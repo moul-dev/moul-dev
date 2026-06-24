@@ -178,13 +178,13 @@ func (h *RecordHandler) ListRecords(c echo.Context) error {
 	var authorizedRecords []map[string]interface{}
 
 	for _, rec := range rawRecords {
-		record := nullStringMapToMap(rec)
+		record := normalizeRecord(moul, nullStringMapToMap(rec))
 		allowed, err := rules.EvaluateRule(moul.Rules.ListRule, authUser, record)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 		}
 		if allowed {
-			authorizedRecords = append(authorizedRecords, normalizeRecord(moul, record))
+			authorizedRecords = append(authorizedRecords, record)
 		}
 	}
 
@@ -213,7 +213,7 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	recordMap := nullStringMapToMap(record)
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
 	authUser := middleware.GetAuthRecord(c)
 	allowed, err := rules.EvaluateRule(moul.Rules.ViewRule, authUser, recordMap)
 	if err != nil {
@@ -226,7 +226,7 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to view this record")
 	}
 
-	return c.JSON(http.StatusOK, normalizeRecord(moul, recordMap))
+	return c.JSON(http.StatusOK, recordMap)
 }
 
 // UpdateRecord handles partial updates on fields.
@@ -252,7 +252,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	recordMap := nullStringMapToMap(record)
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
 
 	// Check update rule against current record status
 	authUser := middleware.GetAuthRecord(c)
@@ -366,7 +366,7 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	recordMap := nullStringMapToMap(record)
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
 
 	// Validate rule
 	authUser := middleware.GetAuthRecord(c)
