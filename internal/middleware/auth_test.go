@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/moul-dev/moul-dev/auth"
+	"github.com/moul-dev/moul-dev/internal/auth"
 )
 
 func TestLoadAuthContextMiddleware(t *testing.T) {

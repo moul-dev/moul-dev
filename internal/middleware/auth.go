@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 
-	"github.com/moul-dev/moul-dev/auth"
+	"github.com/moul-dev/moul-dev/internal/auth"
 
 	"github.com/labstack/echo/v4"
 )

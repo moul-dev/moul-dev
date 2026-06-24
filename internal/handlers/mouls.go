@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/moul-dev/moul-dev/db"
-	"github.com/moul-dev/moul-dev/schema"
-	"github.com/moul-dev/moul-dev/util"
+	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/util"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pocketbase/dbx"

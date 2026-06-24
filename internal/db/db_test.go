@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/moul-dev/moul-dev/schema"
+	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
 func TestInitDB(t *testing.T) {

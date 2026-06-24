@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moul-dev/moul-dev/schema"
+	"github.com/moul-dev/moul-dev/internal/schema"
 
 	"github.com/pocketbase/dbx"
 	_ "modernc.org/sqlite"

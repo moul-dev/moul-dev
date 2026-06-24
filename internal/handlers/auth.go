@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/moul-dev/moul-dev/auth"
-	"github.com/moul-dev/moul-dev/db"
+	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/db"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pocketbase/dbx"

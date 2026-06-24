@@ -12,6 +12,8 @@ moul-local.db-shm
 *.dylib
 bin/
 out/
+tmp/*
+!tmp/.gitkeep
 
 # Go files
 *.out

@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/moul-dev/moul-dev/db"
-	"github.com/moul-dev/moul-dev/handlers"
-	"github.com/moul-dev/moul-dev/middleware"
+	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/handlers"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 
 	"github.com/labstack/echo/v4"
 )

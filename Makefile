@@ -1,8 +1,17 @@
-.PHONY: run test-go test-flow clean-db
+.PHONY: run dev build test-go test-flow clean-db
 
 # Start the Echo server locally
 run:
-	go run main.go
+	go run cmd/moul-dev/main.go
+
+# Start the watcher for live-reload development
+dev:
+	air -c .air.toml
+
+# Build for production with stripped debug symbols and metadata
+build:
+	mkdir -p bin
+	go build -ldflags="-s -w" -o bin/moul-dev cmd/moul-dev/main.go
 
 # Run the Go unit and integration tests
 test-go:
@@ -80,14 +89,14 @@ test-flow:
 		-d '{"title": "Updated Title (Owner)"}'; \
 	echo "\n"; \
 	\
-# 	echo "=== 11. Deleting the post as User A (Should succeed) ==="; \
-# 	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts/records/$$POST_ID \
-# 		-H "Authorization: Bearer $$TOKEN"; \
-# 	echo "\n"
+	echo "=== 11. Deleting the post as User A (Should succeed) ==="; \
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts/records/$$POST_ID \
+		-H "Authorization: Bearer $$TOKEN"; \
+	echo "\n"
 
-# 	@echo "=== 12. Cleaning up: Deleting 'posts' and 'users' mouls ==="
-# 	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts
-# 	@echo "\n"
-# 	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
-# 	@echo "\n"
-# 	@echo "=== Flow Test Complete! ==="
+	@echo "=== 12. Cleaning up: Deleting 'posts' and 'users' mouls ==="
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts
+	@echo "\n"
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
+	@echo "\n"
+	@echo "=== Flow Test Complete! ==="
