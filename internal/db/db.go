@@ -51,6 +51,16 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" {
 			continue
 		}
+		if m.Type == "worker" {
+			if lowerName == "state" || lowerName == "queue" || lowerName == "worker" ||
+				lowerName == "args" || lowerName == "meta" || lowerName == "tags" ||
+				lowerName == "errors" || lowerName == "attempt" || lowerName == "max_attempts" ||
+				lowerName == "priority" || lowerName == "inserted_at" || lowerName == "scheduled_at" ||
+				lowerName == "attempted_at" || lowerName == "attempted_by" ||
+				lowerName == "cancelled_at" || lowerName == "completed_at" || lowerName == "discarded_at" {
+				continue
+			}
+		}
 
 		sqliteType := "TEXT"
 		switch field.Type {
@@ -82,6 +92,30 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				%s
 			);
 		`, m.Name, columnsSQL)
+	} else if m.Type == "worker" {
+		createSQL = fmt.Sprintf(`
+			CREATE TABLE IF NOT EXISTS %s (
+				id TEXT PRIMARY KEY,
+				state TEXT NOT NULL DEFAULT 'available',
+				queue TEXT NOT NULL DEFAULT 'default',
+				worker TEXT NOT NULL,
+				args TEXT NOT NULL DEFAULT '{}',
+				meta TEXT NOT NULL DEFAULT '{}',
+				tags TEXT NOT NULL DEFAULT '[]',
+				errors TEXT NOT NULL DEFAULT '[]',
+				attempt INTEGER NOT NULL DEFAULT 0,
+				max_attempts INTEGER NOT NULL DEFAULT 20,
+				priority INTEGER NOT NULL DEFAULT 0,
+				inserted_at TEXT NOT NULL,
+				scheduled_at TEXT NOT NULL,
+				attempted_at TEXT,
+				attempted_by TEXT,
+				cancelled_at TEXT,
+				completed_at TEXT,
+				discarded_at TEXT
+				%s
+			);
+		`, m.Name, columnsSQL)
 	} else {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
@@ -96,6 +130,14 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 	_, err := db.NewQuery(createSQL).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create table %s: %w", m.Name, err)
+	}
+
+	if m.Type == "worker" {
+		indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, m.Name)
+		_, err = db.NewQuery(indexSQL).Execute()
+		if err != nil {
+			return fmt.Errorf("failed to create job index for table %s: %w", m.Name, err)
+		}
 	}
 
 	return nil

@@ -39,7 +39,7 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 	}
 
 	// Default to base type
-	if m.Type != "auth" {
+	if m.Type != "auth" && m.Type != "worker" {
 		m.Type = "base"
 	}
 

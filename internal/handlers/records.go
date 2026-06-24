@@ -20,8 +20,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type RecordEngine interface {
+	Trigger(tableName string, jobID string)
+}
+
 type RecordHandler struct {
-	DB *dbx.DB
+	DB     *dbx.DB
+	Engine RecordEngine
 }
 
 func NewRecordHandler(dbConn *dbx.DB) *RecordHandler {
@@ -95,8 +100,10 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 	insertData["id"] = recordID
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	insertData["created_at"] = now
-	insertData["updated_at"] = now
+	if moul.Type != "worker" {
+		insertData["created_at"] = now
+		insertData["updated_at"] = now
+	}
 
 	// Auth collection specific fields
 	if moul.Type == "auth" {
@@ -123,6 +130,73 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		insertData["passwordHash"] = string(hash)
 	}
 
+	// Worker collection specific fields
+	if moul.Type == "worker" {
+		workerVal, _ := body["worker"].(string)
+		if workerVal == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "worker name is required for worker mouls")
+		}
+		insertData["worker"] = workerVal
+
+		queueVal, ok := body["queue"].(string)
+		if !ok || queueVal == "" {
+			queueVal = "default"
+		}
+		insertData["queue"] = queueVal
+
+		insertData["state"] = "available"
+		insertData["attempt"] = 0
+		insertData["errors"] = "[]"
+
+		if maxAttemptsVal, ok := body["max_attempts"]; ok {
+			if num, err := toInt(maxAttemptsVal); err == nil {
+				insertData["max_attempts"] = num
+			} else {
+				insertData["max_attempts"] = 20
+			}
+		} else {
+			insertData["max_attempts"] = 20
+		}
+
+		if priorityVal, ok := body["priority"]; ok {
+			if num, err := toInt(priorityVal); err == nil {
+				insertData["priority"] = num
+			} else {
+				insertData["priority"] = 0
+			}
+		} else {
+			insertData["priority"] = 0
+		}
+
+		insertData["inserted_at"] = now
+
+		scheduledAtStr, _ := body["scheduled_at"].(string)
+		if scheduledAtStr == "" {
+			scheduledAtStr = now
+		} else {
+			if _, err := time.Parse(time.RFC3339, scheduledAtStr); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, "Invalid scheduled_at format (must be RFC3339)")
+			}
+		}
+		insertData["scheduled_at"] = scheduledAtStr
+
+		for _, jsonField := range []string{"args", "meta", "tags"} {
+			defaultVal := "{}"
+			if jsonField == "tags" {
+				defaultVal = "[]"
+			}
+			if val, ok := body[jsonField]; ok {
+				bytes, err := json.Marshal(val)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON content for: "+jsonField)
+				}
+				insertData[jsonField] = string(bytes)
+			} else {
+				insertData[jsonField] = defaultVal
+			}
+		}
+	}
+
 	// Rule authorization check
 	authUser := middleware.GetAuthRecord(c)
 	allowed, err := rules.EvaluateRule(moul.Rules.CreateRule, authUser, insertData)
@@ -144,6 +218,11 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to insert record: "+err.Error())
+	}
+
+	// Trigger worker engine
+	if moul.Type == "worker" && h.Engine != nil {
+		h.Engine.Trigger(moulName, recordID)
 	}
 
 	// Fetch back
@@ -321,9 +400,46 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 		}
 	}
 
+	// Worker columns updates
+	if moul.Type == "worker" {
+		if stateVal, ok := body["state"].(string); ok && stateVal != "" {
+			updateParams["state"] = stateVal
+		}
+		if queueVal, ok := body["queue"].(string); ok && queueVal != "" {
+			updateParams["queue"] = queueVal
+		}
+		if workerVal, ok := body["worker"].(string); ok && workerVal != "" {
+			updateParams["worker"] = workerVal
+		}
+		if scheduledAtStr, ok := body["scheduled_at"].(string); ok && scheduledAtStr != "" {
+			if _, err := time.Parse(time.RFC3339, scheduledAtStr); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, "Invalid scheduled_at format (must be RFC3339)")
+			}
+			updateParams["scheduled_at"] = scheduledAtStr
+		}
+		for _, intField := range []string{"attempt", "max_attempts", "priority"} {
+			if val, ok := body[intField]; ok {
+				if num, err := toInt(val); err == nil {
+					updateParams[intField] = num
+				}
+			}
+		}
+		for _, jsonField := range []string{"args", "meta", "tags", "errors"} {
+			if val, ok := body[jsonField]; ok {
+				bytes, err := json.Marshal(val)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON content for: "+jsonField)
+				}
+				updateParams[jsonField] = string(bytes)
+			}
+		}
+	}
+
 	// Check if there's actually anything to update
 	if len(updateParams) > 0 {
-		updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
+		if moul.Type != "worker" {
+			updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
+		}
 		_, err = h.DB.Update(moulName, updateParams, dbx.HashExp{"id": id}).Execute()
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -390,6 +506,22 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Helper to safely convert interface to int
+func toInt(v interface{}) (int, error) {
+	switch val := v.(type) {
+	case int:
+		return val, nil
+	case int64:
+		return int(val), nil
+	case float64:
+		return int(val), nil
+	case string:
+		return strconv.Atoi(val)
+	default:
+		return 0, fmt.Errorf("invalid integer type")
+	}
+}
+
 // normalizeRecord helps format the output data for JSON responses
 func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[string]interface{} {
 	delete(record, "passwordHash")
@@ -418,6 +550,24 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 				var decoded interface{}
 				if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {
 					record[field.Name] = decoded
+				}
+			}
+		}
+	}
+
+	if moul.Type == "worker" {
+		for _, jsonField := range []string{"args", "meta", "tags", "errors"} {
+			if strVal, ok := record[jsonField].(string); ok && strVal != "" {
+				var decoded interface{}
+				if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {
+					record[jsonField] = decoded
+				}
+			}
+		}
+		for _, intField := range []string{"attempt", "max_attempts", "priority"} {
+			if strVal, ok := record[intField].(string); ok && strVal != "" {
+				if intVal, err := strconv.Atoi(strVal); err == nil {
+					record[intField] = intVal
 				}
 			}
 		}

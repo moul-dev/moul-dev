@@ -1,11 +1,18 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/worker"
 
 	"github.com/labstack/echo/v4"
 )
@@ -18,6 +25,21 @@ func main() {
 	}
 	defer dbConn.Close()
 
+	// Initialize Worker Engine
+	workerEngine := worker.NewEngine(dbConn)
+
+	// Register a default worker handler as an example
+	workerEngine.Register("SendEmail", func(ctx context.Context, job *worker.Job) error {
+		log.Printf("[Worker Handler] Successfully processed SendEmail job with ID=%s, args=%v\n", job.ID, job.Args)
+		return nil
+	})
+
+	// Start Worker Engine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	workerEngine.Start(ctx)
+	defer workerEngine.Stop()
+
 	e := echo.New()
 
 	// Global Middlewares
@@ -26,6 +48,7 @@ func main() {
 	// Handlers initialization
 	moulHandler := handlers.NewMoulHandler(dbConn)
 	recordHandler := handlers.NewRecordHandler(dbConn)
+	recordHandler.Engine = workerEngine
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	// API Routes
@@ -45,9 +68,27 @@ func main() {
 	e.PATCH("/api/mouls/:moulName/records/:id", recordHandler.UpdateRecord)
 	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
 
-	// Start Echo HTTP server
-	log.Println("Starting moul-dev engine server on http://localhost:8090")
-	if err := e.Start(":8090"); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// Start Echo HTTP server in a goroutine for graceful shutdown
+	go func() {
+		log.Println("Starting moul-dev engine server on http://localhost:8090")
+		if err := e.Start(":8090"); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server gracefully...")
+	cancel()            // Cancel context for background workers
+	workerEngine.Stop() // Wait for active jobs to complete
+
+	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+	if err := e.Shutdown(ctxShutdown); err != nil {
+		log.Fatalf("Server shutdown failed: %v", err)
 	}
+	log.Println("Server stopped gracefully")
 }

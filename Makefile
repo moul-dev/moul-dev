@@ -1,4 +1,4 @@
-.PHONY: run dev build test-go test-flow clean-db
+.PHONY: run dev build test-go test-flow clean-db test-worker
 
 # Start the Echo server locally
 run:
@@ -100,3 +100,31 @@ test-flow:
 	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
 	@echo "\n"
 	@echo "=== Flow Test Complete! ==="
+
+# Run the background job processing flow tests
+test-worker:
+	@curl -s http://localhost:8090/api/mouls >/dev/null || (echo "ERROR: Server is not running on http://localhost:8090.\n\nPlease start the server by running 'make run' in a separate terminal window first, then run 'make test-worker' again.\n" && exit 1)
+	@echo "=== 1. Creating 'background_tasks' worker moul ==="
+	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "Content-Type: application/json" \
+		-d '{"name": "background_tasks", "type": "worker"}'
+	@echo "\n"
+
+	@echo "=== 2. Enqueuing 'SendEmail' job (Should be processed immediately) ==="
+	curl -s -X POST http://localhost:8090/api/mouls/background_tasks/records \
+		-H "Content-Type: application/json" \
+		-d '{"worker": "SendEmail", "args": {"to": "user@example.com", "subject": "Hello background worker!"}, "priority": 1}'
+	@echo "\n"
+
+	@echo "=== 3. Waiting for worker to process job... ==="
+	@sleep 1.5
+	@echo "\n"
+
+	@echo "=== 4. Querying 'background_tasks' records (Should be completed) ==="
+	curl -s http://localhost:8090/api/mouls/background_tasks/records
+	@echo "\n"
+
+	@echo "=== 5. Cleaning up: Deleting 'background_tasks' worker moul ==="
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/background_tasks
+	@echo "\n"
+	@echo "=== Worker Test Complete! ==="
