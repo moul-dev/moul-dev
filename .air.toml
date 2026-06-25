@@ -1,11 +1,11 @@
 # Air configuration for moul-dev
 
 root = "."
-tmp_dir = "tmp"
+tmp_dir = "tmp/build"
 
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/moul-dev/main.go"
-  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/build/main ./cmd/moul-dev/main.go"
+  bin = "./tmp/build/main"
   delay = 1000
   exclude_dir = ["bin", "tmp", ".git", ".gemini", ".agents"]
   exclude_regex = ["_test\\.go"]
