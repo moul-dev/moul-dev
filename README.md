@@ -13,6 +13,7 @@
 5. **Rule Authorization Engine**: Enforce HCL-like rules (e.g. `auth.id == author_id` or `auth.id != nil`) dynamically using the fast `expr-lang/expr` library.
 6. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with support for queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 7. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local deployment.
+8. **First-Party Analytics & Session Tracking**: Create `analytic` mouls that automatically track events and sessions. The engine parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution and a server-side Go API.
 
 ---
 
@@ -84,6 +85,18 @@ Worker mouls are dedicated collections that represent background job queues. Set
 }
 ```
 
+##### Create an `analytic` event collection:
+Analytic mouls are event tracking tables. Setting `type` to `"analytic"` dynamically creates the table with standard system fields (`visit_token`, `visitor_token`, `user_id`, `name`, `properties`, `time`) and allows you to append optional custom fields:
+```json
+{
+  "name": "events",
+  "type": "analytic",
+  "fields": [
+    { "name": "path", "type": "text" }
+  ]
+}
+```
+
 #### List Mouls
 - **HTTP Method**: `GET`
 - **Path**: `/api/mouls`
@@ -135,10 +148,47 @@ Posting to a `"worker"` moul table enqueues a background job and triggers the wo
   - `max_attempts` (integer, optional): Retry limit before discarding (defaults to `20`).
   - `scheduled_at` (string RFC3339, optional): Delay execution until this time (defaults to now).
 
+##### Request Body Example (Analytic Moul):
+Posting to an `"analytic"` moul table records an event and manages session/visit resolution:
+```json
+{
+  "name": "btn_click",
+  "properties": {
+    "color": "blue"
+  },
+  "landing_page": "https://moul.dev/landing?utm_source=fb&utm_medium=social"
+}
+```
+The engine resolves `visit_token` and `visitor_token` automatically:
+1. It checks the JSON body (`visit_token`/`visitor_token`).
+2. It checks headers (`X-Visit-Token`/`X-Visitor-Token`).
+3. It checks cookies (`moul_visit`/`moul_visitor`).
+
+If none are found, the engine generates fresh tokens, returns them in response headers, and drops cookies (`moul_visit` expires in 30 minutes, `moul_visitor` in 2 years) to maintain session continuity.
+
+- **Supported Event Fields**:
+  - `name` (string, required): The name of the recorded event.
+  - `properties` (JSON object, optional): Custom metadata about the event.
+  - `landing_page` (string, optional): Current page URL to extract UTM parameters.
+  - `referrer` (string, optional): Referrer URL to resolve the referring domain.
+
 #### List/Query Records
 - **HTTP Method**: `GET`
 - **Path**: `/api/mouls/:moulName/records`
 *(For worker mouls, returns all jobs and their execution states, e.g. `"completed"`, `"executing"`, `"available"`, `"discarded"`).*
+
+---
+
+### 3. Visits Management
+Query the session logs recorded by the analytics engine. These endpoints require a valid JWT bearer token.
+
+#### List Visits
+- **HTTP Method**: `GET`
+- **Path**: `/api/visits`
+
+#### Get Specific Visit
+- **HTTP Method**: `GET`
+- **Path**: `/api/visits/:id`
 
 ---
 
@@ -187,6 +237,26 @@ jobOpts := map[string]interface{}{
 job, err := workerEngine.Enqueue(context.Background(), "background_tasks", jobOpts)
 ```
 
+### 3. Programmatic Go Analytics API
+You can also record events programmatically using the analytics engine in Go:
+```go
+import (
+	"context"
+	"github.com/moul-dev/moul-dev/internal/analytics"
+)
+
+params := &analytics.EventParams{
+	VisitToken:   "visit-123",
+	VisitorToken: "visitor-456",
+	Name:         "payment_completed",
+	Properties: map[string]interface{}{
+		"amount": 99.9,
+	},
+}
+
+event, err := analyticsEngine.Track(context.Background(), "events", params)
+```
+
 ---
 
 ## Worker Engine Architecture & Operations
@@ -212,4 +282,9 @@ make test-flow
 ### Verify Background Worker Job Processing:
 ```bash
 make test-worker
+```
+
+### Verify First-Party Analytics and Visits Resolution:
+```bash
+make test-analytics
 ```

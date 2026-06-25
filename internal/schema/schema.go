@@ -18,7 +18,7 @@ type MoulRules struct {
 type Moul struct {
 	ID        string      `json:"id"`
 	Name      string      `json:"name"`
-	Type      string      `json:"type"` // "base", "auth", or "worker"
+	Type      string      `json:"type"` // "base", "auth", "worker", or "analytic"
 	Fields    []MoulField `json:"fields"`
 	Rules     MoulRules   `json:"rules"`
 	CreatedAt string      `json:"created_at"`

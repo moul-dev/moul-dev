@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/rules"
@@ -25,8 +26,9 @@ type RecordEngine interface {
 }
 
 type RecordHandler struct {
-	DB     *dbx.DB
-	Engine RecordEngine
+	DB              *dbx.DB
+	Engine          RecordEngine
+	AnalyticsEngine *analytics.Engine
 }
 
 func NewRecordHandler(dbConn *dbx.DB) *RecordHandler {
@@ -60,6 +62,123 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 	body := make(map[string]interface{})
 	if err := c.Bind(&body); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")
+	}
+
+	if moul.Type == "analytic" {
+		name, _ := body["name"].(string)
+		if name == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "name is required for analytic records")
+		}
+
+		var properties map[string]interface{}
+		if props, ok := body["properties"].(map[string]interface{}); ok {
+			properties = props
+		} else {
+			properties = make(map[string]interface{})
+			for k, v := range body {
+				if k != "visit_token" && k != "visitor_token" && k != "name" && k != "id" && k != "landing_page" && k != "referrer" {
+					properties[k] = v
+				}
+			}
+		}
+
+		var userID string
+		authUser := middleware.GetAuthRecord(c)
+		if authUser != nil {
+			userID, _ = authUser["id"].(string)
+		}
+
+		ruleData := map[string]interface{}{
+			"name":       name,
+			"properties": properties,
+			"user_id":    userID,
+		}
+
+		allowed, err := rules.EvaluateRule(moul.Rules.CreateRule, authUser, ruleData)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+		}
+		if !allowed {
+			if authUser == nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to perform this action")
+			}
+			return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
+		}
+
+		if h.AnalyticsEngine == nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Analytics engine not initialized")
+		}
+
+		var visitToken, visitorToken string
+		if vt, ok := body["visit_token"].(string); ok {
+			visitToken = vt
+		}
+		if vt, ok := body["visitor_token"].(string); ok {
+			visitorToken = vt
+		}
+		if visitToken == "" {
+			visitToken = c.Request().Header.Get("X-Visit-Token")
+		}
+		if visitorToken == "" {
+			visitorToken = c.Request().Header.Get("X-Visitor-Token")
+		}
+		if visitToken == "" {
+			if cookie, err := c.Cookie("moul_visit"); err == nil {
+				visitToken = cookie.Value
+			}
+		}
+		if visitorToken == "" {
+			if cookie, err := c.Cookie("moul_visitor"); err == nil {
+				visitorToken = cookie.Value
+			}
+		}
+
+		referrer, _ := body["referrer"].(string)
+		if referrer == "" {
+			referrer = c.Request().Referer()
+		}
+		landingPage, _ := body["landing_page"].(string)
+		if landingPage == "" {
+			landingPage = c.Request().Referer()
+		}
+
+		res, err := h.AnalyticsEngine.Track(c.Request().Context(), moulName, &analytics.EventParams{
+			VisitToken:   visitToken,
+			VisitorToken: visitorToken,
+			UserID:       userID,
+			Name:         name,
+			Properties:   properties,
+			IP:           c.RealIP(),
+			UserAgent:    c.Request().UserAgent(),
+			Referrer:     referrer,
+			LandingPage:  landingPage,
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		resolvedVisit, _ := res["visit_token"].(string)
+		resolvedVisitor, _ := res["visitor_token"].(string)
+
+		c.Response().Header().Set("X-Visit-Token", resolvedVisit)
+		c.Response().Header().Set("X-Visitor-Token", resolvedVisitor)
+
+		c.SetCookie(&http.Cookie{
+			Name:     "moul_visit",
+			Value:    resolvedVisit,
+			Path:     "/",
+			HttpOnly: true,
+			Expires:  time.Now().Add(30 * time.Minute),
+		})
+		c.SetCookie(&http.Cookie{
+			Name:     "moul_visitor",
+			Value:    resolvedVisitor,
+			Path:     "/",
+			HttpOnly: true,
+			Expires:  time.Now().AddDate(2, 0, 0),
+		})
+
+		return c.JSON(http.StatusCreated, normalizeRecord(moul, res))
 	}
 
 	// Prepare data map for db insert
@@ -569,6 +688,15 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 				if intVal, err := strconv.Atoi(strVal); err == nil {
 					record[intField] = intVal
 				}
+			}
+		}
+	}
+
+	if moul.Type == "analytic" {
+		if strVal, ok := record["properties"].(string); ok && strVal != "" {
+			var decoded interface{}
+			if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {
+				record["properties"] = decoded
 			}
 		}
 	}

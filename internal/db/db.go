@@ -36,6 +36,45 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create _mouls meta table: %w", err)
 	}
 
+	// Create meta-table _visits
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _visits (
+			id TEXT PRIMARY KEY,
+			visitor_token TEXT NOT NULL,
+			user_id TEXT,
+			ip TEXT,
+			user_agent TEXT,
+			referrer TEXT,
+			referring_domain TEXT,
+			landing_page TEXT,
+			browser TEXT,
+			os TEXT,
+			device_type TEXT,
+			country TEXT,
+			region TEXT,
+			city TEXT,
+			utm_source TEXT,
+			utm_medium TEXT,
+			utm_term TEXT,
+			utm_content TEXT,
+			utm_campaign TEXT,
+			started_at TEXT NOT NULL
+		);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _visits table: %w", err)
+	}
+
+	// Create indexes on _visits
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_visitor ON _visits (visitor_token);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_visits_visitor index: %w", err)
+	}
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_user ON _visits (user_id);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_visits_user index: %w", err)
+	}
+
 	return db, nil
 }
 
@@ -58,6 +97,13 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				lowerName == "priority" || lowerName == "inserted_at" || lowerName == "scheduled_at" ||
 				lowerName == "attempted_at" || lowerName == "attempted_by" ||
 				lowerName == "cancelled_at" || lowerName == "completed_at" || lowerName == "discarded_at" {
+				continue
+			}
+		}
+		if m.Type == "analytic" {
+			if lowerName == "visit_token" || lowerName == "visitor_token" ||
+				lowerName == "user_id" || lowerName == "name" ||
+				lowerName == "properties" || lowerName == "time" {
 				continue
 			}
 		}
@@ -113,6 +159,19 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				cancelled_at TEXT,
 				completed_at TEXT,
 				discarded_at TEXT
+				%s
+			);
+		`, m.Name, columnsSQL)
+	} else if m.Type == "analytic" {
+		createSQL = fmt.Sprintf(`
+			CREATE TABLE IF NOT EXISTS %s (
+				id TEXT PRIMARY KEY,
+				visit_token TEXT NOT NULL,
+				visitor_token TEXT NOT NULL,
+				user_id TEXT,
+				name TEXT NOT NULL,
+				properties TEXT NOT NULL DEFAULT '{}',
+				time TEXT NOT NULL
 				%s
 			);
 		`, m.Name, columnsSQL)

@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -24,6 +25,14 @@ func main() {
 		log.Fatalf("Database initialization failed: %v", err)
 	}
 	defer dbConn.Close()
+
+	// Initialize Analytics Engine
+	geoIPPath := os.Getenv("GEOIP_DB_PATH")
+	analyticsEngine, err := analytics.NewEngine(dbConn, geoIPPath)
+	if err != nil {
+		log.Fatalf("Analytics engine initialization failed: %v", err)
+	}
+	defer analyticsEngine.Close()
 
 	// Initialize Worker Engine
 	workerEngine := worker.NewEngine(dbConn)
@@ -49,7 +58,9 @@ func main() {
 	moulHandler := handlers.NewMoulHandler(dbConn)
 	recordHandler := handlers.NewRecordHandler(dbConn)
 	recordHandler.Engine = workerEngine
+	recordHandler.AnalyticsEngine = analyticsEngine
 	authHandler := handlers.NewAuthHandler(dbConn)
+	visitsHandler := handlers.NewVisitsHandler(dbConn)
 
 	// API Routes
 
@@ -67,6 +78,10 @@ func main() {
 	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
 	e.PATCH("/api/mouls/:moulName/records/:id", recordHandler.UpdateRecord)
 	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
+
+	// 4. Analytics visits log
+	e.GET("/api/visits", visitsHandler.ListVisits)
+	e.GET("/api/visits/:id", visitsHandler.GetVisit)
 
 	// Start Echo HTTP server in a goroutine for graceful shutdown
 	go func() {

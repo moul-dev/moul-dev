@@ -1,4 +1,4 @@
-.PHONY: run dev build test-go test-flow clean-db test-worker
+.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics
 
 # Start the Echo server locally
 run:
@@ -128,3 +128,57 @@ test-worker:
 	curl -i -s -X DELETE http://localhost:8090/api/mouls/background_tasks
 	@echo "\n"
 	@echo "=== Worker Test Complete! ==="
+
+# Run the analytics and visits flow tests
+test-analytics:
+	@curl -s http://localhost:8090/api/mouls >/dev/null || (echo "ERROR: Server is not running on http://localhost:8090.\n\nPlease start the server by running 'make run' in a separate terminal window first, then run 'make test-analytics' again.\n" && exit 1)
+	@echo "=== 1. Creating 'users' auth moul ==="
+	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "Content-Type: application/json" \
+		-d '{"name": "users", "type": "auth"}'
+	@echo "\n"
+
+	@echo "=== 2. Creating 'events' analytic moul ==="
+	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "Content-Type: application/json" \
+		-d '{"name": "events", "type": "analytic"}'
+	@echo "\n"
+
+	@echo "=== 3. Registering admin user ==="
+	@USER_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/records \
+		-H "Content-Type: application/json" \
+		-d '{"username": "admin", "email": "admin@example.com", "password": "password123", "passwordConfirm": "password123"}'); \
+	echo "$$USER_RESP"; \
+	echo "\n"; \
+	\
+	echo "=== 4. Logging in to get JWT ==="; \
+	AUTH_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/auth-with-password \
+		-H "Content-Type: application/json" \
+		-d '{"identity": "admin@example.com", "password": "password123"}'); \
+	echo "$$AUTH_RESP"; \
+	TOKEN=$$(echo "$$AUTH_RESP" | grep -o '"token":"[^"]*' | cut -d'"' -f4); \
+	echo "JWT Token: $$TOKEN\n"; \
+	\
+	echo "=== 5. Tracking an event (page_view) ==="; \
+	TRACK_RESP=$$(curl -i -s -X POST http://localhost:8090/api/mouls/events/records \
+		-H "Content-Type: application/json" \
+		-H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+		-d '{"name": "page_view", "path": "/dashboard", "landing_page": "https://moul.dev/dashboard?utm_source=newsletter&utm_medium=email"}'); \
+	echo "$$TRACK_RESP"; \
+	echo "\n"; \
+	\
+	echo "=== 6. Querying visits log (Authenticated) ==="; \
+	curl -s -X GET http://localhost:8090/api/visits \
+		-H "Authorization: Bearer $$TOKEN"; \
+	echo "\n"; \
+	\
+	echo "=== 7. Querying visits log (Anonymous - Should fail with 401) ==="; \
+	curl -i -s -X GET http://localhost:8090/api/visits; \
+	echo "\n"
+
+	@echo "=== 8. Cleaning up: Deleting 'events' and 'users' mouls ==="
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/events
+	@echo "\n"
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
+	@echo "\n"
+	@echo "=== Analytics Flow Test Complete! ==="
