@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -89,8 +90,8 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	userAPayload := map[string]interface{}{
 		"username":        "usera",
 		"email":           "usera@example.com",
-		"password":        "password123",
-		"passwordConfirm": "password123",
+		"password":        "Password1",
+		"passwordConfirm": "Password1",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userAPayload, "")
 	if resp.StatusCode != http.StatusCreated {
@@ -104,7 +105,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	// --- STEP 4: Authenticate User A ---
 	loginAPayload := map[string]interface{}{
 		"identity": "usera@example.com",
-		"password": "password123",
+		"password": "Password1",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", loginAPayload, "")
 	if resp.StatusCode != http.StatusOK {
@@ -138,8 +139,8 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	userBPayload := map[string]interface{}{
 		"username":        "userb",
 		"email":           "userb@example.com",
-		"password":        "password456",
-		"passwordConfirm": "password456",
+		"password":        "Password2",
+		"passwordConfirm": "Password2",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userBPayload, "")
 	if resp.StatusCode != http.StatusCreated {
@@ -150,7 +151,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 
 	loginBPayload := map[string]interface{}{
 		"identity": "userb",
-		"password": "password456",
+		"password": "Password2",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", loginBPayload, "")
 	if resp.StatusCode != http.StatusOK {
@@ -321,8 +322,8 @@ func TestHandlersEdgeCases(t *testing.T) {
 	userPayload := map[string]interface{}{
 		"username":        "testuser",
 		"email":           "test@example.com",
-		"password":        "correct_pass",
-		"passwordConfirm": "correct_pass",
+		"password":        "CorrectPass1",
+		"passwordConfirm": "CorrectPass1",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusCreated {
@@ -333,7 +334,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	userID := userRec["id"].(string)
 
 	// Auth with wrong credentials
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "nonexistent@example.com", "password": "correct_pass"}, "")
+	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "nonexistent@example.com", "password": "CorrectPass1"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for wrong identity, got %d", resp.StatusCode)
 	}
@@ -343,7 +344,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// Auth success
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "correct_pass"}, "")
+	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "CorrectPass1"}, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 for correct auth, got %d", resp.StatusCode)
 	}
@@ -493,7 +494,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 	// Auth collection: password mismatch
 	resp = patchJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, map[string]interface{}{
-		"password":        "newpass",
+		"password":        "NewPass99",
 		"passwordConfirm": "mismatchpass",
 	}, token)
 	if resp.StatusCode != http.StatusBadRequest {
@@ -501,8 +502,8 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 	// Auth collection: valid password update
 	resp = patchJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, map[string]interface{}{
-		"password":        "newpass",
-		"passwordConfirm": "newpass",
+		"password":        "NewPass99",
+		"passwordConfirm": "NewPass99",
 	}, token)
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200 for user password update, got %d", resp.StatusCode)
@@ -625,6 +626,9 @@ func parseJSON(t *testing.T, resp *http.Response, target interface{}) {
 }
 
 func TestMain(m *testing.M) {
+	// Initialize JWT for all handler tests
+	auth.InitJWT("test-secret-key-for-unit-tests-1234")
+
 	// Quiet logging for tests if needed
 	code := m.Run()
 	os.Exit(code)

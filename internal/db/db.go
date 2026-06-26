@@ -80,6 +80,11 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 
 // CreateMoulTable dynamically creates the physical SQLite table for a moul.
 func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
+	if err := ValidateTableName(m.Name); err != nil {
+		return fmt.Errorf("unsafe moul name: %w", err)
+	}
+
+	quotedName := QuoteIdentifier(m.Name)
 	var columns []string
 
 	// Map dynamic fields
@@ -117,7 +122,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		case "json":
 			sqliteType = "TEXT"
 		}
-		columns = append(columns, fmt.Sprintf("`%s` %s", field.Name, sqliteType))
+		columns = append(columns, fmt.Sprintf("%s %s", QuoteIdentifier(field.Name), sqliteType))
 	}
 
 	var createSQL string
@@ -137,7 +142,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				passwordHash TEXT NOT NULL
 				%s
 			);
-		`, m.Name, columnsSQL)
+		`, quotedName, columnsSQL)
 	} else if m.Type == "worker" {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
@@ -161,7 +166,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				discarded_at TEXT
 				%s
 			);
-		`, m.Name, columnsSQL)
+		`, quotedName, columnsSQL)
 	} else if m.Type == "analytic" {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
@@ -174,7 +179,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				time TEXT NOT NULL
 				%s
 			);
-		`, m.Name, columnsSQL)
+		`, quotedName, columnsSQL)
 	} else {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
@@ -183,7 +188,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				updated_at TEXT NOT NULL
 				%s
 			);
-		`, m.Name, columnsSQL)
+		`, quotedName, columnsSQL)
 	}
 
 	_, err := db.NewQuery(createSQL).Execute()
@@ -192,7 +197,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 	}
 
 	if m.Type == "worker" {
-		indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, m.Name)
+		indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, quotedName)
 		_, err = db.NewQuery(indexSQL).Execute()
 		if err != nil {
 			return fmt.Errorf("failed to create job index for table %s: %w", m.Name, err)

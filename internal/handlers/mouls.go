@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -38,6 +39,11 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name cannot start with underscore")
 	}
 
+	// Validate table name is safe for SQL
+	if err := db.ValidateTableName(m.Name); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid moul name: must start with a letter and contain only letters, digits, or underscores (max 63 chars)")
+	}
+
 	// Default to base type
 	if m.Type != "auth" && m.Type != "worker" && m.Type != "analytic" {
 		m.Type = "base"
@@ -49,12 +55,14 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 
 	// Create physical sqlite table
 	if err := db.CreateMoulTable(h.DB, m); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to create table %s: %v", m.Name, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create table")
 	}
 
 	// Save schema metadata
 	if err := db.SaveMoulMetadata(h.DB, m); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to save metadata for moul %s: %v", m.Name, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save moul metadata")
 	}
 
 	return c.JSON(http.StatusCreated, m)
@@ -64,7 +72,8 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 func (h *MoulHandler) ListMouls(c echo.Context) error {
 	mouls, err := db.LoadAllMouls(h.DB)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to fetch mouls: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve mouls")
 	}
 	return c.JSON(http.StatusOK, mouls)
 }
@@ -82,19 +91,22 @@ func (h *MoulHandler) DeleteMoul(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to load moul %s: %v", name, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")
 	}
 
-	// Physical drop table
-	_, err = h.DB.NewQuery(fmt.Sprintf("DROP TABLE IF EXISTS %s;", moul.Name)).Execute()
+	// Physical drop table (use QuoteIdentifier for safety)
+	_, err = h.DB.NewQuery(fmt.Sprintf("DROP TABLE IF EXISTS %s;", db.QuoteIdentifier(moul.Name))).Execute()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to drop table: "+err.Error())
+		log.Printf("[ERROR] Failed to drop table %s: %v", moul.Name, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to drop table")
 	}
 
 	// Delete from _mouls metadata
 	_, err = h.DB.Delete("_mouls", dbx.HashExp{"name": name}).Execute()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete metadata: "+err.Error())
+		log.Printf("[ERROR] Failed to delete metadata for moul %s: %v", name, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete moul metadata")
 	}
 
 	return c.NoContent(http.StatusNoContent)

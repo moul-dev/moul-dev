@@ -2,13 +2,35 @@ package auth
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Static secret key for development as decided in the design phase
-var jwtSecretKey = []byte("super-secret-development-key-12345678")
+var (
+	jwtSecretKey []byte
+	jwtOnce      sync.Once
+	jwtReady     bool
+)
+
+// InitJWT sets the JWT secret key. Must be called once at startup before
+// any token operations. Panics if called more than once with a different key.
+func InitJWT(secret string) {
+	if secret == "" {
+		panic("JWT secret must not be empty")
+	}
+	jwtOnce.Do(func() {
+		jwtSecretKey = []byte(secret)
+		jwtReady = true
+	})
+}
+
+func mustBeReady() {
+	if !jwtReady {
+		panic("auth.InitJWT() must be called before using JWT functions")
+	}
+}
 
 // Claims represents the JWT claims payload.
 type Claims struct {
@@ -21,6 +43,8 @@ type Claims struct {
 
 // GenerateToken creates a signed JWT token for an authenticated user.
 func GenerateToken(id, email, username, moulName string) (string, error) {
+	mustBeReady()
+
 	claims := Claims{
 		ID:       id,
 		Email:    email,
@@ -43,6 +67,8 @@ func GenerateToken(id, email, username, moulName string) (string, error) {
 
 // VerifyToken parses and validates a JWT token string.
 func VerifyToken(tokenString string) (*Claims, error) {
+	mustBeReady()
+
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

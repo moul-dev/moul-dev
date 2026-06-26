@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -27,7 +28,8 @@ func (h *VisitsHandler) ListVisits(c echo.Context) error {
 	var rows []dbx.NullStringMap
 	err := h.DB.Select("*").From("_visits").OrderBy("started_at DESC").All(&rows)
 	if err != nil && err != sql.ErrNoRows {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits: "+err.Error())
+		log.Printf("[ERROR] Failed to retrieve visits: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")
 	}
 
 	visits := make([]map[string]interface{}, 0, len(rows))
@@ -64,7 +66,8 @@ func (h *VisitsHandler) GetVisit(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Visit not found")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to retrieve visit %s: %v", id, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	visitMap := make(map[string]interface{})

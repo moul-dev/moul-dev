@@ -10,6 +10,9 @@ import (
 )
 
 func TestLoadAuthContextMiddleware(t *testing.T) {
+	// Initialize JWT for testing
+	auth.InitJWT("test-secret-key-for-unit-tests-1234")
+
 	e := echo.New()
 
 	// Generate a valid token for testing

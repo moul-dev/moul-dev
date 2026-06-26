@@ -7,6 +7,8 @@ import (
 )
 
 // EvaluateRule evaluates a boolean rule expression against the auth context and record data.
+// The expression environment is restricted to only auth and record fields to prevent
+// access to dangerous built-in functions.
 func EvaluateRule(ruleStr string, authRecord map[string]interface{}, recordData map[string]interface{}) (bool, error) {
 	if ruleStr == "" {
 		return true, nil // Empty rule means public access (anyone can access)
@@ -32,8 +34,16 @@ func EvaluateRule(ruleStr string, authRecord map[string]interface{}, recordData 
 		}
 	}
 
-	// Compile the expression
-	program, err := expr.Compile(ruleStr, expr.Env(env))
+	// Compile the expression with safety restrictions:
+	// - AsBool: enforce boolean output at compile time
+	// - AllowUndefinedVariables: prevent panics on missing fields
+	// - DisableAllBuiltins: remove access to potentially dangerous built-in functions
+	program, err := expr.Compile(ruleStr,
+		expr.Env(env),
+		expr.AsBool(),
+		expr.AllowUndefinedVariables(),
+		expr.DisableAllBuiltins(),
+	)
 	if err != nil {
 		return false, fmt.Errorf("failed to compile rule '%s': %w", ruleStr, err)
 	}
@@ -44,7 +54,7 @@ func EvaluateRule(ruleStr string, authRecord map[string]interface{}, recordData 
 		return false, fmt.Errorf("failed to execute rule '%s': %w", ruleStr, err)
 	}
 
-	// Expect boolean output
+	// Expect boolean output (guaranteed by AsBool() at compile time)
 	allowed, ok := output.(bool)
 	if !ok {
 		return false, fmt.Errorf("rule did not evaluate to a boolean (got %T)", output)

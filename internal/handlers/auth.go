@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
@@ -33,7 +34,8 @@ func (h *AuthHandler) AuthWithPassword(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to load moul %s for auth: %v", moulName, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	if moul.Type != "auth" {
@@ -59,7 +61,8 @@ func (h *AuthHandler) AuthWithPassword(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid credentials")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		log.Printf("[ERROR] Failed to query auth record in %s: %v", moulName, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	recordMap := nullStringMapToMap(record)
@@ -67,11 +70,13 @@ func (h *AuthHandler) AuthWithPassword(c echo.Context) error {
 	// Extract password hash
 	hashVal, ok := recordMap["passwordHash"]
 	if !ok || hashVal == nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Missing password hash in database record")
+		log.Printf("[ERROR] Missing password hash in database record for moul %s", moulName)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 	passwordHash, ok := hashVal.(string)
 	if !ok {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Invalid password hash type in database record")
+		log.Printf("[ERROR] Invalid password hash type in database record for moul %s", moulName)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	// Compare password
@@ -88,6 +93,7 @@ func (h *AuthHandler) AuthWithPassword(c echo.Context) error {
 	// Generate JWT
 	token, err := auth.GenerateToken(id, email, username, moulName)
 	if err != nil {
+		log.Printf("[ERROR] Failed to generate auth token: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate auth token")
 	}
 

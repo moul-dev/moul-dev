@@ -81,8 +81,8 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 	userPayload := map[string]interface{}{
 		"username":        "adminuser",
 		"email":           "admin@example.com",
-		"password":        "password123",
-		"passwordConfirm": "password123",
+		"password":        "Password1",
+		"passwordConfirm": "Password1",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusCreated {
@@ -91,7 +91,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 
 	authPayload := map[string]interface{}{
 		"identity": "admin@example.com",
-		"password": "password123",
+		"password": "Password1",
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", authPayload, "")
 	if resp.StatusCode != http.StatusOK {

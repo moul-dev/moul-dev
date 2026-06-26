@@ -8,6 +8,9 @@ import (
 )
 
 func TestGenerateAndVerifyToken(t *testing.T) {
+	// Initialize JWT for testing
+	InitJWT("test-secret-key-for-unit-tests-1234")
+
 	id := "user-123"
 	email := "user@example.com"
 	username := "testuser"

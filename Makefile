@@ -1,3 +1,7 @@
+export MOUL_ENV ?= development
+export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
+export MOUL_ADMIN_KEY ?= test-admin-key-1234
+
 .PHONY: run dev build test-go test-flow clean-db test-worker test-analytics
 
 # Start the Echo server locally
@@ -26,12 +30,14 @@ test-flow:
 	@curl -s http://localhost:8090/api/mouls >/dev/null || (echo "ERROR: Server is not running on http://localhost:8090.\n\nPlease start the server by running 'make run' in a separate terminal window first, then run 'make test-flow' again.\n" && exit 1)
 	@echo "=== 1. Creating 'users' auth moul ==="
 	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"name": "users", "type": "auth", "rules": {"listRule": "", "viewRule": "auth.id == id", "createRule": "", "updateRule": "auth.id == id", "deleteRule": "auth.id == id"}}'
 	@echo "\n"
 
 	@echo "=== 2. Creating 'posts' base moul ==="
 	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}], "rules": {"listRule": "", "viewRule": "", "createRule": "auth.id != nil", "updateRule": "auth.id == author_id", "deleteRule": "auth.id == author_id"}}'
 	@echo "\n"
@@ -43,7 +49,7 @@ test-flow:
 	@echo "=== 4-11. Executing Record CRUD and Authentication Flow ==="
 	@USER_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/records \
 		-H "Content-Type: application/json" \
-		-d '{"username": "usera", "email": "usera@example.com", "password": "password123", "passwordConfirm": "password123"}'); \
+		-d '{"username": "usera", "email": "usera@example.com", "password": "Password1", "passwordConfirm": "Password1"}'); \
 	echo "=== 4. Registering a new user (User A) ==="; \
 	echo "$$USER_RESP"; \
 	USER_ID=$$(echo "$$USER_RESP" | grep -o '"id":"[^"]*' | cut -d'"' -f4); \
@@ -52,7 +58,7 @@ test-flow:
 	echo "=== 5. Logging in User A to get JWT ==="; \
 	AUTH_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/auth-with-password \
 		-H "Content-Type: application/json" \
-		-d '{"identity": "usera@example.com", "password": "password123"}'); \
+		-d '{"identity": "usera@example.com", "password": "Password1"}'); \
 	echo "$$AUTH_RESP"; \
 	TOKEN=$$(echo "$$AUTH_RESP" | grep -o '"token":"[^"]*' | cut -d'"' -f4); \
 	echo "JWT Token: $$TOKEN\n"; \
@@ -95,9 +101,11 @@ test-flow:
 	echo "\n"
 
 	@echo "=== 12. Cleaning up: Deleting 'posts' and 'users' mouls ==="
-	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/posts \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
-	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/users \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
 	@echo "=== Flow Test Complete! ==="
 
@@ -106,6 +114,7 @@ test-worker:
 	@curl -s http://localhost:8090/api/mouls >/dev/null || (echo "ERROR: Server is not running on http://localhost:8090.\n\nPlease start the server by running 'make run' in a separate terminal window first, then run 'make test-worker' again.\n" && exit 1)
 	@echo "=== 1. Creating 'background_tasks' worker moul ==="
 	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"name": "background_tasks", "type": "worker"}'
 	@echo "\n"
@@ -125,7 +134,8 @@ test-worker:
 	@echo "\n"
 
 	@echo "=== 5. Cleaning up: Deleting 'background_tasks' worker moul ==="
-	curl -i -s -X DELETE http://localhost:8090/api/mouls/background_tasks
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/background_tasks \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
 	@echo "=== Worker Test Complete! ==="
 
@@ -134,12 +144,14 @@ test-analytics:
 	@curl -s http://localhost:8090/api/mouls >/dev/null || (echo "ERROR: Server is not running on http://localhost:8090.\n\nPlease start the server by running 'make run' in a separate terminal window first, then run 'make test-analytics' again.\n" && exit 1)
 	@echo "=== 1. Creating 'users' auth moul ==="
 	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"name": "users", "type": "auth"}'
 	@echo "\n"
 
 	@echo "=== 2. Creating 'events' analytic moul ==="
 	curl -s -X POST http://localhost:8090/api/mouls \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"name": "events", "type": "analytic"}'
 	@echo "\n"
@@ -147,14 +159,14 @@ test-analytics:
 	@echo "=== 3. Registering admin user ==="
 	@USER_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/records \
 		-H "Content-Type: application/json" \
-		-d '{"username": "admin", "email": "admin@example.com", "password": "password123", "passwordConfirm": "password123"}'); \
+		-d '{"username": "admin", "email": "admin@example.com", "password": "Password1", "passwordConfirm": "Password1"}'); \
 	echo "$$USER_RESP"; \
 	echo "\n"; \
 	\
 	echo "=== 4. Logging in to get JWT ==="; \
 	AUTH_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/users/auth-with-password \
 		-H "Content-Type: application/json" \
-		-d '{"identity": "admin@example.com", "password": "password123"}'); \
+		-d '{"identity": "admin@example.com", "password": "Password1"}'); \
 	echo "$$AUTH_RESP"; \
 	TOKEN=$$(echo "$$AUTH_RESP" | grep -o '"token":"[^"]*' | cut -d'"' -f4); \
 	echo "JWT Token: $$TOKEN\n"; \
@@ -177,8 +189,10 @@ test-analytics:
 	echo "\n"
 
 	@echo "=== 8. Cleaning up: Deleting 'events' and 'users' mouls ==="
-	curl -i -s -X DELETE http://localhost:8090/api/mouls/events
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/events \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
-	curl -i -s -X DELETE http://localhost:8090/api/mouls/users
+	curl -i -s -X DELETE http://localhost:8090/api/mouls/users \
+		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
 	@echo "=== Analytics Flow Test Complete! ==="
