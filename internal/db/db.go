@@ -65,6 +65,44 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create _visits table: %w", err)
 	}
 
+	// Create meta-table _settings
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _settings table: %w", err)
+	}
+
+	// Seed default settings if they don't exist
+	defaultSettings := map[string]string{
+		"s3_enabled":          "false",
+		"s3_bucket":           "",
+		"s3_endpoint":          "",
+		"s3_region":           "",
+		"s3_access_key":       "",
+		"s3_secret_key":       "",
+		"s3_force_path_style": "false",
+	}
+	for k, v := range defaultSettings {
+		var exists int
+		err = db.Select("COUNT(*)").From("_settings").Where(dbx.HashExp{"key": k}).Row(&exists)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check setting %s: %w", k, err)
+		}
+		if exists == 0 {
+			_, err = db.Insert("_settings", dbx.Params{
+				"key":   k,
+				"value": v,
+			}).Execute()
+			if err != nil {
+				return nil, fmt.Errorf("failed to seed setting %s: %w", k, err)
+			}
+		}
+	}
+
 	// Create indexes on _visits
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_visitor ON _visits (visitor_token);").Execute()
 	if err != nil {
@@ -119,7 +157,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			sqliteType = "NUMERIC"
 		case "bool":
 			sqliteType = "INTEGER"
-		case "json":
+		case "json", "file":
 			sqliteType = "TEXT"
 		}
 		columns = append(columns, fmt.Sprintf("%s %s", QuoteIdentifier(field.Name), sqliteType))

@@ -2,7 +2,7 @@ export MOUL_ENV ?= development
 export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 
-.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics
+.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage
 
 # Start the Echo server locally
 run:
@@ -19,7 +19,12 @@ build:
 
 # Run the Go unit and integration tests
 test-go:
-	go test -v ./...
+	go test -v -cover ./...
+
+# Run tests and output coverage report
+test-coverage:
+	go test -v -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
 
 # Remove SQLite database
 clean-db:
@@ -39,7 +44,7 @@ test-flow:
 	curl -s -X POST http://localhost:8090/api/mouls \
 		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
-		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}], "rules": {"listRule": "", "viewRule": "", "createRule": "auth.id != nil", "updateRule": "auth.id == author_id", "deleteRule": "auth.id == author_id"}}'
+		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}, {"name": "files", "type": "file"}], "rules": {"listRule": "", "viewRule": "", "createRule": "auth.id != nil", "updateRule": "auth.id == author_id", "deleteRule": "auth.id == author_id"}}'
 	@echo "\n"
 
 	@echo "=== 3. Listing all registered mouls ==="
@@ -69,11 +74,19 @@ test-flow:
 		-d '{"title": "Unauthenticated Post", "body": "This should fail", "author_id": "'$$USER_ID'"}'; \
 	echo "\n"; \
 	\
-	echo "=== 7. Creating a post with JWT (Should succeed) ==="; \
+	echo "=== 7. Uploading an attachment (Should succeed) ==="; \
+	echo "test file contents" > test_doc.txt; \
+	UPLOAD_RESP=$$(curl -s -X POST http://localhost:8090/api/upload \
+		-H "Authorization: Bearer $$TOKEN" \
+		-F "file=@test_doc.txt"); \
+	echo "Upload Response: $$UPLOAD_RESP\n"; \
+	rm test_doc.txt; \
+	\
+	echo "=== 7b. Creating a post with JWT and file attachments (Should succeed) ==="; \
 	POST_RESP=$$(curl -s -X POST http://localhost:8090/api/mouls/posts/records \
 		-H "Authorization: Bearer $$TOKEN" \
 		-H "Content-Type: application/json" \
-		-d '{"title": "Hello Moul World!", "body": "Dynamic collections are awesome.", "author_id": "'$$USER_ID'"}'); \
+		-d '{"title": "Hello Moul World!", "body": "Dynamic collections are awesome.", "author_id": "'$$USER_ID'", "files": '$$UPLOAD_RESP'}'); \
 	echo "$$POST_RESP"; \
 	POST_ID=$$(echo "$$POST_RESP" | grep -o '"id":"[^"]*' | cut -d'"' -f4); \
 	echo "Created Post ID: $$POST_ID\n"; \

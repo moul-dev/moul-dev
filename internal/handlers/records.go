@@ -197,11 +197,11 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 	// Validate fields in body against schema
 	for _, field := range moul.Fields {
 		if val, ok := body[field.Name]; ok {
-			if field.Type == "json" {
+			if field.Type == "json" || field.Type == "file" {
 				// Serialize JSON values to string
 				bytes, err := json.Marshal(val)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON field content for: "+field.Name)
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON/file field content for: "+field.Name)
 				}
 				insertData[field.Name] = string(bytes)
 			} else if field.Type == "bool" {
@@ -500,10 +500,10 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 	// Fields validation
 	for _, field := range moul.Fields {
 		if val, ok := body[field.Name]; ok {
-			if field.Type == "json" {
+			if field.Type == "json" || field.Type == "file" {
 				bytes, err := json.Marshal(val)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON field content for: "+field.Name)
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON/file field content for: "+field.Name)
 				}
 				updateParams[field.Name] = string(bytes)
 			} else if field.Type == "bool" {
@@ -700,7 +700,7 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 			}
 		case "bool":
 			record[field.Name] = (strVal == "1" || strVal == "true")
-		case "json":
+		case "json", "file":
 			if strVal != "" {
 				var decoded interface{}
 				if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {

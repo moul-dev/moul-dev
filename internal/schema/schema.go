@@ -4,7 +4,7 @@ import "encoding/json"
 
 type MoulField struct {
 	Name string `json:"name"`
-	Type string `json:"type"` // "text", "number", "bool", "json"
+	Type string `json:"type"` // "text", "number", "bool", "json", "file"
 }
 
 type MoulRules struct {

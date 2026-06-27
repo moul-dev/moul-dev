@@ -106,6 +106,8 @@ func main() {
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev
 	authHandler := handlers.NewAuthHandler(dbConn)
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
+	settingsHandler := handlers.NewSettingsHandler(dbConn)
+	uploadHandler := handlers.NewUploadHandler(dbConn)
 
 	// ── API Routes ──────────────────────────────────────────────────
 
@@ -113,6 +115,17 @@ func main() {
 	adminGroup := e.Group("/api/mouls", middleware.RequireAdminKey(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.DELETE("/:name", moulHandler.DeleteMoul)
+
+	// Admin settings management (Admin-protected)
+	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAdminKey(adminKey))
+	adminSettingsGroup.GET("", settingsHandler.GetSettings)
+	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
+
+	// File upload endpoint (Requires auth or admin key)
+	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
+
+	// Static local storage directory serving
+	e.Static("/storage", "storage")
 
 	// Public moul listing (read-only, no admin key needed)
 	e.GET("/api/mouls", moulHandler.ListMouls)
