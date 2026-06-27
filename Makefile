@@ -2,7 +2,7 @@ export MOUL_ENV ?= development
 export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 
-.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage
+.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui
 
 # Start the Echo server locally
 run:
@@ -209,3 +209,13 @@ test-analytics:
 		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)"
 	@echo "\n"
 	@echo "=== Analytics Flow Test Complete! ==="
+
+# Run the TUI client
+run-tui:
+	go run cmd/moul/main.go
+
+# Build the TUI client binary
+build-tui:
+	mkdir -p bin
+	go build -ldflags="-s -w" -o bin/moul cmd/moul/main.go
+

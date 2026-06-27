@@ -288,3 +288,68 @@ make test-worker
 ```bash
 make test-analytics
 ```
+
+---
+
+## TUI Admin Console (moul)
+
+`moul` comes with a powerful, modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem to manage schemas, CRUD records, monitor background workers, and view visitor session metrics.
+
+### Build and Run
+
+To run the TUI console:
+```bash
+make run-tui
+```
+
+To compile it to a binary:
+```bash
+make build-tui
+./bin/moul
+```
+
+On first startup, the TUI will prompt for:
+1. **Server URL**: The `moul-dev` server address (defaults to `http://localhost:8090`).
+2. **Admin Key**: The admin security key configured on the server (e.g. `test-admin-key-1234`).
+
+Your connection settings are securely saved to `~/.config/moul.json` for easy auto-connection in the future.
+
+### Keyboard Controls Guide
+
+#### Global
+- `ctrl+c`: Exit program.
+
+#### Connection Screen
+- `Tab` / `Shift+Tab`: Focus next/previous input.
+- `Enter` (on submit button): Connect to server.
+
+#### Navigation & Dashboard
+- `↑`/`↓` or `k`/`j`: Move selection up/down.
+- `Enter` / `l` / `→`: Open selected collection or system panel.
+- `r`: Refresh schemas from server.
+- `Esc`: Disconnect and return to connection setup.
+
+#### Records List Screen
+- `↑`/`↓` or `k`/`j`: Navigate rows.
+- `Enter` / `v`: Open detailed JSON payload view.
+- `n`: Create a new record.
+- `e`: Edit highlighted record.
+- `d`: Delete highlighted record.
+- `r`: Refresh list.
+- `Esc` / `h` / `←`: Go back to dashboard.
+
+#### Background Workers Monitor
+- `↑`/`↓` or `k`/`j`: Navigate background jobs.
+- `Enter` / `v`: View job parameters & stack trace.
+- `r`: Force-retry selected job (resets status to `available` and triggers run).
+- `c`: Cancel/Discard selected job.
+- `f`: Refresh list.
+- `Esc`: Go back to dashboard.
+
+#### Analytics Console
+- `l`: Enter user login credentials (requires a standard user account in the `users` auth collection) to retrieve a JWT token.
+- `↑`/`↓` or `k`/`j`: Scroll visits.
+- `Enter` / `v`: Open detailed visit payload (OS, browser, referrer UTM parameters).
+- `f`: Refresh visits.
+- `Esc`: Go back to dashboard.
+
