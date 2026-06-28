@@ -109,8 +109,14 @@ func main() {
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
 	settingsHandler := handlers.NewSettingsHandler(dbConn)
 	uploadHandler := handlers.NewUploadHandler(dbConn)
+	setupHandler := handlers.NewSetupHandler(dbConn)
 
 	// ── API Routes ──────────────────────────────────────────────────
+
+	// Setup management (Admin-protected)
+	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
+	setupGroup.GET("", setupHandler.CheckSetupStatus)
+	setupGroup.POST("", setupHandler.SetupRootUser)
 
 	// 1. Moul schema management (Admin-protected)
 	adminGroup := e.Group("/api/mouls", middleware.RequireAdminKey(adminKey))

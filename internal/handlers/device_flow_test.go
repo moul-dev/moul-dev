@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pocketbase/dbx"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
@@ -50,29 +52,25 @@ func TestDeviceFlowIntegration(t *testing.T) {
 
 	client := server.Client()
 
-	// --- STEP 1: Create 'users' Auth Moul ---
-	moulPayload := `{"name":"users","type":"auth","fields":[]}`
-	req, _ := http.NewRequest("POST", server.URL+"/api/mouls", bytes.NewBufferString(moulPayload))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil || (resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated) {
-		t.Fatalf("Failed to create auth moul: status=%d, err=%v", resp.StatusCode, err)
-	}
-
-	// --- STEP 2: Create a user record (username=admin, password=AdminPass123) ---
-	userPayload := `{"username":"admin","email":"admin@example.com","password":"AdminPass123","passwordConfirm":"AdminPass123"}`
-	req, _ = http.NewRequest("POST", server.URL+"/api/mouls/users/records", bytes.NewBufferString(userPayload))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Failed to sign up user: status=%d, err=%v", resp.StatusCode, err)
+	// --- STEP 1 & 2: Seed a user into _rootUsers table ---
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("AdminPass123"), bcrypt.DefaultCost)
+	_, err = dbConn.Insert("_rootUsers", dbx.Params{
+		"id":           "rootuser12345",
+		"username":     "admin",
+		"email":        "admin@example.com",
+		"passwordHash": string(hashedPassword),
+		"created_at":   "2026-06-28T00:00:00Z",
+		"updated_at":   "2026-06-28T00:00:00Z",
+	}).Execute()
+	if err != nil {
+		t.Fatalf("Failed to seed root user: %v", err)
 	}
 
 	// --- STEP 3: Request Device Authorization ---
 	authPayload := `{"client_id":"moul-tui"}`
-	req, _ = http.NewRequest("POST", server.URL+"/api/oauth2/device/authorize", bytes.NewBufferString(authPayload))
+	req, _ := http.NewRequest("POST", server.URL+"/api/oauth2/device/authorize", bytes.NewBufferString(authPayload))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("Device authorize request failed: status=%d, err=%v", resp.StatusCode, err)
 	}
@@ -162,7 +160,7 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to verify generated token: %v", err)
 	}
-	if claims.Username != "admin" || claims.MoulName != "users" {
+	if claims.Username != "admin" || claims.MoulName != "_rootUsers" {
 		t.Errorf("Claims mismatch, username=%q, moul=%q", claims.Username, claims.MoulName)
 	}
 }

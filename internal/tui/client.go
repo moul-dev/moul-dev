@@ -219,3 +219,27 @@ func (c *Client) PollDeviceToken(clientID, deviceCode string) (*DeviceTokenRespo
 	c.Token = resp.AccessToken
 	return &resp, nil
 }
+
+// SetupStatusResponse represents the response from the setup status endpoint.
+type SetupStatusResponse struct {
+	NeedsSetup bool `json:"needsSetup"`
+}
+
+// CheckSetupStatus requests the setup status of the server.
+func (c *Client) CheckSetupStatus() (bool, error) {
+	var resp SetupStatusResponse
+	if err := c.request("GET", "/api/setup", nil, &resp); err != nil {
+		return false, err
+	}
+	return resp.NeedsSetup, nil
+}
+
+// SetupRootUser registers the initial root user.
+func (c *Client) SetupRootUser(username, email, password string) error {
+	payload := map[string]string{
+		"username": username,
+		"email":    email,
+		"password": password,
+	}
+	return c.request("POST", "/api/setup", payload, nil)
+}

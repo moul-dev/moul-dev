@@ -19,6 +19,7 @@ type AppState int
 
 const (
 	StateConnect AppState = iota
+	StateRootSetup
 	StateDashboard
 	StateRecordList
 	StateRecordDetail
@@ -61,6 +62,7 @@ type Model struct {
 
 	// huh Forms
 	ConnForm           *huh.Form
+	RootSetupForm      *huh.Form
 	RecordForm         *huh.Form
 	AnalyticsLoginForm *huh.Form
 
@@ -69,6 +71,12 @@ type Model struct {
 	analyticsPassword  string
 	analyticsMoul      string
 	analyticsAuthError error
+
+	// Root Setup Data
+	rootUsername    string
+	rootEmail       string
+	rootPassword    string
+	rootConfirmPass string
 
 	// Temporary data
 	serverURL      string
@@ -117,16 +125,11 @@ func NewModel(serverURLOverride, adminKeyOverride string) *Model {
 
 // Init initializes the Bubble Tea program.
 func (m *Model) Init() tea.Cmd {
-	// Attempt auto-connection if credentials exist
-	if m.serverURL != "" {
-		if m.authMode == "admin_key" && m.adminKey != "" {
-			return m.connectCmd()
-		} else if m.authMode == "device_flow" {
-			token, _ := GetSecret(m.serverURL, "jwt_token")
-			if token != "" {
-				return m.connectCmd()
-			}
-		}
+	// Attempt auto-connection if credentials exist (we default to checking the cached JWT token first)
+	token, _ := GetSecret(m.serverURL, "jwt_token")
+	if m.serverURL != "" && token != "" {
+		m.authMode = "device_flow"
+		return m.connectCmd()
 	}
 	return m.ConnForm.Init()
 }
@@ -147,6 +150,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case VisitsMsg:
 		m.Visits = msg.Visits
+		return m, nil
+
+	case setupStatusMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.ConnForm.State = huh.StateNormal
+			m.State = StateConnect
+		} else if msg.needsSetup {
+			m.initRootSetupForm()
+			m.State = StateRootSetup
+			return m, m.RootSetupForm.Init()
+		} else {
+			return m, m.startDeviceFlowCmd()
+		}
+		return m, nil
+
+	case setupRootUserResultMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.RootSetupForm.State = huh.StateNormal
+		} else {
+			return m, m.startDeviceFlowCmd()
+		}
 		return m, nil
 
 	case tea.WindowSizeMsg:
@@ -266,7 +292,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		if m.State == StateDeviceAuth && msg.Type == tea.KeyEsc {
+		if (m.State == StateDeviceAuth || m.State == StateRootSetup) && msg.Type == tea.KeyEsc {
 			m.State = StateConnect
 			m.ConnForm.State = huh.StateNormal
 			m.Err = fmt.Errorf("authorization cancelled")
@@ -286,14 +312,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check if form is completed/submitted
 		if m.ConnForm.State == huh.StateCompleted {
 			m.Err = nil
-			if m.authMode == "admin_key" {
-				m.Client = NewClient(m.serverURL, m.adminKey)
-				_ = SetSecret(m.serverURL, "admin_key", m.adminKey)
-				return m, m.connectCmd()
-			} else {
-				m.Client = NewClient(m.serverURL, "")
-				return m, m.startDeviceFlowCmd()
-			}
+			m.Client = NewClient(m.serverURL, m.adminKey)
+			_ = SetSecret(m.serverURL, "admin_key", m.adminKey)
+			return m, m.checkSetupStatusCmd()
+		}
+
+	case StateRootSetup:
+		if m.RootSetupForm == nil {
+			m.initRootSetupForm()
+		}
+		newForm, cmd := m.RootSetupForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.RootSetupForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.RootSetupForm.State == huh.StateCompleted {
+			m.Err = nil
+			return m, m.setupRootUserCmd()
 		}
 
 	case StateDashboard:
@@ -350,7 +386,7 @@ func (m *Model) View() string {
 	var content string
 
 	switch m.State {
-	case StateConnect, StateDeviceAuth:
+	case StateConnect, StateRootSetup, StateDeviceAuth:
 		content = m.viewConnect()
 	case StateDashboard:
 		content = m.viewDashboard()
@@ -429,6 +465,7 @@ func (m *Model) connectCmd() tea.Cmd {
 
 func (m *Model) startDeviceFlowCmd() tea.Cmd {
 	return func() tea.Msg {
+		m.authMode = "device_flow"
 		resp, err := m.Client.RequestDeviceCode("moul-tui")
 		return deviceFlowStartMsg{resp: resp, err: err}
 	}
@@ -438,6 +475,29 @@ func (m *Model) pollDeviceTokenCmd(delay time.Duration) tea.Cmd {
 	return tea.Tick(delay, func(t time.Time) tea.Msg {
 		return devicePollTickMsg{}
 	})
+}
+
+type setupStatusMsg struct {
+	needsSetup bool
+	err        error
+}
+
+func (m *Model) checkSetupStatusCmd() tea.Cmd {
+	return func() tea.Msg {
+		needsSetup, err := m.Client.CheckSetupStatus()
+		return setupStatusMsg{needsSetup: needsSetup, err: err}
+	}
+}
+
+type setupRootUserResultMsg struct {
+	err error
+}
+
+func (m *Model) setupRootUserCmd() tea.Cmd {
+	return func() tea.Msg {
+		err := m.Client.SetupRootUser(m.rootUsername, m.rootEmail, m.rootPassword)
+		return setupRootUserResultMsg{err: err}
+	}
 }
 
 // copyToClipboard copies the given code string to the clipboard.

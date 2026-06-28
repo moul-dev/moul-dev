@@ -76,6 +76,21 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create _settings table: %w", err)
 	}
 
+	// Create meta-table _rootUsers
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _rootUsers (
+			id TEXT PRIMARY KEY,
+			username TEXT UNIQUE NOT NULL,
+			email TEXT UNIQUE NOT NULL,
+			passwordHash TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _rootUsers table: %w", err)
+	}
+
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
 		"s3_enabled":          "false",

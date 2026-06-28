@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
-	"github.com/moul-dev/moul-dev/internal/db"
 )
 
 type DeviceFlowHandler struct {
@@ -136,10 +135,7 @@ func (h *DeviceFlowHandler) DeviceToken(c echo.Context) error {
 // RenderDeviceForm handles GET /device
 func (h *DeviceFlowHandler) RenderDeviceForm(c echo.Context) error {
 	userCode := c.QueryParam("user_code")
-	authMoul := c.QueryParam("auth_moul")
-	if authMoul == "" {
-		authMoul = "users"
-	}
+	authMoul := "_rootUsers"
 
 	return renderTemplate(c, http.StatusOK, RenderData{
 		UserCode: userCode,
@@ -150,7 +146,7 @@ func (h *DeviceFlowHandler) RenderDeviceForm(c echo.Context) error {
 // VerifyDevice handles POST /device/verify
 func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	userCode := c.FormValue("user_code")
-	authMoul := c.FormValue("auth_moul")
+	authMoul := "_rootUsers"
 	identity := c.FormValue("identity")
 	password := c.FormValue("password")
 
@@ -166,9 +162,6 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	if strings.TrimSpace(userCode) == "" {
 		return renderErr("User Code is required")
 	}
-	if strings.TrimSpace(authMoul) == "" {
-		return renderErr("Authentication Moul collection is required")
-	}
 	if strings.TrimSpace(identity) == "" || strings.TrimSpace(password) == "" {
 		return renderErr("Email/Username and Password are required")
 	}
@@ -183,23 +176,9 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 		return renderErr("This device has already been approved")
 	}
 
-	// 2. Load Moul database schema to check if it's an auth type
-	moul, err := db.LoadMoulByName(h.DB, authMoul)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return renderErr(fmt.Sprintf("Moul collection '%s' not found", authMoul))
-		}
-		log.Printf("[ERROR] Failed to load moul %s for device verification: %v", authMoul, err)
-		return renderErr("Internal server error")
-	}
-
-	if moul.Type != "auth" {
-		return renderErr(fmt.Sprintf("Moul collection '%s' is not an Authentication collection", authMoul))
-	}
-
-	// 3. Authenticate User Credentials
+	// 2. Authenticate User Credentials directly against _rootUsers
 	var record dbx.NullStringMap
-	err = h.DB.Select("*").From(authMoul).
+	err := h.DB.Select("*").From("_rootUsers").
 		Where(dbx.NewExp("username = {:identity} OR email = {:identity}", dbx.Params{"identity": identity})).
 		One(&record)
 
@@ -207,7 +186,7 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return renderErr("Invalid email/username or password")
 		}
-		log.Printf("[ERROR] Failed to query auth record in %s: %v", authMoul, err)
+		log.Printf("[ERROR] Failed to query auth record in _rootUsers: %v", err)
 		return renderErr("Internal server error")
 	}
 
@@ -216,12 +195,12 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	// Compare Password
 	hashVal, ok := recordMap["passwordHash"]
 	if !ok || hashVal == nil {
-		log.Printf("[ERROR] Missing password hash in database record for moul %s", authMoul)
+		log.Printf("[ERROR] Missing password hash in database record for _rootUsers")
 		return renderErr("Internal server error")
 	}
 	passwordHash, ok := hashVal.(string)
 	if !ok {
-		log.Printf("[ERROR] Invalid password hash type in database record for moul %s", authMoul)
+		log.Printf("[ERROR] Invalid password hash type in database record for _rootUsers")
 		return renderErr("Internal server error")
 	}
 
@@ -234,14 +213,14 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	email, _ := recordMap["email"].(string)
 	username, _ := recordMap["username"].(string)
 
-	// 4. Generate JWT Token
+	// 3. Generate JWT Token
 	token, err := auth.GenerateToken(id, email, username, authMoul)
 	if err != nil {
 		log.Printf("[ERROR] Failed to generate auth token: %v", err)
 		return renderErr("Failed to generate auth token")
 	}
 
-	// 5. Approve Device
+	// 4. Approve Device
 	err = auth.DefaultDeviceFlowStore.ApproveDeviceRequest(userCode, authMoul, id, token)
 	if err != nil {
 		return renderErr(fmt.Sprintf("Approval failed: %v", err))
@@ -435,11 +414,6 @@ const htmlTemplate = `<!DOCTYPE html>
                 <div class="form-group">
                     <label for="user_code">User Code</label>
                     <input type="text" id="user_code" name="user_code" class="user-code-input" placeholder="XXXX-XXXX" value="{{.UserCode}}" required autocomplete="off" autofocus>
-                </div>
-                
-                <div class="form-group">
-                    <label for="auth_moul">Authentication Moul</label>
-                    <input type="text" id="auth_moul" name="auth_moul" placeholder="users" value="{{if .AuthMoul}}{{.AuthMoul}}{{else}}users{{end}}" required>
                 </div>
                 
                 <div class="form-group">

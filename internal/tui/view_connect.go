@@ -31,22 +31,72 @@ func (m *Model) initConnectionForm() {
 					return nil
 				}),
 
-			huh.NewSelect[string]().
-				Title("Authentication Method").
-				Options(
-					huh.NewOption("Admin Key (X-Admin-Key)", "admin_key"),
-					huh.NewOption("Device Authorization Flow (OAuth 2.0)", "device_flow"),
-				).
-				Value(&m.authMode),
-
 			huh.NewInput().
 				Title("Admin Key (X-Admin-Key)").
-				Placeholder("Required for Admin Key mode (leave blank for Device Flow)...").
+				Placeholder("Required to verify setup/configure system...").
 				Value(&m.adminKey).
 				EchoMode(huh.EchoModePassword).
 				Validate(func(str string) error {
-					if m.authMode == "admin_key" && strings.TrimSpace(str) == "" {
-						return fmt.Errorf("admin key is required to manage collections")
+					if strings.TrimSpace(str) == "" {
+						return fmt.Errorf("admin key is required")
+					}
+					return nil
+				}),
+		),
+	).WithTheme(theme)
+}
+
+// initRootSetupForm initializes the root user setup form.
+func (m *Model) initRootSetupForm() {
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	m.RootSetupForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Root Username").
+				Placeholder("e.g. admin").
+				Value(&m.rootUsername).
+				Validate(func(str string) error {
+					if strings.TrimSpace(str) == "" {
+						return fmt.Errorf("username is required")
+					}
+					return nil
+				}),
+
+			huh.NewInput().
+				Title("Root Email").
+				Placeholder("e.g. admin@moul.dev").
+				Value(&m.rootEmail).
+				Validate(func(str string) error {
+					if !strings.Contains(str, "@") {
+						return fmt.Errorf("invalid email address")
+					}
+					return nil
+				}),
+
+			huh.NewInput().
+				Title("Password").
+				Placeholder("••••••••").
+				Value(&m.rootPassword).
+				EchoMode(huh.EchoModePassword).
+				Validate(func(str string) error {
+					if len(str) < 8 {
+						return fmt.Errorf("password must be at least 8 characters")
+					}
+					return nil
+				}),
+
+			huh.NewInput().
+				Title("Confirm Password").
+				Placeholder("••••••••").
+				Value(&m.rootConfirmPass).
+				EchoMode(huh.EchoModePassword).
+				Validate(func(str string) error {
+					if str != m.rootPassword {
+						return fmt.Errorf("passwords do not match")
 					}
 					return nil
 				}),
@@ -86,15 +136,27 @@ func (m *Model) viewConnect() string {
 
 	var errMsg string
 	if m.Err != nil {
-		errMsg = AlertErrorStyle.Render(fmt.Sprintf("Connection Error: %v", m.Err))
+		errMsg = AlertErrorStyle.Render(fmt.Sprintf("Error: %v", m.Err))
+	}
+
+	var formView string
+	var sectionTitle string = "Bring Your Own Compute. Simplified."
+
+	if m.State == StateRootSetup {
+		sectionTitle = "Initial Server Setup: Create Root User"
+		if m.RootSetupForm != nil {
+			formView = m.RootSetupForm.View()
+		}
+	} else {
+		formView = m.ConnForm.View()
 	}
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		logoStyle.Render(logo),
-		subTitleStyle.Render("Bring Your Own Compute. Simplified."),
+		subTitleStyle.Render(sectionTitle),
 		errMsg,
-		formStyle.Render(m.ConnForm.View()),
+		formStyle.Render(formView),
 	)
 
 	// Center the content on screen
