@@ -175,3 +175,47 @@ func (c *Client) Login(authMoul, identity, password string) (string, error) {
 	c.Token = respData.Token
 	return respData.Token, nil
 }
+
+// DeviceAuthResponse represents the response from the device authorization endpoint.
+type DeviceAuthResponse struct {
+	DeviceCode              string `json:"device_code"`
+	UserCode                string `json:"user_code"`
+	VerificationURI         string `json:"verification_uri"`
+	VerificationURIComplete string `json:"verification_uri_complete"`
+	ExpiresIn               int    `json:"expires_in"`
+	Interval                int    `json:"interval"`
+}
+
+// RequestDeviceCode initiates the device authorization flow.
+func (c *Client) RequestDeviceCode(clientID string) (*DeviceAuthResponse, error) {
+	payload := map[string]string{
+		"client_id": clientID,
+	}
+	var resp DeviceAuthResponse
+	if err := c.request("POST", "/api/oauth2/device/authorize", payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeviceTokenResponse represents the response from the device token endpoint.
+type DeviceTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
+// PollDeviceToken polls the token endpoint for the JWT token.
+func (c *Client) PollDeviceToken(clientID, deviceCode string) (*DeviceTokenResponse, error) {
+	payload := map[string]string{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+		"client_id":   clientID,
+	}
+	var resp DeviceTokenResponse
+	if err := c.request("POST", "/api/oauth2/device/token", payload, &resp); err != nil {
+		return nil, err
+	}
+	c.Token = resp.AccessToken
+	return &resp, nil
+}

@@ -10,7 +10,8 @@ import (
 // Config holds the TUI application configuration.
 type Config struct {
 	ServerURL string `json:"server_url"`
-	AdminKey  string `json:"admin_key"`
+	AdminKey  string `json:"admin_key,omitempty"`
+	AuthMode  string `json:"auth_mode"` // "admin_key" or "device_flow"
 }
 
 // getConfigPath returns the path to the config file: ~/.config/moul.json
@@ -35,7 +36,7 @@ func LoadConfig() (*Config, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return &Config{
 				ServerURL: "http://localhost:8090",
-				AdminKey:  "",
+				AuthMode:  "admin_key",
 			}, nil
 		}
 		return nil, err
@@ -48,6 +49,17 @@ func LoadConfig() (*Config, error) {
 
 	if cfg.ServerURL == "" {
 		cfg.ServerURL = "http://localhost:8090"
+	}
+
+	if cfg.AuthMode == "" {
+		cfg.AuthMode = "admin_key"
+	}
+
+	// One-time migration of AdminKey to OS Keychain
+	if cfg.AdminKey != "" {
+		_ = SetSecret(cfg.ServerURL, "admin_key", cfg.AdminKey)
+		cfg.AdminKey = ""
+		_ = SaveConfig(&cfg)
 	}
 
 	return &cfg, nil

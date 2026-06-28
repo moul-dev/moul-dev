@@ -105,6 +105,7 @@ func main() {
 	recordHandler.AnalyticsEngine = analyticsEngine
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev
 	authHandler := handlers.NewAuthHandler(dbConn)
+	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
 	settingsHandler := handlers.NewSettingsHandler(dbConn)
 	uploadHandler := handlers.NewUploadHandler(dbConn)
@@ -133,6 +134,10 @@ func main() {
 	// 2. Auth collections with rate limiting (5 requests/second per IP)
 	authGroup := e.Group("", echoMiddleware.RateLimiter(echoMiddleware.NewRateLimiterMemoryStore(5)))
 	authGroup.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	authGroup.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
+	authGroup.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
+	authGroup.GET("/device", deviceFlowHandler.RenderDeviceForm)
+	authGroup.POST("/device/verify", deviceFlowHandler.VerifyDevice)
 
 	// 3. Record management (Data CRUD) — protected by per-moul rules
 	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)

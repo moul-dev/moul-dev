@@ -89,7 +89,15 @@ func TestConfigLoadSave(t *testing.T) {
 	if loaded.ServerURL != cfg.ServerURL {
 		t.Errorf("Expected ServerURL %q, got %q", cfg.ServerURL, loaded.ServerURL)
 	}
-	if loaded.AdminKey != cfg.AdminKey {
-		t.Errorf("Expected AdminKey %q, got %q", cfg.AdminKey, loaded.AdminKey)
+	if loaded.AdminKey != "" {
+		t.Errorf("Expected AdminKey to be cleared from config struct, got %q", loaded.AdminKey)
+	}
+
+	migratedKey, err := GetSecret(loaded.ServerURL, "admin_key")
+	if err != nil {
+		t.Fatalf("GetSecret failed: %v", err)
+	}
+	if migratedKey != cfg.AdminKey {
+		t.Errorf("Expected migrated AdminKey %q, got %q", cfg.AdminKey, migratedKey)
 	}
 }
