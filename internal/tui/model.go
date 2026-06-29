@@ -27,6 +27,7 @@ const (
 	StateWorkerMonitor
 	StateAnalytics
 	StateDeviceAuth
+	StateMoulCreate
 )
 
 // Model is the main state container for the moul TUI.
@@ -65,6 +66,7 @@ type Model struct {
 	RootSetupForm      *huh.Form
 	RecordForm         *huh.Form
 	AnalyticsLoginForm *huh.Form
+	MoulForm           *huh.Form
 
 	// Analytics Login Data
 	analyticsEmail     string
@@ -83,6 +85,11 @@ type Model struct {
 	adminKey       string
 	editRecordID   string
 	recordFormData map[string]*string
+
+	// Moul creation data
+	newMoulName   string
+	newMoulType   string
+	newMoulFields string
 
 	// Device Auth Data
 	authMode        string
@@ -109,10 +116,8 @@ func NewModel(serverURLOverride, adminKeyOverride string) *Model {
 	}
 
 	// Fetch credentials from OS Keychain if not overridden
-	if m.authMode == "admin_key" {
-		adminKey, _ := GetSecret(m.serverURL, "admin_key")
-		m.adminKey = adminKey
-	}
+	adminKey, _ := GetSecret(m.serverURL, "admin_key")
+	m.adminKey = adminKey
 
 	if adminKeyOverride != "" {
 		m.adminKey = adminKeyOverride
@@ -193,6 +198,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Viewport.Width = m.Width - 32
 			m.Viewport.Height = vHeight
 		}
+
+	case createMoulResultMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.MoulForm.State = huh.StateNormal
+		} else {
+			m.Mouls = msg.mouls
+			m.SuccessMsg = "Collection created successfully!"
+			m.State = StateDashboard
+		}
+		return m, nil
 
 	case connectResultMsg:
 		if msg.err != nil {
@@ -298,6 +314,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Err = fmt.Errorf("authorization cancelled")
 			return m, nil
 		}
+
+		if m.State == StateMoulCreate && msg.Type == tea.KeyEsc {
+			m.State = StateDashboard
+			return m, nil
+		}
 	}
 
 	// Route based on state
@@ -361,6 +382,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.saveRecordForm()
 		}
 
+	case StateMoulCreate:
+		newForm, cmd := m.MoulForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.MoulForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.MoulForm.State == huh.StateCompleted {
+			return m, m.saveMoulForm()
+		} else if m.MoulForm.State == huh.StateAborted {
+			m.State = StateDashboard
+		}
+
 	case StateWorkerMonitor:
 		cmd := m.updateWorkerMonitor(msg)
 		if cmd != nil {
@@ -400,6 +434,8 @@ func (m *Model) View() string {
 		content = m.viewWorkerMonitor()
 	case StateAnalytics:
 		content = m.viewAnalytics()
+	case StateMoulCreate:
+		content = m.viewMoulCreate()
 	}
 
 	return MainContainerStyle.Width(m.Width).Height(m.Height).Render(content)
@@ -451,11 +487,14 @@ func (m *Model) connectCmd() tea.Cmd {
 				token, _ := GetSecret(m.serverURL, "jwt_token")
 				m.Client.Token = token
 			}
-		} else if m.Client.AdminKey == "" && m.authMode == "admin_key" {
-			m.Client.AdminKey = m.adminKey
-		} else if m.Client.Token == "" && m.authMode == "device_flow" {
-			token, _ := GetSecret(m.serverURL, "jwt_token")
-			m.Client.Token = token
+		} else {
+			if m.Client.AdminKey == "" && m.adminKey != "" {
+				m.Client.AdminKey = m.adminKey
+			}
+			if m.Client.Token == "" && m.authMode == "device_flow" {
+				token, _ := GetSecret(m.serverURL, "jwt_token")
+				m.Client.Token = token
+			}
 		}
 
 		mouls, err := m.Client.ListMouls()

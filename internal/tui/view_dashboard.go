@@ -13,6 +13,10 @@ import (
 func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Clear notifications on key press
+		m.SuccessMsg = ""
+		m.Err = nil
+
 		switch msg.String() {
 		case "up", "k":
 			if m.ActiveSidebarIndex > 0 {
@@ -32,6 +36,10 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 		case "esc":
 			m.State = StateConnect
 			m.initConnectionForm()
+		case "n":
+			m.State = StateMoulCreate
+			m.initMoulForm()
+			return m.MoulForm.Init()
 		case "r":
 			// Refresh moul schemas
 			return func() tea.Msg {
@@ -96,6 +104,17 @@ func (m *Model) viewDashboard() string {
 		rightContent = m.viewDashboardAnalyticsInfo(rightWidth)
 	}
 
+	var banner string
+	if m.SuccessMsg != "" {
+		banner = AlertSuccessStyle.Render(m.SuccessMsg) + "\n\n"
+	} else if m.Err != nil {
+		banner = AlertErrorStyle.Render(fmt.Sprintf("Error: %v", m.Err)) + "\n\n"
+	}
+
+	if banner != "" {
+		rightContent = banner + rightContent
+	}
+
 	rightPanel := lipgloss.NewStyle().
 		Width(rightWidth).
 		Height(rightHeight).
@@ -157,7 +176,7 @@ func (m *Model) renderSidebar(width int) string {
 
 	// Add hotkey hints at the bottom of the sidebar
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" r      Refresh schemas\n Esc    Disconnect\n ctrl+c Quit"))
+	s.WriteString(HelpStyle.Render(" n      New collection\n r      Refresh schemas\n Esc    Disconnect\n ctrl+c Quit"))
 
 	return SidebarStyle.Width(width).Height(m.Height - 2).Render(s.String())
 }
@@ -198,7 +217,7 @@ func (m *Model) viewDashboardMoulInfo(idx int, width int) string {
 		rulesStr,
 		FormLabelStyle.Render("METADATA"),
 		fmt.Sprintf("  • ID:          %s\n  • Created At:  %s\n  • Updated At:  %s\n", moul.ID, formatTime(moul.CreatedAt), formatTime(moul.UpdatedAt)),
-		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to view and manage records."),
+		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to view and manage records.\nPress [n] to create a new collection."),
 	)
 
 	return ContentStyle.Width(width).Render(content)
