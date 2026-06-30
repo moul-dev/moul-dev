@@ -114,17 +114,23 @@ func (c *Client) DeleteMoul(name string) error {
 }
 
 // ListRecords fetches records of a specific moul.
-func (c *Client) ListRecords(moulName string) ([]map[string]interface{}, error) {
+func (c *Client) ListRecords(moulName string, expand ...string) ([]map[string]interface{}, error) {
 	var records []map[string]interface{}
 	path := fmt.Sprintf("/api/mouls/%s/records", moulName)
+	if len(expand) > 0 {
+		path = fmt.Sprintf("%s?expand=%s", path, strings.Join(expand, ","))
+	}
 	err := c.request("GET", path, nil, &records)
 	return records, err
 }
 
 // GetRecord fetches a single record of a specific moul by ID.
-func (c *Client) GetRecord(moulName string, id string) (map[string]interface{}, error) {
+func (c *Client) GetRecord(moulName string, id string, expand ...string) (map[string]interface{}, error) {
 	var record map[string]interface{}
 	path := fmt.Sprintf("/api/mouls/%s/records/%s", moulName, id)
+	if len(expand) > 0 {
+		path = fmt.Sprintf("%s?expand=%s", path, strings.Join(expand, ","))
+	}
 	err := c.request("GET", path, nil, &record)
 	return record, err
 }

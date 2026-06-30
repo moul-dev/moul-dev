@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
@@ -622,6 +623,221 @@ func parseJSON(t *testing.T, resp *http.Response, target interface{}) {
 
 	if err := json.Unmarshal(bodyBytes, target); err != nil {
 		t.Fatalf("Failed to parse JSON response (body: %s): %v", string(bodyBytes), err)
+	}
+}
+
+func TestMoulAssociations(t *testing.T) {
+	// Initialize test db
+	dbFile := filepath.Join(t.TempDir(), "moul-test-assoc.db")
+	dbConn, err := db.InitDB(dbFile)
+	if err != nil {
+		t.Fatalf("Failed to init DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	// Handler setup
+	recordHandler := handlers.NewRecordHandler(dbConn)
+	moulHandler := &handlers.MoulHandler{DB: dbConn}
+
+	e := echo.New()
+	e.POST("/api/mouls", moulHandler.CreateMoul)
+	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/mouls/:moulName/records", recordHandler.ListRecords)
+	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
+	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create target collections: 'categories' and 'users'
+	createCategoriesPayload := schema.Moul{
+		Name: "categories",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "name", Type: "text"},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/mouls", createCategoriesPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for categories moul, got %d", resp.StatusCode)
+	}
+
+	createUsersPayload := schema.Moul{
+		Name: "users",
+		Type: "auth",
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for users moul, got %d", resp.StatusCode)
+	}
+
+	// Create user record
+	userPayload := map[string]interface{}{
+		"username":        "john_assoc",
+		"email":           "john@assoc.com",
+		"password":        "Password1",
+		"passwordConfirm": "Password1",
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for user, got %d", resp.StatusCode)
+	}
+	var userRecord map[string]interface{}
+	parseJSON(t, resp, &userRecord)
+	userID := userRecord["id"].(string)
+
+	// Create category record
+	categoryPayload := map[string]interface{}{
+		"name": "Electronics",
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls/categories/records", categoryPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for category, got %d", resp.StatusCode)
+	}
+	var categoryRecord map[string]interface{}
+	parseJSON(t, resp, &categoryRecord)
+	categoryID := categoryRecord["id"].(string)
+
+	// 2. Create collection 'products' referencing 'categories' (1:N) and 'users' (M:N)
+	createProductsPayload := schema.Moul{
+		Name: "products",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{
+				Name: "category",
+				Type: "relation",
+				RelationConfig: &schema.RelationConfig{
+					TargetMoul:  "categories",
+					Cardinality: "1:N",
+				},
+			},
+			{
+				Name: "buyers",
+				Type: "relation",
+				RelationConfig: &schema.RelationConfig{
+					TargetMoul:  "users",
+					Cardinality: "M:N",
+				},
+			},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls", createProductsPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for products moul, got %d", resp.StatusCode)
+	}
+
+	// 3. Test Creation Validation
+	// Invalid category ID
+	invalidProdPayload := map[string]interface{}{
+		"title":    "Phone",
+		"category": "nonexistent-id",
+		"buyers":   []string{userID},
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", invalidProdPayload, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for invalid category ID, got %d", resp.StatusCode)
+	}
+
+	// Invalid buyer ID in array
+	invalidProdPayload2 := map[string]interface{}{
+		"title":    "Phone",
+		"category": categoryID,
+		"buyers":   []string{userID, "nonexistent-user"},
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", invalidProdPayload2, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for invalid buyer ID, got %d", resp.StatusCode)
+	}
+
+	// Valid payload
+	validProdPayload := map[string]interface{}{
+		"title":    "Phone",
+		"category": categoryID,
+		"buyers":   []string{userID},
+	}
+	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", validProdPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for valid product, got %d", resp.StatusCode)
+	}
+	var productRecord map[string]interface{}
+	parseJSON(t, resp, &productRecord)
+	productID := productRecord["id"].(string)
+
+	// 4. Test Expansion
+	// Retrieve product without expansion
+	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
+	}
+	var prod1 map[string]interface{}
+	parseJSON(t, resp, &prod1)
+	if _, expanded := prod1["expand"]; expanded {
+		t.Fatal("Expected no 'expand' key when expand param is empty")
+	}
+
+	// Retrieve product with expansion
+	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID+"?expand=category,buyers", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
+	}
+	var prodExpanded map[string]interface{}
+	parseJSON(t, resp, &prodExpanded)
+
+	expandMap, ok := prodExpanded["expand"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected 'expand' key to be map[string]interface{}")
+	}
+
+	expandedCat, ok := expandMap["category"].(map[string]interface{})
+	if !ok || expandedCat["name"] != "Electronics" {
+		t.Fatalf("Expected expanded category with name 'Electronics', got %v", expandMap["category"])
+	}
+
+	expandedBuyers, ok := expandMap["buyers"].([]interface{})
+	if !ok || len(expandedBuyers) != 1 {
+		t.Fatalf("Expected expanded buyers list with 1 buyer, got %v", expandMap["buyers"])
+	}
+	firstBuyer := expandedBuyers[0].(map[string]interface{})
+	if firstBuyer["username"] != "john_assoc" {
+		t.Fatalf("Expected buyer username john_assoc, got %v", firstBuyer["username"])
+	}
+
+	// 5. Test automatic deletion cleanup (nullify / remove reference)
+	// Delete category
+	resp = deleteJSON(t, client, server.URL+"/api/mouls/categories/records/"+categoryID, "")
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Expected 204 No Content, got %d", resp.StatusCode)
+	}
+
+	// Verify category field in product is cleared
+	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
+	}
+	var prodCleared map[string]interface{}
+	parseJSON(t, resp, &prodCleared)
+	if catVal, _ := prodCleared["category"].(string); catVal != "" {
+		t.Fatalf("Expected category to be cleared, got %q", catVal)
+	}
+
+	// Delete user
+	resp = deleteJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, "")
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Expected 204 No Content, got %d", resp.StatusCode)
+	}
+
+	// Verify buyers array in product is cleared (empty)
+	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
+	}
+	var prodBuyersCleared map[string]interface{}
+	parseJSON(t, resp, &prodBuyersCleared)
+	buyersSlice, ok := prodBuyersCleared["buyers"].([]interface{})
+	if !ok || len(buyersSlice) != 0 {
+		t.Fatalf("Expected buyers list to be empty, got %v", prodBuyersCleared["buyers"])
 	}
 }
 

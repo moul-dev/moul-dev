@@ -2,10 +2,17 @@ package schema
 
 import "encoding/json"
 
-type MoulField struct {
-	Name string `json:"name"`
-	Type string `json:"type"` // "text", "number", "bool", "json", "file"
+type RelationConfig struct {
+	TargetMoul  string `json:"targetMoul"`
+	Cardinality string `json:"cardinality"` // "1:1", "1:N", "M:N"
 }
+
+type MoulField struct {
+	Name           string          `json:"name"`
+	Type           string          `json:"type"` // "text", "number", "bool", "json", "file", "relation"
+	RelationConfig *RelationConfig `json:"relationConfig,omitempty"`
+}
+
 
 type MoulRules struct {
 	ListRule   string `json:"listRule"`

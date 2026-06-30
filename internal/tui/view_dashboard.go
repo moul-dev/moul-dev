@@ -261,7 +261,13 @@ func (m *Model) fetchRecords() tea.Cmd {
 		if moul == nil {
 			return nil
 		}
-		records, err := m.Client.ListRecords(moul.Name)
+		var expandList []string
+		for _, field := range moul.Fields {
+			if field.Type == "relation" {
+				expandList = append(expandList, field.Name)
+			}
+		}
+		records, err := m.Client.ListRecords(moul.Name, expandList...)
 		if err != nil {
 			return ErrMsg{err}
 		}

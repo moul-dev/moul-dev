@@ -26,8 +26,8 @@ func validateFieldsString(str string) error {
 			continue
 		}
 		subParts := strings.Split(part, ":")
-		if len(subParts) != 2 {
-			return fmt.Errorf("invalid format for %q: must be name:type", part)
+		if len(subParts) != 2 && len(subParts) != 4 {
+			return fmt.Errorf("invalid format for %q: must be name:type or name:relation:targetMoul:cardinality", part)
 		}
 		fName := strings.TrimSpace(subParts[0])
 		fType := strings.TrimSpace(subParts[1])
@@ -41,9 +41,26 @@ func validateFieldsString(str string) error {
 		// Validate type
 		switch fType {
 		case "text", "number", "bool", "json", "file":
-			// valid
+			if len(subParts) != 2 {
+				return fmt.Errorf("field %q of type %q cannot have extra parameters", fName, fType)
+			}
+		case "relation":
+			if len(subParts) != 4 {
+				return fmt.Errorf("relation field %q must specify target collection and cardinality (format: name:relation:targetMoul:cardinality)", fName)
+			}
+			targetMoul := strings.TrimSpace(subParts[2])
+			cardinality := strings.TrimSpace(subParts[3])
+			if targetMoul == "" {
+				return fmt.Errorf("relation field %q must specify a target collection", fName)
+			}
+			if !tableNamePattern.MatchString(targetMoul) {
+				return fmt.Errorf("invalid target collection name %q for field %q", targetMoul, fName)
+			}
+			if cardinality != "1:1" && cardinality != "1:N" && cardinality != "M:N" {
+				return fmt.Errorf("invalid cardinality %q for relation field %q (allowed: 1:1, 1:N, M:N)", cardinality, fName)
+			}
 		default:
-			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, json, file)", fType, fName)
+			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, json, file, relation)", fType, fName)
 		}
 	}
 	return nil
@@ -68,6 +85,15 @@ func parseFieldsString(str string) []schema.MoulField {
 				Name: strings.TrimSpace(subParts[0]),
 				Type: strings.TrimSpace(subParts[1]),
 			})
+		} else if len(subParts) == 4 && strings.TrimSpace(subParts[1]) == "relation" {
+			fields = append(fields, schema.MoulField{
+				Name: strings.TrimSpace(subParts[0]),
+				Type: "relation",
+				RelationConfig: &schema.RelationConfig{
+					TargetMoul:  strings.TrimSpace(subParts[2]),
+					Cardinality: strings.TrimSpace(subParts[3]),
+				},
+			})
 		}
 	}
 	return fields
@@ -77,13 +103,14 @@ func parseFieldsString(str string) []schema.MoulField {
 func (m *Model) initMoulForm() {
 	m.newMoulName = ""
 	m.newMoulType = "base"
-	m.newMoulFields = ""
-	m.customizeRules = false
 	m.newMoulListRule = ""
 	m.newMoulViewRule = ""
 	m.newMoulCreateRule = ""
 	m.newMoulUpdateRule = ""
 	m.newMoulDeleteRule = ""
+	m.newMoulFieldsList = []schema.MoulField{}
+	m.moulWizardState = "metadata"
+	m.isEditingField = false
 
 	theme := huh.ThemeCharm()
 	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
@@ -119,18 +146,224 @@ func (m *Model) initMoulForm() {
 					huh.NewOption("Analytic (Traffic Tracking Table)", "analytic"),
 				).
 				Value(&m.newMoulType),
-
-			huh.NewInput().
-				Title("Custom Fields (format: name:type, comma-separated)").
-				Placeholder("e.g. title:text, views:number, published:bool").
-				Value(&m.newMoulFields).
-				Validate(validateFieldsString),
-
-			huh.NewConfirm().
-				Title("Customize Access Rules?").
-				Description("If no, access will default to public.").
-				Value(&m.customizeRules),
 		),
+	).WithTheme(theme)
+}
+
+// initMoulActionForm initializes the field manager main action form.
+func (m *Model) initMoulActionForm() {
+	m.newMoulAction = "add"
+
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	var options []huh.Option[string]
+	options = append(options, huh.NewOption("Add custom field", "add"))
+	if len(m.newMoulFieldsList) > 0 {
+		options = append(options, huh.NewOption("Edit custom field", "edit"))
+		options = append(options, huh.NewOption("Delete custom field", "delete"))
+	}
+	options = append(options,
+		huh.NewOption("Customize Access Rules", "rules"),
+		huh.NewOption("Save Collection", "save"),
+		huh.NewOption("Cancel", "cancel"),
+	)
+
+	m.MoulActionForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select Action").
+				Options(options...).
+				Value(&m.newMoulAction),
+		),
+	).WithTheme(theme)
+}
+
+// initMoulFieldForm initializes the field creator sub-form.
+func (m *Model) initMoulFieldForm() {
+	if !m.isEditingField {
+		m.newFieldName = ""
+		m.newFieldType = "text"
+		m.newFieldRelationTarget = ""
+		m.newFieldRelationCard = "1:N"
+	} else {
+		var fToEdit *schema.MoulField
+		for i := range m.newMoulFieldsList {
+			if m.newMoulFieldsList[i].Name == m.editingFieldName {
+				fToEdit = &m.newMoulFieldsList[i]
+				break
+			}
+		}
+		if fToEdit != nil {
+			m.newFieldName = fToEdit.Name
+			m.newFieldType = fToEdit.Type
+			if fToEdit.Type == "relation" && fToEdit.RelationConfig != nil {
+				m.newFieldRelationTarget = fToEdit.RelationConfig.TargetMoul
+				m.newFieldRelationCard = fToEdit.RelationConfig.Cardinality
+			} else {
+				m.newFieldRelationTarget = ""
+				m.newFieldRelationCard = "1:N"
+			}
+		}
+	}
+
+	// Construct target collection options
+	var targetOptions []huh.Option[string]
+	if m.newMoulName != "" {
+		targetOptions = append(targetOptions, huh.NewOption[string](m.newMoulName+" (self)", m.newMoulName))
+		if m.newFieldRelationTarget == "" {
+			m.newFieldRelationTarget = m.newMoulName
+		}
+	}
+	for _, moul := range m.Mouls {
+		if moul.Name != m.newMoulName {
+			targetOptions = append(targetOptions, huh.NewOption[string](moul.Name, moul.Name))
+			if m.newFieldRelationTarget == "" {
+				m.newFieldRelationTarget = moul.Name
+			}
+		}
+	}
+	if len(targetOptions) == 0 {
+		targetOptions = append(targetOptions, huh.NewOption[string]("(none available)", ""))
+		m.newFieldRelationTarget = ""
+	} else {
+		// Set default target if not set yet or invalid
+		foundTarget := false
+		for _, opt := range targetOptions {
+			if opt.Value == m.newFieldRelationTarget {
+				foundTarget = true
+				break
+			}
+		}
+		if !foundTarget {
+			m.newFieldRelationTarget = targetOptions[0].Value
+		}
+	}
+
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	m.MoulFieldForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Field Name").
+				Placeholder("e.g. title").
+				Value(&m.newFieldName).
+				Validate(func(str string) error {
+					name := strings.TrimSpace(str)
+					if name == "" {
+						return fmt.Errorf("field name is required")
+					}
+					if !tableNamePattern.MatchString(name) {
+						return fmt.Errorf("invalid name: must start with a letter and contain only alphanumeric characters and underscores (max 63 chars)")
+					}
+					for _, f := range m.newMoulFieldsList {
+						if f.Name == name {
+							if m.isEditingField && name == m.editingFieldName {
+								continue
+							}
+							return fmt.Errorf("field name %q already exists", name)
+						}
+					}
+					return nil
+				}),
+
+			huh.NewSelect[string]().
+				Title("Field Type").
+				Options(
+					huh.NewOption("Text (String)", "text"),
+					huh.NewOption("Number (Numeric/Float)", "number"),
+					huh.NewOption("Boolean (True/False)", "bool"),
+					huh.NewOption("JSON (Structured Object/Array)", "json"),
+					huh.NewOption("File (File Metadata)", "file"),
+					huh.NewOption("Association (Relation to other collection)", "relation"),
+				).
+				Value(&m.newFieldType),
+		),
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Target Collection").
+				Options(targetOptions...).
+				Value(&m.newFieldRelationTarget),
+
+			huh.NewSelect[string]().
+				Title("Association Cardinality").
+				Options(
+					huh.NewOption("1:1 (One to One)", "1:1"),
+					huh.NewOption("1:N (One to Many / Belongs To)", "1:N"),
+					huh.NewOption("M:N (Many to Many)", "M:N"),
+				).
+				Value(&m.newFieldRelationCard),
+		).WithHideFunc(func() bool {
+			return m.newFieldType != "relation"
+		}),
+	).WithTheme(theme)
+}
+
+// initMoulFieldDeleteForm initializes the selector to delete a custom field.
+func (m *Model) initMoulFieldDeleteForm() {
+	m.fieldToDelete = ""
+	var options []huh.Option[string]
+	for _, f := range m.newMoulFieldsList {
+		options = append(options, huh.NewOption[string](f.Name, f.Name))
+	}
+	if len(options) > 0 {
+		m.fieldToDelete = options[0].Value
+	}
+
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	m.MoulFieldDeleteForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select Field to Delete").
+				Options(options...).
+				Value(&m.fieldToDelete),
+		),
+	).WithTheme(theme)
+}
+
+// initMoulFieldSelectForm initializes the selector to edit a custom field.
+func (m *Model) initMoulFieldSelectForm() {
+	m.fieldToEdit = ""
+	var options []huh.Option[string]
+	for _, f := range m.newMoulFieldsList {
+		options = append(options, huh.NewOption[string](f.Name, f.Name))
+	}
+	if len(options) > 0 {
+		m.fieldToEdit = options[0].Value
+	}
+
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	m.MoulFieldSelectForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select Field to Edit").
+				Options(options...).
+				Value(&m.fieldToEdit),
+		),
+	).WithTheme(theme)
+}
+
+// initMoulRulesForm initializes the custom access rules form.
+func (m *Model) initMoulRulesForm() {
+	theme := huh.ThemeCharm()
+	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
+	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+
+	m.MoulRulesForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("List Access Rule (empty for public)").
@@ -156,9 +389,7 @@ func (m *Model) initMoulForm() {
 				Title("Delete Access Rule (empty for public)").
 				Placeholder("e.g. auth.id == author_id").
 				Value(&m.newMoulDeleteRule),
-		).WithHideFunc(func() bool {
-			return !m.customizeRules
-		}),
+		),
 	).WithTheme(theme)
 }
 
@@ -170,24 +401,16 @@ type createMoulResultMsg struct {
 
 // saveMoulForm creates a Moul schema and issues the backend API request.
 func (m *Model) saveMoulForm() tea.Cmd {
-	listRule := ""
-	viewRule := ""
-	createRule := ""
-	updateRule := ""
-	deleteRule := ""
-
-	if m.customizeRules {
-		listRule = strings.TrimSpace(m.newMoulListRule)
-		viewRule = strings.TrimSpace(m.newMoulViewRule)
-		createRule = strings.TrimSpace(m.newMoulCreateRule)
-		updateRule = strings.TrimSpace(m.newMoulUpdateRule)
-		deleteRule = strings.TrimSpace(m.newMoulDeleteRule)
-	}
+	listRule := strings.TrimSpace(m.newMoulListRule)
+	viewRule := strings.TrimSpace(m.newMoulViewRule)
+	createRule := strings.TrimSpace(m.newMoulCreateRule)
+	updateRule := strings.TrimSpace(m.newMoulUpdateRule)
+	deleteRule := strings.TrimSpace(m.newMoulDeleteRule)
 
 	newMoul := &schema.Moul{
 		Name:   strings.TrimSpace(m.newMoulName),
 		Type:   m.newMoulType,
-		Fields: parseFieldsString(m.newMoulFields),
+		Fields: m.newMoulFieldsList,
 		Rules: schema.MoulRules{
 			ListRule:   listRule,
 			ViewRule:   viewRule,
@@ -220,12 +443,85 @@ func (m *Model) viewMoulCreate() string {
 		Padding(1, 2).
 		Width(60)
 
+	var innerView string
+	switch m.moulWizardState {
+	case "metadata":
+		innerView = formStyle.Render(m.MoulForm.View())
+	case "fields":
+		var s strings.Builder
+		s.WriteString(lipgloss.NewStyle().Foreground(ColorCyan).Bold(true).Render("Collection: ") + m.newMoulName + " (" + m.newMoulType + ")\n\n")
+		s.WriteString(lipgloss.NewStyle().Bold(true).Render("Fields List:") + "\n")
+		s.WriteString("  - id (system, text)\n")
+		if m.newMoulType == "auth" {
+			s.WriteString("  - username (system, text)\n")
+			s.WriteString("  - email (system, text)\n")
+			s.WriteString("  - created_at (system, text)\n")
+			s.WriteString("  - updated_at (system, text)\n")
+		} else if m.newMoulType == "worker" {
+			s.WriteString("  - state (system, text)\n")
+			s.WriteString("  - queue (system, text)\n")
+			s.WriteString("  - worker (system, text)\n")
+			s.WriteString("  - inserted_at (system, text)\n")
+		} else if m.newMoulType == "analytic" {
+			s.WriteString("  - visit_token (system, text)\n")
+			s.WriteString("  - visitor_token (system, text)\n")
+			s.WriteString("  - name (system, text)\n")
+			s.WriteString("  - time (system, text)\n")
+		} else {
+			s.WriteString("  - created_at (system, text)\n")
+			s.WriteString("  - updated_at (system, text)\n")
+		}
+
+		for _, f := range m.newMoulFieldsList {
+			if f.Type == "relation" && f.RelationConfig != nil {
+				s.WriteString(fmt.Sprintf("  - %s (relation:%s %s)\n", f.Name, f.RelationConfig.TargetMoul, f.RelationConfig.Cardinality))
+			} else {
+				s.WriteString(fmt.Sprintf("  - %s (%s)\n", f.Name, f.Type))
+			}
+		}
+		s.WriteString("\n")
+		s.WriteString(m.MoulActionForm.View())
+		innerView = formStyle.Render(s.String())
+	case "add_field":
+		title := "Add Custom Field"
+		if m.isEditingField {
+			title = "Edit Custom Field: " + m.editingFieldName
+		}
+		innerView = formStyle.Render(lipgloss.JoinVertical(
+			lipgloss.Left,
+			lipgloss.NewStyle().Foreground(ColorCyan).Bold(true).Render(title),
+			"",
+			m.MoulFieldForm.View(),
+		))
+	case "edit_select":
+		innerView = formStyle.Render(lipgloss.JoinVertical(
+			lipgloss.Left,
+			lipgloss.NewStyle().Foreground(ColorCyan).Bold(true).Render("Edit Custom Field"),
+			"",
+			m.MoulFieldSelectForm.View(),
+		))
+	case "delete_select":
+		innerView = formStyle.Render(lipgloss.JoinVertical(
+			lipgloss.Left,
+			lipgloss.NewStyle().Foreground(ColorRed).Bold(true).Render("Delete Custom Field"),
+			"",
+			m.MoulFieldDeleteForm.View(),
+		))
+	case "rules":
+		innerView = formStyle.Render(lipgloss.JoinVertical(
+			lipgloss.Left,
+			lipgloss.NewStyle().Foreground(ColorCyan).Bold(true).Render("Customize Collection Access Rules"),
+			"",
+			m.MoulRulesForm.View(),
+		))
+	}
+
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		HeaderStyle.Render("Create New Collection"),
 		"",
 		errMsg,
-		formStyle.Render(m.MoulForm.View()),
+		innerView,
 	)
 
 	return ContentStyle.Width(m.Width).Render(content)

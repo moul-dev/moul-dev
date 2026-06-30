@@ -81,21 +81,36 @@ type Model struct {
 	rootConfirmPass string
 
 	// Temporary data
-	serverURL      string
-	adminKey       string
-	editRecordID   string
-	recordFormData map[string]*string
+	serverURL          string
+	adminKey           string
+	editRecordID       string
+	recordFormData     map[string]*string
+	recordFormMultiSel map[string]*[]string
 
 	// Moul creation data
-	newMoulName       string
-	newMoulType       string
-	newMoulFields     string
-	customizeRules    bool
-	newMoulListRule   string
-	newMoulViewRule   string
-	newMoulCreateRule string
-	newMoulUpdateRule string
-	newMoulDeleteRule string
+	newMoulName            string
+	newMoulType            string
+	newMoulListRule        string
+	newMoulViewRule        string
+	newMoulCreateRule      string
+	newMoulUpdateRule      string
+	newMoulDeleteRule      string
+	newMoulFieldsList      []schema.MoulField
+	newMoulAction          string
+	newFieldName           string
+	newFieldType           string
+	newFieldRelationTarget string
+	newFieldRelationCard   string
+	MoulActionForm         *huh.Form
+	MoulFieldForm          *huh.Form
+	MoulRulesForm          *huh.Form
+	MoulFieldDeleteForm    *huh.Form
+	MoulFieldSelectForm    *huh.Form
+	fieldToDelete          string
+	fieldToEdit            string
+	editingFieldName       string
+	isEditingField         bool
+	moulWizardState        string // "metadata", "fields", "add_field", "edit_select", "delete_select", "rules"
 
 	// Device Auth Data
 	authMode        string
@@ -322,7 +337,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.State == StateMoulCreate && msg.Type == tea.KeyEsc {
-			m.State = StateDashboard
+			switch m.moulWizardState {
+			case "add_field", "edit_select", "delete_select", "rules":
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				return m, m.MoulActionForm.Init()
+			case "fields":
+				m.moulWizardState = "metadata"
+				return m, m.MoulForm.Init()
+			default:
+				m.State = StateDashboard
+			}
 			return m, nil
 		}
 	}
@@ -389,16 +414,156 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case StateMoulCreate:
-		newForm, cmd := m.MoulForm.Update(msg)
-		if f, ok := newForm.(*huh.Form); ok {
-			m.MoulForm = f
-		}
-		cmds = append(cmds, cmd)
+		switch m.moulWizardState {
+		case "metadata":
+			newForm, cmd := m.MoulForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulForm = f
+			}
+			cmds = append(cmds, cmd)
 
-		if m.MoulForm.State == huh.StateCompleted {
-			return m, m.saveMoulForm()
-		} else if m.MoulForm.State == huh.StateAborted {
-			m.State = StateDashboard
+			if m.MoulForm.State == huh.StateCompleted {
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			} else if m.MoulForm.State == huh.StateAborted {
+				m.State = StateDashboard
+			}
+
+		case "fields":
+			newForm, cmd := m.MoulActionForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulActionForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.MoulActionForm.State == huh.StateCompleted {
+				switch m.newMoulAction {
+				case "add":
+					m.isEditingField = false
+					m.initMoulFieldForm()
+					m.moulWizardState = "add_field"
+					cmds = append(cmds, m.MoulFieldForm.Init())
+				case "edit":
+					m.initMoulFieldSelectForm()
+					m.moulWizardState = "edit_select"
+					cmds = append(cmds, m.MoulFieldSelectForm.Init())
+				case "delete":
+					m.initMoulFieldDeleteForm()
+					m.moulWizardState = "delete_select"
+					cmds = append(cmds, m.MoulFieldDeleteForm.Init())
+				case "rules":
+					m.initMoulRulesForm()
+					m.moulWizardState = "rules"
+					cmds = append(cmds, m.MoulRulesForm.Init())
+				case "save":
+					return m, m.saveMoulForm()
+				case "cancel":
+					m.State = StateDashboard
+				}
+			} else if m.MoulActionForm.State == huh.StateAborted {
+				m.State = StateDashboard
+			}
+
+		case "add_field":
+			newForm, cmd := m.MoulFieldForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulFieldForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.MoulFieldForm.State == huh.StateCompleted {
+				newField := schema.MoulField{
+					Name: strings.TrimSpace(m.newFieldName),
+					Type: m.newFieldType,
+				}
+				if m.newFieldType == "relation" {
+					newField.RelationConfig = &schema.RelationConfig{
+						TargetMoul:  m.newFieldRelationTarget,
+						Cardinality: m.newFieldRelationCard,
+					}
+				}
+
+				if m.isEditingField {
+					for i := range m.newMoulFieldsList {
+						if m.newMoulFieldsList[i].Name == m.editingFieldName {
+							m.newMoulFieldsList[i] = newField
+							break
+						}
+					}
+				} else {
+					m.newMoulFieldsList = append(m.newMoulFieldsList, newField)
+				}
+
+				m.isEditingField = false
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			} else if m.MoulFieldForm.State == huh.StateAborted {
+				m.isEditingField = false
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			}
+
+		case "edit_select":
+			newForm, cmd := m.MoulFieldSelectForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulFieldSelectForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.MoulFieldSelectForm.State == huh.StateCompleted {
+				m.isEditingField = true
+				m.editingFieldName = m.fieldToEdit
+				m.initMoulFieldForm()
+				m.moulWizardState = "add_field"
+				cmds = append(cmds, m.MoulFieldForm.Init())
+			} else if m.MoulFieldSelectForm.State == huh.StateAborted {
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			}
+
+		case "delete_select":
+			newForm, cmd := m.MoulFieldDeleteForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulFieldDeleteForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.MoulFieldDeleteForm.State == huh.StateCompleted {
+				var filtered []schema.MoulField
+				for _, f := range m.newMoulFieldsList {
+					if f.Name != m.fieldToDelete {
+						filtered = append(filtered, f)
+					}
+				}
+				m.newMoulFieldsList = filtered
+
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			} else if m.MoulFieldDeleteForm.State == huh.StateAborted {
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			}
+
+		case "rules":
+			newForm, cmd := m.MoulRulesForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.MoulRulesForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.MoulRulesForm.State == huh.StateCompleted {
+				return m, m.saveMoulForm()
+			} else if m.MoulRulesForm.State == huh.StateAborted {
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
+			}
 		}
 
 	case StateWorkerMonitor:

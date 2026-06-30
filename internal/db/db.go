@@ -172,7 +172,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			sqliteType = "NUMERIC"
 		case "bool":
 			sqliteType = "INTEGER"
-		case "json", "file":
+		case "json", "file", "relation":
 			sqliteType = "TEXT"
 		}
 		columns = append(columns, fmt.Sprintf("%s %s", QuoteIdentifier(field.Name), sqliteType))

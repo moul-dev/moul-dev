@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
 // updateRecordList handles key presses in the records list screen.
@@ -70,7 +71,7 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 							return ErrMsg{err}
 						}
 						// Reload
-						records, err := m.Client.ListRecords(moul.Name)
+						records, err := m.Client.ListRecords(moul.Name, m.getExpandFields(moul)...)
 						if err != nil {
 							return ErrMsg{err}
 						}
@@ -215,7 +216,7 @@ func (m *Model) updateRecordDetail(msg tea.Msg) tea.Cmd {
 							return ErrMsg{err}
 						}
 						// Reload
-						records, err := m.Client.ListRecords(moul.Name)
+						records, err := m.Client.ListRecords(moul.Name, m.getExpandFields(moul)...)
 						if err != nil {
 							return ErrMsg{err}
 						}
@@ -267,6 +268,7 @@ func (m *Model) initRecordForm(isEdit bool) {
 
 	var fields []huh.Field
 	m.recordFormData = make(map[string]*string)
+	m.recordFormMultiSel = make(map[string]*[]string)
 
 	// Auth mouls standard fields
 	if moul.Type == "auth" {
@@ -307,6 +309,92 @@ func (m *Model) initRecordForm(isEdit bool) {
 			continue
 		}
 
+		if f.Type == "relation" && f.RelationConfig != nil {
+			targetMoul := f.RelationConfig.TargetMoul
+			targetRecs, err := m.Client.ListRecords(targetMoul)
+			if err == nil && len(targetRecs) < 100 {
+				var options []huh.Option[string]
+				options = append(options, huh.NewOption[string]("(none)", ""))
+				for _, rec := range targetRecs {
+					recID, _ := rec["id"].(string)
+					label := recID
+					if name, ok := rec["name"].(string); ok && name != "" {
+						label = fmt.Sprintf("%s (%s)", name, recID)
+					} else if title, ok := rec["title"].(string); ok && title != "" {
+						label = fmt.Sprintf("%s (%s)", title, recID)
+					} else if username, ok := rec["username"].(string); ok && username != "" {
+						label = fmt.Sprintf("%s (%s)", username, recID)
+					} else if email, ok := rec["email"].(string); ok && email != "" {
+						label = fmt.Sprintf("%s (%s)", email, recID)
+					}
+					options = append(options, huh.NewOption[string](label, recID))
+				}
+
+				card := f.RelationConfig.Cardinality
+				if card == "1:1" || card == "1:N" {
+					valStr := ""
+					if record != nil {
+						if val, ok := record[f.Name]; ok && val != nil {
+							valStr = fmt.Sprintf("%v", val)
+						}
+					}
+					m.recordFormData[f.Name] = &valStr
+					fields = append(fields, huh.NewSelect[string]().
+						Title(fmt.Sprintf("%s (relation:%s)", f.Name, targetMoul)).
+						Options(options...).
+						Value(&valStr))
+				} else if card == "M:N" {
+					var selectedIDs []string
+					if record != nil {
+						if val, ok := record[f.Name]; ok && val != nil {
+							if sliceVal, ok := val.([]interface{}); ok {
+								for _, item := range sliceVal {
+									if s, ok := item.(string); ok {
+										selectedIDs = append(selectedIDs, s)
+									}
+								}
+							} else if sliceVal, ok := val.([]string); ok {
+								selectedIDs = sliceVal
+							}
+						}
+					}
+					m.recordFormMultiSel[f.Name] = &selectedIDs
+					fields = append(fields, huh.NewMultiSelect[string]().
+						Title(fmt.Sprintf("%s (relation:%s M:N)", f.Name, targetMoul)).
+						Options(options[1:]...). // exclude (none)
+						Value(m.recordFormMultiSel[f.Name]))
+				}
+				continue
+			}
+
+			// Fallback to text input if fetching fails or too many records
+			valStr := ""
+			if record != nil {
+				if val, ok := record[f.Name]; ok && val != nil {
+					if f.RelationConfig.Cardinality == "M:N" {
+						if sliceVal, ok := val.([]interface{}); ok {
+							var items []string
+							for _, item := range sliceVal {
+								if s, ok := item.(string); ok {
+									items = append(items, s)
+								}
+							}
+							valStr = strings.Join(items, ", ")
+						} else if sliceVal, ok := val.([]string); ok {
+							valStr = strings.Join(sliceVal, ", ")
+						}
+					} else {
+						valStr = fmt.Sprintf("%v", val)
+					}
+				}
+			}
+			m.recordFormData[f.Name] = &valStr
+			fields = append(fields, huh.NewInput().
+				Title(fmt.Sprintf("%s (relation:%s - enter ID)", f.Name, targetMoul)).
+				Value(&valStr))
+			continue
+		}
+
 		valStr := ""
 		if record != nil {
 			if val, ok := record[f.Name]; ok && val != nil {
@@ -339,13 +427,39 @@ func (m *Model) saveRecordForm() {
 	payload := make(map[string]interface{})
 	for name, ptr := range m.recordFormData {
 		val := *ptr
-		// Resolve type
+		// Resolve type and cardinality
 		fieldType := "text"
+		var relationConf *schema.RelationConfig
 		for _, f := range moul.Fields {
 			if f.Name == name {
 				fieldType = f.Type
+				relationConf = f.RelationConfig
 				break
 			}
+		}
+
+		if fieldType == "relation" && relationConf != nil {
+			if relationConf.Cardinality == "M:N" {
+				if _, ok := m.recordFormMultiSel[name]; !ok {
+					var ids []string
+					if val != "" {
+						for _, part := range strings.Split(val, ",") {
+							trimmed := strings.TrimSpace(part)
+							if trimmed != "" {
+								ids = append(ids, trimmed)
+							}
+						}
+					}
+					payload[name] = ids
+				}
+			} else {
+				if val == "" || val == "(none)" {
+					payload[name] = nil
+				} else {
+					payload[name] = val
+				}
+			}
+			continue
 		}
 
 		if val == "" {
@@ -378,6 +492,12 @@ func (m *Model) saveRecordForm() {
 		}
 	}
 
+	for name, ids := range m.recordFormMultiSel {
+		if ids != nil {
+			payload[name] = *ids
+		}
+	}
+
 	var err error
 	if m.editRecordID != "" {
 		_, err = m.Client.UpdateRecord(moul.Name, m.editRecordID, payload)
@@ -396,7 +516,7 @@ func (m *Model) saveRecordForm() {
 	m.editRecordID = ""
 
 	// Refresh list
-	records, err := m.Client.ListRecords(moul.Name)
+	records, err := m.Client.ListRecords(moul.Name, m.getExpandFields(moul)...)
 	if err == nil {
 		m.Records = records
 	}
@@ -432,4 +552,17 @@ func (m *Model) viewRecordEdit() string {
 	s.WriteString(formContainer.Render(m.RecordForm.View()))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
+}
+
+func (m *Model) getExpandFields(moul *schema.Moul) []string {
+	if moul == nil {
+		return nil
+	}
+	var expandList []string
+	for _, field := range moul.Fields {
+		if field.Type == "relation" {
+			expandList = append(expandList, field.Name)
+		}
+	}
+	return expandList
 }

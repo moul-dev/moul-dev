@@ -215,6 +215,73 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 				} else {
 					insertData[field.Name] = val
 				}
+			} else if field.Type == "relation" {
+				if val == nil || val == "" {
+					if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
+						insertData[field.Name] = "[]"
+					} else {
+						insertData[field.Name] = ""
+					}
+				} else {
+					targetMoul := field.RelationConfig.TargetMoul
+					card := field.RelationConfig.Cardinality
+					if card == "1:1" || card == "1:N" {
+						strVal, ok := val.(string)
+						if !ok {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s must be a string ID", field.Name))
+						}
+						if strVal != "" {
+							exists, err := h.recordExists(targetMoul, strVal)
+							if err != nil {
+								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
+							}
+							if !exists {
+								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", strVal, targetMoul))
+							}
+						}
+						insertData[field.Name] = strVal
+					} else if card == "M:N" {
+						var ids []string
+						if sliceVal, ok := val.([]interface{}); ok {
+							for _, item := range sliceVal {
+								strItem, ok := item.(string)
+								if !ok {
+									return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s elements must be strings", field.Name))
+								}
+								ids = append(ids, strItem)
+							}
+						} else if sliceVal, ok := val.([]string); ok {
+							ids = sliceVal
+						} else if strVal, ok := val.(string); ok {
+							if strVal != "" {
+								for _, part := range strings.Split(strVal, ",") {
+									trimmed := strings.TrimSpace(part)
+									if trimmed != "" {
+										ids = append(ids, trimmed)
+									}
+								}
+							}
+						} else {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s must be an array of string IDs", field.Name))
+						}
+
+						for _, id := range ids {
+							exists, err := h.recordExists(targetMoul, id)
+							if err != nil {
+								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
+							}
+							if !exists {
+								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", id, targetMoul))
+							}
+						}
+
+						bytes, err := json.Marshal(ids)
+						if err != nil {
+							return echo.NewHTTPError(http.StatusBadRequest, "Invalid relation content for: "+field.Name)
+						}
+						insertData[field.Name] = string(bytes)
+					}
+				}
 			} else {
 				insertData[field.Name] = val
 			}
@@ -369,7 +436,10 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	return c.JSON(http.StatusCreated, normalizeRecord(moul, nullStringMapToMap(record)))
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	expandParam := c.QueryParam("expand")
+	h.expandRelations(moul, recordMap, expandParam)
+	return c.JSON(http.StatusCreated, recordMap)
 }
 
 // ListRecords queries records filtering dynamically by auth listRules.
@@ -394,9 +464,11 @@ func (h *RecordHandler) ListRecords(c echo.Context) error {
 
 	authUser := middleware.GetAuthRecord(c)
 	var authorizedRecords []map[string]interface{}
+	expandParam := c.QueryParam("expand")
 
 	for _, rec := range rawRecords {
 		record := normalizeRecord(moul, nullStringMapToMap(rec))
+		h.expandRelations(moul, record, expandParam)
 		allowed, err := rules.EvaluateRule(moul.Rules.ListRule, authUser, record)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
@@ -434,6 +506,8 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 	}
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	expandParam := c.QueryParam("expand")
+	h.expandRelations(moul, recordMap, expandParam)
 	authUser := middleware.GetAuthRecord(c)
 	allowed, err := rules.EvaluateRule(moul.Rules.ViewRule, authUser, recordMap)
 	if err != nil {
@@ -515,6 +589,73 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 					}
 				} else {
 					updateParams[field.Name] = val
+				}
+			} else if field.Type == "relation" {
+				if val == nil || val == "" {
+					if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
+						updateParams[field.Name] = "[]"
+					} else {
+						updateParams[field.Name] = ""
+					}
+				} else {
+					targetMoul := field.RelationConfig.TargetMoul
+					card := field.RelationConfig.Cardinality
+					if card == "1:1" || card == "1:N" {
+						strVal, ok := val.(string)
+						if !ok {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s must be a string ID", field.Name))
+						}
+						if strVal != "" {
+							exists, err := h.recordExists(targetMoul, strVal)
+							if err != nil {
+								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
+							}
+							if !exists {
+								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", strVal, targetMoul))
+							}
+						}
+						updateParams[field.Name] = strVal
+					} else if card == "M:N" {
+						var ids []string
+						if sliceVal, ok := val.([]interface{}); ok {
+							for _, item := range sliceVal {
+								strItem, ok := item.(string)
+								if !ok {
+									return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s elements must be strings", field.Name))
+								}
+								ids = append(ids, strItem)
+							}
+						} else if sliceVal, ok := val.([]string); ok {
+							ids = sliceVal
+						} else if strVal, ok := val.(string); ok {
+							if strVal != "" {
+								for _, part := range strings.Split(strVal, ",") {
+									trimmed := strings.TrimSpace(part)
+									if trimmed != "" {
+										ids = append(ids, trimmed)
+									}
+								}
+							}
+						} else {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s must be an array of string IDs", field.Name))
+						}
+
+						for _, id := range ids {
+							exists, err := h.recordExists(targetMoul, id)
+							if err != nil {
+								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
+							}
+							if !exists {
+								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", id, targetMoul))
+							}
+						}
+
+						bytes, err := json.Marshal(ids)
+						if err != nil {
+							return echo.NewHTTPError(http.StatusBadRequest, "Invalid relation content for: "+field.Name)
+						}
+						updateParams[field.Name] = string(bytes)
+					}
 				}
 			} else {
 				updateParams[field.Name] = val
@@ -608,7 +749,10 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	return c.JSON(http.StatusOK, normalizeRecord(moul, nullStringMapToMap(updatedRecord)))
+	recordMap = normalizeRecord(moul, nullStringMapToMap(updatedRecord))
+	expandParam := c.QueryParam("expand")
+	h.expandRelations(moul, recordMap, expandParam)
+	return c.JSON(http.StatusOK, recordMap)
 }
 
 // DeleteRecord deletes a record by ID.
@@ -658,6 +802,48 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete record")
 	}
 
+	// Clean up relations
+	allMouls, err := db.LoadAllMouls(h.DB)
+	if err == nil {
+		for _, otherMoul := range allMouls {
+			for _, field := range otherMoul.Fields {
+				if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.TargetMoul == moulName {
+					card := field.RelationConfig.Cardinality
+					if card == "1:1" || card == "1:N" {
+						_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: ""}, dbx.HashExp{field.Name: id}).Execute()
+					} else if card == "M:N" {
+						var rawRecs []dbx.NullStringMap
+						if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).All(&rawRecs); qErr == nil {
+							for _, rawRec := range rawRecs {
+								recMap := nullStringMapToMap(rawRec)
+								recID, _ := recMap["id"].(string)
+								rawVal, _ := recMap[field.Name].(string)
+								if rawVal != "" {
+									var ids []string
+									if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+										found := false
+										var newIDs []string
+										for _, item := range ids {
+											if item == id {
+												found = true
+											} else {
+												newIDs = append(newIDs, item)
+											}
+										}
+										if found {
+											newJSON, _ := json.Marshal(newIDs)
+											_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: string(newJSON)}, dbx.HashExp{"id": recID}).Execute()
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -684,8 +870,15 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 	// Convert database strings to correct JSON types based on moul fields schema
 	for _, field := range moul.Fields {
 		val, ok := record[field.Name]
-		if !ok || val == nil {
-			continue
+		if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
+			if !ok || val == nil {
+				record[field.Name] = []string{}
+				continue
+			}
+		} else {
+			if !ok || val == nil {
+				continue
+			}
 		}
 
 		strVal, isStr := val.(string)
@@ -705,6 +898,23 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 				var decoded interface{}
 				if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {
 					record[field.Name] = decoded
+				}
+			}
+		case "relation":
+			if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
+				var decoded []string
+				if strVal != "" && strVal != "null" {
+					if err := json.Unmarshal([]byte(strVal), &decoded); err == nil {
+						if decoded == nil {
+							record[field.Name] = []string{}
+						} else {
+							record[field.Name] = decoded
+						}
+					} else {
+						record[field.Name] = []string{}
+					}
+				} else {
+					record[field.Name] = []string{}
 				}
 			}
 		}
@@ -738,4 +948,88 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 	}
 
 	return record
+}
+
+func (h *RecordHandler) recordExists(targetMoul string, id string) (bool, error) {
+	var count int
+	err := h.DB.Select("COUNT(*)").From(targetMoul).Where(dbx.HashExp{"id": id}).Row(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]interface{}, expandParam string) {
+	if expandParam == "" {
+		return
+	}
+	expands := strings.Split(expandParam, ",")
+	expandMap := make(map[string]interface{})
+
+	for _, exp := range expands {
+		exp = strings.TrimSpace(exp)
+		if exp == "" {
+			continue
+		}
+
+		// Find the field
+		var targetField *schema.MoulField
+		for _, f := range moul.Fields {
+			if f.Name == exp && f.Type == "relation" && f.RelationConfig != nil {
+				targetField = &f
+				break
+			}
+		}
+
+		if targetField == nil {
+			continue
+		}
+
+		targetMoulName := targetField.RelationConfig.TargetMoul
+		targetMoul, err := db.LoadMoulByName(h.DB, targetMoulName)
+		if err != nil {
+			continue
+		}
+
+		card := targetField.RelationConfig.Cardinality
+		if card == "1:1" || card == "1:N" {
+			val, ok := recordMap[exp].(string)
+			if ok && val != "" {
+				var targetRec dbx.NullStringMap
+				err = h.DB.Select("*").From(targetMoulName).Where(dbx.HashExp{"id": val}).One(&targetRec)
+				if err == nil {
+					expandMap[exp] = normalizeRecord(targetMoul, nullStringMapToMap(targetRec))
+				} else {
+					expandMap[exp] = nil
+				}
+			} else {
+				expandMap[exp] = nil
+			}
+		} else if card == "M:N" {
+			var ids []string
+			if val, ok := recordMap[exp].([]string); ok {
+				ids = val
+			} else if val, ok := recordMap[exp].([]interface{}); ok {
+				for _, item := range val {
+					if s, ok := item.(string); ok {
+						ids = append(ids, s)
+					}
+				}
+			}
+
+			var expandedRecs []map[string]interface{}
+			for _, id := range ids {
+				var targetRec dbx.NullStringMap
+				err = h.DB.Select("*").From(targetMoulName).Where(dbx.HashExp{"id": id}).One(&targetRec)
+				if err == nil {
+					expandedRecs = append(expandedRecs, normalizeRecord(targetMoul, nullStringMapToMap(targetRec)))
+				}
+			}
+			expandMap[exp] = expandedRecs
+		}
+	}
+
+	if len(expandMap) > 0 {
+		recordMap["expand"] = expandMap
+	}
 }
