@@ -211,7 +211,7 @@ test-analytics:
 	@echo "=== Analytics Flow Test Complete! ==="
 
 # Run the TUI client
-run-tui:
+tui:
 	go run cmd/moul/main.go
 
 # Build the TUI client binary

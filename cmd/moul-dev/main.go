@@ -98,6 +98,9 @@ func main() {
 	// Auth context loader (JWT extraction from Authorization header)
 	e.Use(middleware.LoadAuthContextMiddleware())
 
+	// HTTP Request logging
+	e.Use(middleware.RequestLogger())
+
 	// ── Handlers initialization ─────────────────────────────────────
 	moulHandler := handlers.NewMoulHandler(dbConn)
 	recordHandler := handlers.NewRecordHandler(dbConn)
