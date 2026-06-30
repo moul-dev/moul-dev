@@ -87,9 +87,15 @@ type Model struct {
 	recordFormData map[string]*string
 
 	// Moul creation data
-	newMoulName   string
-	newMoulType   string
-	newMoulFields string
+	newMoulName       string
+	newMoulType       string
+	newMoulFields     string
+	customizeRules    bool
+	newMoulListRule   string
+	newMoulViewRule   string
+	newMoulCreateRule string
+	newMoulUpdateRule string
+	newMoulDeleteRule string
 
 	// Device Auth Data
 	authMode        string

@@ -78,6 +78,12 @@ func (m *Model) initMoulForm() {
 	m.newMoulName = ""
 	m.newMoulType = "base"
 	m.newMoulFields = ""
+	m.customizeRules = false
+	m.newMoulListRule = ""
+	m.newMoulViewRule = ""
+	m.newMoulCreateRule = ""
+	m.newMoulUpdateRule = ""
+	m.newMoulDeleteRule = ""
 
 	theme := huh.ThemeCharm()
 	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
@@ -119,7 +125,40 @@ func (m *Model) initMoulForm() {
 				Placeholder("e.g. title:text, views:number, published:bool").
 				Value(&m.newMoulFields).
 				Validate(validateFieldsString),
+
+			huh.NewConfirm().
+				Title("Customize Access Rules?").
+				Description("If no, access will default to public.").
+				Value(&m.customizeRules),
 		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("List Access Rule (empty for public)").
+				Placeholder("e.g. auth.id != nil").
+				Value(&m.newMoulListRule),
+
+			huh.NewInput().
+				Title("View Access Rule (empty for public)").
+				Placeholder("e.g. auth.id != nil").
+				Value(&m.newMoulViewRule),
+
+			huh.NewInput().
+				Title("Create Access Rule (empty for public)").
+				Placeholder("e.g. auth.id != nil").
+				Value(&m.newMoulCreateRule),
+
+			huh.NewInput().
+				Title("Update Access Rule (empty for public)").
+				Placeholder("e.g. auth.id == author_id").
+				Value(&m.newMoulUpdateRule),
+
+			huh.NewInput().
+				Title("Delete Access Rule (empty for public)").
+				Placeholder("e.g. auth.id == author_id").
+				Value(&m.newMoulDeleteRule),
+		).WithHideFunc(func() bool {
+			return !m.customizeRules
+		}),
 	).WithTheme(theme)
 }
 
@@ -131,10 +170,31 @@ type createMoulResultMsg struct {
 
 // saveMoulForm creates a Moul schema and issues the backend API request.
 func (m *Model) saveMoulForm() tea.Cmd {
+	listRule := ""
+	viewRule := ""
+	createRule := ""
+	updateRule := ""
+	deleteRule := ""
+
+	if m.customizeRules {
+		listRule = strings.TrimSpace(m.newMoulListRule)
+		viewRule = strings.TrimSpace(m.newMoulViewRule)
+		createRule = strings.TrimSpace(m.newMoulCreateRule)
+		updateRule = strings.TrimSpace(m.newMoulUpdateRule)
+		deleteRule = strings.TrimSpace(m.newMoulDeleteRule)
+	}
+
 	newMoul := &schema.Moul{
 		Name:   strings.TrimSpace(m.newMoulName),
 		Type:   m.newMoulType,
 		Fields: parseFieldsString(m.newMoulFields),
+		Rules: schema.MoulRules{
+			ListRule:   listRule,
+			ViewRule:   viewRule,
+			CreateRule: createRule,
+			UpdateRule: updateRule,
+			DeleteRule: deleteRule,
+		},
 	}
 
 	return func() tea.Msg {
