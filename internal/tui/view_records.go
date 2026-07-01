@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -20,7 +20,7 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// Clear success message on key press
 		m.SuccessMsg = ""
 		m.Err = nil
@@ -40,7 +40,7 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 				record := m.Records[m.SelectedRecordIndex]
 				jsonStr := formatJSON(record)
 				m.Viewport.SetContent(jsonStr)
-				m.Viewport.YOffset = 0
+				m.Viewport.SetYOffset(0)
 				m.State = StateRecordDetail
 			}
 		case "e":
@@ -142,8 +142,26 @@ func (m *Model) viewRecordList() string {
 	s.WriteString(TableHeaderStyle.Render(headerLine.String()))
 	s.WriteString("\n")
 
+	// Calculate window/scrolling logic
+	maxRows := m.Height - 11
+	if maxRows < 3 {
+		maxRows = 3
+	}
+
+	startIndex := 0
+	if m.SelectedRecordIndex >= maxRows {
+		startIndex = m.SelectedRecordIndex - maxRows + 1
+	}
+	endIndex := startIndex + maxRows
+	if endIndex > len(m.Records) {
+		endIndex = len(m.Records)
+	}
+
+	visibleRecords := m.Records[startIndex:endIndex]
+
 	// Draw table rows
-	for rIdx, r := range m.Records {
+	for i, r := range visibleRecords {
+		rIdx := startIndex + i
 		var rowLine strings.Builder
 		for _, h := range headers {
 			valStr := ""
@@ -190,7 +208,7 @@ func (m *Model) updateRecordDetail(msg tea.Msg) tea.Cmd {
 	m.Viewport, cmd = m.Viewport.Update(msg)
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "esc", "q", "left", "h":
 			m.State = StateRecordList
@@ -406,14 +424,9 @@ func (m *Model) initRecordForm(isEdit bool) {
 		fields = append(fields, huh.NewInput().Title(fmt.Sprintf("%s (%s)", f.Name, f.Type)).Value(&valStr))
 	}
 
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.RecordForm = huh.NewForm(
 		huh.NewGroup(fields...),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // saveRecordForm compiles inputs and sends request to server.

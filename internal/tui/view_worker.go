@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // updateWorkerMonitor handles interaction on the background worker dashboard.
@@ -14,7 +14,7 @@ func (m *Model) updateWorkerMonitor(msg tea.Msg) tea.Cmd {
 	workerMoulName := m.getWorkerMoulName()
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		m.SuccessMsg = ""
 		m.Err = nil
 
@@ -33,7 +33,7 @@ func (m *Model) updateWorkerMonitor(msg tea.Msg) tea.Cmd {
 				job := m.Jobs[m.SelectedJobIndex]
 				jsonStr := formatJSON(job)
 				m.Viewport.SetContent(jsonStr)
-				m.Viewport.YOffset = 0
+				m.Viewport.SetYOffset(0)
 				m.State = StateRecordDetail
 				m.ViewDetail = "job"
 			}
@@ -155,8 +155,26 @@ func (m *Model) viewWorkerMonitor() string {
 	s.WriteString(TableHeaderStyle.Render(headerLine.String()))
 	s.WriteString("\n")
 
+	// Calculate window/scrolling logic
+	maxRows := m.Height - 11
+	if maxRows < 3 {
+		maxRows = 3
+	}
+
+	startIndex := 0
+	if m.SelectedJobIndex >= maxRows {
+		startIndex = m.SelectedJobIndex - maxRows + 1
+	}
+	endIndex := startIndex + maxRows
+	if endIndex > len(m.Jobs) {
+		endIndex = len(m.Jobs)
+	}
+
+	visibleJobs := m.Jobs[startIndex:endIndex]
+
 	// Draw rows
-	for rIdx, job := range m.Jobs {
+	for i, job := range visibleJobs {
+		rIdx := startIndex + i
 		var rowLine strings.Builder
 		for _, h := range headers {
 			valStr := ""

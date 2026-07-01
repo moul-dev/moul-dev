@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
 // updateDashboard handles navigation within the sidebar.
 func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// Clear notifications on key press
 		m.SuccessMsg = ""
 		m.Err = nil

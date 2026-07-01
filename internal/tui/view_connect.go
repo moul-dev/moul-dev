@@ -4,17 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 )
 
-// initConnectionForm initializes the connection setup form.
 func (m *Model) initConnectionForm() {
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.ConnForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -43,16 +37,10 @@ func (m *Model) initConnectionForm() {
 					return nil
 				}),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
-// initRootSetupForm initializes the root user setup form.
 func (m *Model) initRootSetupForm() {
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.RootSetupForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -101,7 +89,7 @@ func (m *Model) initRootSetupForm() {
 					return nil
 				}),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // viewConnect renders the connection screen.

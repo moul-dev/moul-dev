@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -122,7 +123,9 @@ type Model struct {
 	pollExpiry      time.Time
 
 	// Settings Screen
-	SettingsForm                 *huh.Form
+	StorageSettingsForm          *huh.Form
+	LiteSettingsForm             *huh.Form
+	SettingsFocus                SettingsFocus
 	settingFileS3Enabled         string
 	settingFileS3Bucket          string
 	settingFileS3Endpoint        string
@@ -138,7 +141,18 @@ type Model struct {
 	settingLiteSecretKey         string
 	settingLiteS3ForcePath       string
 	settingLiteReplica           string
+	lastStorageField             huh.Field
+	lastLiteField                huh.Field
 }
+
+type SettingsFocus int
+
+const (
+	FocusStorage SettingsFocus = iota
+	FocusLite
+	FocusSave
+	FocusCancel
+)
 
 // NewModel initializes the TUI model with default values.
 func NewModel(serverURLOverride, adminKeyOverride string) *Model {
@@ -216,7 +230,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.initSettingsForm()
 		m.State = StateSettings
-		return m, m.SettingsForm.Init()
+		m.SettingsFocus = FocusStorage
+		return m, tea.Batch(m.StorageSettingsForm.Init(), m.LiteSettingsForm.Init())
 
 	case settingsSavedMsg:
 		if msg.err != nil {
@@ -265,10 +280,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			vHeight = 5
 		}
 		if !m.recordViewportReady() {
-			m.Viewport = viewport.New(m.Width-32, vHeight)
+			m.Viewport = viewport.New(viewport.WithWidth(m.Width-32), viewport.WithHeight(vHeight))
 		} else {
-			m.Viewport.Width = m.Width - 32
-			m.Viewport.Height = vHeight
+			m.Viewport.SetWidth(m.Width - 32)
+			m.Viewport.SetHeight(vHeight)
 		}
 
 	case createMoulResultMsg:
@@ -374,20 +389,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, m.connectCmd()
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// Global exit on Ctrl+C (unless editing inside a text input, but global Ctrl+C is generally safe)
-		if msg.Type == tea.KeyCtrlC {
+		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 
-		if (m.State == StateDeviceAuth || m.State == StateRootSetup) && msg.Type == tea.KeyEsc {
+		if (m.State == StateDeviceAuth || m.State == StateRootSetup) && msg.String() == "esc" {
 			m.State = StateConnect
 			m.ConnForm.State = huh.StateNormal
 			m.Err = fmt.Errorf("authorization cancelled")
 			return m, nil
 		}
 
-		if m.State == StateMoulCreate && msg.Type == tea.KeyEsc {
+		if m.State == StateMoulCreate && msg.String() == "esc" {
 			switch m.moulWizardState {
 			case "add_field", "edit_select", "delete_select", "rules":
 				m.initMoulActionForm()
@@ -630,26 +645,194 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case StateSettings:
-		newForm, cmd := m.SettingsForm.Update(msg)
-		if f, ok := newForm.(*huh.Form); ok {
-			m.SettingsForm = f
+		// Intercept keys for split pane focus switching
+		if kp, ok := msg.(tea.KeyPressMsg); ok {
+			switch kp.String() {
+			case "left":
+				if m.SettingsFocus == FocusLite {
+					m.SettingsFocus = FocusStorage
+					return m, nil
+				} else if m.SettingsFocus == FocusCancel {
+					m.SettingsFocus = FocusSave
+					return m, nil
+				}
+			case "right":
+				if m.SettingsFocus == FocusStorage {
+					m.SettingsFocus = FocusLite
+					return m, nil
+				} else if m.SettingsFocus == FocusSave {
+					m.SettingsFocus = FocusCancel
+					return m, nil
+				}
+			case "up":
+				if m.SettingsFocus == FocusSave {
+					m.SettingsFocus = FocusStorage
+					return m, nil
+				} else if m.SettingsFocus == FocusCancel {
+					m.SettingsFocus = FocusLite
+					return m, nil
+				}
+			case "down":
+				if m.SettingsFocus == FocusStorage {
+					if m.StorageSettingsForm.GetFocusedField() == m.lastStorageField {
+						m.SettingsFocus = FocusSave
+						return m, nil
+					}
+				} else if m.SettingsFocus == FocusLite {
+					if m.LiteSettingsForm.GetFocusedField() == m.lastLiteField {
+						m.SettingsFocus = FocusCancel
+						return m, nil
+					}
+				}
+			case "tab":
+				if m.SettingsFocus == FocusStorage {
+					if m.StorageSettingsForm.GetFocusedField() == m.lastStorageField {
+						m.SettingsFocus = FocusSave
+						return m, nil
+					}
+				} else if m.SettingsFocus == FocusLite {
+					if m.LiteSettingsForm.GetFocusedField() == m.lastLiteField {
+						m.SettingsFocus = FocusSave
+						return m, nil
+					}
+				}
+			case "shift+tab":
+				if m.SettingsFocus == FocusSave {
+					m.SettingsFocus = FocusStorage
+					return m, nil
+				} else if m.SettingsFocus == FocusCancel {
+					m.SettingsFocus = FocusLite
+					return m, nil
+				}
+			case "esc":
+				m.State = StateDashboard
+				return m, nil
+			case "enter":
+				if m.SettingsFocus == FocusSave {
+					m.saveSettingsForm()
+					return m, nil
+				} else if m.SettingsFocus == FocusCancel {
+					m.State = StateDashboard
+					return m, nil
+				}
+			}
 		}
-		cmds = append(cmds, cmd)
 
-		if m.SettingsForm.State == huh.StateCompleted {
-			m.saveSettingsForm()
-		} else if m.SettingsForm.State == huh.StateAborted {
-			m.State = StateDashboard
+		oldS3 := m.settingFileS3Enabled
+		oldLite := m.settingLiteEnabled
+
+		if m.SettingsFocus == FocusStorage {
+			newForm, cmd := m.StorageSettingsForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.StorageSettingsForm = f
+			}
+			cmds = append(cmds, cmd)
+			if m.StorageSettingsForm.State == huh.StateCompleted {
+				m.StorageSettingsForm.State = huh.StateNormal
+				m.SettingsFocus = FocusSave
+			}
+		} else if m.SettingsFocus == FocusLite {
+			newForm, cmd := m.LiteSettingsForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.LiteSettingsForm = f
+			}
+			cmds = append(cmds, cmd)
+			if m.LiteSettingsForm.State == huh.StateCompleted {
+				m.LiteSettingsForm.State = huh.StateNormal
+				m.SettingsFocus = FocusSave
+			}
+		}
+
+		if m.settingFileS3Enabled != oldS3 || m.settingLiteEnabled != oldLite {
+			m.initSettingsForm()
+			cmds = append(cmds, m.StorageSettingsForm.Init(), m.LiteSettingsForm.Init())
 		}
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
+func (m *Model) cycleSettingsFocus(forward bool) {
+	if forward {
+		m.SettingsFocus = (m.SettingsFocus + 1) % 4
+	} else {
+		m.SettingsFocus = (m.SettingsFocus - 1 + 4) % 4
+	}
+}
+
+func (m *Model) renderBreadcrumbs() string {
+	var crumbs []string
+	crumbs = append(crumbs, "MOUL")
+
+	switch m.State {
+	case StateDashboard:
+		crumbs = append(crumbs, "Dashboard")
+		idx := m.ActiveSidebarIndex
+		if idx >= 0 && idx < len(m.Mouls) {
+			crumbs = append(crumbs, "Collections", m.Mouls[idx].Name)
+		} else if idx == len(m.Mouls) {
+			crumbs = append(crumbs, "System", "Background Jobs")
+		} else if idx == len(m.Mouls)+1 {
+			crumbs = append(crumbs, "System", "Visitor Analytics")
+		} else if idx == len(m.Mouls)+2 {
+			crumbs = append(crumbs, "System", "Settings")
+		}
+	case StateRecordList:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Records")
+		}
+	case StateRecordDetail:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Records", "Detail")
+		} else if m.ViewDetail == "job" {
+			crumbs = append(crumbs, "System", "Background Jobs", "Job Payload")
+		} else if m.ViewDetail == "visit" {
+			crumbs = append(crumbs, "System", "Visitor Analytics", "Session Detail")
+		}
+	case StateRecordEdit:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Records")
+			if m.editRecordID != "" {
+				crumbs = append(crumbs, "Edit")
+			} else {
+				crumbs = append(crumbs, "New")
+			}
+		}
+	case StateWorkerMonitor:
+		crumbs = append(crumbs, "System", "Background Jobs")
+	case StateAnalytics:
+		crumbs = append(crumbs, "System", "Visitor Analytics")
+	case StateMoulCreate:
+		crumbs = append(crumbs, "Collections", "Create Collection")
+	case StateSettings:
+		crumbs = append(crumbs, "System", "Settings")
+	}
+
+	var formatted []string
+	for i, crumb := range crumbs {
+		if i == len(crumbs)-1 {
+			formatted = append(formatted, BreadcrumbActiveStyle.Render(strings.ToUpper(crumb)))
+		} else {
+			formatted = append(formatted, BreadcrumbInactiveStyle.Render(strings.ToUpper(crumb)))
+		}
+	}
+
+	separator := BreadcrumbSeparatorStyle.Render(" > ")
+	joined := strings.Join(formatted, separator)
+	return BreadcrumbsContainerStyle.Width(m.Width).Render("  " + joined)
+}
+
 // View compiles and renders the active layout.
-func (m *Model) View() string {
+func (m *Model) View() tea.View {
+	v := tea.NewView("")
+	v.AltScreen = true
+
 	if !m.Ready {
-		return "\n  Initializing moul TUI..."
+		v.SetContent("\n  Initializing moul TUI...")
+		return v
 	}
 
 	var content string
@@ -657,6 +840,8 @@ func (m *Model) View() string {
 	switch m.State {
 	case StateConnect, StateRootSetup, StateDeviceAuth:
 		content = m.viewConnect()
+		v.SetContent(content)
+		return v
 	case StateDashboard:
 		content = m.viewDashboard()
 	case StateRecordList:
@@ -675,11 +860,26 @@ func (m *Model) View() string {
 		content = m.viewSettings()
 	}
 
-	return MainContainerStyle.Width(m.Width).Height(m.Height).Render(content)
+	// For authenticated app states, render global header breadcrumbs and content area
+	header := m.renderBreadcrumbs()
+	
+	// Available height for middle content is main height minus header height
+	contentHeight := m.Height - lipgloss.Height(header)
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	mainContent := lipgloss.NewStyle().
+		Height(contentHeight).
+		Width(m.Width).
+		Render(content)
+
+	v.SetContent(lipgloss.JoinVertical(lipgloss.Left, header, mainContent))
+	return v
 }
 
 func (m *Model) recordViewportReady() bool {
-	return m.Viewport.Height > 0
+	return m.Viewport.Height() > 0
 }
 
 func (m *Model) loadSystemData() {

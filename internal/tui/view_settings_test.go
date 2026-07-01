@@ -23,10 +23,14 @@ func TestInitSettingsForm(t *testing.T) {
 		settingLiteReplica:     "s3://my-test-bucket/replica",
 	}
 
-	// Run form initialization and ensure it doesn't panic and populates the form object.
+	// Run form initialization and ensure it doesn't panic and populates the form objects.
 	m.initSettingsForm()
 
-	if m.SettingsForm == nil {
-		t.Fatal("Expected SettingsForm to be initialized, got nil")
+	if m.StorageSettingsForm == nil {
+		t.Fatal("Expected StorageSettingsForm to be initialized, got nil")
+	}
+
+	if m.LiteSettingsForm == nil {
+		t.Fatal("Expected LiteSettingsForm to be initialized, got nil")
 	}
 }

@@ -4,21 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 )
 
-// initAnalyticsLoginForm initializes the user credentials form.
 func (m *Model) initAnalyticsLoginForm() {
 	if m.analyticsMoul == "" {
 		m.analyticsMoul = "users"
 	}
-
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
 
 	m.AnalyticsLoginForm = huh.NewForm(
 		huh.NewGroup(
@@ -53,7 +47,7 @@ func (m *Model) initAnalyticsLoginForm() {
 					return nil
 				}),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // updateAnalytics handles the interaction loop in the analytics tab.
@@ -86,7 +80,7 @@ func (m *Model) updateAnalytics(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		m.SuccessMsg = ""
 		m.Err = nil
 
@@ -105,7 +99,7 @@ func (m *Model) updateAnalytics(msg tea.Msg) tea.Cmd {
 				visit := m.Visits[m.SelectedVisitIndex]
 				jsonStr := formatJSON(visit)
 				m.Viewport.SetContent(jsonStr)
-				m.Viewport.YOffset = 0
+				m.Viewport.SetYOffset(0)
 				m.State = StateRecordDetail
 				m.ViewDetail = "visit"
 			}
@@ -217,8 +211,26 @@ func (m *Model) viewAnalytics() string {
 	s.WriteString(TableHeaderStyle.Render(headerLine.String()))
 	s.WriteString("\n")
 
+	// Calculate window/scrolling logic
+	maxRows := m.Height - 11
+	if maxRows < 3 {
+		maxRows = 3
+	}
+
+	startIndex := 0
+	if m.SelectedVisitIndex >= maxRows {
+		startIndex = m.SelectedVisitIndex - maxRows + 1
+	}
+	endIndex := startIndex + maxRows
+	if endIndex > len(m.Visits) {
+		endIndex = len(m.Visits)
+	}
+
+	visibleVisits := m.Visits[startIndex:endIndex]
+
 	// Draw rows
-	for rIdx, v := range m.Visits {
+	for i, v := range visibleVisits {
+		rIdx := startIndex + i
 		var rowLine strings.Builder
 		for _, h := range headers {
 			valStr := ""

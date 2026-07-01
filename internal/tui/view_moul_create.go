@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -112,11 +112,6 @@ func (m *Model) initMoulForm() {
 	m.moulWizardState = "metadata"
 	m.isEditingField = false
 
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.MoulForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -147,17 +142,12 @@ func (m *Model) initMoulForm() {
 				).
 				Value(&m.newMoulType),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // initMoulActionForm initializes the field manager main action form.
 func (m *Model) initMoulActionForm() {
 	m.newMoulAction = "add"
-
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
 
 	var options []huh.Option[string]
 	options = append(options, huh.NewOption("Add custom field", "add"))
@@ -178,7 +168,7 @@ func (m *Model) initMoulActionForm() {
 				Options(options...).
 				Value(&m.newMoulAction),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // initMoulFieldForm initializes the field creator sub-form.
@@ -242,11 +232,6 @@ func (m *Model) initMoulFieldForm() {
 		}
 	}
 
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.MoulFieldForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -301,7 +286,7 @@ func (m *Model) initMoulFieldForm() {
 		).WithHideFunc(func() bool {
 			return m.newFieldType != "relation"
 		}),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // initMoulFieldDeleteForm initializes the selector to delete a custom field.
@@ -315,11 +300,6 @@ func (m *Model) initMoulFieldDeleteForm() {
 		m.fieldToDelete = options[0].Value
 	}
 
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.MoulFieldDeleteForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
@@ -327,7 +307,7 @@ func (m *Model) initMoulFieldDeleteForm() {
 				Options(options...).
 				Value(&m.fieldToDelete),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // initMoulFieldSelectForm initializes the selector to edit a custom field.
@@ -341,11 +321,6 @@ func (m *Model) initMoulFieldSelectForm() {
 		m.fieldToEdit = options[0].Value
 	}
 
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.MoulFieldSelectForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
@@ -353,16 +328,11 @@ func (m *Model) initMoulFieldSelectForm() {
 				Options(options...).
 				Value(&m.fieldToEdit),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // initMoulRulesForm initializes the custom access rules form.
 func (m *Model) initMoulRulesForm() {
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
-
 	m.MoulRulesForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -390,7 +360,7 @@ func (m *Model) initMoulRulesForm() {
 				Placeholder("e.g. auth.id == author_id").
 				Value(&m.newMoulDeleteRule),
 		),
-	).WithTheme(theme)
+	).WithTheme(ThemeCustom)
 }
 
 // createMoulResultMsg is sent after the CreateMoul API call completes.

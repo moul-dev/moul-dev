@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
+)
 
 var (
 	// ── Colors ──────────────────────────────────────────────────────
@@ -54,7 +57,7 @@ var (
 
 	// ── Content Area Styles ─────────────────────────────────────────
 	ContentStyle = lipgloss.NewStyle().
-			Padding(1, 2)
+			Padding(0, 1)
 
 	HeaderStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -164,4 +167,47 @@ var (
 	HelpStyle = lipgloss.NewStyle().
 			Foreground(ColorTextMuted).
 			MarginTop(1)
+
+	// ── Breadcrumbs ─────────────────────────────────────────────────
+	BreadcrumbsContainerStyle = lipgloss.NewStyle().
+					Background(ColorBgPanel).
+					Foreground(ColorTextLight).
+					Padding(0, 1).
+					Border(lipgloss.NormalBorder(), false, false, true, false).
+					BorderForeground(ColorBorder)
+
+	BreadcrumbActiveStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorCyan)
+
+	BreadcrumbInactiveStyle = lipgloss.NewStyle().
+				Foreground(ColorTextMuted)
+
+	BreadcrumbSeparatorStyle = lipgloss.NewStyle().
+					Foreground(ColorBorder).
+					Padding(0, 1)
+
+	// ── Settings Columns ────────────────────────────────────────────
+	SettingsPaneStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ColorBorder).
+				Padding(0, 1)
+
+	SettingsPaneFocusedStyle = lipgloss.NewStyle().
+					Border(lipgloss.RoundedBorder()).
+					BorderForeground(ColorIndigo).
+					Padding(0, 1)
+
+	SettingsButtonAreaStyle = lipgloss.NewStyle().
+				MarginTop(0).
+				Padding(0, 1)
 )
+
+var ThemeCustom huh.ThemeFunc = func(isDark bool) *huh.Styles {
+	styles := huh.ThemeCharm(isDark)
+	styles.Focused.Title = styles.Focused.Title.Foreground(ColorCyan)
+	styles.Focused.TextInput.Prompt = styles.Focused.TextInput.Prompt.Foreground(ColorCyan)
+	styles.Focused.Base = styles.Focused.Base.BorderForeground(ColorIndigo).MarginBottom(0).PaddingBottom(0)
+	styles.Blurred.Base = styles.Blurred.Base.MarginBottom(0).PaddingBottom(0)
+	return styles
+}

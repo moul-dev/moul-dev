@@ -4,39 +4,25 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // initSettingsForm initializes the system settings editor form.
 func (m *Model) initSettingsForm() {
-	theme := huh.ThemeCharm()
-	theme.Focused.Title = theme.Focused.Title.Foreground(ColorCyan)
-	theme.Focused.TextInput.Prompt = theme.Focused.TextInput.Prompt.Foreground(ColorCyan)
-	theme.Focused.Base = theme.Focused.Base.BorderForeground(ColorIndigo)
+	var storageFields []huh.Field
+	storageFields = append(storageFields,
+		huh.NewSelect[string]().
+			Title("S3 Storage Enabled").
+			Options(
+				huh.NewOption("Yes", "true"),
+				huh.NewOption("No", "false"),
+			).
+			Value(&m.settingFileS3Enabled),
+	)
 
-	m.SettingsForm = huh.NewForm(
-		// Group 0: Toggle Settings
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("S3 Enabled").
-				Options(
-					huh.NewOption("Yes", "true"),
-					huh.NewOption("No", "false"),
-				).
-				Value(&m.settingFileS3Enabled),
-
-			huh.NewSelect[string]().
-				Title("Litestream Enabled").
-				Options(
-					huh.NewOption("Yes", "true"),
-					huh.NewOption("No", "false"),
-				).
-				Value(&m.settingLiteEnabled),
-		),
-
-		// Group 1: S3 Details (hidden if S3 is not enabled)
-		huh.NewGroup(
+	if m.settingFileS3Enabled == "true" {
+		storageFields = append(storageFields,
 			huh.NewInput().
 				Title("S3 Bucket").
 				Placeholder("e.g. my-bucket-name").
@@ -70,12 +56,28 @@ func (m *Model) initSettingsForm() {
 					huh.NewOption("No", "false"),
 				).
 				Value(&m.settingFileS3ForcePath),
-		).WithHideFunc(func() bool {
-			return m.settingFileS3Enabled != "true"
-		}),
+		)
+	}
 
-		// Group 2: Litestream Details (hidden if Litestream is not enabled)
-		huh.NewGroup(
+	m.lastStorageField = storageFields[len(storageFields)-1]
+
+	m.StorageSettingsForm = huh.NewForm(
+		huh.NewGroup(storageFields...),
+	).WithTheme(ThemeCustom)
+
+	var liteFields []huh.Field
+	liteFields = append(liteFields,
+		huh.NewSelect[string]().
+			Title("Litestream Enabled").
+			Options(
+				huh.NewOption("Yes", "true"),
+				huh.NewOption("No", "false"),
+			).
+			Value(&m.settingLiteEnabled),
+	)
+
+	if m.settingLiteEnabled == "true" {
+		liteFields = append(liteFields,
 			huh.NewInput().
 				Title("Litestream S3 Bucket").
 				Placeholder("e.g. my-backup-bucket").
@@ -114,10 +116,14 @@ func (m *Model) initSettingsForm() {
 				Title("Litestream Replica Path").
 				Placeholder("e.g. s3://my-bucket/replica").
 				Value(&m.settingLiteReplica),
-		).WithHideFunc(func() bool {
-			return m.settingLiteEnabled != "true"
-		}),
-	).WithTheme(theme)
+		)
+	}
+
+	m.lastLiteField = liteFields[len(liteFields)-1]
+
+	m.LiteSettingsForm = huh.NewForm(
+		huh.NewGroup(liteFields...),
+	).WithTheme(ThemeCustom)
 }
 
 // saveSettingsForm compiles form values and saves them on the server.
@@ -143,7 +149,9 @@ func (m *Model) saveSettingsForm() {
 	_, err := m.Client.UpdateSettings(payload)
 	if err != nil {
 		m.Err = err
-		m.SettingsForm.State = huh.StateNormal // Allow retry
+		// Reset forms state to allow retries
+		m.StorageSettingsForm.State = huh.StateNormal
+		m.LiteSettingsForm.State = huh.StateNormal
 		return
 	}
 
@@ -151,24 +159,83 @@ func (m *Model) saveSettingsForm() {
 	m.SuccessMsg = "Settings saved successfully!"
 }
 
-// viewSettings renders the settings form with headers.
+// viewSettings renders the settings split screen layout.
 func (m *Model) viewSettings() string {
 	var s strings.Builder
-	s.WriteString(HeaderStyle.Render("System Settings - S3 Storage & Litestream Backup"))
-	s.WriteString("\n")
 
 	if m.Err != nil {
 		s.WriteString(AlertErrorStyle.Render(fmt.Sprintf("Failed to save settings: %v", m.Err)))
 		s.WriteString("\n")
 	}
 
-	formContainer := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorBorder).
-		Padding(1, 2).
-		Width(60)
+	colWidth := (m.Width - 6) / 2
+	if colWidth < 20 {
+		colWidth = 20
+	}
 
-	s.WriteString(formContainer.Render(m.SettingsForm.View()))
+	// Dynamic height calculation
+	headerHeight := 2 // breadcrumbs
+	if m.Err != nil {
+		headerHeight += 2
+	}
+	formHeight := m.Height - headerHeight - 8
+	if formHeight < 6 {
+		formHeight = 6
+	}
+
+	// Update width and height on both forms
+	m.StorageSettingsForm.WithWidth(colWidth).WithHeight(formHeight)
+	m.LiteSettingsForm.WithWidth(colWidth).WithHeight(formHeight)
+
+	// Determine split pane styling based on current focus
+	storageStyle := SettingsPaneStyle
+	liteStyle := SettingsPaneStyle
+
+	if m.SettingsFocus == FocusStorage {
+		storageStyle = SettingsPaneFocusedStyle
+	} else if m.SettingsFocus == FocusLite {
+		liteStyle = SettingsPaneFocusedStyle
+	}
+
+	// Render Left and Right panels
+	storageView := storageStyle.Width(colWidth).Height(formHeight).Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Render(" S3 STORAGE SETTINGS"),
+			"",
+			m.StorageSettingsForm.View(),
+		),
+	)
+
+	liteView := liteStyle.Width(colWidth).Height(formHeight).Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Render(" LITESTREAM BACKUP SETTINGS"),
+			"",
+			m.LiteSettingsForm.View(),
+		),
+	)
+
+	// Render side-by-side pane
+	s.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, storageView, "  ", liteView))
+	s.WriteString("\n")
+
+	// Render Save/Cancel Buttons
+	saveBtnStyle := ButtonStyle
+	cancelBtnStyle := ButtonStyle
+
+	if m.SettingsFocus == FocusSave {
+		saveBtnStyle = ButtonActiveStyle
+	} else if m.SettingsFocus == FocusCancel {
+		cancelBtnStyle = ButtonActiveStyle
+	}
+
+	buttons := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		saveBtnStyle.Render(" Save Settings "),
+		"  ",
+		cancelBtnStyle.Render(" Cancel "),
+	)
+
+	s.WriteString(SettingsButtonAreaStyle.Render(buttons))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }
