@@ -43,13 +43,15 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 
 	// Update only existing settings keys for security
 	allowedKeys := map[string]bool{
-		"s3_enabled":          true,
-		"s3_bucket":           true,
-		"s3_endpoint":          true,
-		"s3_region":           true,
-		"s3_access_key":       true,
-		"s3_secret_key":       true,
-		"s3_force_path_style": true,
+		"s3_enabled":              true,
+		"s3_bucket":               true,
+		"s3_endpoint":             true,
+		"s3_region":               true,
+		"s3_access_key":           true,
+		"s3_secret_key":           true,
+		"s3_force_path_style":     true,
+		"litestream_enabled":      true,
+		"litestream_replica_path": true,
 	}
 
 	tx, err := h.DB.Begin()

@@ -14,6 +14,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/backup"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -40,12 +41,41 @@ func main() {
 		log.Fatalf("MOUL_ADMIN_KEY environment variable is required: %v", err)
 	}
 
+	dbPath := envy.Get("MOUL_DB_PATH", "moul-local.db")
+
+	// 1. Defer Litestream store shutdown (must run AFTER dbConn.Close())
+	var litestreamStore *backup.LitestreamStore
+	defer func() {
+		if litestreamStore != nil {
+			log.Println("Stopping Litestream replication...")
+			if err := litestreamStore.Close(context.Background()); err != nil {
+				log.Printf("Error stopping Litestream replication: %v", err)
+			}
+		}
+	}()
+
+	// 2. Check if the database file exists; if missing, attempt restore
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		log.Printf("Database file %s not found. Attempting Litestream S3 restore...\n", dbPath)
+		if err := backup.RestoreFromS3(context.Background(), dbPath); err != nil {
+			log.Printf("Litestream restore error: %v\n", err)
+		}
+	}
+
 	// ── Database ────────────────────────────────────────────────────
-	dbConn, err := db.InitDB("moul-local.db")
+	dbConn, err := db.InitDB(dbPath)
 	if err != nil {
 		log.Fatalf("Database initialization failed: %v", err)
 	}
 	defer dbConn.Close()
+
+	// 3. Start Litestream replication
+	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)
+	if err != nil {
+		log.Printf("Failed to start Litestream replication: %v\n", err)
+	} else {
+		litestreamStore = store
+	}
 
 	// ── Analytics Engine ────────────────────────────────────────────
 	geoIPPath := envy.Get("GEOIP_DB_PATH", "")

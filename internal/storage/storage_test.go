@@ -32,13 +32,15 @@ func prepareTestDB(t *testing.T) (*dbx.DB, func()) {
 	}
 
 	defaultSettings := map[string]string{
-		"s3_enabled":          "false",
-		"s3_bucket":           "",
-		"s3_endpoint":          "",
-		"s3_region":           "",
-		"s3_access_key":       "",
-		"s3_secret_key":       "",
-		"s3_force_path_style": "false",
+		"s3_enabled":               "false",
+		"s3_bucket":                "",
+		"s3_endpoint":              "",
+		"s3_region":                "",
+		"s3_access_key":            "",
+		"s3_secret_key":            "",
+		"s3_force_path_style":      "false",
+		"litestream_enabled":      "false",
+		"litestream_replica_path": "",
 	}
 	for k, v := range defaultSettings {
 		_, err = db.Insert("_settings", dbx.Params{"key": k, "value": v}).Execute()
