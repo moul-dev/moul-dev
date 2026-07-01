@@ -93,15 +93,21 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
-		"s3_enabled":               "false",
-		"s3_bucket":                "",
-		"s3_endpoint":              "",
-		"s3_region":                "",
-		"s3_access_key":            "",
-		"s3_secret_key":            "",
-		"s3_force_path_style":      "false",
-		"litestream_enabled":      "false",
-		"litestream_replica_path": "",
+		"file_s3_enabled":                "false",
+		"file_s3_bucket":                 "",
+		"file_s3_endpoint":               "",
+		"file_s3_region":                 "",
+		"file_s3_access_key":             "",
+		"file_s3_secret_key":             "",
+		"file_s3_force_path_style":       "false",
+		"litestream_enabled":             "false",
+		"litestream_s3_bucket":           "",
+		"litestream_s3_endpoint":         "",
+		"litestream_s3_region":           "",
+		"litestream_access_key_id":       "",
+		"litestream_secret_access_key":   "",
+		"litestream_s3_force_path_style": "false",
+		"litestream_replica_path":        "",
 	}
 	for k, v := range defaultSettings {
 		var exists int

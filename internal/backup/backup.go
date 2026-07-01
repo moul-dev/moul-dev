@@ -110,12 +110,12 @@ func StartReplication(ctx context.Context, dbConn *dbx.DB, dbPath string) (*Lite
 		return nil, nil
 	}
 
-	bucket := getSettingOrEnv(settings, "s3_bucket", "LITESTREAM_S3_BUCKET", "")
-	accessKey := getSettingOrEnv(settings, "s3_access_key", "LITESTREAM_ACCESS_KEY_ID", "")
-	secretKey := getSettingOrEnv(settings, "s3_secret_key", "LITESTREAM_SECRET_ACCESS_KEY", "")
-	region := getSettingOrEnv(settings, "s3_region", "LITESTREAM_REGION", "")
-	endpoint := getSettingOrEnv(settings, "s3_endpoint", "LITESTREAM_S3_ENDPOINT", "")
-	forcePathStyleVal := getSettingOrEnv(settings, "s3_force_path_style", "LITESTREAM_S3_FORCE_PATH_STYLE", "false")
+	bucket := getSettingOrEnv(settings, "litestream_s3_bucket", "LITESTREAM_S3_BUCKET", "")
+	accessKey := getSettingOrEnv(settings, "litestream_access_key_id", "LITESTREAM_ACCESS_KEY_ID", "")
+	secretKey := getSettingOrEnv(settings, "litestream_secret_access_key", "LITESTREAM_SECRET_ACCESS_KEY", "")
+	region := getSettingOrEnv(settings, "litestream_region", "LITESTREAM_REGION", "")
+	endpoint := getSettingOrEnv(settings, "litestream_s3_endpoint", "LITESTREAM_S3_ENDPOINT", "")
+	forcePathStyleVal := getSettingOrEnv(settings, "litestream_s3_force_path_style", "LITESTREAM_S3_FORCE_PATH_STYLE", "false")
 	replicaPath := getSettingOrEnv(settings, "litestream_replica_path", "LITESTREAM_REPLICA_PATH", "")
 
 	if bucket == "" || accessKey == "" || secretKey == "" {

@@ -249,3 +249,18 @@ func (c *Client) SetupRootUser(username, email, password string) error {
 	}
 	return c.request("POST", "/api/setup", payload, nil)
 }
+
+// GetSettings fetches all settings from the database and returns them as a JSON object.
+func (c *Client) GetSettings() (map[string]string, error) {
+	var settings map[string]string
+	err := c.request("GET", "/api/settings", nil, &settings)
+	return settings, err
+}
+
+// UpdateSettings updates key-value settings in the database.
+func (c *Client) UpdateSettings(settings map[string]string) (map[string]string, error) {
+	var updated map[string]string
+	err := c.request("PATCH", "/api/settings", settings, &updated)
+	return updated, err
+}
+

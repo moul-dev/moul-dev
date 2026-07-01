@@ -28,6 +28,7 @@ const (
 	StateAnalytics
 	StateDeviceAuth
 	StateMoulCreate
+	StateSettings
 )
 
 // Model is the main state container for the moul TUI.
@@ -119,6 +120,24 @@ type Model struct {
 	verificationURI string
 	pollInterval    int
 	pollExpiry      time.Time
+
+	// Settings Screen
+	SettingsForm                 *huh.Form
+	settingFileS3Enabled         string
+	settingFileS3Bucket          string
+	settingFileS3Endpoint        string
+	settingFileS3Region          string
+	settingFileS3AccessKey       string
+	settingFileS3SecretKey       string
+	settingFileS3ForcePath       string
+	settingLiteEnabled           string
+	settingLiteS3Bucket          string
+	settingLiteS3Endpoint        string
+	settingLiteS3Region          string
+	settingLiteAccessKey         string
+	settingLiteSecretKey         string
+	settingLiteS3ForcePath       string
+	settingLiteReplica           string
 }
 
 // NewModel initializes the TUI model with default values.
@@ -176,6 +195,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case VisitsMsg:
 		m.Visits = msg.Visits
+		return m, nil
+
+	case SettingsMsg:
+		m.settingFileS3Enabled = msg.Settings["file_s3_enabled"]
+		m.settingFileS3Bucket = msg.Settings["file_s3_bucket"]
+		m.settingFileS3Endpoint = msg.Settings["file_s3_endpoint"]
+		m.settingFileS3Region = msg.Settings["file_s3_region"]
+		m.settingFileS3AccessKey = msg.Settings["file_s3_access_key"]
+		m.settingFileS3SecretKey = msg.Settings["file_s3_secret_key"]
+		m.settingFileS3ForcePath = msg.Settings["file_s3_force_path_style"]
+		m.settingLiteEnabled = msg.Settings["litestream_enabled"]
+		m.settingLiteS3Bucket = msg.Settings["litestream_s3_bucket"]
+		m.settingLiteS3Endpoint = msg.Settings["litestream_s3_endpoint"]
+		m.settingLiteS3Region = msg.Settings["litestream_region"]
+		m.settingLiteAccessKey = msg.Settings["litestream_access_key_id"]
+		m.settingLiteSecretKey = msg.Settings["litestream_secret_access_key"]
+		m.settingLiteS3ForcePath = msg.Settings["litestream_s3_force_path_style"]
+		m.settingLiteReplica = msg.Settings["litestream_replica_path"]
+
+		m.initSettingsForm()
+		m.State = StateSettings
+		return m, m.SettingsForm.Init()
+
+	case settingsSavedMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.SuccessMsg = ""
+		} else {
+			m.SuccessMsg = "Settings saved successfully!"
+			m.Err = nil
+		}
+		m.State = StateDashboard
 		return m, nil
 
 	case setupStatusMsg:
@@ -577,6 +628,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
+
+	case StateSettings:
+		newForm, cmd := m.SettingsForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.SettingsForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.SettingsForm.State == huh.StateCompleted {
+			m.saveSettingsForm()
+		} else if m.SettingsForm.State == huh.StateAborted {
+			m.State = StateDashboard
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -607,6 +671,8 @@ func (m *Model) View() string {
 		content = m.viewAnalytics()
 	case StateMoulCreate:
 		content = m.viewMoulCreate()
+	case StateSettings:
+		content = m.viewSettings()
 	}
 
 	return MainContainerStyle.Width(m.Width).Height(m.Height).Render(content)
@@ -755,5 +821,13 @@ type devicePollTickMsg struct{}
 type devicePollResultMsg struct {
 	token string
 	err   error
+}
+
+type SettingsMsg struct {
+	Settings map[string]string
+}
+
+type settingsSavedMsg struct {
+	err error
 }
 

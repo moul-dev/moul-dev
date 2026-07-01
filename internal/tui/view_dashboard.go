@@ -22,10 +22,10 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 			if m.ActiveSidebarIndex > 0 {
 				m.ActiveSidebarIndex--
 			} else {
-				m.ActiveSidebarIndex = len(m.Mouls) + 1 // wrap to bottom
+				m.ActiveSidebarIndex = len(m.Mouls) + 2 // wrap to bottom
 			}
 		case "down", "j":
-			totalItems := len(m.Mouls) + 2
+			totalItems := len(m.Mouls) + 3
 			if m.ActiveSidebarIndex < totalItems-1 {
 				m.ActiveSidebarIndex++
 			} else {
@@ -75,6 +75,8 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 		m.State = StateAnalytics
 		m.SelectedVisitIndex = 0
 		return m.fetchVisits()
+	} else if idx == len(m.Mouls)+2 {
+		return m.fetchSettings()
 	}
 	return nil
 }
@@ -102,6 +104,8 @@ func (m *Model) viewDashboard() string {
 		rightContent = m.viewDashboardWorkerInfo(rightWidth)
 	} else if idx == len(m.Mouls)+1 {
 		rightContent = m.viewDashboardAnalyticsInfo(rightWidth)
+	} else if idx == len(m.Mouls)+2 {
+		rightContent = m.viewDashboardSettingsInfo(rightWidth)
 	}
 
 	var banner string
@@ -171,6 +175,16 @@ func (m *Model) renderSidebar(width int) string {
 		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(analyticsLine))
 	} else {
 		s.WriteString(SidebarItemInactiveStyle.Render(analyticsLine))
+	}
+	s.WriteString("\n")
+ 
+	// Settings
+	settingsIdx := len(m.Mouls) + 2
+	settingsLine := " ⚙️ Settings"
+	if m.ActiveSidebarIndex == settingsIdx {
+		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(settingsLine))
+	} else {
+		s.WriteString(SidebarItemInactiveStyle.Render(settingsLine))
 	}
 	s.WriteString("\n")
 
@@ -309,5 +323,27 @@ func (m *Model) fetchVisits() tea.Cmd {
 			return ErrMsg{err}
 		}
 		return VisitsMsg{visits}
+	}
+}
+
+func (m *Model) viewDashboardSettingsInfo(width int) string {
+	content := fmt.Sprintf(
+		"%s\n%s\n\n%s\n%s\n\n%s",
+		HeaderStyle.Render("System: Settings Console"),
+		SubtitleStyle.Render("Configure S3 Storage & Litestream Backups"),
+		FormLabelStyle.Render("DESCRIPTION"),
+		"  Manage system-wide configuration directly in the database settings table.\n\n  Configure AWS S3 (or S3-compatible) buckets for file storage and set up\n  Litestream database replica paths to automatically back up your SQLite DB.",
+		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to open the Settings panel."),
+	)
+	return ContentStyle.Width(width).Render(content)
+}
+
+func (m *Model) fetchSettings() tea.Cmd {
+	return func() tea.Msg {
+		settings, err := m.Client.GetSettings()
+		if err != nil {
+			return ErrMsg{err}
+		}
+		return SettingsMsg{Settings: settings}
 	}
 }

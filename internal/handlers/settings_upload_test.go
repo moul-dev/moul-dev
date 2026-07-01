@@ -81,14 +81,14 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&settings)
 	resp.Body.Close()
 
-	if settings["s3_enabled"] != "false" {
-		t.Errorf("Expected default s3_enabled to be 'false', got %q", settings["s3_enabled"])
+	if settings["file_s3_enabled"] != "false" {
+		t.Errorf("Expected default file_s3_enabled to be 'false', got %q", settings["file_s3_enabled"])
 	}
 
 	// --- 3. Test settings PATCH (Update settings) ---
 	patchData, _ := json.Marshal(map[string]string{
-		"s3_enabled": "true",
-		"s3_bucket":  "my-bucket-name",
+		"file_s3_enabled": "true",
+		"file_s3_bucket":  "my-bucket-name",
 	})
 	req, _ = http.NewRequest("PATCH", server.URL+"/api/settings", bytes.NewReader(patchData))
 	req.Header.Set("Content-Type", "application/json")
@@ -103,12 +103,12 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&settings)
 	resp.Body.Close()
 
-	if settings["s3_enabled"] != "true" || settings["s3_bucket"] != "my-bucket-name" {
+	if settings["file_s3_enabled"] != "true" || settings["file_s3_bucket"] != "my-bucket-name" {
 		t.Errorf("Settings were not updated: %+v", settings)
 	}
 
-	// Revert s3_enabled to false for subsequent local storage tests
-	patchData, _ = json.Marshal(map[string]string{"s3_enabled": "false"})
+	// Revert file_s3_enabled to false for subsequent local storage tests
+	patchData, _ = json.Marshal(map[string]string{"file_s3_enabled": "false"})
 	req, _ = http.NewRequest("PATCH", server.URL+"/api/settings", bytes.NewReader(patchData))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Admin-Key", adminKey)

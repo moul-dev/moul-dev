@@ -79,17 +79,17 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 	var thumbHashStr string
 
 	// Prepare S3 configuration if active
-	s3Enabled := settings["s3_enabled"] == "true"
+	s3Enabled := settings["file_s3_enabled"] == "true"
 
 	var s3Client *s3.Client
 	var bucket string
 	if s3Enabled {
-		bucket = settings["s3_bucket"]
-		accessKey := settings["s3_access_key"]
-		secretKey := settings["s3_secret_key"]
-		region := settings["s3_region"]
-		endpoint := settings["s3_endpoint"]
-		forcePathStyle := settings["s3_force_path_style"] == "true"
+		bucket = settings["file_s3_bucket"]
+		accessKey := settings["file_s3_access_key"]
+		secretKey := settings["file_s3_secret_key"]
+		region := settings["file_s3_region"]
+		endpoint := settings["file_s3_endpoint"]
+		forcePathStyle := settings["file_s3_force_path_style"] == "true"
 
 		if bucket == "" || accessKey == "" || secretKey == "" || region == "" {
 			return nil, fmt.Errorf("S3 is enabled but configuration is incomplete (bucket, region, keys are required)")
@@ -131,8 +131,8 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 			return nil, fmt.Errorf("failed to upload original file to S3: %w", err)
 		}
 
-		endpoint := settings["s3_endpoint"]
-		region := settings["s3_region"]
+		endpoint := settings["file_s3_endpoint"]
+		region := settings["file_s3_region"]
 		if endpoint != "" {
 			originalURL = fmt.Sprintf("%s/%s/%s", strings.TrimSuffix(endpoint, "/"), bucket, key)
 		} else {
@@ -186,8 +186,8 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 					return nil, fmt.Errorf("failed to upload thumbnail file to S3: %w", err)
 				}
 
-				endpoint := settings["s3_endpoint"]
-				region := settings["s3_region"]
+				endpoint := settings["file_s3_endpoint"]
+				region := settings["file_s3_region"]
 				if endpoint != "" {
 					thumbURL = fmt.Sprintf("%s/%s/%s", strings.TrimSuffix(endpoint, "/"), bucket, thumbKey)
 				} else {
