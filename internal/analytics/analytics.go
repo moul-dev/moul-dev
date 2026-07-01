@@ -5,14 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
+
 	"github.com/google/uuid"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/pocketbase/dbx"
@@ -35,28 +37,28 @@ type EventParams struct {
 type Engine struct {
 	db        *dbx.DB
 	geoReader *geoip2.Reader
-	logger    *slog.Logger
+	logger    *log.Logger
 }
 
 // NewEngine instantiates a new analytics Engine.
 func NewEngine(dbConn *dbx.DB, geoIPPath string) (*Engine, error) {
 	var reader *geoip2.Reader
-	logger := slog.Default()
+	l := logger.With("component", "analytics")
 
 	if geoIPPath != "" {
 		r, err := geoip2.Open(geoIPPath)
 		if err != nil {
-			logger.Warn("Failed to open GeoIP database, geolocation will be disabled", "path", geoIPPath, "error", err)
+			l.Warn("Failed to open GeoIP database, geolocation will be disabled", "path", geoIPPath, "err", err)
 		} else {
 			reader = r
-			logger.Info("GeoIP database loaded successfully", "path", geoIPPath)
+			l.Info("GeoIP database loaded successfully", "path", geoIPPath)
 		}
 	}
 
 	return &Engine{
 		db:        dbConn,
 		geoReader: reader,
-		logger:    logger,
+		logger:    l,
 	}, nil
 }
 

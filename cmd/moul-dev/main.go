@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +16,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/backup"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/worker"
 
@@ -32,13 +32,13 @@ func main() {
 	// ── Required secrets ────────────────────────────────────────────
 	jwtSecret, err := envy.MustGet("MOUL_JWT_SECRET")
 	if err != nil {
-		log.Fatalf("MOUL_JWT_SECRET environment variable is required: %v", err)
+		logger.Fatal("MOUL_JWT_SECRET environment variable is required", "err", err)
 	}
 	auth.InitJWT(jwtSecret)
 
 	adminKey, err := envy.MustGet("MOUL_ADMIN_KEY")
 	if err != nil {
-		log.Fatalf("MOUL_ADMIN_KEY environment variable is required: %v", err)
+		logger.Fatal("MOUL_ADMIN_KEY environment variable is required", "err", err)
 	}
 
 	dbPath := envy.Get("MOUL_DB_PATH", "moul-local.db")
@@ -47,32 +47,32 @@ func main() {
 	var litestreamStore *backup.LitestreamStore
 	defer func() {
 		if litestreamStore != nil {
-			log.Println("Stopping Litestream replication...")
+			logger.Info("Stopping Litestream replication...")
 			if err := litestreamStore.Close(context.Background()); err != nil {
-				log.Printf("Error stopping Litestream replication: %v", err)
+				logger.Error("Error stopping Litestream replication", "err", err)
 			}
 		}
 	}()
 
 	// 2. Check if the database file exists; if missing, attempt restore
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Printf("Database file %s not found. Attempting Litestream S3 restore...\n", dbPath)
+		logger.Info("Database file not found, attempting Litestream S3 restore", "path", dbPath)
 		if err := backup.RestoreFromS3(context.Background(), dbPath); err != nil {
-			log.Printf("Litestream restore error: %v\n", err)
+			logger.Error("Litestream restore error", "err", err)
 		}
 	}
 
 	// ── Database ────────────────────────────────────────────────────
 	dbConn, err := db.InitDB(dbPath)
 	if err != nil {
-		log.Fatalf("Database initialization failed: %v", err)
+		logger.Fatal("Database initialization failed", "err", err)
 	}
 	defer dbConn.Close()
 
 	// 3. Start Litestream replication
 	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)
 	if err != nil {
-		log.Printf("Failed to start Litestream replication: %v\n", err)
+		logger.Error("Failed to start Litestream replication", "err", err)
 	} else {
 		litestreamStore = store
 	}
@@ -81,7 +81,7 @@ func main() {
 	geoIPPath := envy.Get("GEOIP_DB_PATH", "")
 	analyticsEngine, err := analytics.NewEngine(dbConn, geoIPPath)
 	if err != nil {
-		log.Fatalf("Analytics engine initialization failed: %v", err)
+		logger.Fatal("Analytics engine initialization failed", "err", err)
 	}
 	defer analyticsEngine.Close()
 
@@ -90,7 +90,7 @@ func main() {
 
 	// Register a default worker handler as an example
 	workerEngine.Register("SendEmail", func(ctx context.Context, job *worker.Job) error {
-		log.Printf("[Worker Handler] Successfully processed SendEmail job with ID=%s, args=%v\n", job.ID, job.Args)
+		logger.Info("Successfully processed SendEmail job", "jobID", job.ID, "args", job.Args)
 		return nil
 	})
 
@@ -191,9 +191,9 @@ func main() {
 
 	// ── Start server ────────────────────────────────────────────────
 	go func() {
-		log.Printf("Starting moul-dev engine server on http://localhost:8090 (env=%s)", moulEnv)
+		logger.Info("Starting moul-dev engine server", "addr", "http://localhost:8090", "env", moulEnv)
 		if err := e.Start(":8090"); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed to start: %v", err)
+			logger.Fatal("Server failed to start", "err", err)
 		}
 	}()
 
@@ -202,14 +202,14 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server gracefully...")
+	logger.Info("Shutting down server gracefully...")
 	cancel()            // Cancel context for background workers
 	workerEngine.Stop() // Wait for active jobs to complete
 
 	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelShutdown()
 	if err := e.Shutdown(ctxShutdown); err != nil {
-		log.Fatalf("Server shutdown failed: %v", err)
+		logger.Fatal("Server shutdown failed", "err", err)
 	}
-	log.Println("Server stopped gracefully")
+	logger.Info("Server stopped gracefully")
 }

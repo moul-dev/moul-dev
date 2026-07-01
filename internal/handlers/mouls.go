@@ -3,11 +3,11 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
@@ -55,13 +55,13 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 
 	// Create physical sqlite table
 	if err := db.CreateMoulTable(h.DB, m); err != nil {
-		log.Printf("[ERROR] Failed to create table %s: %v", m.Name, err)
+		logger.Error("Failed to create table", "moul", m.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create table")
 	}
 
 	// Save schema metadata
 	if err := db.SaveMoulMetadata(h.DB, m); err != nil {
-		log.Printf("[ERROR] Failed to save metadata for moul %s: %v", m.Name, err)
+		logger.Error("Failed to save metadata for moul", "moul", m.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save moul metadata")
 	}
 
@@ -72,7 +72,7 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 func (h *MoulHandler) ListMouls(c echo.Context) error {
 	mouls, err := db.LoadAllMouls(h.DB)
 	if err != nil {
-		log.Printf("[ERROR] Failed to fetch mouls: %v", err)
+		logger.Error("Failed to fetch mouls", "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve mouls")
 	}
 	return c.JSON(http.StatusOK, mouls)
@@ -91,21 +91,21 @@ func (h *MoulHandler) DeleteMoul(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", name, err)
+		logger.Error("Failed to load moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")
 	}
 
 	// Physical drop table (use QuoteIdentifier for safety)
 	_, err = h.DB.NewQuery(fmt.Sprintf("DROP TABLE IF EXISTS %s;", db.QuoteIdentifier(moul.Name))).Execute()
 	if err != nil {
-		log.Printf("[ERROR] Failed to drop table %s: %v", moul.Name, err)
+		logger.Error("Failed to drop table", "moul", moul.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to drop table")
 	}
 
 	// Delete from _mouls metadata
 	_, err = h.DB.Delete("_mouls", dbx.HashExp{"name": name}).Execute()
 	if err != nil {
-		log.Printf("[ERROR] Failed to delete metadata for moul %s: %v", name, err)
+		logger.Error("Failed to delete metadata for moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete moul metadata")
 	}
 

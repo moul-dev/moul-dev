@@ -1,9 +1,9 @@
 package tui
 
 import (
-	"log"
 	"sync"
 
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/zalando/go-keyring"
 )
 
@@ -27,7 +27,7 @@ func SetSecret(serverURL, keyType, value string) error {
 
 	err := keyring.Set(keyringService, key, value)
 	if err != nil {
-		log.Printf("[WARNING] OS Keychain set failed, falling back to in-memory store: %v", err)
+		logger.Warn("OS Keychain set failed, falling back to in-memory store", "err", err)
 		useFallback = true
 		fallbackMu.Lock()
 		fallbackStore[key] = value
@@ -53,7 +53,7 @@ func GetSecret(serverURL, keyType string) (string, error) {
 			return "", nil
 		}
 		// If keyring fails with other error (e.g. D-Bus connection error), fall back
-		log.Printf("[WARNING] OS Keychain get failed, checking in-memory store: %v", err)
+		logger.Warn("OS Keychain get failed, checking in-memory store", "err", err)
 		fallbackMu.RLock()
 		val = fallbackStore[key]
 		fallbackMu.RUnlock()

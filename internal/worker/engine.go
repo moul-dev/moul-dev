@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
+
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 )
@@ -64,7 +66,7 @@ type Engine struct {
 	wg             sync.WaitGroup
 	ctx            context.Context
 	cancel         context.CancelFunc
-	logger         *slog.Logger
+	logger         *log.Logger
 }
 
 // NewEngine creates a new background job worker engine.
@@ -79,7 +81,7 @@ func NewEngine(dbConn *dbx.DB) *Engine {
 		wakeupChan:     make(chan struct{}, 100),
 		maxConcurrency: 10,
 		activeJobs:     make(chan struct{}, 10), // semaphore for max concurrency
-		logger:         slog.Default(),
+		logger:         logger.With("component", "worker"),
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/logger"
 )
 
 type DeviceFlowHandler struct {
@@ -59,7 +59,7 @@ func (h *DeviceFlowHandler) DeviceAuthorize(c echo.Context) error {
 	expiry := 5 * time.Minute
 	deviceReq, err := auth.DefaultDeviceFlowStore.CreateDeviceRequest(req.ClientID, expiry)
 	if err != nil {
-		log.Printf("[ERROR] Failed to create device authorization: %v", err)
+		logger.Error("Failed to create device authorization", "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -186,7 +186,7 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return renderErr("Invalid email/username or password")
 		}
-		log.Printf("[ERROR] Failed to query auth record in _rootUsers: %v", err)
+		logger.Error("Failed to query auth record in _rootUsers", "err", err)
 		return renderErr("Internal server error")
 	}
 
@@ -195,12 +195,12 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	// Compare Password
 	hashVal, ok := recordMap["passwordHash"]
 	if !ok || hashVal == nil {
-		log.Printf("[ERROR] Missing password hash in database record for _rootUsers")
+		logger.Error("Missing password hash in database record for _rootUsers")
 		return renderErr("Internal server error")
 	}
 	passwordHash, ok := hashVal.(string)
 	if !ok {
-		log.Printf("[ERROR] Invalid password hash type in database record for _rootUsers")
+		logger.Error("Invalid password hash type in database record for _rootUsers")
 		return renderErr("Internal server error")
 	}
 
@@ -216,7 +216,7 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	// 3. Generate JWT Token
 	token, err := auth.GenerateToken(id, email, username, authMoul)
 	if err != nil {
-		log.Printf("[ERROR] Failed to generate auth token: %v", err)
+		logger.Error("Failed to generate auth token", "err", err)
 		return renderErr("Failed to generate auth token")
 	}
 

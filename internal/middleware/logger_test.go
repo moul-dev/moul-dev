@@ -2,22 +2,20 @@ package middleware
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
-	"log/slog"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v4"
+
+	"github.com/moul-dev/moul-dev/internal/logger"
 )
 
 func TestRequestLogger(t *testing.T) {
-	// Set up slog to write JSON to a buffer for parsing
-	var buf bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	slog.SetDefault(logger)
-
 	tests := []struct {
 		name           string
 		handler        echo.HandlerFunc
@@ -49,7 +47,7 @@ func TestRequestLogger(t *testing.T) {
 				return errors.New("something went wrong")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedLevel:  "ERROR",
+			expectedLevel:  "ERRO",
 			expectErrorMsg: "something went wrong",
 		},
 		{
@@ -71,7 +69,12 @@ func TestRequestLogger(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf.Reset()
+			// Redirect the package-level logger to a buffer for testing
+			var buf bytes.Buffer
+			logger.Default = log.NewWithOptions(&buf, log.Options{
+				ReportTimestamp: false,
+			})
+
 			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/test-path", nil)
 			rec := httptest.NewRecorder()
@@ -84,50 +87,46 @@ func TestRequestLogger(t *testing.T) {
 			h := RequestLogger()(tt.handler)
 			_ = h(c) // Execute middleware
 
-			// Parse logged output
-			logOutput := buf.Bytes()
-			if len(logOutput) == 0 {
+			// Parse logged output as text
+			logOutput := buf.String()
+			if logOutput == "" {
 				t.Fatal("Expected log output, got empty buffer")
 			}
 
-			var logData map[string]interface{}
-			if err := json.Unmarshal(logOutput, &logData); err != nil {
-				t.Fatalf("Failed to parse log JSON: %v. Output was: %s", err, string(logOutput))
+			// Validate log level
+			if !strings.Contains(logOutput, tt.expectedLevel) {
+				t.Errorf("Expected level %q in log output, got: %s", tt.expectedLevel, logOutput)
 			}
 
 			// Validate standard fields
-			if logData["level"] != tt.expectedLevel {
-				t.Errorf("Expected level %q, got %q", tt.expectedLevel, logData["level"])
+			if !strings.Contains(logOutput, "method=GET") {
+				t.Errorf("Expected method=GET in log output, got: %s", logOutput)
 			}
-			if logData["method"] != "GET" {
-				t.Errorf("Expected method GET, got %v", logData["method"])
+			if !strings.Contains(logOutput, "path=/test-path") {
+				t.Errorf("Expected path=/test-path in log output, got: %s", logOutput)
 			}
-			if logData["path"] != "/test-path" {
-				t.Errorf("Expected path /test-path, got %v", logData["path"])
-			}
-
-			// In JSON handler, numbers are parsed as float64
-			status, ok := logData["status"].(float64)
-			if !ok || int(status) != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %v", tt.expectedStatus, logData["status"])
+			statusStr := fmt.Sprintf("status=%d", tt.expectedStatus)
+			if !strings.Contains(logOutput, statusStr) {
+				t.Errorf("Expected %s in log output, got: %s", statusStr, logOutput)
 			}
 
 			// Validate user context
 			if tt.expectUser {
-				if logData["user_id"] != "user-123" {
-					t.Errorf("Expected user_id 'user-123', got %v", logData["user_id"])
+				if !strings.Contains(logOutput, "user_id=user-123") {
+					t.Errorf("Expected user_id=user-123 in log output, got: %s", logOutput)
 				}
-				if logData["email"] != "test@example.com" {
-					t.Errorf("Expected email 'test@example.com', got %v", logData["email"])
+				if !strings.Contains(logOutput, "email=test@example.com") {
+					t.Errorf("Expected email=test@example.com in log output, got: %s", logOutput)
 				}
 			}
 
 			// Validate error message
 			if tt.expectErrorMsg != "" {
-				if logData["error"] != tt.expectErrorMsg {
-					t.Errorf("Expected error message %q, got %v", tt.expectErrorMsg, logData["error"])
+				if !strings.Contains(logOutput, tt.expectErrorMsg) {
+					t.Errorf("Expected error message %q in log output, got: %s", tt.expectErrorMsg, logOutput)
 				}
 			}
 		})
 	}
 }
+

@@ -3,7 +3,6 @@ package backup
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/gobuffalo/envy"
 	"github.com/pocketbase/dbx"
+
+	"github.com/moul-dev/moul-dev/internal/logger"
 )
 
 // LitestreamStore wraps the active litestream.Store to manage its lifecycle.
@@ -43,7 +44,7 @@ func RestoreFromS3(ctx context.Context, dbPath string) error {
 	replicaPath := envy.Get("LITESTREAM_REPLICA_PATH", "")
 
 	if bucket == "" || accessKey == "" || secretKey == "" {
-		log.Println("[Backup] S3 restore fallback skipped: bucket, access key, or secret key is missing in environment variables.")
+		logger.Info("S3 restore fallback skipped: bucket, access key, or secret key is missing")
 		return nil
 	}
 
@@ -53,7 +54,7 @@ func RestoreFromS3(ctx context.Context, dbPath string) error {
 
 	forcePathStyle := forcePathStyleStr == "true"
 
-	log.Printf("[Backup] Attempting to restore database from S3 bucket %s at path %s...\n", bucket, replicaPath)
+	logger.Info("Attempting to restore database from S3", "bucket", bucket, "path", replicaPath)
 
 	db := litestream.NewDB(dbPath)
 
@@ -77,11 +78,11 @@ func RestoreFromS3(ctx context.Context, dbPath string) error {
 	if err := replica.Restore(ctx, opt); err != nil {
 		// If it's a new database and replica doesn't exist yet on S3, Restore might return an error like "no snapshots found".
 		// We should log it and proceed so that a fresh local db is initialized.
-		log.Printf("[Backup] S3 restore not completed: %v. Proceeding to initialize fresh database.\n", err)
+		logger.Warn("S3 restore not completed, proceeding with fresh database", "err", err)
 		return nil
 	}
 
-	log.Printf("[Backup] Database successfully restored from S3 to %s\n", dbPath)
+	logger.Info("Database successfully restored from S3", "path", dbPath)
 	return nil
 }
 
@@ -106,7 +107,7 @@ func StartReplication(ctx context.Context, dbConn *dbx.DB, dbPath string) (*Lite
 	// 2. Resolve settings with environment variables override
 	enabledVal := getSettingOrEnv(settings, "litestream_enabled", "LITESTREAM_ENABLED", "false")
 	if enabledVal != "true" {
-		log.Println("[Backup] Litestream replication is disabled.")
+		logger.Info("Litestream replication is disabled")
 		return nil, nil
 	}
 
@@ -128,7 +129,7 @@ func StartReplication(ctx context.Context, dbConn *dbx.DB, dbPath string) (*Lite
 
 	forcePathStyle := forcePathStyleVal == "true"
 
-	log.Printf("[Backup] Starting Litestream replication to S3 (bucket: %s, region: %s, path: %s)...\n", bucket, region, replicaPath)
+	logger.Info("Starting Litestream replication to S3", "bucket", bucket, "region", region, "path", replicaPath)
 
 	// 3. Initialize Litestream DB
 	db := litestream.NewDB(dbPath)

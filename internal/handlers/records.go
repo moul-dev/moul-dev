@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -59,7 +59,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", moulName, err)
+		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -110,7 +110,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		}
 
 		if h.AnalyticsEngine == nil {
-			log.Printf("[ERROR] Analytics engine not initialized for moul %s", moulName)
+			logger.Error("Analytics engine not initialized", "moul", moulName)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 		}
 
@@ -159,7 +159,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 			LandingPage:  landingPage,
 		})
 		if err != nil {
-			log.Printf("[ERROR] Analytics tracking failed for moul %s: %v", moulName, err)
+			logger.Error("Analytics tracking failed", "moul", moulName, "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 		}
 
@@ -323,7 +323,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		// Hash password
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("[ERROR] Failed to hash password: %v", err)
+			logger.Error("Failed to hash password", "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 		}
 
@@ -419,7 +419,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
 		}
-		log.Printf("[ERROR] Failed to insert record in %s: %v", moulName, err)
+		logger.Error("Failed to insert record", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to insert record")
 	}
 
@@ -432,7 +432,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 	var record dbx.NullStringMap
 	err = h.DB.Select("*").From(moulName).Where(dbx.HashExp{"id": recordID}).One(&record)
 	if err != nil {
-		log.Printf("[ERROR] Failed to fetch back record %s in %s: %v", recordID, moulName, err)
+		logger.Error("Failed to fetch back record", "record", recordID, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -450,7 +450,7 @@ func (h *RecordHandler) ListRecords(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", moulName, err)
+		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -458,7 +458,7 @@ func (h *RecordHandler) ListRecords(c echo.Context) error {
 	var rawRecords []dbx.NullStringMap
 	err = h.DB.Select("*").From(moulName).All(&rawRecords)
 	if err != nil && err != sql.ErrNoRows {
-		log.Printf("[ERROR] Failed to list records in %s: %v", moulName, err)
+		logger.Error("Failed to list records", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -491,7 +491,7 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", moulName, err)
+		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -501,7 +501,7 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
 		}
-		log.Printf("[ERROR] Failed to fetch record %s in %s: %v", id, moulName, err)
+		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -533,7 +533,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", moulName, err)
+		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -544,7 +544,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
 		}
-		log.Printf("[ERROR] Failed to fetch record %s in %s: %v", id, moulName, err)
+		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -684,7 +684,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 
 			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 			if err != nil {
-				log.Printf("[ERROR] Failed to hash password: %v", err)
+				logger.Error("Failed to hash password", "err", err)
 				return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 			}
 			updateParams["passwordHash"] = string(hash)
@@ -736,7 +736,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 				return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
 			}
-			log.Printf("[ERROR] Failed to update record %s in %s: %v", id, moulName, err)
+			logger.Error("Failed to update record", "record", id, "moul", moulName, "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update record")
 		}
 	}
@@ -745,7 +745,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 	var updatedRecord dbx.NullStringMap
 	err = h.DB.Select("*").From(moulName).Where(dbx.HashExp{"id": id}).One(&updatedRecord)
 	if err != nil {
-		log.Printf("[ERROR] Failed to fetch back record %s in %s: %v", id, moulName, err)
+		logger.Error("Failed to fetch back record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -765,7 +765,7 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
 		}
-		log.Printf("[ERROR] Failed to load moul %s: %v", moulName, err)
+		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -776,7 +776,7 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
 		}
-		log.Printf("[ERROR] Failed to fetch record %s in %s: %v", id, moulName, err)
+		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -798,7 +798,7 @@ func (h *RecordHandler) DeleteRecord(c echo.Context) error {
 	// Delete
 	_, err = h.DB.Delete(moulName, dbx.HashExp{"id": id}).Execute()
 	if err != nil {
-		log.Printf("[ERROR] Failed to delete record %s in %s: %v", id, moulName, err)
+		logger.Error("Failed to delete record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete record")
 	}
 

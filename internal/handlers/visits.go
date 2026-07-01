@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
+
+	"github.com/moul-dev/moul-dev/internal/logger"
 
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/labstack/echo/v4"
@@ -28,7 +29,7 @@ func (h *VisitsHandler) ListVisits(c echo.Context) error {
 	var rows []dbx.NullStringMap
 	err := h.DB.Select("*").From("_visits").OrderBy("started_at DESC").All(&rows)
 	if err != nil && err != sql.ErrNoRows {
-		log.Printf("[ERROR] Failed to retrieve visits: %v", err)
+		logger.Error("Failed to retrieve visits", "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")
 	}
 
@@ -66,7 +67,7 @@ func (h *VisitsHandler) GetVisit(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Visit not found")
 		}
-		log.Printf("[ERROR] Failed to retrieve visit %s: %v", id, err)
+		logger.Error("Failed to retrieve visit", "id", id, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
