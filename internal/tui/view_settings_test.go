@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestInitSettingsForm(t *testing.T) {
+func TestInitSettingsInputs(t *testing.T) {
 	m := &Model{
 		settingFileS3Enabled:   "true",
 		settingFileS3Bucket:    "my-test-bucket",
@@ -23,14 +23,19 @@ func TestInitSettingsForm(t *testing.T) {
 		settingLiteReplica:     "s3://my-test-bucket/replica",
 	}
 
-	// Run form initialization and ensure it doesn't panic and populates the form objects.
-	m.initSettingsForm()
+	m.initSettingsInputs()
 
-	if m.StorageSettingsForm == nil {
-		t.Fatal("Expected StorageSettingsForm to be initialized, got nil")
+	if len(m.storageInputs) != 5 {
+		t.Fatalf("Expected 5 storage inputs, got %d", len(m.storageInputs))
+	}
+	if m.storageInputs[0].Value() != "my-test-bucket" {
+		t.Errorf("Expected storage bucket value 'my-test-bucket', got %q", m.storageInputs[0].Value())
 	}
 
-	if m.LiteSettingsForm == nil {
-		t.Fatal("Expected LiteSettingsForm to be initialized, got nil")
+	if len(m.liteInputs) != 6 {
+		t.Fatalf("Expected 6 litestream inputs, got %d", len(m.liteInputs))
+	}
+	if m.liteInputs[5].Value() != "s3://my-test-bucket/replica" {
+		t.Errorf("Expected litestream replica value 's3://my-test-bucket/replica', got %q", m.liteInputs[5].Value())
 	}
 }

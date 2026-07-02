@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
@@ -123,9 +124,6 @@ type Model struct {
 	pollExpiry      time.Time
 
 	// Settings Screen
-	StorageSettingsForm          *huh.Form
-	LiteSettingsForm             *huh.Form
-	SettingsFocus                SettingsFocus
 	settingFileS3Enabled         string
 	settingFileS3Bucket          string
 	settingFileS3Endpoint        string
@@ -141,18 +139,13 @@ type Model struct {
 	settingLiteSecretKey         string
 	settingLiteS3ForcePath       string
 	settingLiteReplica           string
-	lastStorageField             huh.Field
-	lastLiteField                huh.Field
+
+	// Settings Tabs & Custom Inputs
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream
+	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
+	storageInputs                []textinput.Model
+	liteInputs                   []textinput.Model
 }
-
-type SettingsFocus int
-
-const (
-	FocusStorage SettingsFocus = iota
-	FocusLite
-	FocusSave
-	FocusCancel
-)
 
 // NewModel initializes the TUI model with default values.
 func NewModel(serverURLOverride, adminKeyOverride string) *Model {
@@ -228,10 +221,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingLiteS3ForcePath = msg.Settings["litestream_s3_force_path_style"]
 		m.settingLiteReplica = msg.Settings["litestream_replica_path"]
 
-		m.initSettingsForm()
+		m.initSettingsInputs()
 		m.State = StateSettings
-		m.SettingsFocus = FocusStorage
-		return m, tea.Batch(m.StorageSettingsForm.Init(), m.LiteSettingsForm.Init())
+		m.settingsActiveTab = 0
+		m.settingsFocusIndex = 0
+		return m, textinput.Blink
 
 	case settingsSavedMsg:
 		if msg.err != nil {
@@ -645,119 +639,113 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case StateSettings:
-		// Intercept keys for split pane focus switching
+		fields := m.getSettingsFields()
+		numFields := len(fields)
+
 		if kp, ok := msg.(tea.KeyPressMsg); ok {
-			switch kp.String() {
-			case "left":
-				if m.SettingsFocus == FocusLite {
-					m.SettingsFocus = FocusStorage
-					return m, nil
-				} else if m.SettingsFocus == FocusCancel {
-					m.SettingsFocus = FocusSave
-					return m, nil
-				}
-			case "right":
-				if m.SettingsFocus == FocusStorage {
-					m.SettingsFocus = FocusLite
-					return m, nil
-				} else if m.SettingsFocus == FocusSave {
-					m.SettingsFocus = FocusCancel
-					return m, nil
-				}
-			case "up":
-				if m.SettingsFocus == FocusSave {
-					m.SettingsFocus = FocusStorage
-					return m, nil
-				} else if m.SettingsFocus == FocusCancel {
-					m.SettingsFocus = FocusLite
-					return m, nil
-				}
-			case "down":
-				if m.SettingsFocus == FocusStorage {
-					if m.StorageSettingsForm.GetFocusedField() == m.lastStorageField {
-						m.SettingsFocus = FocusSave
-						return m, nil
-					}
-				} else if m.SettingsFocus == FocusLite {
-					if m.LiteSettingsForm.GetFocusedField() == m.lastLiteField {
-						m.SettingsFocus = FocusCancel
-						return m, nil
-					}
-				}
-			case "tab":
-				if m.SettingsFocus == FocusStorage {
-					if m.StorageSettingsForm.GetFocusedField() == m.lastStorageField {
-						m.SettingsFocus = FocusSave
-						return m, nil
-					}
-				} else if m.SettingsFocus == FocusLite {
-					if m.LiteSettingsForm.GetFocusedField() == m.lastLiteField {
-						m.SettingsFocus = FocusSave
-						return m, nil
-					}
-				}
-			case "shift+tab":
-				if m.SettingsFocus == FocusSave {
-					m.SettingsFocus = FocusStorage
-					return m, nil
-				} else if m.SettingsFocus == FocusCancel {
-					m.SettingsFocus = FocusLite
-					return m, nil
-				}
+			keyStr := kp.String()
+			switch keyStr {
 			case "esc":
 				m.State = StateDashboard
 				return m, nil
-			case "enter":
-				if m.SettingsFocus == FocusSave {
+			case "left", "h":
+				if m.settingsFocusIndex == 0 {
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 2) % 2
+					m.updateSettingsFocus(m.settingsFocusIndex, 0)
+					return m, nil
+				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
+					m.updateSettingsFocus(m.settingsFocusIndex, numFields+1)
+					return m, nil
+				}
+			case "right", "l":
+				if m.settingsFocusIndex == 0 {
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 2
+					m.updateSettingsFocus(m.settingsFocusIndex, 0)
+					return m, nil
+				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
+					m.updateSettingsFocus(m.settingsFocusIndex, numFields+2)
+					return m, nil
+				}
+			case "up", "k":
+				prev := m.settingsFocusIndex
+				next := prev - 1
+				if next < 0 {
+					next = numFields + 2 // wrap to Cancel
+				}
+				m.updateSettingsFocus(prev, next)
+				return m, nil
+			case "down", "j":
+				prev := m.settingsFocusIndex
+				next := prev + 1
+				if next > numFields+2 {
+					next = 0 // wrap to Tabs
+				}
+				m.updateSettingsFocus(prev, next)
+				return m, nil
+			case "tab":
+				prev := m.settingsFocusIndex
+				next := prev + 1
+				if next > numFields+2 {
+					next = 0 // wrap to Tabs
+				}
+				m.updateSettingsFocus(prev, next)
+				return m, nil
+			case "shift+tab":
+				prev := m.settingsFocusIndex
+				next := prev - 1
+				if next < 0 {
+					next = numFields + 2 // wrap to Cancel
+				}
+				m.updateSettingsFocus(prev, next)
+				return m, nil
+			case "enter", " ":
+				if m.settingsFocusIndex > 0 && m.settingsFocusIndex <= numFields {
+					f := fields[m.settingsFocusIndex-1]
+					if f.isBool {
+						if *f.boolVal == "true" {
+							*f.boolVal = "false"
+						} else {
+							*f.boolVal = "true"
+						}
+						// If toggled enable state, number of fields changes.
+						// Adjust next focus to not exceed new fields limit
+						newFields := m.getSettingsFields()
+						newNumFields := len(newFields)
+						if m.settingsFocusIndex > newNumFields {
+							m.updateSettingsFocus(m.settingsFocusIndex, 1)
+						}
+						return m, nil
+					}
+				} else if m.settingsFocusIndex == numFields+1 { // Save
 					m.saveSettingsForm()
 					return m, nil
-				} else if m.SettingsFocus == FocusCancel {
+				} else if m.settingsFocusIndex == numFields+2 { // Cancel
 					m.State = StateDashboard
 					return m, nil
 				}
 			}
 		}
 
-		oldS3 := m.settingFileS3Enabled
-		oldLite := m.settingLiteEnabled
-
-		if m.SettingsFocus == FocusStorage {
-			newForm, cmd := m.StorageSettingsForm.Update(msg)
-			if f, ok := newForm.(*huh.Form); ok {
-				m.StorageSettingsForm = f
+		// Update inputs if focused
+		if m.settingsFocusIndex > 0 && m.settingsFocusIndex <= numFields {
+			f := fields[m.settingsFocusIndex-1]
+			if !f.isBool {
+				var cmd tea.Cmd
+				if m.settingsActiveTab == 0 {
+					m.storageInputs[f.inputIdx], cmd = m.storageInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.storageInputs[f.inputIdx].Value()
+				} else {
+					m.liteInputs[f.inputIdx], cmd = m.liteInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.liteInputs[f.inputIdx].Value()
+				}
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
-			cmds = append(cmds, cmd)
-			if m.StorageSettingsForm.State == huh.StateCompleted {
-				m.StorageSettingsForm.State = huh.StateNormal
-				m.SettingsFocus = FocusSave
-			}
-		} else if m.SettingsFocus == FocusLite {
-			newForm, cmd := m.LiteSettingsForm.Update(msg)
-			if f, ok := newForm.(*huh.Form); ok {
-				m.LiteSettingsForm = f
-			}
-			cmds = append(cmds, cmd)
-			if m.LiteSettingsForm.State == huh.StateCompleted {
-				m.LiteSettingsForm.State = huh.StateNormal
-				m.SettingsFocus = FocusSave
-			}
-		}
-
-		if m.settingFileS3Enabled != oldS3 || m.settingLiteEnabled != oldLite {
-			m.initSettingsForm()
-			cmds = append(cmds, m.StorageSettingsForm.Init(), m.LiteSettingsForm.Init())
 		}
 	}
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m *Model) cycleSettingsFocus(forward bool) {
-	if forward {
-		m.SettingsFocus = (m.SettingsFocus + 1) % 4
-	} else {
-		m.SettingsFocus = (m.SettingsFocus - 1 + 4) % 4
-	}
 }
 
 func (m *Model) renderBreadcrumbs() string {
@@ -860,11 +848,8 @@ func (m *Model) View() tea.View {
 		content = m.viewSettings()
 	}
 
-	// For authenticated app states, render global header breadcrumbs and content area
-	header := m.renderBreadcrumbs()
-	
-	// Available height for middle content is main height minus header height
-	contentHeight := m.Height - lipgloss.Height(header)
+	// Available height for middle content is main height
+	contentHeight := m.Height
 	if contentHeight < 1 {
 		contentHeight = 1
 	}
@@ -874,7 +859,7 @@ func (m *Model) View() tea.View {
 		Width(m.Width).
 		Render(content)
 
-	v.SetContent(lipgloss.JoinVertical(lipgloss.Left, header, mainContent))
+	v.SetContent(mainContent)
 	return v
 }
 
