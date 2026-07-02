@@ -2,7 +2,7 @@ export MOUL_ENV ?= development
 export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 
-.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui
+.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup
 
 # Start the Echo server locally
 run:
@@ -218,4 +218,16 @@ tui:
 build-tui:
 	mkdir -p bin
 	go build -ldflags="-s -w" -o bin/moul cmd/moul/main.go
+
+# Start local MinIO server with local data directory
+minio-start:
+	@mkdir -p ./data
+	@echo "Starting local MinIO server (Console: http://localhost:9001)..."
+	MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server ./data --console-address :9001
+
+# Setup mc alias for local MinIO server
+minio-setup:
+	@echo "Setting up MinIO client alias 'moul-local'..."
+	mc alias set moul-local http://localhost:9000 minioadmin minioadmin
+
 

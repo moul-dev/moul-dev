@@ -45,6 +45,27 @@ To execute the comprehensive unit and integration tests (which run against isola
 make test-go
 ```
 
+### Run Local S3 (MinIO)
+For local file storage and database backup (via Litestream), you can run a local MinIO server.
+
+1. **Start MinIO server**:
+   Ensure you have `minio` and `mc` installed (e.g., `brew install minio minio-client` on macOS). Then run:
+   ```bash
+   make minio-start
+   ```
+   This starts the MinIO server locally, storing data in `./data` (Console at http://localhost:9001).
+
+2. **Configure the MinIO Client (mc)**:
+   In a separate terminal, register the `moul-local` alias:
+   ```bash
+   make minio-setup
+   ```
+
+3. **Create Buckets Manually**:
+   Create buckets manually using `mc` or via the web console at http://localhost:9001 (default credentials: `minioadmin` / `minioadmin`):
+   - For file uploads: `mc mb moul-local/moul-bucket`
+   - For Litestream backups: `mc mb moul-local/moul-litestream`
+
 ---
 
 ## API Documentation
