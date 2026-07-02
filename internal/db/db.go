@@ -153,7 +153,8 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		// Avoid overriding system fields
 		lowerName := strings.ToLower(field.Name)
 		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
-			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" {
+			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
+			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" {
 			continue
 		}
 		if m.Type == "worker" {
@@ -200,7 +201,10 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				updated_at TEXT NOT NULL,
 				username TEXT UNIQUE NOT NULL,
 				email TEXT UNIQUE NOT NULL,
-				passwordHash TEXT NOT NULL
+				passwordHash TEXT,
+				otpCode TEXT,
+				otpExpiresAt TEXT,
+				passkeys TEXT
 				%s
 			);
 		`, quotedName, columnsSQL)

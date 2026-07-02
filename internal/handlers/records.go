@@ -308,28 +308,33 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 		password, _ := body["password"].(string)
 		passwordConfirm, _ := body["passwordConfirm"].(string)
 
-		if username == "" || email == "" || password == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "username, email, and password are required for auth mouls")
-		}
-		if password != passwordConfirm {
-			return echo.NewHTTPError(http.StatusBadRequest, "password and passwordConfirm must match")
-		}
-
-		// Validate password complexity
-		if err := auth.ValidatePassword(password); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-
-		// Hash password
-		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			logger.Error("Failed to hash password", "err", err)
-			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		if username == "" || email == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "username and email are required for auth mouls")
 		}
 
 		insertData["username"] = username
 		insertData["email"] = email
-		insertData["passwordHash"] = string(hash)
+
+		if password != "" || passwordConfirm != "" {
+			if password != passwordConfirm {
+				return echo.NewHTTPError(http.StatusBadRequest, "password and passwordConfirm must match")
+			}
+
+			// Validate password complexity
+			if err := auth.ValidatePassword(password); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+			}
+
+			// Hash password
+			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if err != nil {
+				logger.Error("Failed to hash password", "err", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+			}
+			insertData["passwordHash"] = string(hash)
+		} else {
+			insertData["passwordHash"] = nil
+		}
 	}
 
 	// Worker collection specific fields
@@ -866,6 +871,9 @@ func toInt(v interface{}) (int, error) {
 // normalizeRecord helps format the output data for JSON responses
 func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[string]interface{} {
 	delete(record, "passwordHash")
+	delete(record, "otpCode")
+	delete(record, "otpExpiresAt")
+	delete(record, "passkeys")
 
 	// Convert database strings to correct JSON types based on moul fields schema
 	for _, field := range moul.Fields {

@@ -192,6 +192,100 @@ Query the session logs recorded by the analytics engine. These endpoints require
 
 ---
 
+### 4. Authentication Management
+
+Auth-type collections support three authentication flows: Password, Email OTP, and Passkeys.
+
+#### 4.1. Password Authentication
+
+##### Authenticate with Password
+- **HTTP Method**: `POST`
+- **Path**: `/api/mouls/:moulName/auth-with-password`
+- **Request Body**:
+```json
+{
+  "identity": "username_or_email",
+  "password": "Password123"
+}
+```
+- **Response**:
+```json
+{
+  "token": "JWT_TOKEN",
+  "record": {
+    "id": "users-LpI7pW...",
+    "username": "username",
+    "email": "user@example.com",
+    "created_at": "...",
+    "updated_at": "..."
+  }
+}
+```
+
+#### 4.2. Email OTP Authentication
+
+##### Request OTP
+- **HTTP Method**: `POST`
+- **Path**: `/api/mouls/:moulName/otp/request`
+- **Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+*Note: If the email is not registered yet, an account will be automatically created (auto-signup) upon successful OTP verification.*
+
+##### Verify OTP / Authenticate
+- **HTTP Method**: `POST`
+- **Path**: `/api/mouls/:moulName/auth-with-otp`
+- **Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
+
+#### 4.3. Passkey (WebAuthn) Authentication
+
+##### Register Passkey (Authenticated User)
+1. **Request Registration Options**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/register/options`
+   - **Headers**: `Authorization: Bearer <JWT_TOKEN>`
+   - **Response**: Returns WebAuthn registration options + a unique `sessionToken`.
+2. **Verify Registration**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/register/verify?sessionToken=<TOKEN>`
+   - **Headers**: `Authorization: Bearer <JWT_TOKEN>`
+   - **Request Body**: Raw browser credentials assertion JSON object (`navigator.credentials.create()`).
+
+##### Sign Up with Passkey (New User)
+1. **Request Signup Options**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/signup/options`
+   - **Request Body**: `{"email": "newuser@example.com"}`
+   - **Response**: Returns WebAuthn registration options + a unique `sessionToken`.
+2. **Verify Signup**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/signup/verify?sessionToken=<TOKEN>`
+   - **Request Body**: Raw browser credentials assertion JSON object.
+   - **Response**: Returns JWT token + new user record.
+
+##### Login with Passkey (Existing User)
+1. **Request Login Options**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/login/options`
+   - **Request Body**: `{"identity": "username_or_email"}`
+   - **Response**: Returns WebAuthn login options + a unique `sessionToken`.
+2. **Verify Login**:
+   - **HTTP Method**: `POST`
+   - **Path**: `/api/mouls/:moulName/passkey/login/verify?sessionToken=<TOKEN>`
+   - **Request Body**: Raw browser assertion response JSON object (`navigator.credentials.get()`).
+   - **Response**: Returns JWT token + user record.
+
+---
+
 ## Programmatic Go Worker API
 
 For backend processing, you can register custom execution handlers in Go and enqueue jobs programmatically.
