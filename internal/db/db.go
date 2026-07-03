@@ -136,6 +136,36 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create idx_visits_user index: %w", err)
 	}
 
+	// Create meta-table _requests
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _requests (
+			id TEXT PRIMARY KEY,
+			visit_id TEXT NOT NULL,
+			method TEXT NOT NULL,
+			path TEXT NOT NULL,
+			status_code INTEGER NOT NULL,
+			response_time_ms INTEGER NOT NULL,
+			created_at TEXT NOT NULL
+		);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _requests table: %w", err)
+	}
+
+	// Create indexes on _requests
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_visit_id ON _requests (visit_id);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_requests_visit_id index: %w", err)
+	}
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON _requests (created_at);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_requests_created_at index: %w", err)
+	}
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_path ON _requests (path);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_requests_path index: %w", err)
+	}
+
 	return db, nil
 }
 

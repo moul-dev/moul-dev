@@ -100,6 +100,9 @@ func main() {
 	workerEngine.Start(ctx)
 	defer workerEngine.Stop()
 
+	// Start Analytics Request Flusher
+	analyticsEngine.StartFlusher(ctx)
+
 	// ── Echo server ─────────────────────────────────────────────────
 	e := echo.New()
 
@@ -128,6 +131,11 @@ func main() {
 	// Auth context loader (JWT extraction from Authorization header)
 	e.Use(middleware.LoadAuthContextMiddleware())
 
+	// Request tracking middleware (creates visit sessions, tracks all requests)
+	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests"}),
+	))
+
 	// HTTP Request logging
 	e.Use(middleware.RequestLogger())
 
@@ -140,6 +148,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(dbConn)
 	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
+	requestsHandler := handlers.NewRequestsHandler(dbConn)
 	settingsHandler := handlers.NewSettingsHandler(dbConn)
 	uploadHandler := handlers.NewUploadHandler(dbConn)
 	setupHandler := handlers.NewSetupHandler(dbConn)
@@ -196,6 +205,10 @@ func main() {
 	// 4. Analytics visits log (JWT-protected)
 	e.GET("/api/visits", visitsHandler.ListVisits)
 	e.GET("/api/visits/:id", visitsHandler.GetVisit)
+
+	// 5. Request tracking log (JWT-protected)
+	e.GET("/api/requests", requestsHandler.ListRequests)
+	e.GET("/api/requests/:id", requestsHandler.GetRequest)
 
 	// ── Start server ────────────────────────────────────────────────
 	go func() {

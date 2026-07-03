@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -33,11 +34,40 @@ type EventParams struct {
 	LandingPage  string
 }
 
+// RequestData holds per-request tracking data for async insertion.
+type RequestData struct {
+	VisitID        string
+	Method         string
+	Path           string
+	StatusCode     int
+	ResponseTimeMs int64
+	CreatedAt      string
+}
+
+// VisitResult holds the result of EnsureVisit, including whether a new visit was created.
+type VisitResult struct {
+	VisitID      string
+	VisitorToken string
+	IsNew        bool
+}
+
+const (
+	requestChannelSize = 1000
+	flushInterval      = 5 * time.Second
+	flushBatchSize     = 100
+)
+
 // Engine manages analytics events and visit tracking.
 type Engine struct {
 	db        *dbx.DB
 	geoReader *geoip2.Reader
 	logger    *log.Logger
+
+	// Request tracking
+	requestCh chan RequestData
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
+	stopped   bool
 }
 
 // NewEngine instantiates a new analytics Engine.
@@ -59,15 +89,202 @@ func NewEngine(dbConn *dbx.DB, geoIPPath string) (*Engine, error) {
 		db:        dbConn,
 		geoReader: reader,
 		logger:    l,
+		requestCh: make(chan RequestData, requestChannelSize),
 	}, nil
 }
 
 // Close releases any resources associated with the analytics engine.
 func (e *Engine) Close() error {
+	e.Stop()
 	if e.geoReader != nil {
 		return e.geoReader.Close()
 	}
 	return nil
+}
+
+// EnsureVisit creates a new visit session or retrieves an existing one.
+// It uses the visitor_token cookie/header for deduplication.
+func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, referrer, landingPage string) (*VisitResult, error) {
+	// If visitToken is provided, check if the visit exists
+	if visitToken != "" {
+		var count int
+		err := e.db.Select("COUNT(*)").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&count)
+		if err == nil && count > 0 {
+			// Visit exists, update user_id if needed
+			if userID != "" {
+				var currentUserID sql.NullString
+				err := e.db.Select("user_id").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&currentUserID)
+				if err == nil && (!currentUserID.Valid || currentUserID.String == "") {
+					_, _ = e.db.Update("_visits", dbx.Params{"user_id": userID}, dbx.HashExp{"id": visitToken}).Execute()
+				}
+			}
+			return &VisitResult{
+				VisitID:      visitToken,
+				VisitorToken: visitorToken,
+				IsNew:        false,
+			}, nil
+		}
+	}
+
+	// Create a new visit
+	if visitToken == "" {
+		visitToken = uuid.NewString()
+	}
+	if visitorToken == "" {
+		visitorToken = uuid.NewString()
+	}
+
+	browser, os, device := parseUserAgent(userAgent)
+	utmSource, utmMedium, utmTerm, utmContent, utmCampaign := parseUTM(landingPage)
+	refDomain := parseReferrerDomain(referrer)
+	country, region, city := e.lookupIP(ip)
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	insertParams := dbx.Params{
+		"id":               visitToken,
+		"visitor_token":    visitorToken,
+		"ip":               ip,
+		"user_agent":       userAgent,
+		"referrer":         referrer,
+		"referring_domain": refDomain,
+		"landing_page":     landingPage,
+		"browser":          browser,
+		"os":               os,
+		"device_type":      device,
+		"country":          country,
+		"region":           region,
+		"city":             city,
+		"utm_source":       utmSource,
+		"utm_medium":       utmMedium,
+		"utm_term":         utmTerm,
+		"utm_content":      utmContent,
+		"utm_campaign":     utmCampaign,
+		"started_at":       now,
+	}
+	if userID != "" {
+		insertParams["user_id"] = userID
+	}
+
+	_, err := e.db.Insert("_visits", insertParams).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert visit: %w", err)
+	}
+
+	return &VisitResult{
+		VisitID:      visitToken,
+		VisitorToken: visitorToken,
+		IsNew:        true,
+	}, nil
+}
+
+// TrackRequest enqueues a request record for async batch insertion.
+// This is non-blocking; if the channel is full, the request is dropped with a warning.
+func (e *Engine) TrackRequest(data RequestData) {
+	select {
+	case e.requestCh <- data:
+	default:
+		e.logger.Warn("Request tracking channel full, dropping request", "path", data.Path)
+	}
+}
+
+// StartFlusher starts the background goroutine that batch-inserts request records.
+func (e *Engine) StartFlusher(ctx context.Context) {
+	flusherCtx, cancel := context.WithCancel(ctx)
+	e.cancel = cancel
+	e.wg.Add(1)
+	go e.runFlusher(flusherCtx)
+	e.logger.Info("Request tracking flusher started")
+}
+
+// Stop signals the flusher to drain remaining items and shut down.
+func (e *Engine) Stop() {
+	if e.stopped {
+		return
+	}
+	e.stopped = true
+	if e.cancel != nil {
+		e.cancel()
+	}
+	e.wg.Wait()
+	e.logger.Info("Request tracking flusher stopped")
+}
+
+// runFlusher is the background loop that collects request data and flushes in batches.
+func (e *Engine) runFlusher(ctx context.Context) {
+	defer e.wg.Done()
+
+	ticker := time.NewTicker(flushInterval)
+	defer ticker.Stop()
+
+	buffer := make([]RequestData, 0, flushBatchSize)
+
+	for {
+		select {
+		case req, ok := <-e.requestCh:
+			if !ok {
+				// Channel closed, flush remaining
+				if len(buffer) > 0 {
+					e.flushRequests(buffer)
+				}
+				return
+			}
+			buffer = append(buffer, req)
+			if len(buffer) >= flushBatchSize {
+				e.flushRequests(buffer)
+				buffer = buffer[:0]
+			}
+		case <-ticker.C:
+			if len(buffer) > 0 {
+				e.flushRequests(buffer)
+				buffer = buffer[:0]
+			}
+		case <-ctx.Done():
+			// Drain remaining items from the channel
+			for {
+				select {
+				case req, ok := <-e.requestCh:
+					if !ok {
+						if len(buffer) > 0 {
+							e.flushRequests(buffer)
+						}
+						return
+					}
+					buffer = append(buffer, req)
+				default:
+					if len(buffer) > 0 {
+						e.flushRequests(buffer)
+					}
+					return
+				}
+			}
+		}
+	}
+}
+
+// flushRequests batch-inserts request records into the _requests table.
+func (e *Engine) flushRequests(batch []RequestData) {
+	if len(batch) == 0 {
+		return
+	}
+
+	for _, req := range batch {
+		reqID := fmt.Sprintf("req-%s", util.RandomID())
+		_, err := e.db.Insert("_requests", dbx.Params{
+			"id":               reqID,
+			"visit_id":         req.VisitID,
+			"method":           req.Method,
+			"path":             req.Path,
+			"status_code":      req.StatusCode,
+			"response_time_ms": req.ResponseTimeMs,
+			"created_at":       req.CreatedAt,
+		}).Execute()
+		if err != nil {
+			e.logger.Error("Failed to insert request record", "path", req.Path, "err", err)
+		}
+	}
+
+	e.logger.Debug("Flushed request records", "count", len(batch))
 }
 
 // Track records a new analytic event and resolves/creates a visit session.

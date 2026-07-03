@@ -14,6 +14,7 @@
 6. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with support for queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 7. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local deployment.
 8. **First-Party Analytics & Session Tracking**: Create `analytic` mouls that automatically track events and sessions. The engine parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution and a server-side Go API.
+9. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
 
 ---
 
@@ -210,6 +211,64 @@ Query the session logs recorded by the analytics engine. These endpoints require
 #### Get Specific Visit
 - **HTTP Method**: `GET`
 - **Path**: `/api/visits/:id`
+
+---
+
+### 3.1 Request Tracking
+
+All incoming HTTP requests are tracked by default. The engine maintains two tables:
+- **`_visits`**: One row per visitor session (deduplicated by `moul_visitor` cookie). Captures browser, OS, device type, geo (via GeoIP), UTM parameters, referrer, and landing page.
+- **`_requests`**: One row per HTTP request, linked to `_visits` via `visit_id`. Captures method, path, status code, and response time.
+
+#### Architecture
+
+```mermaid
+flowchart LR
+    A["HTTP Request"] --> B["RequestTracker Middleware"]
+    B --> C{"Visit cookie exists?"}
+    C -->|Yes| D["Reuse existing _visits row"]
+    C -->|No| E["Create new _visits row + set cookies"]
+    D --> F["Process request handler"]
+    E --> F
+    F --> G["Enqueue RequestData to channel"]
+    G --> H["Background Flusher goroutine"]
+    H -->|"Every 5s or 100 items"| I["Batch INSERT into _requests"]
+```
+
+Request tracking is implemented as a global middleware that runs on every request. Visit sessions are created synchronously (to set cookies), while per-request data is buffered and batch-inserted asynchronously to minimize latency impact.
+
+**Excluded paths** (not tracked): `/api/visits`, `/api/requests` — to avoid self-referential noise.
+
+#### List Tracked Requests
+- **HTTP Method**: `GET`
+- **Path**: `/api/requests`
+- **Query Parameters**:
+  - `page` (integer, optional): Page number (defaults to `1`).
+  - `perPage` (integer, optional): Items per page, max 200 (defaults to `50`).
+- **Response**:
+```json
+{
+  "page": 1,
+  "perPage": 50,
+  "totalItems": 142,
+  "totalPages": 3,
+  "items": [
+    {
+      "id": "req-abc123",
+      "visit_id": "550e8400-e29b-41d4-a716-446655440000",
+      "method": "POST",
+      "path": "/api/mouls/users/records",
+      "status_code": "201",
+      "response_time_ms": "42",
+      "created_at": "2026-07-03T09:00:00Z"
+    }
+  ]
+}
+```
+
+#### Get Specific Request
+- **HTTP Method**: `GET`
+- **Path**: `/api/requests/:id`
 
 ---
 
