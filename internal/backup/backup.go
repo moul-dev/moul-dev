@@ -145,6 +145,7 @@ func StartReplication(ctx context.Context, dbConn *dbx.DB, dbPath string) (*Lite
 
 	replica := litestream.NewReplica(db)
 	replica.Client = client
+	replica.SyncInterval = 4 * time.Hour
 	db.Replica = replica
 
 	// 4. Configure compaction levels (Level 0 and Level 1 at 10-second sync intervals)
@@ -155,6 +156,8 @@ func StartReplication(ctx context.Context, dbConn *dbx.DB, dbPath string) (*Lite
 
 	// 5. Create store and add DB
 	store := litestream.NewStore([]*litestream.DB{db}, levels)
+	store.SnapshotInterval = 1 * time.Hour
+	store.SnapshotRetention = 72 * time.Hour
 
 	// 6. Open the store to begin replication background tasks
 	if err := store.Open(ctx); err != nil {
