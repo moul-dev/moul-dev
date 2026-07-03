@@ -221,9 +221,9 @@ build-tui:
 
 # Start local MinIO server with local data directory
 minio-start:
-	@mkdir -p ./data
+	@mkdir -p tmp/minio
 	@echo "Starting local MinIO server (Console: http://localhost:9001)..."
-	MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server ./data --console-address :9001
+	MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server tmp/minio --console-address :9001
 
 # Setup mc alias for local MinIO server
 minio-setup:

@@ -53,7 +53,7 @@ For local file storage and database backup (via Litestream), you can run a local
    ```bash
    make minio-start
    ```
-   This starts the MinIO server locally, storing data in `./data` (Console at http://localhost:9001).
+   This starts the MinIO server locally, storing data in `tmp/minio` (Console at http://localhost:9001).
 
 2. **Configure the MinIO Client (mc)**:
    In a separate terminal, register the `moul-local` alias:

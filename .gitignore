@@ -3,6 +3,7 @@ moul-local.db
 moul-local.db-journal
 moul-local.db-wal
 moul-local.db-shm
+.moul-local*
 
 # Binaries and templates
 *.exe
