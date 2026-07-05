@@ -264,3 +264,33 @@ func (c *Client) UpdateSettings(settings map[string]string) (map[string]string, 
 	return updated, err
 }
 
+// GetEmailTemplates fetches the email templates for a specific auth moul.
+func (c *Client) GetEmailTemplates(moulName string) (*schema.EmailTemplates, error) {
+	var templates schema.EmailTemplates
+	path := fmt.Sprintf("/api/mouls/%s/email-templates", moulName)
+	err := c.request("GET", path, nil, &templates)
+	return &templates, err
+}
+
+// UpdateEmailTemplates updates the email templates for a specific auth moul.
+func (c *Client) UpdateEmailTemplates(moulName string, templates *schema.EmailTemplates) (*schema.EmailTemplates, error) {
+	var updated schema.EmailTemplates
+	path := fmt.Sprintf("/api/mouls/%s/email-templates", moulName)
+	err := c.request("PUT", path, templates, &updated)
+	return &updated, err
+}
+
+// SendTestEmail sends a test email for a specific auth moul and template.
+func (c *Client) SendTestEmail(moulName string, email string, template string) (string, error) {
+	payload := map[string]string{
+		"email":    email,
+		"template": template,
+	}
+	var resp struct {
+		Message string `json:"message"`
+	}
+	path := fmt.Sprintf("/api/mouls/%s/email-templates/test", moulName)
+	err := c.request("POST", path, payload, &resp)
+	return resp.Message, err
+}
+

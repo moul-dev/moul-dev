@@ -36,6 +36,9 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create _mouls meta table: %w", err)
 	}
 
+	// Ensure email_templates column exists in _mouls for backwards compatibility
+	_, _ = db.NewQuery("ALTER TABLE _mouls ADD COLUMN email_templates TEXT;").Execute()
+
 	// Create meta-table _visits
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _visits (
@@ -313,18 +316,32 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 		return err
 	}
 
+	templatesJSON := "{}"
+	if m.Type == "auth" {
+		if m.EmailTemplates == nil {
+			defaults := schema.GetDefaultEmailTemplates()
+			m.EmailTemplates = &defaults
+		}
+		bytes, err := json.Marshal(m.EmailTemplates)
+		if err != nil {
+			return err
+		}
+		templatesJSON = string(bytes)
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 	m.CreatedAt = now
 	m.UpdatedAt = now
 
 	_, err = db.Insert("_mouls", dbx.Params{
-		"id":         m.ID,
-		"name":       m.Name,
-		"type":       m.Type,
-		"fields":     fieldsJSON,
-		"rules":      rulesJSON,
-		"created_at": m.CreatedAt,
-		"updated_at": m.UpdatedAt,
+		"id":              m.ID,
+		"name":            m.Name,
+		"type":            m.Type,
+		"fields":          fieldsJSON,
+		"rules":           rulesJSON,
+		"email_templates": templatesJSON,
+		"created_at":      m.CreatedAt,
+		"updated_at":      m.UpdatedAt,
 	}).Execute()
 
 	if err != nil {
@@ -337,16 +354,17 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 // LoadAllMouls retrieves all defined mouls from the meta-table.
 func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
 	var rows []struct {
-		ID        string `db:"id"`
-		Name      string `db:"name"`
-		Type      string `db:"type"`
-		Fields    string `db:"fields"`
-		Rules     string `db:"rules"`
-		CreatedAt string `db:"created_at"`
-		UpdatedAt string `db:"updated_at"`
+		ID             string         `db:"id"`
+		Name           string         `db:"name"`
+		Type           string         `db:"type"`
+		Fields         string         `db:"fields"`
+		Rules          string         `db:"rules"`
+		EmailTemplates sql.NullString `db:"email_templates"`
+		CreatedAt      string         `db:"created_at"`
+		UpdatedAt      string         `db:"updated_at"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
 		From("_mouls").
 		All(&rows)
 	if err != nil && err != sql.ErrNoRows {
@@ -357,6 +375,7 @@ func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
 	for _, row := range rows {
 		var fields []schema.MoulField
 		var rules schema.MoulRules
+		var templates *schema.EmailTemplates
 
 		if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
 			return nil, err
@@ -364,15 +383,27 @@ func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
 		if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
 			return nil, err
 		}
+		if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
+			var t schema.EmailTemplates
+			if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
+				templates = &t
+			}
+		}
+
+		if templates == nil && row.Type == "auth" {
+			defaults := schema.GetDefaultEmailTemplates()
+			templates = &defaults
+		}
 
 		mouls = append(mouls, &schema.Moul{
-			ID:        row.ID,
-			Name:      row.Name,
-			Type:      row.Type,
-			Fields:    fields,
-			Rules:     rules,
-			CreatedAt: row.CreatedAt,
-			UpdatedAt: row.UpdatedAt,
+			ID:             row.ID,
+			Name:           row.Name,
+			Type:           row.Type,
+			Fields:         fields,
+			Rules:          rules,
+			EmailTemplates: templates,
+			CreatedAt:      row.CreatedAt,
+			UpdatedAt:      row.UpdatedAt,
 		})
 	}
 
@@ -382,16 +413,17 @@ func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
 // LoadMoulByName retrieves a single moul by name.
 func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 	var row struct {
-		ID        string `db:"id"`
-		Name      string `db:"name"`
-		Type      string `db:"type"`
-		Fields    string `db:"fields"`
-		Rules     string `db:"rules"`
-		CreatedAt string `db:"created_at"`
-		UpdatedAt string `db:"updated_at"`
+		ID             string         `db:"id"`
+		Name           string         `db:"name"`
+		Type           string         `db:"type"`
+		Fields         string         `db:"fields"`
+		Rules          string         `db:"rules"`
+		EmailTemplates sql.NullString `db:"email_templates"`
+		CreatedAt      string         `db:"created_at"`
+		UpdatedAt      string         `db:"updated_at"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
 		From("_mouls").
 		Where(dbx.HashExp{"name": name}).
 		One(&row)
@@ -401,6 +433,7 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 
 	var fields []schema.MoulField
 	var rules schema.MoulRules
+	var templates *schema.EmailTemplates
 
 	if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
 		return nil, err
@@ -408,14 +441,44 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 	if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
 		return nil, err
 	}
+	if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
+		var t schema.EmailTemplates
+		if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
+			templates = &t
+		}
+	}
+
+	if templates == nil && row.Type == "auth" {
+		defaults := schema.GetDefaultEmailTemplates()
+		templates = &defaults
+	}
 
 	return &schema.Moul{
-		ID:        row.ID,
-		Name:      row.Name,
-		Type:      row.Type,
-		Fields:    fields,
-		Rules:     rules,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
+		ID:             row.ID,
+		Name:           row.Name,
+		Type:           row.Type,
+		Fields:         fields,
+		Rules:          rules,
+		EmailTemplates: templates,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
 	}, nil
+}
+
+// UpdateMoulEmailTemplates updates the email templates in the _mouls metadata table.
+func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.EmailTemplates) error {
+	bytes, err := json.Marshal(templates)
+	if err != nil {
+		return fmt.Errorf("failed to marshal email templates: %w", err)
+	}
+
+	_, err = db.Update("_mouls", dbx.Params{
+		"email_templates": string(bytes),
+		"updated_at":      time.Now().UTC().Format(time.RFC3339),
+	}, dbx.HashExp{"id": moulID}).Execute()
+
+	if err != nil {
+		return fmt.Errorf("failed to update email templates: %w", err)
+	}
+	return nil
 }

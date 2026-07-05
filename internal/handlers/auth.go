@@ -7,6 +7,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/worker"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pocketbase/dbx"
@@ -14,7 +15,8 @@ import (
 )
 
 type AuthHandler struct {
-	DB *dbx.DB
+	DB     *dbx.DB
+	Engine *worker.Engine
 }
 
 func NewAuthHandler(dbConn *dbx.DB) *AuthHandler {

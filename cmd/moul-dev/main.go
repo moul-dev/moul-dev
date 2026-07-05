@@ -146,6 +146,7 @@ func main() {
 	recordHandler.AnalyticsEngine = analyticsEngine
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev
 	authHandler := handlers.NewAuthHandler(dbConn)
+	authHandler.Engine = workerEngine
 	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
 	requestsHandler := handlers.NewRequestsHandler(dbConn)
@@ -164,6 +165,9 @@ func main() {
 	adminGroup := e.Group("/api/mouls", middleware.RequireAdminKey(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.DELETE("/:name", moulHandler.DeleteMoul)
+	adminGroup.GET("/:moulName/email-templates", authHandler.GetEmailTemplates)
+	adminGroup.PUT("/:moulName/email-templates", authHandler.UpdateEmailTemplates)
+	adminGroup.POST("/:moulName/email-templates/test", authHandler.SendTestEmail)
 
 	// Admin settings management (Admin-protected)
 	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAdminKey(adminKey))

@@ -12,6 +12,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
 	"github.com/labstack/echo/v4"
@@ -76,6 +77,8 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
+	var username string
+
 	// 2. Auto-signup: If user does not exist, create a new record
 	if err == sql.ErrNoRows {
 		// Generate unique username from email prefix
@@ -86,7 +89,7 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 			baseUsername = "user"
 		}
 
-		username := baseUsername
+		username = baseUsername
 		for {
 			var exists int
 			err := h.DB.Select("COUNT(*)").From(moulName).Where(dbx.HashExp{"username": username}).Row(&exists)
@@ -115,6 +118,9 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 			logger.Error("Failed to insert new user during OTP auto-signup", "moul", moulName, "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 		}
+	} else {
+		recordMap := nullStringMapToMap(record)
+		username, _ = recordMap["username"].(string)
 	}
 
 	// 3. Generate and store OTP code
@@ -137,13 +143,63 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	// 4. Log OTP to terminal for local debugging / mock delivery
+	// 4. Render template and dispatch email
+	if moul.EmailTemplates == nil {
+		defaults := schema.GetDefaultEmailTemplates()
+		moul.EmailTemplates = &defaults
+	}
+
+	otpTemplate := moul.EmailTemplates.OTP
+	templateData := map[string]interface{}{
+		"OTP":      otpCode,
+		"Username": username,
+		"Email":    email,
+	}
+
+	subject, err := renderEmailTemplate(otpTemplate.Subject, templateData)
+	if err != nil {
+		logger.Error("Failed to render OTP subject template", "err", err)
+		subject = otpTemplate.Subject
+	}
+
+	body, err := renderEmailTemplate(otpTemplate.Body, templateData)
+	if err != nil {
+		logger.Error("Failed to render OTP body template", "err", err)
+		body = otpTemplate.Body
+	}
+
+	// Log OTP to terminal for local debugging / mock delivery
 	logger.Info("========================================")
 	logger.Info("EMAIL OTP REQUEST RECEIVED", "moul", moulName)
 	logger.Info("To:", "email", email)
+	logger.Info("Subject:", "subject", subject)
+	logger.Info("Body:", "body", body)
 	logger.Info("Code:", "otp", otpCode)
 	logger.Info("Expires At:", "time", otpExpiresAt)
 	logger.Info("========================================")
+
+	// If worker Engine is available, enqueue a SendEmail job
+	if h.Engine != nil {
+		tableName, err := findWorkerTable(h.DB)
+		if err != nil {
+			logger.Error("Failed to find worker table for background OTP email job", "err", err)
+		} else if tableName != "" {
+			_, err = h.Engine.Enqueue(c.Request().Context(), tableName, map[string]interface{}{
+				"worker":   "SendEmail",
+				"priority": 1,
+				"args": map[string]interface{}{
+					"to":      email,
+					"subject": subject,
+					"body":    body,
+				},
+			})
+			if err != nil {
+				logger.Error("Failed to enqueue OTP SendEmail job", "err", err)
+			}
+		} else {
+			logger.Warn("No worker collection found. Cannot enqueue background SendEmail job.")
+		}
+	}
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "OTP generated and sent successfully (check server logs/console for code)",
