@@ -66,6 +66,7 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 	if idx >= 0 && idx < len(m.Mouls) {
 		m.State = StateRecordList
 		m.SelectedRecordIndex = 0
+		m.collectionActiveTab = 0
 		return m.fetchRecords()
 	} else if idx == len(m.Mouls) {
 		m.State = StateWorkerMonitor

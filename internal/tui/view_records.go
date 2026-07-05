@@ -11,12 +11,15 @@ import (
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
-// updateRecordList handles key presses in the records list screen.
 func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 	moul := m.currentMoul()
 	if moul == nil {
 		m.State = StateDashboard
 		return nil
+	}
+
+	if moul.Type == "auth" && m.collectionActiveTab == 1 {
+		return m.updateEmailTemplatesTab(msg)
 	}
 
 	switch msg := msg.(type) {
@@ -79,6 +82,12 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 					}
 				}
 			}
+		case "tab":
+			if moul.Type == "auth" {
+				m.collectionActiveTab = 1
+				m.selectedTemplateIndex = 0
+				return m.fetchEmailTemplatesCmd()
+			}
 		case "r":
 			// Refresh
 			return m.fetchRecords()
@@ -86,6 +95,7 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 			m.State = StateDashboard
 			m.Records = nil
 			m.SelectedRecordIndex = 0
+			m.collectionActiveTab = 0
 		}
 	case recordDeletedMsg:
 		m.Records = msg.records
@@ -107,8 +117,20 @@ func (m *Model) viewRecordList() string {
 	}
 
 	var s strings.Builder
-	s.WriteString(HeaderStyle.Render(fmt.Sprintf("Records in: %s", moul.Name)))
-	s.WriteString("\n")
+	if moul.Type == "auth" {
+		var tabs []string
+		if m.collectionActiveTab == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ RECORDS ◀"))
+			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL TEMPLATES  "))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RECORDS  "))
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ EMAIL TEMPLATES ◀"))
+		}
+		s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n")
+	} else {
+		s.WriteString(HeaderStyle.Render(fmt.Sprintf("Records in: %s", moul.Name)))
+		s.WriteString("\n")
+	}
 
 	if m.SuccessMsg != "" {
 		s.WriteString(AlertSuccessStyle.Render(m.SuccessMsg))

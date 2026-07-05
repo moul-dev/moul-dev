@@ -31,6 +31,8 @@ const (
 	StateDeviceAuth
 	StateMoulCreate
 	StateSettings
+	StateEmailTemplateEdit
+	StateTestEmailSend
 )
 
 // Model is the main state container for the moul TUI.
@@ -145,6 +147,16 @@ type Model struct {
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
+
+	// Email Templates settings
+	collectionActiveTab   int // 0 = Records, 1 = Email Templates
+	selectedTemplateIndex int // 0 to 4
+	emailTemplates        *schema.EmailTemplates
+	tempSubject           string
+	tempBody              string
+	EmailTemplateForm     *huh.Form
+	testEmailRecipient    string
+	TestEmailForm         *huh.Form
 }
 
 // NewModel initializes the TUI model with default values.
@@ -236,6 +248,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Err = nil
 		}
 		m.State = StateDashboard
+		return m, nil
+
+	case EmailTemplatesMsg:
+		m.emailTemplates = msg.Templates
+		return m, nil
+
+	case emailTemplatesSavedMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+		} else {
+			m.SuccessMsg = "Email template updated successfully!"
+			m.Err = nil
+		}
+		m.State = StateRecordList
+		return m, nil
+
+	case testEmailSentMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+		} else {
+			m.SuccessMsg = "Test email sent/queued successfully!"
+			m.Err = nil
+		}
+		m.State = StateRecordList
 		return m, nil
 
 	case setupStatusMsg:
@@ -743,6 +779,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
+	case StateEmailTemplateEdit:
+		newForm, cmd := m.EmailTemplateForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.EmailTemplateForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.EmailTemplateForm.State == huh.StateCompleted {
+			return m, m.saveEmailTemplateForm()
+		} else if m.EmailTemplateForm.State == huh.StateAborted {
+			m.State = StateRecordList
+			return m, nil
+		}
+
+	case StateTestEmailSend:
+		newForm, cmd := m.TestEmailForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.TestEmailForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.TestEmailForm.State == huh.StateCompleted {
+			return m, m.sendTestEmailCmd()
+		} else if m.TestEmailForm.State == huh.StateAborted {
+			m.State = StateRecordList
+			return m, nil
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -768,7 +832,21 @@ func (m *Model) renderBreadcrumbs() string {
 	case StateRecordList:
 		crumbs = append(crumbs, "Collections")
 		if moul := m.currentMoul(); moul != nil {
-			crumbs = append(crumbs, moul.Name, "Records")
+			if m.collectionActiveTab == 1 {
+				crumbs = append(crumbs, moul.Name, "Email Templates")
+			} else {
+				crumbs = append(crumbs, moul.Name, "Records")
+			}
+		}
+	case StateEmailTemplateEdit:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Email Templates", "Edit")
+		}
+	case StateTestEmailSend:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Email Templates", "Send Test")
 		}
 	case StateRecordDetail:
 		crumbs = append(crumbs, "Collections")
@@ -833,7 +911,15 @@ func (m *Model) View() tea.View {
 	case StateDashboard:
 		content = m.viewDashboard()
 	case StateRecordList:
-		content = m.viewRecordList()
+		if m.collectionActiveTab == 1 {
+			content = m.viewEmailTemplates()
+		} else {
+			content = m.viewRecordList()
+		}
+	case StateEmailTemplateEdit:
+		content = m.viewEmailTemplateEdit()
+	case StateTestEmailSend:
+		content = m.viewTestEmailSend()
 	case StateRecordDetail:
 		content = m.viewRecordDetail()
 	case StateRecordEdit:
@@ -1013,6 +1099,19 @@ type SettingsMsg struct {
 }
 
 type settingsSavedMsg struct {
+	err error
+}
+
+type EmailTemplatesMsg struct {
+	Templates *schema.EmailTemplates
+}
+
+type emailTemplatesSavedMsg struct {
+	err error
+}
+
+type testEmailSentMsg struct {
+	msg string
 	err error
 }
 
