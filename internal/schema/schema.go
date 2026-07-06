@@ -88,3 +88,10 @@ func (m *Moul) SerializeRules() (string, error) {
 	}
 	return string(bytes), nil
 }
+
+type RateLimitRule struct {
+	Label         string `json:"label"`
+	MaxRequests   int    `json:"max_requests"`
+	Interval      int    `json:"interval"`
+	TargetedUsers string `json:"targeted_users"` // "all", "authenticated", "guest"
+}

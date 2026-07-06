@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/pocketbase/dbx"
 )
 
@@ -58,6 +59,8 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 		"litestream_secret_access_key":    true,
 		"litestream_s3_force_path_style":  true,
 		"litestream_replica_path":         true,
+		"rate_limiting_enabled":          true,
+		"rate_limiting_rules":            true,
 	}
 
 	tx, err := h.DB.Begin()
@@ -80,6 +83,9 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit settings: "+err.Error())
 	}
+
+	// Reload rate limiter middleware configuration
+	_ = middleware.ReloadRateLimiter(h.DB)
 
 	// Return updated settings
 	return h.GetSettings(c)

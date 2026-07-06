@@ -50,6 +50,13 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// HTTP Request logging
 	e.Use(middleware.RequestLogger())
 
+	// Initialize dynamic rate limiter
+	if err := middleware.InitRateLimiter(dbConn); err != nil {
+		e.Logger.Errorf("Failed to initialize dynamic rate limiter: %v", err)
+	}
+	// Use dynamic rate limiter globally
+	e.Use(middleware.DynamicRateLimiter(adminKey))
+
 	// ── Handlers initialization ─────────────────────────────────────
 	moulHandler := NewMoulHandler(dbConn)
 	recordHandler := NewRecordHandler(dbConn)
@@ -94,8 +101,8 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// Public moul listing (read-only, no admin key needed)
 	e.GET("/api/mouls", moulHandler.ListMouls)
 
-	// 2. Auth collections with rate limiting (5 requests/second per IP)
-	authGroup := e.Group("", echoMiddleware.RateLimiter(echoMiddleware.NewRateLimiterMemoryStore(5)))
+	// 2. Auth collections
+	authGroup := e.Group("")
 	authGroup.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
 	authGroup.POST("/api/mouls/:moulName/otp/request", authHandler.RequestOTP)
 	authGroup.POST("/api/mouls/:moulName/auth-with-otp", authHandler.AuthWithOTP)

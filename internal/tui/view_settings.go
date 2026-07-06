@@ -1,11 +1,15 @@
 package tui
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
 type settingField struct {
@@ -14,6 +18,7 @@ type settingField struct {
 	boolVal  *string
 	strVal   *string
 	inputIdx int
+	isTable  bool // mark as the rate limit rules table
 }
 
 func (m *Model) getSettingsFields() []settingField {
@@ -34,7 +39,7 @@ func (m *Model) getSettingsFields() []settingField {
 				settingField{label: "S3 Force Path Style", isBool: true, boolVal: &m.settingFileS3ForcePath},
 			)
 		}
-	} else {
+	} else if m.settingsActiveTab == 1 {
 		fields = append(fields, settingField{
 			label:   "Litestream Enabled",
 			isBool:  true,
@@ -50,6 +55,18 @@ func (m *Model) getSettingsFields() []settingField {
 				settingField{label: "Litestream S3 Force Path Style", isBool: true, boolVal: &m.settingLiteS3ForcePath},
 				settingField{label: "Litestream Replica Path", strVal: &m.settingLiteReplica, inputIdx: 5},
 			)
+		}
+	} else if m.settingsActiveTab == 2 {
+		fields = append(fields, settingField{
+			label:   "Rate Limiting Enabled",
+			isBool:  true,
+			boolVal: &m.settingRateLimitingEnabled,
+		})
+		if m.settingRateLimitingEnabled == "true" {
+			fields = append(fields, settingField{
+				label:   "Rate Limit Rules Table",
+				isTable: true,
+			})
 		}
 	}
 	return fields
@@ -122,10 +139,10 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 	// Blur previous
 	if prevIndex > 0 && prevIndex <= len(fields) {
 		f := fields[prevIndex-1]
-		if !f.isBool {
+		if !f.isBool && !f.isTable {
 			if m.settingsActiveTab == 0 {
 				m.storageInputs[f.inputIdx].Blur()
-			} else {
+			} else if m.settingsActiveTab == 1 {
 				m.liteInputs[f.inputIdx].Blur()
 			}
 		}
@@ -134,10 +151,10 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 	// Focus new
 	if newIndex > 0 && newIndex <= len(fields) {
 		f := fields[newIndex-1]
-		if !f.isBool {
+		if !f.isBool && !f.isTable {
 			if m.settingsActiveTab == 0 {
 				m.storageInputs[f.inputIdx].Focus()
-			} else {
+			} else if m.settingsActiveTab == 1 {
 				m.liteInputs[f.inputIdx].Focus()
 			}
 		}
@@ -157,6 +174,12 @@ func (m *Model) blurAllSettingsInputs() {
 
 // saveSettingsForm compiles form values and saves them on the server.
 func (m *Model) saveSettingsForm() {
+	rulesJSON, err := json.Marshal(m.settingRateLimitingRules)
+	if err != nil {
+		m.Err = err
+		return
+	}
+
 	payload := map[string]string{
 		"file_s3_enabled":                 m.settingFileS3Enabled,
 		"file_s3_bucket":                  m.settingFileS3Bucket,
@@ -173,9 +196,11 @@ func (m *Model) saveSettingsForm() {
 		"litestream_secret_access_key":    m.settingLiteSecretKey,
 		"litestream_s3_force_path_style":  m.settingLiteS3ForcePath,
 		"litestream_replica_path":         m.settingLiteReplica,
+		"rate_limiting_enabled":           m.settingRateLimitingEnabled,
+		"rate_limiting_rules":             string(rulesJSON),
 	}
 
-	_, err := m.Client.UpdateSettings(payload)
+	_, err = m.Client.UpdateSettings(payload)
 	if err != nil {
 		m.Err = err
 		return
@@ -226,7 +251,7 @@ func (m *Model) viewSettings() string {
 	var s strings.Builder
 
 	if m.Err != nil {
-		s.WriteString(AlertErrorStyle.Render(fmt.Sprintf("Failed to save settings: %v", m.Err)))
+		s.WriteString(AlertErrorStyle.Render(fmt.Sprintf("Error: %v", m.Err)))
 		s.WriteString("\n\n")
 	}
 
@@ -255,7 +280,52 @@ func (m *Model) viewSettings() string {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  LITESTREAM BACKUPS  "))
 	}
 
+	// Rate Limiting Tab
+	if m.settingsActiveTab == 2 {
+		if m.settingsFocusIndex == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ RATE LIMITING ◀"))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  RATE LIMITING  "))
+		}
+	} else {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RATE LIMITING  "))
+	}
+
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
+
+	// Render form state if adding or editing a rate limit rule
+	if m.settingsActiveTab == 2 && m.rateLimitSubState != "list" {
+		var title string
+		if m.rateLimitSubState == "add" {
+			title = "ADD NEW RATE LIMIT RULE"
+		} else {
+			title = "EDIT RATE LIMIT RULE"
+		}
+		s.WriteString("  " + lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Render(title) + "\n\n")
+
+		labels := []string{"Rate Limit Label", "Max Requests (per IP)", "Interval (in seconds)", "Targeted Users (all/authenticated/guest)"}
+		for i, label := range labels {
+			focused := (m.rateLimitFormFocusIdx == i)
+			s.WriteString(renderTextField(label, m.rateLimitFormInputs[i], focused) + "\n\n")
+		}
+
+		saveBtnStyle := ButtonStyle
+		cancelBtnStyle := ButtonStyle
+		if m.rateLimitFormFocusIdx == 4 {
+			saveBtnStyle = ButtonActiveStyle
+		} else if m.rateLimitFormFocusIdx == 5 {
+			cancelBtnStyle = ButtonActiveStyle
+		}
+		buttons := lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			saveBtnStyle.Render(" Save Rule "),
+			"  ",
+			cancelBtnStyle.Render(" Cancel "),
+		)
+		s.WriteString("\n" + SettingsButtonAreaStyle.Render(buttons))
+		s.WriteString("\n\n" + HelpStyle.Render("  Tab/Arrows: Navigate fields  |  Space/Enter: Trigger button  |  Esc: Cancel"))
+		return ContentStyle.Width(m.Width).Render(s.String())
+	}
 
 	// Render fields of the active tab
 	fields := m.getSettingsFields()
@@ -266,6 +336,28 @@ func (m *Model) viewSettings() string {
 		if f.isBool {
 			valBool := (*f.boolVal == "true")
 			line = renderBoolField(f.label, valBool, focused)
+			s.WriteString(line + "\n\n")
+		} else if f.isTable {
+			// Draw dynamic interactive table for rate limiting rules
+			s.WriteString("  " + TableHeaderStyle.Render(fmt.Sprintf("%-25s %-15s %-15s %-20s", "RATE LIMIT LABEL", "MAX REQUESTS", "INTERVAL (S)", "TARGETED USERS")) + "\n")
+			if len(m.settingRateLimitingRules) == 0 {
+				s.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render("    No rate limit rules configured. Press [a] to add a rule.") + "\n")
+			} else {
+				for rIdx, r := range m.settingRateLimitingRules {
+					line := fmt.Sprintf("%-25s %-15d %-15d %-20s", r.Label, r.MaxRequests, r.Interval, r.TargetedUsers)
+					isTableFocused := (m.settingsFocusIndex == 2)
+					if rIdx == m.selectedRateLimitRuleIdx && isTableFocused {
+						s.WriteString(TableCellSelectedStyle.Width(m.Width - 10).Render(line) + "\n")
+					} else {
+						if rIdx == m.selectedRateLimitRuleIdx {
+							s.WriteString("  " + lipgloss.NewStyle().Foreground(ColorCyan).Render(">") + " " + TableCellStyle.Render(line) + "\n")
+						} else {
+							s.WriteString("    " + TableCellStyle.Render(line) + "\n")
+						}
+					}
+				}
+			}
+			s.WriteString("\n")
 		} else {
 			var input textinput.Model
 			if m.settingsActiveTab == 0 {
@@ -274,8 +366,8 @@ func (m *Model) viewSettings() string {
 				input = m.liteInputs[f.inputIdx]
 			}
 			line = renderTextField(f.label, input, focused)
+			s.WriteString(line + "\n\n")
 		}
-		s.WriteString(line + "\n\n")
 	}
 
 	// Render Save/Cancel Buttons
@@ -300,7 +392,142 @@ func (m *Model) viewSettings() string {
 
 	// Render navigation help
 	s.WriteString("\n\n")
-	s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs (when top row is active) or toggle Save/Cancel buttons\n  ↑/↓ or Tab: Navigate fields  |  Space/Enter: Toggle booleans or trigger buttons  |  Esc: Back"))
+	if m.settingsActiveTab == 2 && m.settingRateLimitingEnabled == "true" {
+		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs (when top row is active) or toggle Save/Cancel buttons\n  ↑/↓ or Tab: Navigate fields  |  Space/Enter: Toggle booleans or trigger buttons\n  [a]: Add Rule  |  [e]: Edit Rule  |  [d]: Delete Rule  |  Esc: Back"))
+	} else {
+		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs (when top row is active) or toggle Save/Cancel buttons\n  ↑/↓ or Tab: Navigate fields  |  Space/Enter: Toggle booleans or trigger buttons  |  Esc: Back"))
+	}
 
 	return ContentStyle.Width(m.Width).Render(s.String())
+}
+
+func (m *Model) initRateLimitForm(action string, rule *schema.RateLimitRule) {
+	m.rateLimitSubState = action
+	m.rateLimitFormFocusIdx = 0
+
+	m.rateLimitFormInputs = make([]textinput.Model, 4)
+	for i := range m.rateLimitFormInputs {
+		t := textinput.New()
+		t.CharLimit = 128
+		s := t.Styles()
+		s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+		s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+		t.SetStyles(s)
+		m.rateLimitFormInputs[i] = t
+	}
+
+	m.rateLimitFormInputs[0].Placeholder = "e.g. *:auth, /api/batch, users:list"
+	m.rateLimitFormInputs[1].Placeholder = "e.g. 10"
+	m.rateLimitFormInputs[2].Placeholder = "e.g. 3"
+	m.rateLimitFormInputs[3].Placeholder = "all, authenticated, guest"
+
+	if action == "edit" && rule != nil {
+		m.rateLimitFormInputs[0].SetValue(rule.Label)
+		m.rateLimitFormInputs[1].SetValue(fmt.Sprintf("%d", rule.MaxRequests))
+		m.rateLimitFormInputs[2].SetValue(fmt.Sprintf("%d", rule.Interval))
+		m.rateLimitFormInputs[3].SetValue(rule.TargetedUsers)
+	}
+
+	m.rateLimitFormInputs[0].Focus()
+}
+
+func (m *Model) updateRateLimitForm(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	if kp, ok := msg.(tea.KeyPressMsg); ok {
+		keyStr := kp.String()
+		switch keyStr {
+		case "esc":
+			m.rateLimitSubState = "list"
+			m.Err = nil
+			return m, nil
+		case "tab", "down", "j":
+			m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Blur()
+			m.rateLimitFormFocusIdx = (m.rateLimitFormFocusIdx + 1) % 6
+			if m.rateLimitFormFocusIdx < 4 {
+				m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Focus()
+			}
+			return m, nil
+		case "shift+tab", "up", "k":
+			m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Blur()
+			m.rateLimitFormFocusIdx = (m.rateLimitFormFocusIdx - 1 + 6) % 6
+			if m.rateLimitFormFocusIdx < 4 {
+				m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Focus()
+			}
+			return m, nil
+		case "enter", " ":
+			// If on input, enter behaves like Tab (advance to next input)
+			if m.rateLimitFormFocusIdx < 4 {
+				m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Blur()
+				m.rateLimitFormFocusIdx = (m.rateLimitFormFocusIdx + 1) % 6
+				if m.rateLimitFormFocusIdx < 4 {
+					m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Focus()
+				}
+				return m, nil
+			}
+
+			if m.rateLimitFormFocusIdx == 4 { // Save Rule
+				label := strings.TrimSpace(m.rateLimitFormInputs[0].Value())
+				maxReqStr := strings.TrimSpace(m.rateLimitFormInputs[1].Value())
+				intervalStr := strings.TrimSpace(m.rateLimitFormInputs[2].Value())
+				targetedUsers := strings.ToLower(strings.TrimSpace(m.rateLimitFormInputs[3].Value()))
+
+				if label == "" {
+					m.Err = fmt.Errorf("rule label cannot be empty")
+					return m, nil
+				}
+				maxReq, err := strconv.Atoi(maxReqStr)
+				if err != nil || maxReq <= 0 {
+					m.Err = fmt.Errorf("max requests must be a positive integer")
+					return m, nil
+				}
+				interval, err := strconv.Atoi(intervalStr)
+				if err != nil || interval <= 0 {
+					m.Err = fmt.Errorf("interval must be a positive integer")
+					return m, nil
+				}
+				if targetedUsers != "all" && targetedUsers != "authenticated" && targetedUsers != "guest" {
+					m.Err = fmt.Errorf("targeted users must be 'all', 'authenticated', or 'guest'")
+					return m, nil
+				}
+
+				rule := schema.RateLimitRule{
+					Label:         label,
+					MaxRequests:   maxReq,
+					Interval:      interval,
+					TargetedUsers: targetedUsers,
+				}
+
+				if m.rateLimitSubState == "add" {
+					m.settingRateLimitingRules = append(m.settingRateLimitingRules, rule)
+					m.selectedRateLimitRuleIdx = len(m.settingRateLimitingRules) - 1
+				} else { // edit
+					if m.selectedRateLimitRuleIdx >= 0 && m.selectedRateLimitRuleIdx < len(m.settingRateLimitingRules) {
+						m.settingRateLimitingRules[m.selectedRateLimitRuleIdx] = rule
+					}
+				}
+
+				m.rateLimitSubState = "list"
+				m.Err = nil
+				return m, nil
+			}
+
+			if m.rateLimitFormFocusIdx == 5 { // Cancel
+				m.rateLimitSubState = "list"
+				m.Err = nil
+				return m, nil
+			}
+		}
+	}
+
+	// Update active textinput
+	if m.rateLimitFormFocusIdx < 4 {
+		var cmd tea.Cmd
+		m.rateLimitFormInputs[m.rateLimitFormFocusIdx], cmd = m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	return m, tea.Batch(cmds...)
 }

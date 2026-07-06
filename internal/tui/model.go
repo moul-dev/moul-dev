@@ -142,9 +142,15 @@ type Model struct {
 	settingLiteSecretKey         string
 	settingLiteS3ForcePath       string
 	settingLiteReplica           string
+	settingRateLimitingEnabled   string
+	settingRateLimitingRules     []schema.RateLimitRule
+	selectedRateLimitRuleIdx     int
+	rateLimitSubState            string // "list", "add", "edit"
+	rateLimitFormInputs          []textinput.Model
+	rateLimitFormFocusIdx        int
 
 	// Settings Tabs & Custom Inputs
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -233,6 +239,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingLiteSecretKey = msg.Settings["litestream_secret_access_key"]
 		m.settingLiteS3ForcePath = msg.Settings["litestream_s3_force_path_style"]
 		m.settingLiteReplica = msg.Settings["litestream_replica_path"]
+		m.settingRateLimitingEnabled = msg.Settings["rate_limiting_enabled"]
+		
+		m.settingRateLimitingRules = nil
+		rulesJSON := msg.Settings["rate_limiting_rules"]
+		if rulesJSON != "" {
+			_ = json.Unmarshal([]byte(rulesJSON), &m.settingRateLimitingRules)
+		}
+		m.selectedRateLimitRuleIdx = 0
+		m.rateLimitSubState = "list"
 
 		m.initSettingsInputs()
 		m.State = StateSettings
@@ -678,6 +693,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case StateSettings:
+		if m.settingsActiveTab == 2 && m.rateLimitSubState != "list" {
+			return m.updateRateLimitForm(msg)
+		}
+
 		fields := m.getSettingsFields()
 		numFields := len(fields)
 
@@ -689,7 +708,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 2) % 2
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 3) % 3
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -698,7 +717,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 2
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 3
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -706,6 +725,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			case "up", "k":
+				if m.settingsActiveTab == 2 && m.settingsFocusIndex == 2 {
+					if m.selectedRateLimitRuleIdx > 0 {
+						m.selectedRateLimitRuleIdx--
+					}
+					return m, nil
+				}
 				prev := m.settingsFocusIndex
 				next := prev - 1
 				if next < 0 {
@@ -714,6 +739,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateSettingsFocus(prev, next)
 				return m, nil
 			case "down", "j":
+				if m.settingsActiveTab == 2 && m.settingsFocusIndex == 2 {
+					if m.selectedRateLimitRuleIdx < len(m.settingRateLimitingRules)-1 {
+						m.selectedRateLimitRuleIdx++
+					}
+					return m, nil
+				}
 				prev := m.settingsFocusIndex
 				next := prev + 1
 				if next > numFields+2 {
@@ -721,6 +752,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.updateSettingsFocus(prev, next)
 				return m, nil
+			case "a":
+				if m.settingsActiveTab == 2 && m.settingsFocusIndex == 2 {
+					m.initRateLimitForm("add", nil)
+					return m, nil
+				}
+			case "e":
+				if m.settingsActiveTab == 2 && m.settingsFocusIndex == 2 {
+					if len(m.settingRateLimitingRules) > 0 {
+						m.initRateLimitForm("edit", &m.settingRateLimitingRules[m.selectedRateLimitRuleIdx])
+					}
+					return m, nil
+				}
+			case "d":
+				if m.settingsActiveTab == 2 && m.settingsFocusIndex == 2 {
+					if len(m.settingRateLimitingRules) > 0 {
+						m.settingRateLimitingRules = append(m.settingRateLimitingRules[:m.selectedRateLimitRuleIdx], m.settingRateLimitingRules[m.selectedRateLimitRuleIdx+1:]...)
+						if m.selectedRateLimitRuleIdx >= len(m.settingRateLimitingRules) && m.selectedRateLimitRuleIdx > 0 {
+							m.selectedRateLimitRuleIdx = len(m.settingRateLimitingRules) - 1
+						}
+					}
+					return m, nil
+				}
 			case "tab":
 				prev := m.settingsFocusIndex
 				next := prev + 1
@@ -768,7 +821,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update inputs if focused
 		if m.settingsFocusIndex > 0 && m.settingsFocusIndex <= numFields {
 			f := fields[m.settingsFocusIndex-1]
-			if !f.isBool {
+			if !f.isBool && !f.isTable {
 				var cmd tea.Cmd
 				if m.settingsActiveTab == 0 {
 					m.storageInputs[f.inputIdx], cmd = m.storageInputs[f.inputIdx].Update(msg)
