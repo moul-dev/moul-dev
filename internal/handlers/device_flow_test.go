@@ -164,3 +164,96 @@ func TestDeviceFlowIntegration(t *testing.T) {
 		t.Errorf("Claims mismatch, username=%q, moul=%q", claims.Username, claims.MoulName)
 	}
 }
+
+func TestDeviceFlowIPBlocking(t *testing.T) {
+	// Initialize JWT
+	auth.InitJWT("test-secret-key-device-flow-tests-ip")
+
+	// 1. Setup in-memory SQLite DB
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	// Enable IP restrictions for test
+	_, _ = dbConn.Update("_settings", dbx.Params{"value": "true"}, dbx.HashExp{"key": "root_user_ip_enabled"}).Execute()
+	_, _ = dbConn.Update("_settings", dbx.Params{"value": "127.0.0.1"}, dbx.HashExp{"key": "root_user_allowed_ips"}).Execute()
+
+	// 2. Setup Echo router
+	e := echo.New()
+	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
+
+	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
+	e.POST("/device/verify", deviceFlowHandler.VerifyDevice)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	// Seed root user
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("AdminPass123"), bcrypt.DefaultCost)
+	_, err = dbConn.Insert("_rootUsers", dbx.Params{
+		"id":           "rootuser12345",
+		"username":     "admin",
+		"email":        "admin@example.com",
+		"passwordHash": string(hashedPassword),
+		"created_at":   "2026-06-28T00:00:00Z",
+		"updated_at":   "2026-06-28T00:00:00Z",
+	}).Execute()
+	if err != nil {
+		t.Fatalf("Failed to seed root user: %v", err)
+	}
+
+	// --- STEP 1: Request Device Authorization ---
+	authPayload := `{"client_id":"moul-tui"}`
+	req, _ := http.NewRequest("POST", server.URL+"/api/oauth2/device/authorize", bytes.NewBufferString(authPayload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Device authorize request failed: status=%d, err=%v", resp.StatusCode, err)
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	var authResp struct {
+		UserCode string `json:"user_code"`
+	}
+	json.Unmarshal(bodyBytes, &authResp)
+
+	// --- STEP 2: Verify device from DISALLOWED client IP ---
+	form := url.Values{}
+	form.Add("user_code", authResp.UserCode)
+	form.Add("identity", "admin@example.com")
+	form.Add("password", "AdminPass123")
+
+	req, _ = http.NewRequest("POST", server.URL+"/device/verify", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// Spoof/simulate disallowed remote address
+	req.Header.Set("X-Real-IP", "192.168.1.50")
+
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected Bad Request (IP blocked), got status=%d", resp.StatusCode)
+	}
+
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "Your IP address is not authorized to log in as a root user") {
+		t.Errorf("Expected IP authorization error message in response body, got:\n%s", string(bodyBytes))
+	}
+
+	// --- STEP 3: Verify device from ALLOWED client IP (127.0.0.1) ---
+	req, _ = http.NewRequest("POST", server.URL+"/device/verify", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-Real-IP", "127.0.0.1")
+
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected OK (IP allowed), got status=%d, err=%v", resp.StatusCode, err)
+	}
+
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "Device Authorized") {
+		t.Error("Expected success page response showing 'Device Authorized'")
+	}
+}

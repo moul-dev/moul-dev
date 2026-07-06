@@ -59,8 +59,10 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 		"litestream_secret_access_key":    true,
 		"litestream_s3_force_path_style":  true,
 		"litestream_replica_path":         true,
-		"rate_limiting_enabled":          true,
-		"rate_limiting_rules":            true,
+		"rate_limiting_enabled":           true,
+		"rate_limiting_rules":             true,
+		"root_user_ip_enabled":            true,
+		"root_user_allowed_ips":           true,
 	}
 
 	tx, err := h.DB.Begin()
@@ -86,6 +88,7 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 
 	// Reload rate limiter middleware configuration
 	_ = middleware.ReloadRateLimiter(h.DB)
+	_ = middleware.ReloadRootIPs(h.DB)
 
 	// Return updated settings
 	return h.GetSettings(c)

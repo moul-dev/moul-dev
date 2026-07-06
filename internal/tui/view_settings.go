@@ -68,6 +68,19 @@ func (m *Model) getSettingsFields() []settingField {
 				isTable: true,
 			})
 		}
+	} else if m.settingsActiveTab == 3 {
+		fields = append(fields, settingField{
+			label:   "Root User IP Check Enabled",
+			isBool:  true,
+			boolVal: &m.settingRootIPEnabled,
+		})
+		if m.settingRootIPEnabled == "true" {
+			fields = append(fields, settingField{
+				label:    "Allowed IP Ranges",
+				strVal:   &m.settingRootAllowedIPs,
+				inputIdx: 0,
+			})
+		}
 	}
 	return fields
 }
@@ -118,6 +131,20 @@ func (m *Model) initSettingsInputs() {
 		m.liteInputs[5].Placeholder = "e.g. s3://my-bucket/replica"
 	}
 
+	if len(m.rootIPsInputs) == 0 {
+		m.rootIPsInputs = make([]textinput.Model, 1)
+		t := textinput.New()
+		t.CharLimit = 256
+
+		s := t.Styles()
+		s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+		s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+		t.SetStyles(s)
+
+		m.rootIPsInputs[0] = t
+		m.rootIPsInputs[0].Placeholder = "e.g. 127.0.0.1, 192.168.1.0/24 (leave empty to disable)"
+	}
+
 	// Load values from model state
 	m.storageInputs[0].SetValue(m.settingFileS3Bucket)
 	m.storageInputs[1].SetValue(m.settingFileS3Endpoint)
@@ -131,6 +158,8 @@ func (m *Model) initSettingsInputs() {
 	m.liteInputs[3].SetValue(m.settingLiteAccessKey)
 	m.liteInputs[4].SetValue(m.settingLiteSecretKey)
 	m.liteInputs[5].SetValue(m.settingLiteReplica)
+
+	m.rootIPsInputs[0].SetValue(m.settingRootAllowedIPs)
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -144,6 +173,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.storageInputs[f.inputIdx].Blur()
 			} else if m.settingsActiveTab == 1 {
 				m.liteInputs[f.inputIdx].Blur()
+			} else if m.settingsActiveTab == 3 {
+				m.rootIPsInputs[f.inputIdx].Blur()
 			}
 		}
 	}
@@ -156,6 +187,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.storageInputs[f.inputIdx].Focus()
 			} else if m.settingsActiveTab == 1 {
 				m.liteInputs[f.inputIdx].Focus()
+			} else if m.settingsActiveTab == 3 {
+				m.rootIPsInputs[f.inputIdx].Focus()
 			}
 		}
 	}
@@ -169,6 +202,9 @@ func (m *Model) blurAllSettingsInputs() {
 	}
 	for i := range m.liteInputs {
 		m.liteInputs[i].Blur()
+	}
+	for i := range m.rootIPsInputs {
+		m.rootIPsInputs[i].Blur()
 	}
 }
 
@@ -198,6 +234,8 @@ func (m *Model) saveSettingsForm() {
 		"litestream_replica_path":         m.settingLiteReplica,
 		"rate_limiting_enabled":           m.settingRateLimitingEnabled,
 		"rate_limiting_rules":             string(rulesJSON),
+		"root_user_ip_enabled":            m.settingRootIPEnabled,
+		"root_user_allowed_ips":           m.settingRootAllowedIPs,
 	}
 
 	_, err = m.Client.UpdateSettings(payload)
@@ -291,6 +329,17 @@ func (m *Model) viewSettings() string {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RATE LIMITING  "))
 	}
 
+	// Root User IPs Tab
+	if m.settingsActiveTab == 3 {
+		if m.settingsFocusIndex == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT USER IPS ◀"))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT USER IPS  "))
+		}
+	} else {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT USER IPS  "))
+	}
+
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
 
 	// Render form state if adding or editing a rate limit rule
@@ -362,8 +411,10 @@ func (m *Model) viewSettings() string {
 			var input textinput.Model
 			if m.settingsActiveTab == 0 {
 				input = m.storageInputs[f.inputIdx]
-			} else {
+			} else if m.settingsActiveTab == 1 {
 				input = m.liteInputs[f.inputIdx]
+			} else if m.settingsActiveTab == 3 {
+				input = m.rootIPsInputs[f.inputIdx]
 			}
 			line = renderTextField(f.label, input, focused)
 			s.WriteString(line + "\n\n")

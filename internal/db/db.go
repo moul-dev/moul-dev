@@ -113,6 +113,8 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		"litestream_replica_path":        "",
 		"rate_limiting_enabled":          "true",
 		"rate_limiting_rules":            `[{"label":"*:auth","max_requests":10,"interval":3,"targeted_users":"all"},{"label":"/","max_requests":300,"interval":5,"targeted_users":"all"}]`,
+		"root_user_ip_enabled":           "false",
+		"root_user_allowed_ips":          "",
 	}
 	for k, v := range defaultSettings {
 		var exists int

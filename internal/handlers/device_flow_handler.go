@@ -14,6 +14,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/util"
 )
 
 type DeviceFlowHandler struct {
@@ -207,6 +208,17 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 	if err != nil {
 		return renderErr("Invalid email/username or password")
+	}
+
+	// 2.5 Verify client IP address restrictions for root user
+	var ipEnabledVal string
+	_ = h.DB.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_ip_enabled"}).Row(&ipEnabledVal)
+	if ipEnabledVal == "true" {
+		var allowedIPs string
+		_ = h.DB.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_allowed_ips"}).Row(&allowedIPs)
+		if !util.IsIPAllowed(c.RealIP(), allowedIPs) {
+			return renderErr("Your IP address is not authorized to log in as a root user")
+		}
 	}
 
 	id, _ := recordMap["id"].(string)

@@ -1,12 +1,57 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/util"
+	"github.com/pocketbase/dbx"
 
 	"github.com/labstack/echo/v4"
 )
+
+var (
+	rootIPsMutex   sync.RWMutex
+	rootIPsEnabled bool
+	rootIPsValue   string
+)
+
+// InitRootIPs loads initial root user IP restriction settings from the database.
+func InitRootIPs(db *dbx.DB) error {
+	return ReloadRootIPs(db)
+}
+
+// ReloadRootIPs refreshes root user IP settings from the database.
+func ReloadRootIPs(db *dbx.DB) error {
+	rootIPsMutex.Lock()
+	defer rootIPsMutex.Unlock()
+
+	var enabledVal string
+	err := db.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_ip_enabled"}).Row(&enabledVal)
+	if err != nil {
+		rootIPsEnabled = false
+	} else {
+		rootIPsEnabled = (enabledVal == "true")
+	}
+
+	var val string
+	err = db.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_allowed_ips"}).Row(&val)
+	if err != nil {
+		rootIPsValue = ""
+	} else {
+		rootIPsValue = val
+	}
+
+	return nil
+}
+
+func getRootIPsConfig() (bool, string) {
+	rootIPsMutex.RLock()
+	defer rootIPsMutex.RUnlock()
+	return rootIPsEnabled, rootIPsValue
+}
 
 // AuthContextKey is the context key for storing the auth record map.
 const AuthContextKey = "auth"
@@ -42,6 +87,13 @@ func LoadAuthContextMiddleware() echo.MiddlewareFunc {
 				"email":    claims.Email,
 				"username": claims.Username,
 				"moul":     claims.MoulName,
+			}
+
+			if claims.MoulName == "_rootUsers" {
+				enabled, allowed := getRootIPsConfig()
+				if enabled && !util.IsIPAllowed(c.RealIP(), allowed) {
+					return echo.NewHTTPError(http.StatusForbidden, map[string]string{"message": "IP address not authorized"})
+				}
 			}
 
 			c.Set(AuthContextKey, authRecord)

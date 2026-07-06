@@ -148,9 +148,12 @@ type Model struct {
 	rateLimitSubState            string // "list", "add", "edit"
 	rateLimitFormInputs          []textinput.Model
 	rateLimitFormFocusIdx        int
+	settingRootIPEnabled         string
+	settingRootAllowedIPs        string
+	rootIPsInputs                []textinput.Model
 
 	// Settings Tabs & Custom Inputs
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -240,6 +243,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingLiteS3ForcePath = msg.Settings["litestream_s3_force_path_style"]
 		m.settingLiteReplica = msg.Settings["litestream_replica_path"]
 		m.settingRateLimitingEnabled = msg.Settings["rate_limiting_enabled"]
+		m.settingRootIPEnabled = msg.Settings["root_user_ip_enabled"]
+		m.settingRootAllowedIPs = msg.Settings["root_user_allowed_ips"]
 		
 		m.settingRateLimitingRules = nil
 		rulesJSON := msg.Settings["rate_limiting_rules"]
@@ -708,7 +713,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 3) % 3
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 4) % 4
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -717,7 +722,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 3
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 4
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -826,9 +831,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.settingsActiveTab == 0 {
 					m.storageInputs[f.inputIdx], cmd = m.storageInputs[f.inputIdx].Update(msg)
 					*f.strVal = m.storageInputs[f.inputIdx].Value()
-				} else {
+				} else if m.settingsActiveTab == 1 {
 					m.liteInputs[f.inputIdx], cmd = m.liteInputs[f.inputIdx].Update(msg)
 					*f.strVal = m.liteInputs[f.inputIdx].Value()
+				} else if m.settingsActiveTab == 3 {
+					m.rootIPsInputs[f.inputIdx], cmd = m.rootIPsInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.rootIPsInputs[f.inputIdx].Value()
 				}
 				if cmd != nil {
 					cmds = append(cmds, cmd)

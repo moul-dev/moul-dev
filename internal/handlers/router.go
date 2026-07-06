@@ -54,6 +54,10 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	if err := middleware.InitRateLimiter(dbConn); err != nil {
 		e.Logger.Errorf("Failed to initialize dynamic rate limiter: %v", err)
 	}
+	// Initialize root user allowed IPs
+	if err := middleware.InitRootIPs(dbConn); err != nil {
+		e.Logger.Errorf("Failed to initialize root user allowed IPs: %v", err)
+	}
 	// Use dynamic rate limiter globally
 	e.Use(middleware.DynamicRateLimiter(adminKey))
 
