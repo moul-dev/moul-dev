@@ -2,7 +2,7 @@ export MOUL_ENV ?= development
 export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 
-.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup
+.PHONY: run dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui
 
 # Start the Echo server locally
 run:
@@ -229,5 +229,10 @@ minio-start:
 minio-setup:
 	@echo "Setting up MinIO client alias 'moul-local'..."
 	mc alias set moul-local http://localhost:9000 minioadmin minioadmin
+
+# Run the TUI E2E and unit tests
+test-tui:
+	@mkdir -p tmp
+	MOUL_TEST_ARTIFACT_DIR=$(shell pwd)/tmp go test -v ./internal/tui/...
 
 

@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -331,7 +332,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.Err = msg.err
 			// Clear invalid token from keychain on connection error
-			if m.authMode == "device_flow" {
+			if m.authMode == "device_flow" && os.Getenv("MOUL_TEST_ENV") != "true" {
 				_ = DeleteSecret(m.serverURL, "jwt_token")
 			}
 			m.ConnForm.State = huh.StateNormal
@@ -340,10 +341,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Mouls = msg.mouls
 			m.State = StateDashboard
 			m.loadSystemData()
-			// Save config
-			m.Config.ServerURL = m.serverURL
-			m.Config.AuthMode = m.authMode
-			_ = SaveConfig(m.Config)
+			// Save config (skip if testing)
+			if os.Getenv("MOUL_TEST_ENV") != "true" {
+				m.Config.ServerURL = m.serverURL
+				m.Config.AuthMode = m.authMode
+				_ = SaveConfig(m.Config)
+			}
 		}
 		return m, nil
 

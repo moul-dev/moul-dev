@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"sync"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
@@ -14,6 +15,12 @@ var (
 	fallbackMu    sync.RWMutex
 	useFallback   bool
 )
+
+func init() {
+	if os.Getenv("MOUL_TEST_ENV") == "true" {
+		useFallback = true
+	}
+}
 
 // SetSecret saves a credential (keyType: "admin_key" or "jwt_token") for a given server URL.
 func SetSecret(serverURL, keyType, value string) error {
