@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/db"
 )
@@ -37,7 +37,7 @@ func TestRequestTracker_CreatesVisitOnFirstRequest(t *testing.T) {
 	e := echo.New()
 	mw := RequestTracker(engine, false)
 
-	handler := mw(func(c echo.Context) error {
+	handler := mw(func(c *echo.Context) error {
 		// Verify visit_id is set in context
 		visitID := c.Get("visit_id")
 		if visitID == nil || visitID == "" {
@@ -83,7 +83,7 @@ func TestRequestTracker_ReusesVisitOnSubsequentRequest(t *testing.T) {
 	mw := RequestTracker(engine, false)
 
 	// First request: create the visit
-	handler := mw(func(c echo.Context) error {
+	handler := mw(func(c *echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
 
@@ -107,7 +107,7 @@ func TestRequestTracker_ReusesVisitOnSubsequentRequest(t *testing.T) {
 
 	// Second request: send the visit cookie back
 	var secondVisitID string
-	handler2 := mw(func(c echo.Context) error {
+	handler2 := mw(func(c *echo.Context) error {
 		secondVisitID, _ = c.Get("visit_id").(string)
 		return c.String(http.StatusOK, "OK")
 	})
@@ -140,7 +140,7 @@ func TestRequestTracker_ExcludedPaths(t *testing.T) {
 		WithExcludePaths([]string{"/api/visits", "/api/requests"}),
 	)
 
-	handler := mw(func(c echo.Context) error {
+	handler := mw(func(c *echo.Context) error {
 		// For excluded paths, visit_id should NOT be set
 		visitID := c.Get("visit_id")
 		if visitID != nil {
@@ -174,7 +174,7 @@ func TestRequestTracker_AttachesAuthUserID(t *testing.T) {
 	e := echo.New()
 	mw := RequestTracker(engine, false)
 
-	handler := mw(func(c echo.Context) error {
+	handler := mw(func(c *echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
 
@@ -212,7 +212,7 @@ func TestRequestTracker_EnqueuesRequestData(t *testing.T) {
 	e := echo.New()
 	mw := RequestTracker(engine, false)
 
-	handler := mw(func(c echo.Context) error {
+	handler := mw(func(c *echo.Context) error {
 		// Simulate some processing time
 		time.Sleep(5 * time.Millisecond)
 		return c.String(http.StatusCreated, "Created")

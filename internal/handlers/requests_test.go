@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/util"
@@ -124,8 +124,9 @@ func TestGetRequest_RequiresAuth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/requests/req-123", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("req-123")
+	c.SetPathValues(echo.PathValues{
+		{Name: "id", Value: "req-123"},
+	})
 
 	err = handler.GetRequest(c)
 	if err == nil {
@@ -166,8 +167,9 @@ func TestGetRequest_ReturnsRecord(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/requests/req-specific-123", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("req-specific-123")
+	c.SetPathValues(echo.PathValues{
+		{Name: "id", Value: "req-specific-123"},
+	})
 
 	c.Set(middleware.AuthContextKey, map[string]interface{}{
 		"id":    "user-123",
@@ -212,8 +214,9 @@ func TestGetRequest_NotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/requests/nonexistent", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("nonexistent")
+	c.SetPathValues(echo.PathValues{
+		{Name: "id", Value: "nonexistent"},
+	})
 
 	c.Set(middleware.AuthContextKey, map[string]interface{}{
 		"id":    "user-123",

@@ -9,7 +9,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -60,7 +60,7 @@ const AuthContextKey = "auth"
 // and maps the verified user details into the Echo context.
 func LoadAuthContextMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
 				return next(c)
@@ -92,7 +92,7 @@ func LoadAuthContextMiddleware() echo.MiddlewareFunc {
 			if claims.MoulName == "_rootUsers" {
 				enabled, allowed := getRootIPsConfig()
 				if enabled && !util.IsIPAllowed(c.RealIP(), allowed) {
-					return echo.NewHTTPError(http.StatusForbidden, map[string]string{"message": "IP address not authorized"})
+					return echo.NewHTTPError(http.StatusForbidden, "IP address not authorized")
 				}
 			}
 
@@ -103,7 +103,7 @@ func LoadAuthContextMiddleware() echo.MiddlewareFunc {
 }
 
 // GetAuthRecord retrieves the auth record map from Echo context.
-func GetAuthRecord(c echo.Context) map[string]interface{} {
+func GetAuthRecord(c *echo.Context) map[string]interface{} {
 	val := c.Get(AuthContextKey)
 	if val == nil {
 		return nil

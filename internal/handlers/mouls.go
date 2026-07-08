@@ -11,7 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
 
@@ -24,7 +24,7 @@ func NewMoulHandler(dbConn *dbx.DB) *MoulHandler {
 }
 
 // CreateMoul creates a dynamic table and inserts its metadata.
-func (h *MoulHandler) CreateMoul(c echo.Context) error {
+func (h *MoulHandler) CreateMoul(c *echo.Context) error {
 	m := new(schema.Moul)
 	if err := c.Bind(m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -69,7 +69,7 @@ func (h *MoulHandler) CreateMoul(c echo.Context) error {
 }
 
 // ListMouls returns all metadata for registered mouls.
-func (h *MoulHandler) ListMouls(c echo.Context) error {
+func (h *MoulHandler) ListMouls(c *echo.Context) error {
 	mouls, err := db.LoadAllMouls(h.DB)
 	if err != nil {
 		logger.Error("Failed to fetch mouls", "err", err)
@@ -79,7 +79,7 @@ func (h *MoulHandler) ListMouls(c echo.Context) error {
 }
 
 // DeleteMoul drops the physical table and deletes its meta record.
-func (h *MoulHandler) DeleteMoul(c echo.Context) error {
+func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	name := c.Param("name")
 	if name == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name is required")

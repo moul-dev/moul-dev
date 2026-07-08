@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
 
@@ -46,7 +46,7 @@ type RenderData struct {
 }
 
 // DeviceAuthorize handles POST /api/oauth2/device/authorize
-func (h *DeviceFlowHandler) DeviceAuthorize(c echo.Context) error {
+func (h *DeviceFlowHandler) DeviceAuthorize(c *echo.Context) error {
 	req := new(DeviceAuthorizeRequest)
 	if err := c.Bind(req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -92,7 +92,7 @@ func (h *DeviceFlowHandler) DeviceAuthorize(c echo.Context) error {
 }
 
 // DeviceToken handles POST /api/oauth2/device/token
-func (h *DeviceFlowHandler) DeviceToken(c echo.Context) error {
+func (h *DeviceFlowHandler) DeviceToken(c *echo.Context) error {
 	req := new(DeviceTokenRequest)
 	if err := c.Bind(req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -134,7 +134,7 @@ func (h *DeviceFlowHandler) DeviceToken(c echo.Context) error {
 }
 
 // RenderDeviceForm handles GET /device
-func (h *DeviceFlowHandler) RenderDeviceForm(c echo.Context) error {
+func (h *DeviceFlowHandler) RenderDeviceForm(c *echo.Context) error {
 	userCode := c.QueryParam("user_code")
 	authMoul := "_rootUsers"
 
@@ -145,7 +145,7 @@ func (h *DeviceFlowHandler) RenderDeviceForm(c echo.Context) error {
 }
 
 // VerifyDevice handles POST /device/verify
-func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
+func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
 	userCode := c.FormValue("user_code")
 	authMoul := "_rootUsers"
 	identity := c.FormValue("identity")
@@ -244,14 +244,14 @@ func (h *DeviceFlowHandler) VerifyDevice(c echo.Context) error {
 }
 
 // Helper to render the HTML template
-func renderTemplate(c echo.Context, status int, data RenderData) error {
+func renderTemplate(c *echo.Context, status int, data RenderData) error {
 	tmpl, err := template.New("device").Parse(htmlTemplate)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Template parsing error")
 	}
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
 	c.Response().WriteHeader(status)
-	return tmpl.Execute(c.Response().Writer, data)
+	return tmpl.Execute(c.Response(), data)
 }
 
 const htmlTemplate = `<!DOCTYPE html>

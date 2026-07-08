@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/pocketbase/dbx"
 )
@@ -17,7 +17,7 @@ func NewSettingsHandler(dbConn *dbx.DB) *SettingsHandler {
 }
 
 // GetSettings fetches all settings from the database and returns them as a JSON object.
-func (h *SettingsHandler) GetSettings(c echo.Context) error {
+func (h *SettingsHandler) GetSettings(c *echo.Context) error {
 	var rows []struct {
 		Key   string `db:"key"`
 		Value string `db:"value"`
@@ -36,7 +36,7 @@ func (h *SettingsHandler) GetSettings(c echo.Context) error {
 }
 
 // UpdateSettings updates key-value settings in the database.
-func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
+func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 	body := make(map[string]string)
 	if err := c.Bind(&body); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")

@@ -7,7 +7,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 
 	"github.com/moul-dev/moul-dev/internal/middleware"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
 
@@ -20,7 +20,7 @@ func NewVisitsHandler(dbConn *dbx.DB) *VisitsHandler {
 }
 
 // ListVisits lists all visits recorded, requiring authentication.
-func (h *VisitsHandler) ListVisits(c echo.Context) error {
+func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	if authUser == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access visits log")
@@ -50,7 +50,7 @@ func (h *VisitsHandler) ListVisits(c echo.Context) error {
 }
 
 // GetVisit retrieves a single visit record by ID, requiring authentication.
-func (h *VisitsHandler) GetVisit(c echo.Context) error {
+func (h *VisitsHandler) GetVisit(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	if authUser == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access visit details")

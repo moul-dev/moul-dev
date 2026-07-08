@@ -8,7 +8,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
 
@@ -23,7 +23,7 @@ func NewRequestsHandler(dbConn *dbx.DB) *RequestsHandler {
 }
 
 // ListRequests lists tracked HTTP requests with pagination, requiring authentication.
-func (h *RequestsHandler) ListRequests(c echo.Context) error {
+func (h *RequestsHandler) ListRequests(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	if authUser == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access request logs")
@@ -87,7 +87,7 @@ func (h *RequestsHandler) ListRequests(c echo.Context) error {
 }
 
 // GetRequest retrieves a single tracked request by ID, requiring authentication.
-func (h *RequestsHandler) GetRequest(c echo.Context) error {
+func (h *RequestsHandler) GetRequest(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	if authUser == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access request details")

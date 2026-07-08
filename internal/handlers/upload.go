@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/storage"
 	"github.com/pocketbase/dbx"
 )
@@ -18,7 +18,7 @@ func NewUploadHandler(dbConn *dbx.DB) *UploadHandler {
 }
 
 // UploadFile handles receiving a file via multipart form and storing it.
-func (h *UploadHandler) UploadFile(c echo.Context) error {
+func (h *UploadHandler) UploadFile(c *echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing file in request body (form-data key: 'file')")

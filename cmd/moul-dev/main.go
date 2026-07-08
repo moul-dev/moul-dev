@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gobuffalo/envy"
+	"github.com/labstack/echo/v5"
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
@@ -89,9 +90,10 @@ func main() {
 		return nil
 	})
 
-	// Start Worker Engine
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Start Worker Engine with OS signal context for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	workerEngine.Start(ctx)
 	defer workerEngine.Stop()
 
@@ -101,27 +103,16 @@ func main() {
 	// ── Echo server ─────────────────────────────────────────────────
 	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, isDev)
 
-	// ── Start server ────────────────────────────────────────────────
-	go func() {
-		logger.Info("Starting moul-dev engine server", "addr", "http://localhost:8090", "env", moulEnv)
-		if err := e.Start(":8090"); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server failed to start", "err", err)
-		}
-	}()
-
-	// Wait for interrupt signal to gracefully shutdown the server
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
-	logger.Info("Shutting down server gracefully...")
-	cancel()            // Cancel context for background workers
-	workerEngine.Stop() // Wait for active jobs to complete
-
-	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelShutdown()
-	if err := e.Shutdown(ctxShutdown); err != nil {
-		logger.Fatal("Server shutdown failed", "err", err)
+	// ── Start server with StartConfig for graceful shutdown ──────────
+	logger.Info("Starting moul-dev engine server", "addr", "http://localhost:8090", "env", moulEnv)
+	sc := echo.StartConfig{
+		Address:         ":8090",
+		GracefulTimeout: 10 * time.Second,
 	}
+
+	if err := sc.Start(ctx, e); err != nil && err != http.ErrServerClosed {
+		logger.Fatal("Server failed to start", "err", err)
+	}
+
 	logger.Info("Server stopped gracefully")
 }

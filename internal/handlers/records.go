@@ -18,7 +18,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -52,7 +52,7 @@ func nullStringMapToMap(m dbx.NullStringMap) map[string]interface{} {
 }
 
 // CreateRecord handles inserting a dynamic record in a moul table.
-func (h *RecordHandler) CreateRecord(c echo.Context) error {
+func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	moulName := c.Param( "moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -448,7 +448,7 @@ func (h *RecordHandler) CreateRecord(c echo.Context) error {
 }
 
 // ListRecords queries records filtering dynamically by auth listRules.
-func (h *RecordHandler) ListRecords(c echo.Context) error {
+func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -487,7 +487,7 @@ func (h *RecordHandler) ListRecords(c echo.Context) error {
 }
 
 // GetRecord returns a single record by ID.
-func (h *RecordHandler) GetRecord(c echo.Context) error {
+func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	id := c.Param("id")
 
@@ -529,7 +529,7 @@ func (h *RecordHandler) GetRecord(c echo.Context) error {
 }
 
 // UpdateRecord handles partial updates on fields.
-func (h *RecordHandler) UpdateRecord(c echo.Context) error {
+func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	id := c.Param("id")
 
@@ -761,7 +761,7 @@ func (h *RecordHandler) UpdateRecord(c echo.Context) error {
 }
 
 // DeleteRecord deletes a record by ID.
-func (h *RecordHandler) DeleteRecord(c echo.Context) error {
+func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	id := c.Param("id")
 

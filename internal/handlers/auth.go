@@ -9,7 +9,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/worker"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,7 +29,7 @@ type AuthRequest struct {
 }
 
 // AuthWithPassword verifies credentials and returns a signed JWT token.
-func (h *AuthHandler) AuthWithPassword(c echo.Context) error {
+func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {

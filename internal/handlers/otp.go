@@ -15,7 +15,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
 
@@ -43,7 +43,7 @@ func generateOTP() (string, error) {
 }
 
 // RequestOTP generates a 6-digit OTP, prints it to the console, and updates the DB.
-func (h *AuthHandler) RequestOTP(c echo.Context) error {
+func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -207,7 +207,7 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 }
 
 // AuthWithOTP verifies OTP and returns a signed JWT token.
-func (h *AuthHandler) AuthWithOTP(c echo.Context) error {
+func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {

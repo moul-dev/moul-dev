@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -39,7 +39,7 @@ func findWorkerTable(dbConn *dbx.DB) (string, error) {
 }
 
 // GetEmailTemplates retrieves the email templates for the given auth moul collection.
-func (h *AuthHandler) GetEmailTemplates(c echo.Context) error {
+func (h *AuthHandler) GetEmailTemplates(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -63,7 +63,7 @@ func (h *AuthHandler) GetEmailTemplates(c echo.Context) error {
 }
 
 // UpdateEmailTemplates updates the email templates for the given auth moul collection.
-func (h *AuthHandler) UpdateEmailTemplates(c echo.Context) error {
+func (h *AuthHandler) UpdateEmailTemplates(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -97,7 +97,7 @@ type TestEmailPayload struct {
 }
 
 // SendTestEmail sends a mock/test email using the specified template config.
-func (h *AuthHandler) SendTestEmail(c echo.Context) error {
+func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {

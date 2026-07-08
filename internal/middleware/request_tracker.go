@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/analytics"
 )
 
@@ -33,7 +33,7 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			req := c.Request()
 			path := req.URL.Path
 
@@ -116,16 +116,20 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 			// Process the request
 			err = next(c)
 			if err != nil {
-				c.Error(err)
+				c.Echo().HTTPErrorHandler(c, err)
 			}
 
 			// Capture response data and enqueue for async tracking
 			latency := time.Since(start)
+			statusCode := 200
+			if resp, err := echo.UnwrapResponse(c.Response()); err == nil {
+				statusCode = resp.Status
+			}
 			engine.TrackRequest(analytics.RequestData{
 				VisitID:        result.VisitID,
 				Method:         req.Method,
 				Path:           path,
-				StatusCode:     c.Response().Status,
+				StatusCode:     statusCode,
 				ResponseTimeMs: latency.Milliseconds(),
 				CreatedAt:      time.Now().UTC().Format(time.RFC3339),
 			})

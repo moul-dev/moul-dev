@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gobuffalo/envy"
-	"github.com/labstack/echo/v4"
-	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	echoMiddleware "github.com/labstack/echo/v5/middleware"
 	"github.com/moul-dev/moul-dev/internal/analytics"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/pocketbase/dbx"
@@ -16,11 +18,13 @@ import (
 // NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
 func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, adminKey string, isDev bool) *echo.Echo {
 	e := echo.New()
+	e.Logger = slog.New(logger.Default)
+	e.IPExtractor = echo.LegacyIPExtractor()
 
 	// ── Global Middleware ────────────────────────────────────────────
 
 	// Request body size limit (5MB)
-	e.Use(echoMiddleware.BodyLimit("5M"))
+	e.Use(echoMiddleware.BodyLimit(5 * 1024 * 1024))
 
 	// CORS configuration
 	corsOrigins := envy.Get("MOUL_CORS_ORIGINS", "")
@@ -52,11 +56,11 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Initialize dynamic rate limiter
 	if err := middleware.InitRateLimiter(dbConn); err != nil {
-		e.Logger.Errorf("Failed to initialize dynamic rate limiter: %v", err)
+		e.Logger.Error("Failed to initialize dynamic rate limiter", "error", err)
 	}
 	// Initialize root user allowed IPs
 	if err := middleware.InitRootIPs(dbConn); err != nil {
-		e.Logger.Errorf("Failed to initialize root user allowed IPs: %v", err)
+		e.Logger.Error("Failed to initialize root user allowed IPs", "error", err)
 	}
 	// Use dynamic rate limiter globally
 	e.Use(middleware.DynamicRateLimiter(adminKey))

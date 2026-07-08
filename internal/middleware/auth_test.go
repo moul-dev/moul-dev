@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/pocketbase/dbx"
@@ -71,7 +71,7 @@ func TestLoadAuthContextMiddleware(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			handlerCalled := false
-			h := LoadAuthContextMiddleware()(func(ctx echo.Context) error {
+			h := LoadAuthContextMiddleware()(func(ctx *echo.Context) error {
 				handlerCalled = true
 				// Verify context state
 				record := GetAuthRecord(ctx)
@@ -190,7 +190,7 @@ func TestLoadAuthContextMiddlewareIPBlocking(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			handlerCalled := false
-			h := LoadAuthContextMiddleware()(func(ctx echo.Context) error {
+			h := LoadAuthContextMiddleware()(func(ctx *echo.Context) error {
 				handlerCalled = true
 				return nil
 			})

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/pocketbase/dbx"
 )
@@ -87,7 +87,7 @@ func (s *limiterState) startCleanup(interval time.Duration) {
 }
 
 // getMoulAndAction resolves moul name and action from the parameterized Echo path.
-func getMoulAndAction(c echo.Context) (string, string) {
+func getMoulAndAction(c *echo.Context) (string, string) {
 	path := c.Path()
 	method := c.Request().Method
 	moulName := c.Param("moulName")
@@ -127,7 +127,7 @@ func getMoulAndAction(c echo.Context) (string, string) {
 // DynamicRateLimiter interceptor that implements dynamic rate limiting.
 func DynamicRateLimiter(adminKey string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			globalState.RLock()
 			enabled := globalState.enabled
 			rules := globalState.rules
@@ -217,7 +217,7 @@ func DynamicRateLimiter(adminKey string) echo.MiddlewareFunc {
 				globalState.Unlock()
 
 				if !allowed {
-					return echo.NewHTTPError(http.StatusTooManyRequests, map[string]string{"message": "Too many requests"})
+					return echo.NewHTTPError(http.StatusTooManyRequests, "Too many requests")
 				}
 			}
 

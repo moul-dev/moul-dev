@@ -18,7 +18,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/util"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
 
@@ -98,7 +98,7 @@ type PasskeyEmailPayload struct {
 }
 
 // getWebAuthnConfig dynamically instantiates a WebAuthn config based on request Host & Origin.
-func getWebAuthnConfig(c echo.Context) (*webauthn.WebAuthn, error) {
+func getWebAuthnConfig(c *echo.Context) (*webauthn.WebAuthn, error) {
 	host := c.Request().Host // e.g. "localhost:8090"
 	origin := c.Request().Header.Get("Origin")
 
@@ -146,7 +146,7 @@ func buildWebAuthnUser(recordMap map[string]interface{}) *WebAuthnUser {
 }
 
 // PasskeyRegisterOptions generates registration credentials options for an authenticated user.
-func (h *AuthHandler) PasskeyRegisterOptions(c echo.Context) error {
+func (h *AuthHandler) PasskeyRegisterOptions(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -199,7 +199,7 @@ func (h *AuthHandler) PasskeyRegisterOptions(c echo.Context) error {
 }
 
 // PasskeyRegisterVerify verifies credential signature and registers a passkey for an authenticated user.
-func (h *AuthHandler) PasskeyRegisterVerify(c echo.Context) error {
+func (h *AuthHandler) PasskeyRegisterVerify(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	sessionToken := c.QueryParam("sessionToken")
 	if sessionToken == "" {
@@ -248,7 +248,7 @@ func (h *AuthHandler) PasskeyRegisterVerify(c echo.Context) error {
 }
 
 // PasskeySignupOptions starts registration options for a new user.
-func (h *AuthHandler) PasskeySignupOptions(c echo.Context) error {
+func (h *AuthHandler) PasskeySignupOptions(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -331,7 +331,7 @@ func (h *AuthHandler) PasskeySignupOptions(c echo.Context) error {
 }
 
 // PasskeySignupVerify verifies credential signature and creates the new user with their first passkey.
-func (h *AuthHandler) PasskeySignupVerify(c echo.Context) error {
+func (h *AuthHandler) PasskeySignupVerify(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -411,7 +411,7 @@ func (h *AuthHandler) PasskeySignupVerify(c echo.Context) error {
 }
 
 // PasskeyLoginOptions begins assertion details for passkey login.
-func (h *AuthHandler) PasskeyLoginOptions(c echo.Context) error {
+func (h *AuthHandler) PasskeyLoginOptions(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
@@ -474,7 +474,7 @@ func (h *AuthHandler) PasskeyLoginOptions(c echo.Context) error {
 }
 
 // PasskeyLoginVerify verifies assertion signature and issues JWT.
-func (h *AuthHandler) PasskeyLoginVerify(c echo.Context) error {
+func (h *AuthHandler) PasskeyLoginVerify(c *echo.Context) error {
 	moulName := c.Param("moulName")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {

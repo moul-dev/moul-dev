@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
 
@@ -182,6 +182,7 @@ func TestDeviceFlowIPBlocking(t *testing.T) {
 
 	// 2. Setup Echo router
 	e := echo.New()
+	e.IPExtractor = echo.LegacyIPExtractor()
 	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
 
 	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -60,27 +60,22 @@ func TestDynamicRateLimiter(t *testing.T) {
 			c.SetPath(path)
 		}
 		if pathParamName != "" {
-			c.SetParamNames(pathParamName)
-			c.SetParamValues(pathParamValue)
+			c.SetPathValues(echo.PathValues{
+				{Name: pathParamName, Value: pathParamValue},
+			})
 		}
 		if authRecord != nil {
 			c.Set(AuthContextKey, authRecord)
 		}
 
-		handler := DynamicRateLimiter("admin123")(func(ctx echo.Context) error {
+		handler := DynamicRateLimiter("admin123")(func(ctx *echo.Context) error {
 			return ctx.String(http.StatusOK, "OK")
 		})
 
 		err := handler(c)
 		if err != nil {
 			if he, ok := err.(*echo.HTTPError); ok {
-				var msg string
-				if m, ok := he.Message.(map[string]string); ok {
-					msg = m["message"]
-				} else if s, ok := he.Message.(string); ok {
-					msg = s
-				}
-				return he.Code, msg
+				return he.Code, he.Message
 			}
 			return http.StatusInternalServerError, err.Error()
 		}

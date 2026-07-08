@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/log"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
 )
@@ -19,7 +19,7 @@ func TestRequestLogger(t *testing.T) {
 	tests := []struct {
 		name           string
 		handler        echo.HandlerFunc
-		authSetup      func(c echo.Context)
+		authSetup      func(c *echo.Context)
 		expectedStatus int
 		expectedLevel  string
 		expectErrorMsg string
@@ -27,7 +27,7 @@ func TestRequestLogger(t *testing.T) {
 	}{
 		{
 			name: "Successful Request (200)",
-			handler: func(c echo.Context) error {
+			handler: func(c *echo.Context) error {
 				return c.String(http.StatusOK, "OK")
 			},
 			expectedStatus: http.StatusOK,
@@ -35,7 +35,7 @@ func TestRequestLogger(t *testing.T) {
 		},
 		{
 			name: "Client Error (404)",
-			handler: func(c echo.Context) error {
+			handler: func(c *echo.Context) error {
 				return echo.NewHTTPError(http.StatusNotFound, "Not Found")
 			},
 			expectedStatus: http.StatusNotFound,
@@ -43,7 +43,7 @@ func TestRequestLogger(t *testing.T) {
 		},
 		{
 			name: "Server Error (500)",
-			handler: func(c echo.Context) error {
+			handler: func(c *echo.Context) error {
 				return errors.New("something went wrong")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -52,10 +52,10 @@ func TestRequestLogger(t *testing.T) {
 		},
 		{
 			name: "With Auth Context",
-			handler: func(c echo.Context) error {
+			handler: func(c *echo.Context) error {
 				return c.String(http.StatusOK, "OK")
 			},
-			authSetup: func(c echo.Context) {
+			authSetup: func(c *echo.Context) {
 				c.Set(AuthContextKey, map[string]interface{}{
 					"id":    "user-123",
 					"email": "test@example.com",

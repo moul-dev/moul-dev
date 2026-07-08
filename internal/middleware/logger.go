@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
 )
@@ -11,28 +11,32 @@ import (
 // RequestLogger returns a middleware that logs HTTP requests using charmbracelet/log.
 func RequestLogger() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			start := time.Now()
 
 			req := c.Request()
-			res := c.Response()
 
 			// Process the next handler in the chain
 			err := next(c)
 			if err != nil {
-				c.Error(err)
+				c.Echo().HTTPErrorHandler(c, err)
 			}
 
 			latency := time.Since(start)
 
-			status := res.Status
+			status := 200
+			var bytesSent int64
+			if resp, err := echo.UnwrapResponse(c.Response()); err == nil {
+				status = resp.Status
+				bytesSent = resp.Size
+			}
+
 			method := req.Method
 			path := req.URL.Path
 			if path == "" {
 				path = "/"
 			}
 			ip := c.RealIP()
-			bytesSent := res.Size
 
 			// Construct key-value pairs
 			keyvals := []interface{}{

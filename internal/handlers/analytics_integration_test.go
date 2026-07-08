@@ -14,7 +14,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/schema"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 func TestAnalyticsHTTPFlow(t *testing.T) {

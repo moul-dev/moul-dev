@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
@@ -26,7 +26,7 @@ type SetupRequest struct {
 }
 
 // CheckSetupStatus checks if any root user exists in the _rootUsers table.
-func (h *SetupHandler) CheckSetupStatus(c echo.Context) error {
+func (h *SetupHandler) CheckSetupStatus(c *echo.Context) error {
 	var count int
 	err := h.DB.Select("COUNT(*)").From("_rootUsers").Row(&count)
 	if err != nil {
@@ -38,7 +38,7 @@ func (h *SetupHandler) CheckSetupStatus(c echo.Context) error {
 }
 
 // SetupRootUser registers the initial root user if none exist.
-func (h *SetupHandler) SetupRootUser(c echo.Context) error {
+func (h *SetupHandler) SetupRootUser(c *echo.Context) error {
 	var count int
 	err := h.DB.Select("COUNT(*)").From("_rootUsers").Row(&count)
 	if err != nil {
