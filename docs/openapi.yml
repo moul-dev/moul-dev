@@ -1,0 +1,1436 @@
+openapi: 3.0.3
+info:
+  title: Moul API Reference
+  version: 1.0.0
+  description: |
+    `moul-dev` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
+
+    ### Authentication and Authorization
+    - **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.
+    - **User Endpoints**: Protected by Bearer tokens (`Authorization: Bearer <JWT>`) generated upon successful user authentication.
+    - **Dynamic Record Operations**: Checked at runtime by the HCL-like expression rules defined on the parent collection (e.g. `createRule`, `listRule`).
+servers:
+  - url: http://localhost:8090
+    description: Local development server
+paths:
+  /api/setup:
+    get:
+      summary: Check Setup Status
+      description: Returns whether a root user has been set up in the system.
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: Setup status checked successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  needsSetup:
+                    type: boolean
+                    description: True if no root users exist in the database.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    post:
+      summary: Register Root User
+      description: Sets up the initial root user for the application if none exist.
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Root user created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Root user created successfully
+                  id:
+                    type: string
+                    example: usr-ABC123xyz
+        '400':
+          description: Bad request (validation failed or root user already complete).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls:
+    get:
+      summary: List Mouls
+      description: Lists the metadata schemas of all registered collections.
+      tags:
+        - Moul Schema Management
+      responses:
+        '200':
+          description: List of registered mouls.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Moul'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    post:
+      summary: Create Moul
+      description: Creates a new database table and saves its schema metadata definition.
+      tags:
+        - Moul Schema Management
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                id:
+                  type: string
+                  description: Unique ID of the collection (auto-generated if omitted).
+                name:
+                  type: string
+                  description: Unique name of the collection (must start with letter and contain only alphanumeric/underscores).
+                type:
+                  type: string
+                  enum: [base, auth, worker, analytic]
+                  default: base
+                fields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MoulField'
+                rules:
+                  $ref: '#/components/schemas/MoulRules'
+                email_templates:
+                  $ref: '#/components/schemas/EmailTemplates'
+      responses:
+        '201':
+          description: Moul schema created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moul'
+        '400':
+          description: Invalid request parameters or naming collisions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{name}:
+    delete:
+      summary: Delete Moul
+      description: Drops the physical SQLite table and removes its metadata record.
+      tags:
+        - Moul Schema Management
+      security:
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the collection to delete.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Moul deleted successfully.
+        '400':
+          description: Name parameter is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/email-templates:
+    get:
+      summary: Get Email Templates
+      description: Retrieves custom email templates for an auth-type collection.
+      tags:
+        - Moul Schema Management
+      security:
+        - AdminKeyAuth: []
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email templates config.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplates'
+        '400':
+          description: Collection is not an auth type.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    put:
+      summary: Update Email Templates
+      description: Updates custom email templates for an auth-type collection.
+      tags:
+        - Moul Schema Management
+      security:
+        - AdminKeyAuth: []
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplates'
+      responses:
+        '200':
+          description: Templates updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplates'
+        '400':
+          description: Bad request.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/email-templates/test:
+    post:
+      summary: Send Test Email
+      description: Triggers a mock/test email using the specified template configuration and enqueues a SendEmail background job.
+      tags:
+        - Moul Schema Management
+      security:
+        - AdminKeyAuth: []
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - template
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Recipient email address.
+                template:
+                  type: string
+                  enum: [verification, password_reset, confirm_email_change, otp, login_alert]
+                  description: Key of the email template to test.
+      responses:
+        '200':
+          description: Test email queued successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Test email sent/queued successfully (check server logs/console for details)
+        '400':
+          description: Invalid request parameters or not an auth moul.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/settings:
+    get:
+      summary: Get Settings
+      description: Returns all server settings (S3 config, Litestream, Rate Limiting, IPs) as key-value pairs.
+      tags:
+        - Settings & System Config
+      security:
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: Server settings loaded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    patch:
+      summary: Update Settings
+      description: Modifies server settings and reloads runtime configurations (like rate limits and allowed IPs) dynamically.
+      tags:
+        - Settings & System Config
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Map of settings key-value strings to update.
+              example:
+                file_s3_enabled: "true"
+                file_s3_bucket: "my-uploads-bucket"
+                rate_limiting_enabled: "true"
+      responses:
+        '200':
+          description: Settings updated successfully, returns full settings map.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+        '400':
+          description: Invalid request payload.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/upload:
+    post:
+      summary: Upload File
+      description: Uploads a media file. Automatically processes images to extract thumbhashes and generate 256x256 thumbnails.
+      tags:
+        - File Storage
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File binary payload.
+      responses:
+        '200':
+          description: File uploaded successfully. Returns a list containing the file metadata.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileInfo'
+        '400':
+          description: Missing file in multipart form-data.
+        '401':
+          description: Authorization failed (requires either a valid JWT user or admin key).
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/auth-with-password:
+    post:
+      summary: Password Authentication
+      description: Authenticates identity against the designated auth moul collection and yields a signed JWT.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identity
+                - password
+              properties:
+                identity:
+                  type: string
+                  description: Email or username.
+                password:
+                  type: string
+                  description: Plain text password.
+      responses:
+        '200':
+          description: Authentication successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid credentials or collection is not an auth collection.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/otp/request:
+    post:
+      summary: Request OTP
+      description: |
+        Generates a 6-digit Email OTP valid for 10 minutes and outputs it to the server console.
+        If the email is not registered yet, an account is automatically created (Auto-Signup).
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: OTP code generated and printed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OTP generated and sent successfully (check server logs/console for code)
+        '400':
+          description: Invalid input or invalid collection.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/auth-with-otp:
+    post:
+      summary: Verify OTP / Authenticate
+      description: Verifies OTP code sent to user email and returns a signed JWT on success.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - code
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  description: 6-digit numeric OTP code.
+      responses:
+        '200':
+          description: Verification successful, token generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid OTP, expired OTP, or input errors.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/passkey/register/options:
+    post:
+      summary: Request Passkey Registration Options
+      description: Retrieves WebAuthn credential creation options for an authenticated user to register a new passkey.
+      tags:
+        - User Authentication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Registration options returned with session token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionToken:
+                    type: string
+                    description: Temporary token to link options verification.
+                  publicKey:
+                    type: object
+                    description: Standard WebAuthn CredentialCreationOptions payload.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/passkey/register/verify:
+    post:
+      summary: Verify Passkey Registration
+      description: Verifies client navigator assertion credentials response and completes credential registration.
+      tags:
+        - User Authentication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionToken
+          in: query
+          required: true
+          description: The token returned by the options endpoint.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw navigator.credentials.create() response object.
+      responses:
+        '200':
+          description: Passkey registered successfully.
+        '400':
+          description: Invalid credential verification payload.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
+  /api/mouls/{moulName}/passkey/signup/options:
+    post:
+      summary: Request Passkey Signup Options
+      description: Returns credential creation options for registering a brand-new user via WebAuthn.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Options and session token payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionToken:
+                    type: string
+                  publicKey:
+                    type: object
+
+  /api/mouls/{moulName}/passkey/signup/verify:
+    post:
+      summary: Verify Passkey Signup
+      description: Confirms client WebAuthn registration, auto-creates user record, and logs them in with JWT.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionToken
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Account created and logged in successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/mouls/{moulName}/passkey/login/options:
+    post:
+      summary: Request Passkey Login Options
+      description: Returns credential assertion options to challenge an existing user's registered WebAuthn key.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identity
+              properties:
+                identity:
+                  type: string
+                  description: Email or Username of the user.
+      responses:
+        '200':
+          description: Login request options payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionToken:
+                    type: string
+                  publicKey:
+                    type: object
+
+  /api/mouls/{moulName}/passkey/login/verify:
+    post:
+      summary: Verify Passkey Login
+      description: Validates user assertion authentication, logging them in.
+      tags:
+        - User Authentication
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionToken
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Successfully authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/oauth2/device/authorize:
+    post:
+      summary: OAuth2 Device Authorization Endpoint
+      description: Initiates device authorization code flow and returns code challenges.
+      tags:
+        - OAuth2 Device Flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - client_id
+              properties:
+                client_id:
+                  type: string
+                scope:
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - client_id
+              properties:
+                client_id:
+                  type: string
+                scope:
+                  type: string
+      responses:
+        '200':
+          description: Verification codes generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_code:
+                    type: string
+                  user_code:
+                    type: string
+                  verification_uri:
+                    type: string
+                  verification_uri_complete:
+                    type: string
+                  expires_in:
+                    type: integer
+                  interval:
+                    type: integer
+
+  /api/oauth2/device/token:
+    post:
+      summary: OAuth2 Device Token Request
+      description: Polling endpoint for client devices to acquire JWT access token after authorization.
+      tags:
+        - OAuth2 Device Flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - device_code
+                - client_id
+              properties:
+                grant_type:
+                  type: string
+                  example: urn:ietf:params:oauth:grant-type:device_code
+                device_code:
+                  type: string
+                client_id:
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - device_code
+                - client_id
+              properties:
+                grant_type:
+                  type: string
+                  example: urn:ietf:params:oauth:grant-type:device_code
+                device_code:
+                  type: string
+                client_id:
+                  type: string
+      responses:
+        '200':
+          description: Device verified. Access token returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+        '400':
+          description: Token flow errors (pending approval, expired, etc.).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum: [unsupported_grant_type, invalid_request, expired_token, authorization_pending]
+
+  /device:
+    get:
+      summary: Render Device Verification Page
+      description: Returns the HTML interactive form where users enter user_codes.
+      tags:
+        - OAuth2 Device Flow
+      parameters:
+        - name: user_code
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verification form HTML page.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /device/verify:
+    post:
+      summary: Verify Device Flow Request
+      description: Processes verification form input, checking root user credentials, and marks the code as approved.
+      tags:
+        - OAuth2 Device Flow
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - user_code
+                - identity
+                - password
+              properties:
+                user_code:
+                  type: string
+                identity:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Returns HTML verification success/failure page.
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          description: Bad request, user validation failed.
+
+  /api/mouls/{moulName}/records:
+    get:
+      summary: List Records
+      description: Queries the collection records. Query filters are applied dynamically based on collection HCL listRule config.
+      tags:
+        - Dynamic Records CRUD
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expand
+          in: query
+          required: false
+          description: Comma-separated relational fields to expand inline.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of records matching listRule constraints.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        '400':
+          description: Rule evaluation error or bad request.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    post:
+      summary: Create Record
+      description: |
+        Creates a new record. Evaluates `createRule` against the auth context first.
+        - **Worker Moul**: Creating a record enqueues a background job and wakes the worker thread.
+        - **Analytic Moul**: Creating a record tracking an event; resolves browser, OS, GeoIP, and cookie sessions.
+      tags:
+        - Dynamic Records CRUD
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Dynamic fields mapping matching the collection schema.
+              additionalProperties: true
+      responses:
+        '201':
+          description: Record created successfully. Returns the populated row.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Validation errors or unique key constraint failure.
+        '401':
+          description: Authentication required by collection rules.
+        '403':
+          description: Forbidden by collection rules.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mouls/{moulName}/records/{id}:
+    get:
+      summary: Get Record
+      description: Retrieves a single record by ID, restricted by `viewRule` constraints.
+      tags:
+        - Dynamic Records CRUD
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Record found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Rule evaluation error.
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Forbidden.
+        '404':
+          description: Record or Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    patch:
+      summary: Update Record
+      description: Updates record fields, validated by `updateRule` constraints.
+      tags:
+        - Dynamic Records CRUD
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Record updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Input formatting error.
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Forbidden.
+        '404':
+          description: Record or Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    delete:
+      summary: Delete Record
+      description: Deletes record by ID, validated by `deleteRule` constraints.
+      tags:
+        - Dynamic Records CRUD
+      parameters:
+        - name: moulName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Record deleted successfully.
+        '400':
+          description: Rule evaluation error.
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Forbidden.
+        '404':
+          description: Record not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/visits:
+    get:
+      summary: List Visitor Sessions
+      description: Returns visitor session records recorded by request tracking.
+      tags:
+        - Analytics & Request Observability
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session logs list retrieved.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Visit'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/visits/{id}:
+    get:
+      summary: Get Visitor Session Details
+      description: Returns full details of a specific visit log by ID.
+      tags:
+        - Analytics & Request Observability
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visit session metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Visit'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Visit session not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/requests:
+    get:
+      summary: List Tracked HTTP Requests
+      description: Paginated query list of all server requests tracked asynchronously.
+      tags:
+        - Analytics & Request Observability
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Paginated list of request logs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page:
+                    type: integer
+                  perPage:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequestLog'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/requests/{id}:
+    get:
+      summary: Get Tracked Request Details
+      description: Returns details of a specific HTTP request log.
+      tags:
+        - Analytics & Request Observability
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: HTTP Request Log.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestLog'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Log not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+components:
+  securitySchemes:
+    AdminKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+      description: Shared API Key authentication for administration actions.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: User JSON Web Token for authentication.
+  responses:
+    401Unauthorized:
+      description: Authentication required or invalid key provided.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HTTPError'
+    500InternalError:
+      description: Database error or internal processing server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HTTPError'
+  schemas:
+    HTTPError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Authentication required
+    MoulField:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [text, number, bool, json, file, relation]
+        relationConfig:
+          type: object
+          properties:
+            targetMoul:
+              type: string
+              description: Target collection name referenced.
+            cardinality:
+              type: string
+              enum: ["1:1", "1:N", "M:N"]
+    MoulRules:
+      type: object
+      properties:
+        listRule:
+          type: string
+          description: Expression to authorize listing records (e.g. `auth.id != nil`).
+        viewRule:
+          type: string
+          description: Expression to authorize viewing a single record.
+        createRule:
+          type: string
+          description: Expression to authorize record creation.
+        updateRule:
+          type: string
+          description: Expression to authorize record updates.
+        deleteRule:
+          type: string
+          description: Expression to authorize record deletion.
+    EmailTemplate:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+    EmailTemplates:
+      type: object
+      properties:
+        verification:
+          $ref: '#/components/schemas/EmailTemplate'
+        password_reset:
+          $ref: '#/components/schemas/EmailTemplate'
+        confirm_email_change:
+          $ref: '#/components/schemas/EmailTemplate'
+        otp:
+          $ref: '#/components/schemas/EmailTemplate'
+        login_alert:
+          $ref: '#/components/schemas/EmailTemplate'
+    Moul:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [base, auth, worker, analytic]
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoulField'
+        rules:
+          $ref: '#/components/schemas/MoulRules'
+        email_templates:
+          $ref: '#/components/schemas/EmailTemplates'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    FileInfo:
+      type: object
+      properties:
+        filename:
+          type: string
+        url:
+          type: string
+        thumbhash:
+          type: string
+        thumbs:
+          type: object
+          additionalProperties:
+            type: string
+          description: Thumbnail resolutions dictionary mapping sizes to URLs (e.g. 256x256 -> URL).
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Signed JSON Web Token (JWT).
+        record:
+          type: object
+          description: Populated fields of the authenticated user record.
+          properties:
+            id:
+              type: string
+            created_at:
+              type: string
+            updated_at:
+              type: string
+            username:
+              type: string
+            email:
+              type: string
+          additionalProperties: true
+    Visit:
+      type: object
+      properties:
+        id:
+          type: string
+        visitor_token:
+          type: string
+        user_id:
+          type: string
+        ip:
+          type: string
+        user_agent:
+          type: string
+        referrer:
+          type: string
+        referring_domain:
+          type: string
+        landing_page:
+          type: string
+        browser:
+          type: string
+        os:
+          type: string
+        device_type:
+          type: string
+        country:
+          type: string
+        region:
+          type: string
+        city:
+          type: string
+        utm_source:
+          type: string
+        utm_medium:
+          type: string
+        utm_term:
+          type: string
+        utm_content:
+          type: string
+        utm_campaign:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+    RequestLog:
+      type: object
+      properties:
+        id:
+          type: string
+        visit_id:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        status_code:
+          type: integer
+        response_time_ms:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
