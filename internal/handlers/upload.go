@@ -45,6 +45,6 @@ func (h *UploadHandler) UploadFile(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Storage upload failed: "+err.Error())
 	}
 
-	// Respond with a JSON array as requested: [{"filename": "...", "url": "...", "thumbhash": "...", "thumbs": {"256x256": "..."}}]
+	// Respond with a JSON array as requested: [{"filename": "...", "url": "...", "thumbhash": "...", "thumbs": {"sm": "...", "md": "...", "lg": "..."}}]
 	return c.JSON(http.StatusOK, []*storage.FileInfo{info})
 }

@@ -128,19 +128,33 @@ func TestUploadFileLocalImage(t *testing.T) {
 		t.Errorf("Expected non-empty thumbhash for image")
 	}
 
-	thumbURL, hasThumb := info.Thumbs["256x256"]
-	if !hasThumb || thumbURL == "" {
-		t.Fatalf("Expected 256x256 thumbnail URL in thumbs map, got: %v", info.Thumbs)
+	if _, ok := info.Thumbs["256x256"]; ok {
+		t.Errorf("Expected thumbs map to not contain old key '256x256'")
 	}
 
-	// Verify both original and thumbnail exist locally
+	smURL, hasSm := info.Thumbs["sm"]
+	if !hasSm || smURL == "" {
+		t.Fatalf("Expected 'sm' thumbnail URL in thumbs map, got: %v", info.Thumbs)
+	}
+
+	mdURL, hasMd := info.Thumbs["md"]
+	if !hasMd || mdURL != info.URL {
+		t.Errorf("Expected 'md' URL to point to original URL (%q), got %q", info.URL, mdURL)
+	}
+
+	lgURL, hasLg := info.Thumbs["lg"]
+	if !hasLg || lgURL != info.URL {
+		t.Errorf("Expected 'lg' URL to point to original URL (%q), got %q", info.URL, lgURL)
+	}
+
+	// Verify both original and sm thumbnail exist locally
 	origPath := filepath.Join(".", info.URL)
 	if _, err := os.Stat(origPath); os.IsNotExist(err) {
 		t.Errorf("Original image not found locally at: %s", origPath)
 	}
 
-	thumbPath := filepath.Join(".", thumbURL)
-	if _, err := os.Stat(thumbPath); os.IsNotExist(err) {
-		t.Errorf("Thumbnail image not found locally at: %s", thumbPath)
+	smPath := filepath.Join(".", smURL)
+	if _, err := os.Stat(smPath); os.IsNotExist(err) {
+		t.Errorf("sm image not found locally at: %s", smPath)
 	}
 }

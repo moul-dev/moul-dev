@@ -369,7 +369,7 @@ paths:
   /api/upload:
     post:
       summary: Upload File
-      description: Uploads a media file. Automatically processes images to extract thumbhashes and generate 256x256 thumbnails.
+      description: Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg).
       tags:
         - File Storage
       security:
@@ -1350,7 +1350,7 @@ components:
           type: object
           additionalProperties:
             type: string
-          description: Thumbnail resolutions dictionary mapping sizes to URLs (e.g. 256x256 -> URL).
+          description: Thumbnail resolutions dictionary mapping sizes (sm, md, lg) to URLs.
     AuthResponse:
       type: object
       properties:

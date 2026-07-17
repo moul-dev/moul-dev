@@ -185,8 +185,8 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 		t.Errorf("Expected thumbhash to be returned for image file upload")
 	}
 	thumbs, ok := imageInfo["thumbs"].(map[string]interface{})
-	if !ok || thumbs["256x256"] == nil {
-		t.Errorf("Expected thumbs.256x256 thumbnail to be generated for image")
+	if !ok || thumbs["sm"] == nil || thumbs["md"] == nil || thumbs["lg"] == nil {
+		t.Errorf("Expected semantic sizes (sm, md, lg) in thumbs map, got: %v", thumbs)
 	}
 
 	// --- 5. Test File Type Field Schema Support & Serialization ---
