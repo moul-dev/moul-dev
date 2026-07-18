@@ -46,6 +46,8 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	e.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
 	e.GET("/device", deviceFlowHandler.RenderDeviceForm)
 	e.POST("/device/verify", deviceFlowHandler.VerifyDevice)
+	e.GET("/favicon.svg", deviceFlowHandler.ServeFavicon)
+	e.GET("/favicon.ico", deviceFlowHandler.ServeFavicon)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -191,6 +193,20 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	}
 	if claims.Username != "admin" || claims.MoulName != "_rootUsers" {
 		t.Errorf("Claims mismatch, username=%q, moul=%q", claims.Username, claims.MoulName)
+	}
+
+	// --- STEP 8: Verify Favicon SVG ---
+	req, _ = http.NewRequest("GET", server.URL+"/favicon.svg", nil)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Failed to request /favicon.svg: status=%d, err=%v", resp.StatusCode, err)
+	}
+	if contentType := resp.Header.Get("Content-Type"); !strings.Contains(contentType, "image/svg+xml") {
+		t.Errorf("Expected content-type image/svg+xml, got %q", contentType)
+	}
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "<svg") {
+		t.Errorf("Expected body to contain SVG tag, got:\n%s", string(bodyBytes))
 	}
 }
 

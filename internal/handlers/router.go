@@ -124,6 +124,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	authGroup.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
 	authGroup.GET("/device", deviceFlowHandler.RenderDeviceForm)
 	authGroup.POST("/device/verify", deviceFlowHandler.VerifyDevice)
+	authGroup.GET("/favicon.svg", deviceFlowHandler.ServeFavicon)
+	authGroup.GET("/favicon.ico", deviceFlowHandler.ServeFavicon)
+
 
 	// 3. Record management (Data CRUD) — protected by per-moul rules
 	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)

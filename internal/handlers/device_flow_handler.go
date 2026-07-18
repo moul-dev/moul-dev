@@ -257,6 +257,30 @@ func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
 	})
 }
 
+// ServeFavicon serves the embedded favicon SVG.
+func (h *DeviceFlowHandler) ServeFavicon(c *echo.Context) error {
+	return c.Blob(http.StatusOK, "image/svg+xml", []byte(embeddedFaviconSVG))
+}
+
+const embeddedFaviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    polygon {
+      fill: #000000;
+    }
+    @media (prefers-color-scheme: dark) {
+      polygon {
+        fill: #ffffff;
+      }
+    }
+  </style>
+  <polygon points="80.29,50.00 65.06,73.08 35.53,66.00 35.53,34.00 65.06,26.92" />
+  <polygon points="82.01,51.24 95.00,51.24 88.99,72.83 71.53,88.94 66.78,74.32" />
+  <polygon points="64.33,75.29 69.08,89.92 43.24,94.02 17.82,80.55 34.80,68.21" />
+  <polygon points="33.04,66.00 16.06,78.34 5.00,50.00 16.06,21.66 33.04,34.00" />
+  <polygon points="34.80,31.79 17.82,19.45 43.24,5.98 69.08,10.08 64.33,24.71" />
+  <polygon points="66.78,25.68 71.53,11.06 88.99,27.17 95.00,48.76 82.01,48.76" />
+</svg>`
+
 // Helper to render the HTML template
 func renderTemplate(c *echo.Context, status int, data RenderData) error {
 	tmpl, err := template.New("device").Parse(htmlTemplate)
@@ -274,9 +298,11 @@ const htmlTemplate = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authorize Device - Moul</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Dark Theme variables by default */
             --bg-color: #0d0e15;
             --card-bg: rgba(20, 22, 37, 0.7);
             --card-border: rgba(99, 102, 241, 0.2);
@@ -286,6 +312,32 @@ const htmlTemplate = `<!DOCTYPE html>
             --text-muted: #9ca3af;
             --success: #10b981;
             --error: #ef4444;
+            --radial-1: rgba(99, 102, 241, 0.15);
+            --radial-2: rgba(168, 85, 247, 0.15);
+            --input-bg: rgba(13, 14, 21, 0.8);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+            --alert-success-text: #a7f3d0;
+            --alert-error-text: #fca5a5;
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                /* Light/White Theme variables */
+                --bg-color: #f9fafb;
+                --card-bg: rgba(255, 255, 255, 0.85);
+                --card-border: rgba(99, 102, 241, 0.15);
+                --primary: #4f46e5;
+                --primary-glow: rgba(79, 70, 229, 0.2);
+                --text-color: #1f2937;
+                --text-muted: #6b7280;
+                --radial-1: rgba(99, 102, 241, 0.06);
+                --radial-2: rgba(168, 85, 247, 0.06);
+                --input-bg: #ffffff;
+                --input-border: rgba(0, 0, 0, 0.15);
+                --shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 0 40px rgba(99, 102, 241, 0.05);
+                --alert-success-text: #065f46;
+                --alert-error-text: #991b1b;
+            }
         }
         * {
             box-sizing: border-box;
@@ -296,14 +348,15 @@ const htmlTemplate = `<!DOCTYPE html>
         body {
             background-color: var(--bg-color);
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+                radial-gradient(circle at 10% 20%, var(--radial-1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--radial-2) 0%, transparent 40%);
             color: var(--text-color);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .container {
             width: 100%;
@@ -314,22 +367,41 @@ const htmlTemplate = `<!DOCTYPE html>
             border: 1px solid var(--card-border);
             border-radius: 16px;
             padding: 40px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+            box-shadow: var(--shadow);
             text-align: center;
+            transition: all 0.3s ease;
         }
-        .logo {
-            font-size: 2.2rem;
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 15px var(--primary-glow));
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .logo-text {
+            font-size: 2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+            background: linear-gradient(135deg, #a855f7 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
         }
         .subtitle {
             color: var(--text-muted);
             font-size: 0.95rem;
             margin-bottom: 30px;
+            transition: color 0.3s ease;
         }
         .form-group {
             text-align: left;
@@ -343,14 +415,15 @@ const htmlTemplate = `<!DOCTYPE html>
             letter-spacing: 1px;
             margin-bottom: 8px;
             color: var(--text-muted);
+            transition: color 0.3s ease;
         }
         input {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(13, 14, 21, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 8px;
-            color: #fff;
+            color: var(--text-color);
             font-size: 1rem;
             transition: all 0.3s ease;
         }
@@ -369,7 +442,7 @@ const htmlTemplate = `<!DOCTYPE html>
         button {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
             border: none;
             border-radius: 8px;
             color: #fff;
@@ -378,11 +451,11 @@ const htmlTemplate = `<!DOCTYPE html>
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             margin-top: 10px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 12px var(--primary-glow);
         }
         button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 6px 20px var(--primary-glow);
         }
         button:active {
             transform: translateY(1px);
@@ -397,14 +470,16 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         .alert-error {
             background: rgba(239, 68, 68, 0.1);
-            color: #fca5a5;
+            color: var(--alert-error-text);
             border-left-color: var(--error);
+            transition: color 0.3s ease;
         }
         .alert-success {
             background: rgba(16, 185, 129, 0.1);
-            color: #a7f3d0;
+            color: var(--alert-success-text);
             border-left-color: var(--success);
             text-align: center;
+            transition: color 0.3s ease;
         }
         .success-icon {
             font-size: 4rem;
@@ -421,7 +496,23 @@ const htmlTemplate = `<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <div class="logo">MOUL</div>
+        <div class="logo-container">
+            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#a855f7" />
+                        <stop offset="100%" stop-color="#6366f1" />
+                    </linearGradient>
+                </defs>
+                <polygon points="80.29,50.00 65.06,73.08 35.53,66.00 35.53,34.00 65.06,26.92" fill="url(#logo-grad)" />
+                <polygon points="82.01,51.24 95.00,51.24 88.99,72.83 71.53,88.94 66.78,74.32" fill="url(#logo-grad)" opacity="0.85" />
+                <polygon points="64.33,75.29 69.08,89.92 43.24,94.02 17.82,80.55 34.80,68.21" fill="url(#logo-grad)" opacity="0.75" />
+                <polygon points="33.04,66.00 16.06,78.34 5.00,50.00 16.06,21.66 33.04,34.00" fill="url(#logo-grad)" opacity="0.85" />
+                <polygon points="34.80,31.79 17.82,19.45 43.24,5.98 69.08,10.08 64.33,24.71" fill="url(#logo-grad)" opacity="0.75" />
+                <polygon points="66.78,25.68 71.53,11.06 88.99,27.17 95.00,48.76 82.01,48.76" fill="url(#logo-grad)" opacity="0.9" />
+            </svg>
+            <div class="logo-text">MOUL</div>
+        </div>
         
         {{if .Success}}
             <div class="success-icon">✓</div>
