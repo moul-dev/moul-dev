@@ -112,6 +112,18 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	}
 
 	// --- STEP 5: Render verification form ---
+	// 5.1 Render with invalid auth_moul (should fail)
+	req, _ = http.NewRequest("GET", server.URL+"/device?user_code="+authResp.UserCode+"&auth_moul=users", nil)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request rendering with non-root auth_moul, got status=%d, err=%v", resp.StatusCode, err)
+	}
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "Device authorization is only supported for the root account") {
+		t.Error("Expected error message 'Device authorization is only supported for the root account'")
+	}
+
+	// 5.2 Render with valid/empty auth_moul (should succeed)
 	req, _ = http.NewRequest("GET", server.URL+"/device?user_code="+authResp.UserCode, nil)
 	resp, err = client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -119,9 +131,26 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	}
 
 	// --- STEP 6: Verify device (Post credentials to verify endpoint) ---
+	// 6.1 Verify with invalid auth_moul (should fail)
+	invalidForm := url.Values{}
+	invalidForm.Add("user_code", authResp.UserCode)
+	invalidForm.Add("auth_moul", "users")
+	invalidForm.Add("identity", "admin@example.com")
+	invalidForm.Add("password", "AdminPass123")
+	req, _ = http.NewRequest("POST", server.URL+"/device/verify", strings.NewReader(invalidForm.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request verifying with non-root auth_moul, got status=%d, err=%v", resp.StatusCode, err)
+	}
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "Device authorization is only supported for the root account") {
+		t.Error("Expected error message 'Device authorization is only supported for the root account' on verify")
+	}
+
+	// 6.2 Verify with valid root auth_moul (should succeed)
 	form := url.Values{}
 	form.Add("user_code", authResp.UserCode)
-	form.Add("auth_moul", "users")
 	form.Add("identity", "admin@example.com")
 	form.Add("password", "AdminPass123")
 

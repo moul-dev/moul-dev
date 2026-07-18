@@ -136,7 +136,14 @@ func (h *DeviceFlowHandler) DeviceToken(c *echo.Context) error {
 // RenderDeviceForm handles GET /device
 func (h *DeviceFlowHandler) RenderDeviceForm(c *echo.Context) error {
 	userCode := c.QueryParam("user_code")
-	authMoul := "_rootUsers"
+	authMoul := c.QueryParam("auth_moul")
+	if authMoul != "" && authMoul != "_rootUsers" {
+		return renderTemplate(c, http.StatusBadRequest, RenderData{
+			Error:    "Device authorization is only supported for the root account",
+			UserCode: userCode,
+		})
+	}
+	authMoul = "_rootUsers"
 
 	return renderTemplate(c, http.StatusOK, RenderData{
 		UserCode: userCode,
@@ -147,7 +154,14 @@ func (h *DeviceFlowHandler) RenderDeviceForm(c *echo.Context) error {
 // VerifyDevice handles POST /device/verify
 func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
 	userCode := c.FormValue("user_code")
-	authMoul := "_rootUsers"
+	authMoul := c.FormValue("auth_moul")
+	if authMoul != "" && authMoul != "_rootUsers" {
+		return renderTemplate(c, http.StatusBadRequest, RenderData{
+			Error:    "Device authorization is only supported for the root account",
+			UserCode: userCode,
+		})
+	}
+	authMoul = "_rootUsers"
 	identity := c.FormValue("identity")
 	password := c.FormValue("password")
 
