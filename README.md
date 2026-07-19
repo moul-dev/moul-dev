@@ -10,7 +10,7 @@
 2. **Dynamic Record CRUD**: Perform complete CRUD operations on any dynamic moul using raw JSON payloads.
 3. **Bcrypt Password Hashing**: Auth-type mouls automatically hash passwords securely when inserting or updating records.
 4. **JWT-Based Authentication**: Issue signed JWT tokens on successful logins and parse/verify them automatically using Bearer token middleware.
-5. **Rule Authorization Engine**: Enforce HCL-like rules (e.g. `auth.id == author_id` or `auth.id != nil`) dynamically using the fast `expr-lang/expr` library.
+5. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
 6. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with support for queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 7. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local deployment.
 8. **First-Party Analytics & Session Tracking**: Create `analytic` mouls that automatically track events and sessions. The engine parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution and a server-side Go API.
@@ -439,6 +439,48 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 - **Failures & Exponential Backoffs**: If a job handler returns an error or panics, the engine logs the error details, increments `attempt`, and reschedules the job with an exponential backoff (`(attempt^2 * 10) + 10` seconds + jitter) until it reaches `max_attempts`, at which point it becomes `discarded`.
 - **Immediate Wakeups**: Upon enqueuing a job via HTTP or Go API, the engine is immediately signaled through an in-memory channel to wake up and process the job without waiting for the 1-second polling ticker.
 - **Graceful Shutdown**: The engine stops fetching new jobs immediately on interrupt signals, and blocks shutdown until all currently executing job handlers return (or context timeout occurs).
+
+---
+
+## Access Rules & Filters Syntax
+
+Moul supports a comprehensive rules and filter syntax for API collections. Each Moul (table) can be configured with five distinct rules matching client request contexts:
+- `listRule` - Limits which records can be returned in lists.
+- `viewRule` - Controls access to viewing a single record.
+- `createRule` - Validates fields/permissions before a record is inserted.
+- `updateRule` - Checks current record fields and incoming values before update.
+- `deleteRule` - Validates permissions before a record is deleted.
+
+### 1. Variables and Request Context
+Rules can access fields from the record being evaluated and request variables using the `@request` namespace:
+- `@request.auth.id` - ID of the authenticated user.
+- `@request.body.fieldName` - Incoming request payload parameters.
+- `@request.headers.header_name` - Request headers (normalized to lowercase, dashes replaced with underscores).
+- `@request.query.paramName` - URL query parameters.
+- `@request.method` - The HTTP request method (e.g., `GET`, `POST`).
+
+### 2. Operators
+- `=`, `!=`, `>`, `>=`, `<`, `<=` - Standard comparisons.
+- `~` - Case-insensitive LIKE/Contains (auto-wraps right-hand string with `%` wildcards if not present).
+- `!~` - Case-insensitive NOT LIKE/Contains.
+- `?=` (and `?!=`, `?~`, `?!~`, etc.) - Wildcard modifiers to match at least one item inside an array or multi-relation field (e.g., `allowed_users.id ?= @request.auth.id`).
+
+### 3. Modifiers
+- `:lower` - Converts a string to lowercase (e.g., `title:lower = "hello"`).
+- `:length` - Returns length/count of slice, select, or relation fields (e.g., `tags:length = 2`).
+- `:isset` - Checks if a body parameter was submitted (e.g., `@request.body.role:isset = false`).
+- `:changed` - Checks if a body parameter was changed compared to the database record (e.g., `@request.body.role:changed = false`).
+- `:each` - Asserts a condition matches for every item in an array/relation (e.g., `tags:each ~ "tag"`).
+
+### 4. Special Functions
+- `geoDistance(lonA, latA, lonB, latB)` - Computes the Haversine distance in kilometers between two coordinates.
+- `strftime(format, [time-value, modifiers...])` - Formats dates using SQLite's native `strftime` function.
+
+### 5. Cross-Collection Queries (`@collection`)
+Query other tables/collections directly within a rule. Comparisons targeting the same table name/alias are grouped together and executed as a single combined join/exists check:
+```hcl
+@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'
+```
 
 ---
 

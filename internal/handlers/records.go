@@ -98,7 +98,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 			"user_id":    userID,
 		}
 
-		allowed, err := rules.EvaluateRule(moul.Rules.CreateRule, authUser, ruleData)
+		allowed, err := rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, ruleData, buildRequestContext(c, body))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 		}
@@ -406,7 +406,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 
 	// Rule authorization check
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(moul.Rules.CreateRule, authUser, insertData)
+	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, insertData, buildRequestContext(c, body))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 	}
@@ -474,7 +474,7 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	for _, rec := range rawRecords {
 		record := normalizeRecord(moul, nullStringMapToMap(rec))
 		h.expandRelations(moul, record, expandParam)
-		allowed, err := rules.EvaluateRule(moul.Rules.ListRule, authUser, record)
+		allowed, err := rules.EvaluateRule(h.DB, moul.Rules.ListRule, authUser, record, buildRequestContext(c, nil))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 		}
@@ -514,7 +514,7 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, recordMap, expandParam)
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(moul.Rules.ViewRule, authUser, recordMap)
+	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.ViewRule, authUser, recordMap, buildRequestContext(c, nil))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 	}
@@ -555,9 +555,14 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
 
+	body := make(map[string]interface{})
+	if err := c.Bind(&body); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")
+	}
+
 	// Check update rule against current record status
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(moul.Rules.UpdateRule, authUser, recordMap)
+	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.UpdateRule, authUser, recordMap, buildRequestContext(c, body))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 	}
@@ -566,11 +571,6 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to perform this action")
 		}
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
-	}
-
-	body := make(map[string]interface{})
-	if err := c.Bind(&body); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")
 	}
 
 	// Build update params
@@ -789,7 +789,7 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 
 	// Validate rule
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(moul.Rules.DeleteRule, authUser, recordMap)
+	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.DeleteRule, authUser, recordMap, buildRequestContext(c, nil))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
 	}
@@ -1039,5 +1039,43 @@ func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]
 
 	if len(expandMap) > 0 {
 		recordMap["expand"] = expandMap
+	}
+}
+
+func buildRequestContext(c *echo.Context, body map[string]interface{}) map[string]interface{} {
+	headers := make(map[string]interface{})
+	if c.Request() != nil {
+		for k, vals := range c.Request().Header {
+			nk := strings.ReplaceAll(strings.ToLower(k), "-", "_")
+			if len(vals) > 0 {
+				headers[nk] = vals[0]
+			}
+		}
+	}
+
+	query := make(map[string]interface{})
+	if c.Request() != nil && c.Request().URL != nil {
+		for k, vals := range c.Request().URL.Query() {
+			if len(vals) > 0 {
+				query[k] = vals[0]
+			}
+		}
+	}
+
+	method := ""
+	if c.Request() != nil {
+		method = c.Request().Method
+	}
+
+	reqBody := body
+	if reqBody == nil {
+		reqBody = make(map[string]interface{})
+	}
+
+	return map[string]interface{}{
+		"body":    reqBody,
+		"headers": headers,
+		"query":   query,
+		"method":  method,
 	}
 }
