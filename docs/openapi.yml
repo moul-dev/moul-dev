@@ -557,9 +557,13 @@ paths:
                   sessionToken:
                     type: string
                     description: Temporary token to link options verification.
-                  publicKey:
+                  options:
                     type: object
-                    description: Standard WebAuthn CredentialCreationOptions payload.
+                    description: WebAuthn registration options wrapper.
+                    properties:
+                      publicKey:
+                        type: object
+                        description: Standard WebAuthn CredentialCreationOptions payload.
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '500':
@@ -634,8 +638,12 @@ paths:
                 properties:
                   sessionToken:
                     type: string
-                  publicKey:
+                  options:
                     type: object
+                    description: WebAuthn signup options wrapper.
+                    properties:
+                      publicKey:
+                        type: object
 
   /api/mouls/{moulName}/passkey/signup/verify:
     post:
@@ -702,8 +710,12 @@ paths:
                 properties:
                   sessionToken:
                     type: string
-                  publicKey:
+                  options:
                     type: object
+                    description: WebAuthn login options wrapper.
+                    properties:
+                      publicKey:
+                        type: object
 
   /api/mouls/{moulName}/passkey/login/verify:
     post:
