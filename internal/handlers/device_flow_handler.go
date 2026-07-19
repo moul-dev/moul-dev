@@ -38,11 +38,11 @@ type DeviceTokenRequest struct {
 
 // RenderData represents the variables passed to the HTML template.
 type RenderData struct {
-	Success    bool
-	Error      string
-	UserCode   string
-	AuthMoul   string
-	Identity   string
+	Success  bool
+	Error    string
+	UserCode string
+	AuthMoul string
+	Identity string
 }
 
 // DeviceAuthorize handles POST /api/oauth2/device/authorize
@@ -303,40 +303,46 @@ const htmlTemplate = `<!DOCTYPE html>
     <style>
         :root {
             /* Dark Theme variables by default */
-            --bg-color: #0d0e15;
-            --card-bg: rgba(20, 22, 37, 0.7);
-            --card-border: rgba(99, 102, 241, 0.2);
-            --primary: #6366f1;
-            --primary-glow: rgba(99, 102, 241, 0.4);
-            --text-color: #f3f4f6;
-            --text-muted: #9ca3af;
-            --success: #10b981;
-            --error: #ef4444;
-            --radial-1: rgba(99, 102, 241, 0.15);
-            --radial-2: rgba(168, 85, 247, 0.15);
-            --input-bg: rgba(13, 14, 21, 0.8);
+            --bg-color: #09090b;
+            --card-bg: rgba(18, 18, 22, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #ffffff;
+            --primary-glow: rgba(255, 255, 255, 0.15);
+            --text-color: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --success: #ffffff;
+            --error: #ffffff;
+            --input-bg: rgba(9, 9, 11, 0.8);
             --input-border: rgba(255, 255, 255, 0.1);
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
-            --alert-success-text: #a7f3d0;
-            --alert-error-text: #fca5a5;
+            --shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 50px rgba(255, 255, 255, 0.01);
+            --btn-bg: #ffffff;
+            --btn-text: #09090b;
+            --btn-hover-bg: #e4e4e7;
+            --error-bg: rgba(255, 255, 255, 0.02);
+            --error-border: rgba(255, 255, 255, 0.15);
+            --success-bg: rgba(255, 255, 255, 0.02);
+            --success-border: rgba(255, 255, 255, 0.25);
         }
         @media (prefers-color-scheme: light) {
             :root {
                 /* Light/White Theme variables */
-                --bg-color: #f9fafb;
+                --bg-color: #fafafa;
                 --card-bg: rgba(255, 255, 255, 0.85);
-                --card-border: rgba(99, 102, 241, 0.15);
-                --primary: #4f46e5;
-                --primary-glow: rgba(79, 70, 229, 0.2);
-                --text-color: #1f2937;
-                --text-muted: #6b7280;
-                --radial-1: rgba(99, 102, 241, 0.06);
-                --radial-2: rgba(168, 85, 247, 0.06);
+                --card-border: rgba(0, 0, 0, 0.08);
+                --primary: #09090b;
+                --primary-glow: rgba(0, 0, 0, 0.08);
+                --text-color: #09090b;
+                --text-muted: #71717a;
                 --input-bg: #ffffff;
-                --input-border: rgba(0, 0, 0, 0.15);
-                --shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 0 40px rgba(99, 102, 241, 0.05);
-                --alert-success-text: #065f46;
-                --alert-error-text: #991b1b;
+                --input-border: rgba(0, 0, 0, 0.12);
+                --shadow: 0 20px 40px rgba(0, 0, 0, 0.04), 0 0 50px rgba(0, 0, 0, 0.01);
+                --btn-bg: #09090b;
+                --btn-text: #ffffff;
+                --btn-hover-bg: #27272a;
+                --error-bg: rgba(0, 0, 0, 0.01);
+                --error-border: rgba(0, 0, 0, 0.12);
+                --success-bg: rgba(0, 0, 0, 0.01);
+                --success-border: rgba(0, 0, 0, 0.2);
             }
         }
         * {
@@ -347,16 +353,12 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         body {
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 10% 20%, var(--radial-1) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, var(--radial-2) 0%, transparent 40%);
             color: var(--text-color);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .container {
             width: 100%;
@@ -369,7 +371,6 @@ const htmlTemplate = `<!DOCTYPE html>
             padding: 40px;
             box-shadow: var(--shadow);
             text-align: center;
-            transition: all 0.3s ease;
         }
         .logo-container {
             display: flex;
@@ -383,25 +384,17 @@ const htmlTemplate = `<!DOCTYPE html>
             height: 64px;
             margin-bottom: 12px;
             filter: drop-shadow(0 0 15px var(--primary-glow));
-            animation: float 4s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
         }
         .logo-text {
             font-size: 2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #a855f7 0%, var(--primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-color);
             letter-spacing: 3px;
         }
         .subtitle {
             color: var(--text-muted);
             font-size: 0.95rem;
             margin-bottom: 30px;
-            transition: color 0.3s ease;
         }
         .form-group {
             text-align: left;
@@ -415,17 +408,15 @@ const htmlTemplate = `<!DOCTYPE html>
             letter-spacing: 1px;
             margin-bottom: 8px;
             color: var(--text-muted);
-            transition: color 0.3s ease;
         }
         input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 8px 14px;
             background: var(--input-bg);
             border: 1px solid var(--input-border);
-            border-radius: 8px;
+            border-radius: 12px;
             color: var(--text-color);
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            font-size: 0.95rem;
         }
         input:focus {
             outline: none;
@@ -441,24 +432,24 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         button {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+            padding: 10px 16px;
+            background: var(--btn-bg);
             border: none;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 1rem;
+            border-radius: 12px;
+            color: var(--btn-text);
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: background-color 0.2s, box-shadow 0.2s;
             margin-top: 10px;
             box-shadow: 0 4px 12px var(--primary-glow);
         }
         button:hover {
-            transform: translateY(-1px);
+            background: var(--btn-hover-bg);
             box-shadow: 0 6px 20px var(--primary-glow);
         }
         button:active {
-            transform: translateY(1px);
+            opacity: 0.9;
         }
         .alert {
             padding: 12px 16px;
@@ -466,31 +457,21 @@ const htmlTemplate = `<!DOCTYPE html>
             font-size: 0.9rem;
             margin-bottom: 24px;
             text-align: left;
-            border-left: 4px solid transparent;
+            border: 1px solid var(--alert-border);
+            background: var(--alert-bg);
         }
         .alert-error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--alert-error-text);
-            border-left-color: var(--error);
-            transition: color 0.3s ease;
+            --alert-bg: var(--error-bg);
+            --alert-border: var(--error-border);
+            border-left: 4px solid var(--text-color);
+            color: var(--text-color);
         }
         .alert-success {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--alert-success-text);
-            border-left-color: var(--success);
+            --alert-bg: var(--success-bg);
+            --alert-border: var(--success-border);
+            border-left: 4px solid var(--text-color);
+            color: var(--text-color);
             text-align: center;
-            transition: color 0.3s ease;
-        }
-        .success-icon {
-            font-size: 4rem;
-            color: var(--success);
-            margin-bottom: 20px;
-            animation: scaleIn 0.5s ease-out;
-        }
-        @keyframes scaleIn {
-            0% { transform: scale(0); opacity: 0; }
-            80% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
@@ -498,28 +479,21 @@ const htmlTemplate = `<!DOCTYPE html>
     <div class="container">
         <div class="logo-container">
             <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                <defs>
-                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#a855f7" />
-                        <stop offset="100%" stop-color="#6366f1" />
-                    </linearGradient>
-                </defs>
-                <polygon points="80.29,50.00 65.06,73.08 35.53,66.00 35.53,34.00 65.06,26.92" fill="url(#logo-grad)" />
-                <polygon points="82.01,51.24 95.00,51.24 88.99,72.83 71.53,88.94 66.78,74.32" fill="url(#logo-grad)" opacity="0.85" />
-                <polygon points="64.33,75.29 69.08,89.92 43.24,94.02 17.82,80.55 34.80,68.21" fill="url(#logo-grad)" opacity="0.75" />
-                <polygon points="33.04,66.00 16.06,78.34 5.00,50.00 16.06,21.66 33.04,34.00" fill="url(#logo-grad)" opacity="0.85" />
-                <polygon points="34.80,31.79 17.82,19.45 43.24,5.98 69.08,10.08 64.33,24.71" fill="url(#logo-grad)" opacity="0.75" />
-                <polygon points="66.78,25.68 71.53,11.06 88.99,27.17 95.00,48.76 82.01,48.76" fill="url(#logo-grad)" opacity="0.9" />
+                <polygon points="80.29,50.00 65.06,73.08 35.53,66.00 35.53,34.00 65.06,26.92" fill="var(--primary)" />
+                <polygon points="82.01,51.24 95.00,51.24 88.99,72.83 71.53,88.94 66.78,74.32" fill="var(--primary)" opacity="0.85" />
+                <polygon points="64.33,75.29 69.08,89.92 43.24,94.02 17.82,80.55 34.80,68.21" fill="var(--primary)" opacity="0.75" />
+                <polygon points="33.04,66.00 16.06,78.34 5.00,50.00 16.06,21.66 33.04,34.00" fill="var(--primary)" opacity="0.85" />
+                <polygon points="34.80,31.79 17.82,19.45 43.24,5.98 69.08,10.08 64.33,24.71" fill="var(--primary)" opacity="0.75" />
+                <polygon points="66.78,25.68 71.53,11.06 88.99,27.17 95.00,48.76 82.01,48.76" fill="var(--primary)" opacity="0.9" />
             </svg>
             <div class="logo-text">MOUL</div>
         </div>
         
         {{if .Success}}
-            <div class="success-icon">✓</div>
             <h2 style="margin-bottom: 12px; font-weight: 600;">Device Authorized</h2>
-            <p class="subtitle" style="margin-bottom: 0;">You have successfully authorized the TUI client. You can now return to your terminal; the application will resume automatically.</p>
+            <p class="subtitle" style="margin-bottom: 0;">You have successfully authorized the client. You can now return to your terminal; the application will resume automatically.</p>
         {{else}}
-            <p class="subtitle">Enter the authorization code and your credentials to connect your terminal device.</p>
+            <p class="subtitle">Enter the authorization code and your credentials to connect your device.</p>
             
             {{if .Error}}
                 <div class="alert alert-error">
