@@ -542,6 +542,33 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 
 			if m.MoulForm.State == huh.StateCompleted {
+				if m.newMoulType == "auth" {
+					if m.newMoulListRule == "" {
+						m.newMoulListRule = "id = @request.auth.id"
+					}
+					if m.newMoulViewRule == "" {
+						m.newMoulViewRule = "id = @request.auth.id"
+					}
+					if m.newMoulUpdateRule == "" {
+						m.newMoulUpdateRule = "id = @request.auth.id"
+					}
+					if m.newMoulDeleteRule == "" {
+						m.newMoulDeleteRule = "id = @request.auth.id"
+					}
+				} else {
+					if m.newMoulListRule == "id = @request.auth.id" {
+						m.newMoulListRule = ""
+					}
+					if m.newMoulViewRule == "id = @request.auth.id" {
+						m.newMoulViewRule = ""
+					}
+					if m.newMoulUpdateRule == "id = @request.auth.id" {
+						m.newMoulUpdateRule = ""
+					}
+					if m.newMoulDeleteRule == "id = @request.auth.id" {
+						m.newMoulDeleteRule = ""
+					}
+				}
 				m.initMoulActionForm()
 				m.moulWizardState = "fields"
 				cmds = append(cmds, m.MoulActionForm.Init())

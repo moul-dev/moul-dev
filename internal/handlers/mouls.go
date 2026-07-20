@@ -49,6 +49,22 @@ func (h *MoulHandler) CreateMoul(c *echo.Context) error {
 		m.Type = "base"
 	}
 
+	// Default rules for auth type
+	if m.Type == "auth" {
+		if m.Rules.ListRule == "" {
+			m.Rules.ListRule = "id = @request.auth.id"
+		}
+		if m.Rules.ViewRule == "" {
+			m.Rules.ViewRule = "id = @request.auth.id"
+		}
+		if m.Rules.UpdateRule == "" {
+			m.Rules.UpdateRule = "id = @request.auth.id"
+		}
+		if m.Rules.DeleteRule == "" {
+			m.Rules.DeleteRule = "id = @request.auth.id"
+		}
+	}
+
 	if m.ID == "" {
 		m.ID = util.RandomID()
 	}

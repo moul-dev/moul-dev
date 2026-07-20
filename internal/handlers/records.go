@@ -98,9 +98,15 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 			"user_id":    userID,
 		}
 
-		allowed, err := rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, ruleData, buildRequestContext(c, body))
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+		var allowed bool
+		var ruleErr error
+		if authUser != nil && authUser["moul"] == "_rootUsers" {
+			allowed = true
+		} else {
+			allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, ruleData, buildRequestContext(c, body))
+		}
+		if ruleErr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 		}
 		if !allowed {
 			if authUser == nil {
@@ -406,9 +412,15 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 
 	// Rule authorization check
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, insertData, buildRequestContext(c, body))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+	var allowed bool
+	var ruleErr error
+	if authUser != nil && authUser["moul"] == "_rootUsers" {
+		allowed = true
+	} else {
+		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, insertData, buildRequestContext(c, body))
+	}
+	if ruleErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 	}
 	if !allowed {
 		if authUser == nil {
@@ -474,9 +486,15 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	for _, rec := range rawRecords {
 		record := normalizeRecord(moul, nullStringMapToMap(rec))
 		h.expandRelations(moul, record, expandParam)
-		allowed, err := rules.EvaluateRule(h.DB, moul.Rules.ListRule, authUser, record, buildRequestContext(c, nil))
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+		var allowed bool
+		var ruleErr error
+		if authUser != nil && authUser["moul"] == "_rootUsers" {
+			allowed = true
+		} else {
+			allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.ListRule, authUser, record, buildRequestContext(c, nil))
+		}
+		if ruleErr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 		}
 		if allowed {
 			authorizedRecords = append(authorizedRecords, record)
@@ -514,9 +532,15 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, recordMap, expandParam)
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.ViewRule, authUser, recordMap, buildRequestContext(c, nil))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+	var allowed bool
+	var ruleErr error
+	if authUser != nil && authUser["moul"] == "_rootUsers" {
+		allowed = true
+	} else {
+		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.ViewRule, authUser, recordMap, buildRequestContext(c, nil))
+	}
+	if ruleErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 	}
 	if !allowed {
 		if authUser == nil {
@@ -562,9 +586,15 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	// Check update rule against current record status
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.UpdateRule, authUser, recordMap, buildRequestContext(c, body))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+	var allowed bool
+	var ruleErr error
+	if authUser != nil && authUser["moul"] == "_rootUsers" {
+		allowed = true
+	} else {
+		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.UpdateRule, authUser, recordMap, buildRequestContext(c, body))
+	}
+	if ruleErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 	}
 	if !allowed {
 		if authUser == nil {
@@ -789,9 +819,15 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 
 	// Validate rule
 	authUser := middleware.GetAuthRecord(c)
-	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.DeleteRule, authUser, recordMap, buildRequestContext(c, nil))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+err.Error())
+	var allowed bool
+	var ruleErr error
+	if authUser != nil && authUser["moul"] == "_rootUsers" {
+		allowed = true
+	} else {
+		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.DeleteRule, authUser, recordMap, buildRequestContext(c, nil))
+	}
+	if ruleErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
 	}
 	if !allowed {
 		if authUser == nil {

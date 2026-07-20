@@ -666,6 +666,9 @@ func TestMoulAssociations(t *testing.T) {
 	createUsersPayload := schema.Moul{
 		Name: "users",
 		Type: "auth",
+		Rules: schema.MoulRules{
+			DeleteRule: "true",
+		},
 	}
 	resp = postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
