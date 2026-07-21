@@ -19,12 +19,12 @@ build:
 
 # Run the Go unit and integration tests
 test-go:
-	go test -v -cover ./...
+	GOTOOLCHAIN=go1.25.8 go test -v -cover ./internal/...
 
 # Run tests and output coverage report
 test-coverage:
-	go test -v -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
+	GOTOOLCHAIN=go1.25.8 go test -v -coverprofile=coverage.out ./internal/...
+	GOTOOLCHAIN=go1.25.8 go tool cover -func=coverage.out
 
 # Remove SQLite database
 clean-db:

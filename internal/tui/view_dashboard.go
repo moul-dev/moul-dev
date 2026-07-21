@@ -130,7 +130,7 @@ func (m *Model) viewDashboard() string {
 
 func (m *Model) renderSidebar(width int) string {
 	var s strings.Builder
-	s.WriteString(SidebarTitleStyle.Render("MOUL CONSOLE"))
+	s.WriteString(SidebarTitleStyle.Render("MOUL CONSOLE v" + Version))
 	s.WriteString("\n\n")
 
 	s.WriteString(SidebarHeaderStyle.Render("COLLECTIONS"))

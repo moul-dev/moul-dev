@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]*.[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run Tests
+        run: make test-go
+
+      - name: Build Binaries
+        run: |
+          # Extract version from tag (e.g. refs/tags/v2026.07 -> v2026.07)
+          VERSION=${GITHUB_REF#refs/tags/}
+          
+          # We want to cross-compile for macOS (darwin) and Linux, both amd64 and arm64
+          PLATFORMS=("darwin/amd64" "darwin/arm64" "linux/amd64" "linux/arm64")
+          
+          mkdir -p dist
+          
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            IFS="/" read -r GOOS GOARCH <<< "$PLATFORM"
+            
+            echo "Building moul and moul-dev for $GOOS/$GOARCH..."
+            
+            # Compile moul (TUI)
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+              -ldflags="-s -w -X main.Version=$VERSION" \
+              -o dist/moul \
+              cmd/moul/main.go
+              
+            # Compile moul-dev (server)
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+              -ldflags="-s -w -X main.Version=$VERSION" \
+              -o dist/moul-dev \
+              cmd/moul-dev/main.go
+              
+            # Archive binaries to preserve execution bits
+            tar -czf dist/moul_${VERSION}_${GOOS}_${GOARCH}.tar.gz -C dist moul
+            tar -czf dist/moul-dev_${VERSION}_${GOOS}_${GOARCH}.tar.gz -C dist moul-dev
+            
+            # Clean temporary uncompressed binaries in dist
+            rm dist/moul dist/moul-dev
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true

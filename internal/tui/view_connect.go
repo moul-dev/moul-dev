@@ -128,7 +128,7 @@ func (m *Model) viewConnect() string {
 	}
 
 	var formView string
-	var sectionTitle string = "Bring Your Own Compute. Simplified."
+	var sectionTitle string = fmt.Sprintf("Bring Your Own Compute. Simplified. (v%s)", Version)
 
 	if m.State == StateRootSetup {
 		sectionTitle = "Initial Server Setup: Create Root User"
@@ -224,7 +224,7 @@ func (m *Model) viewDeviceAuth() string {
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		logoStyle.Render(logo),
-		subTitleStyle.Render("Bring Your Own Compute. Simplified."),
+		subTitleStyle.Render(fmt.Sprintf("Bring Your Own Compute. Simplified. (v%s)", Version)),
 		errMsg,
 		cardStyle.Render(cardContent.String()),
 	)

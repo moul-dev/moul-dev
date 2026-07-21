@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +22,19 @@ import (
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
+// Version is set at build time using:
+// -ldflags="-X main.Version=..."
+var Version = "dev"
+
 func main() {
+	versionFlag := flag.Bool("version", false, "Print version and exit")
+	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("moul-dev version %s\n", Version)
+		return
+	}
+
 	// Load environment variables (envy automatically loads .env files)
 	moulEnv := envy.Get("MOUL_ENV", "development")
 	isDev := moulEnv == "development"
@@ -104,7 +118,7 @@ func main() {
 	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, isDev)
 
 	// ── Start server with StartConfig for graceful shutdown ──────────
-	logger.Info("Starting moul-dev engine server", "addr", "http://localhost:8090", "env", moulEnv)
+	logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
 	sc := echo.StartConfig{
 		Address:         ":8090",
 		GracefulTimeout: 10 * time.Second,
