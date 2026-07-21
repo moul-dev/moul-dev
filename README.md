@@ -1,4 +1,6 @@
-# Moul Dynamic API & Background Worker Engine
+# Moul
+
+![Device OAuth Demo](assets/device-oauth-demo.png)
 
 `moul-dev` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 
