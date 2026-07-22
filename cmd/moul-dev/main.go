@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,15 +25,50 @@ import (
 // -ldflags="-X main.Version=..."
 var Version = "dev"
 
-func main() {
-	versionFlag := flag.Bool("version", false, "Print version and exit")
-	flag.Parse()
+func printUsage() {
+	fmt.Println("Usage: moul-dev [command] [options]")
+	fmt.Println()
+	fmt.Println("Commands:")
+	fmt.Println("  start    Start the moul-dev engine server (default)")
+	fmt.Println("  restore  Restore database from Litestream S3 backup")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  -v, --version, version  Print version information and exit")
+	fmt.Println("  -h, --help, help        Show help and usage instructions")
+}
 
-	if *versionFlag {
-		fmt.Printf("moul-dev version %s\n", Version)
-		return
+func main() {
+	cmd := "start"
+	if len(os.Args) > 1 {
+		cmd = os.Args[1]
 	}
 
+	switch cmd {
+	case "start":
+		runStart()
+	case "restore":
+		runRestore()
+	case "-v", "-version", "--version", "version":
+		fmt.Printf("moul-dev version %s\n", Version)
+	case "-h", "-help", "--help", "help":
+		printUsage()
+	default:
+		fmt.Printf("Unknown command: %s\n\n", cmd)
+		printUsage()
+		os.Exit(1)
+	}
+}
+
+func runRestore() {
+	dbPath := envy.Get("MOUL_DB_PATH", "moul-local.db")
+	logger.Info("Attempting Litestream S3 database restore", "path", dbPath)
+	if err := backup.RestoreFromS3(context.Background(), dbPath); err != nil {
+		logger.Fatal("Litestream restore failed", "err", err)
+	}
+	logger.Info("Restore operation completed successfully")
+}
+
+func runStart() {
 	// Load environment variables (envy automatically loads .env files)
 	moulEnv := envy.Get("MOUL_ENV", "development")
 	isDev := moulEnv == "development"
@@ -64,14 +98,6 @@ func main() {
 		}
 	}()
 
-	// 2. Check if the database file exists; if missing, attempt restore
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		logger.Info("Database file not found, attempting Litestream S3 restore", "path", dbPath)
-		if err := backup.RestoreFromS3(context.Background(), dbPath); err != nil {
-			logger.Error("Litestream restore error", "err", err)
-		}
-	}
-
 	// ── Database ────────────────────────────────────────────────────
 	dbConn, err := db.InitDB(dbPath)
 	if err != nil {
@@ -79,7 +105,7 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	// 3. Start Litestream replication
+	// 2. Start Litestream replication
 	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)
 	if err != nil {
 		logger.Error("Failed to start Litestream replication", "err", err)

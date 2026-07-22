@@ -46,8 +46,8 @@ func TestRestoreFromS3_Disabled(t *testing.T) {
 	defer envy.Set("LITESTREAM_ENABLED", "")
 
 	err := RestoreFromS3(context.Background(), "test-restore.db")
-	if err != nil {
-		t.Fatalf("Expected no error when disabled, got: %v", err)
+	if err == nil {
+		t.Fatal("Expected error when litestream is disabled, got nil")
 	}
 }
 
@@ -93,10 +93,10 @@ func TestRestoreFromS3_MissingCredentials(t *testing.T) {
 		envy.Set("LITESTREAM_S3_BUCKET", "")
 	}()
 
-	// If credentials are empty, it should log a warning and return nil (skip restore)
+	// If credentials are empty, it should return an error
 	err := RestoreFromS3(context.Background(), "test-restore.db")
-	if err != nil {
-		t.Fatalf("Expected no error when env credentials are empty, got: %v", err)
+	if err == nil {
+		t.Fatal("Expected error when env credentials are missing, got nil")
 	}
 	// Verify no file was created
 	if _, err := os.Stat("test-restore.db"); !os.IsNotExist(err) {

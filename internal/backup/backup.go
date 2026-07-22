@@ -27,12 +27,11 @@ func (ls *LitestreamStore) Close(ctx context.Context) error {
 	return nil
 }
 
-// RestoreFromS3 attempts to restore the SQLite database file from S3 at startup.
-// It is called ONLY when the local database file is missing.
+// RestoreFromS3 attempts to restore the SQLite database file from S3 using environment variables.
 func RestoreFromS3(ctx context.Context, dbPath string) error {
 	enabled := envy.Get("LITESTREAM_ENABLED", "false")
 	if enabled != "true" {
-		return nil
+		return fmt.Errorf("litestream replication is disabled (LITESTREAM_ENABLED=false)")
 	}
 
 	bucket := envy.Get("LITESTREAM_S3_BUCKET", "")
@@ -44,8 +43,7 @@ func RestoreFromS3(ctx context.Context, dbPath string) error {
 	replicaPath := envy.Get("LITESTREAM_REPLICA_PATH", "")
 
 	if bucket == "" || accessKey == "" || secretKey == "" {
-		logger.Info("S3 restore fallback skipped: bucket, access key, or secret key is missing")
-		return nil
+		return fmt.Errorf("S3 restore configuration incomplete: LITESTREAM_S3_BUCKET, LITESTREAM_ACCESS_KEY_ID, or LITESTREAM_SECRET_ACCESS_KEY is missing")
 	}
 
 	if replicaPath == "" {
@@ -76,10 +74,7 @@ func RestoreFromS3(ctx context.Context, dbPath string) error {
 	}
 
 	if err := replica.Restore(ctx, opt); err != nil {
-		// If it's a new database and replica doesn't exist yet on S3, Restore might return an error like "no snapshots found".
-		// We should log it and proceed so that a fresh local db is initialized.
-		logger.Warn("S3 restore not completed, proceeding with fresh database", "err", err)
-		return nil
+		return fmt.Errorf("failed to restore database from S3: %w", err)
 	}
 
 	logger.Info("Database successfully restored from S3", "path", dbPath)
