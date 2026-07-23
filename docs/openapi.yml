@@ -111,6 +111,7 @@ paths:
       tags:
         - Moul Schema Management
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       requestBody:
         required: true
@@ -158,12 +159,138 @@ paths:
           $ref: '#/components/responses/500InternalError'
 
   /api/moul/{name}:
+    patch:
+      summary: Update Moul
+      description: |
+        Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.
+        If the `name` property in the request body is different from `{name}`, the physical table will be renamed.
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Current name of the collection to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: New or current name of the collection.
+                type:
+                  type: string
+                  enum: [base, auth, worker, analytic]
+                fields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MoulField'
+                rules:
+                  $ref: '#/components/schemas/MoulRules'
+                email_templates:
+                  $ref: '#/components/schemas/EmailTemplates'
+      responses:
+        '200':
+          description: Moul schema updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moul'
+        '400':
+          description: Invalid request parameters, empty name, or target name collision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    put:
+      summary: Replace Moul
+      description: |
+        Replaces or updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Current name of the collection to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: New or current name of the collection.
+                type:
+                  type: string
+                  enum: [base, auth, worker, analytic]
+                fields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MoulField'
+                rules:
+                  $ref: '#/components/schemas/MoulRules'
+                email_templates:
+                  $ref: '#/components/schemas/EmailTemplates'
+      responses:
+        '200':
+          description: Moul schema updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moul'
+        '400':
+          description: Invalid request parameters, empty name, or target name collision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Moul not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          $ref: '#/components/responses/500InternalError'
     delete:
       summary: Delete Moul
       description: Drops the physical SQLite table and removes its metadata record.
       tags:
         - Moul Schema Management
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       parameters:
         - name: name
@@ -199,6 +326,7 @@ paths:
       tags:
         - Moul Schema Management
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       parameters:
         - name: moulName
@@ -228,6 +356,7 @@ paths:
       tags:
         - Moul Schema Management
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       parameters:
         - name: moulName
@@ -265,6 +394,7 @@ paths:
       tags:
         - Moul Schema Management
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       parameters:
         - name: moulName
@@ -318,6 +448,7 @@ paths:
       tags:
         - Settings & System Config
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       responses:
         '200':
@@ -338,6 +469,7 @@ paths:
       tags:
         - Settings & System Config
       security:
+        - BearerAuth: []
         - AdminKeyAuth: []
       requestBody:
         required: true
@@ -585,8 +717,14 @@ paths:
             type: string
         - name: sessionToken
           in: query
-          required: true
-          description: The token returned by the options endpoint.
+          required: false
+          description: The session token returned by options endpoint (can also be passed via X-Session-Token header).
+          schema:
+            type: string
+        - name: X-Session-Token
+          in: header
+          required: false
+          description: Alternative header to pass the session token.
           schema:
             type: string
       requestBody:
@@ -659,7 +797,14 @@ paths:
             type: string
         - name: sessionToken
           in: query
-          required: true
+          required: false
+          description: The session token returned by options endpoint (can also be passed via X-Session-Token header).
+          schema:
+            type: string
+        - name: X-Session-Token
+          in: header
+          required: false
+          description: Alternative header to pass the session token.
           schema:
             type: string
       requestBody:
@@ -731,7 +876,14 @@ paths:
             type: string
         - name: sessionToken
           in: query
-          required: true
+          required: false
+          description: The session token returned by options endpoint (can also be passed via X-Session-Token header).
+          schema:
+            type: string
+        - name: X-Session-Token
+          in: header
+          required: false
+          description: Alternative header to pass the session token.
           schema:
             type: string
       requestBody:
@@ -875,6 +1027,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: auth_moul
+          in: query
+          required: false
+          description: Collection for device auth (defaults to _rootUsers; device flow is restricted to root account).
+          schema:
+            type: string
       responses:
         '200':
           description: Verification form HTML page.
@@ -906,6 +1064,9 @@ paths:
                   type: string
                 password:
                   type: string
+                auth_moul:
+                  type: string
+                  description: Collection for device auth (defaults to _rootUsers; device flow is restricted to root account).
       responses:
         '200':
           description: Returns HTML verification success/failure page.
