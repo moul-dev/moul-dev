@@ -48,9 +48,9 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 
 	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
-	e.POST("/api/mouls", moulHandler.CreateMoul, middleware.RequireAdminKey(adminKey))
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
+	e.POST("/api/moul", moulHandler.CreateMoul, middleware.RequireAdminKey(adminKey))
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -200,7 +200,7 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 		},
 	}
 	moulPayloadBytes, _ := json.Marshal(createMoulPayload)
-	req, _ = http.NewRequest("POST", server.URL+"/api/mouls", bytes.NewReader(moulPayloadBytes))
+	req, _ = http.NewRequest("POST", server.URL+"/api/moul", bytes.NewReader(moulPayloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Admin-Key", adminKey)
 	resp, _ = client.Do(req)
@@ -212,7 +212,7 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 		"files": imageList, // Use the uploaded image list directly as field value
 	}
 	recordPayloadBytes, _ := json.Marshal(recordPayload)
-	req, _ = http.NewRequest("POST", server.URL+"/api/mouls/attachments/records", bytes.NewReader(recordPayloadBytes))
+	req, _ = http.NewRequest("POST", server.URL+"/api/moul/attachments/records", bytes.NewReader(recordPayloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = client.Do(req)
 	if err != nil {
@@ -241,7 +241,7 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 
 	// Verify GET also returns correct JSON
 	recordID := createdRecord["id"].(string)
-	req, _ = http.NewRequest("GET", server.URL+"/api/mouls/attachments/records/"+recordID, nil)
+	req, _ = http.NewRequest("GET", server.URL+"/api/moul/attachments/records/"+recordID, nil)
 	resp, _ = client.Do(req)
 	var retrievedRecord map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&retrievedRecord)

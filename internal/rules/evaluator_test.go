@@ -48,7 +48,7 @@ func TestEvaluateRule_PocketBaseSyntax(t *testing.T) {
 	}
 	fieldsJson, _ := postsMoul.SerializeFields()
 	rulesJson, _ := postsMoul.SerializeRules()
-	_, err = testDB.Insert("_mouls", dbx.Params{
+	_, err = testDB.Insert("_moul", dbx.Params{
 		"id":         postsMoul.ID,
 		"name":       postsMoul.Name,
 		"type":       postsMoul.Type,

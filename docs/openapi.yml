@@ -88,7 +88,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls:
+  /api/moul:
     get:
       summary: List Mouls
       description: Lists the metadata schemas of all registered collections.
@@ -157,7 +157,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{name}:
+  /api/moul/{name}:
     delete:
       summary: Delete Moul
       description: Drops the physical SQLite table and removes its metadata record.
@@ -192,7 +192,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/email-templates:
+  /api/moul/{moulName}/email-templates:
     get:
       summary: Get Email Templates
       description: Retrieves custom email templates for an auth-type collection.
@@ -258,7 +258,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/email-templates/test:
+  /api/moul/{moulName}/email-templates/test:
     post:
       summary: Send Test Email
       description: Triggers a mock/test email using the specified template configuration and enqueues a SendEmail background job.
@@ -404,7 +404,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/auth-with-password:
+  /api/moul/{moulName}/auth-with-password:
     post:
       summary: Password Authentication
       description: Authenticates identity against the designated auth moul collection and yields a signed JWT.
@@ -447,7 +447,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/otp/request:
+  /api/moul/{moulName}/otp/request:
     post:
       summary: Request OTP
       description: |
@@ -490,7 +490,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/auth-with-otp:
+  /api/moul/{moulName}/auth-with-otp:
     post:
       summary: Verify OTP / Authenticate
       description: Verifies OTP code sent to user email and returns a signed JWT on success.
@@ -531,7 +531,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/passkey/register/options:
+  /api/moul/{moulName}/passkey/register/options:
     post:
       summary: Request Passkey Registration Options
       description: Retrieves WebAuthn credential creation options for an authenticated user to register a new passkey.
@@ -569,7 +569,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/passkey/register/verify:
+  /api/moul/{moulName}/passkey/register/verify:
     post:
       summary: Verify Passkey Registration
       description: Verifies client navigator assertion credentials response and completes credential registration.
@@ -604,7 +604,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
 
-  /api/mouls/{moulName}/passkey/signup/options:
+  /api/moul/{moulName}/passkey/signup/options:
     post:
       summary: Request Passkey Signup Options
       description: Returns credential creation options for registering a brand-new user via WebAuthn.
@@ -645,7 +645,7 @@ paths:
                       publicKey:
                         type: object
 
-  /api/mouls/{moulName}/passkey/signup/verify:
+  /api/moul/{moulName}/passkey/signup/verify:
     post:
       summary: Verify Passkey Signup
       description: Confirms client WebAuthn registration, auto-creates user record, and logs them in with JWT.
@@ -676,7 +676,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
 
-  /api/mouls/{moulName}/passkey/login/options:
+  /api/moul/{moulName}/passkey/login/options:
     post:
       summary: Request Passkey Login Options
       description: Returns credential assertion options to challenge an existing user's registered WebAuthn key.
@@ -717,7 +717,7 @@ paths:
                       publicKey:
                         type: object
 
-  /api/mouls/{moulName}/passkey/login/verify:
+  /api/moul/{moulName}/passkey/login/verify:
     post:
       summary: Verify Passkey Login
       description: Validates user assertion authentication, logging them in.
@@ -916,7 +916,7 @@ paths:
         '400':
           description: Bad request, user validation failed.
 
-  /api/mouls/{moulName}/records:
+  /api/moul/{moulName}/records:
     get:
       summary: List Records
       description: Queries the collection records. Query filters are applied dynamically based on collection HCL listRule config.
@@ -994,7 +994,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mouls/{moulName}/records/{id}:
+  /api/moul/{moulName}/records/{id}:
     get:
       summary: Get Record
       description: Retrieves a single record by ID, restricted by `viewRule` constraints.

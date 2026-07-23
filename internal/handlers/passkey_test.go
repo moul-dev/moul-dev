@@ -36,11 +36,11 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	// Register Routes
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.POST("/api/mouls/:moulName/passkey/register/options", authHandler.PasskeyRegisterOptions)
-	e.POST("/api/mouls/:moulName/passkey/signup/options", authHandler.PasskeySignupOptions)
-	e.POST("/api/mouls/:moulName/passkey/login/options", authHandler.PasskeyLoginOptions)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.POST("/api/moul/:moulName/passkey/register/options", authHandler.PasskeyRegisterOptions)
+	e.POST("/api/moul/:moulName/passkey/signup/options", authHandler.PasskeySignupOptions)
+	e.POST("/api/moul/:moulName/passkey/login/options", authHandler.PasskeyLoginOptions)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)
@@ -53,7 +53,7 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 		Name: "users",
 		Type: "auth",
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for users moul creation, got %d", resp.StatusCode)
 	}
@@ -62,7 +62,7 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 	signupPayload := map[string]string{
 		"email": "passkeyuser@example.com",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/passkey/signup/options", signupPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/passkey/signup/options", signupPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for Passkey signup options request, got %d", resp.StatusCode)
 	}
@@ -115,7 +115,7 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 	loginPayload := map[string]string{
 		"identity": "existing@example.com",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/passkey/login/options", loginPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/passkey/login/options", loginPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for Passkey login options request, got %d", resp.StatusCode)
 	}

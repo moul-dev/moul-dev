@@ -152,7 +152,7 @@ func TestGetRequest_ReturnsRecord(t *testing.T) {
 		"id":               "req-specific-123",
 		"visit_id":         "visit-abc",
 		"method":           "POST",
-		"path":             "/api/mouls/users/records",
+		"path":             "/api/moul/users/records",
 		"status_code":      201,
 		"response_time_ms": 55,
 		"created_at":       now,
@@ -196,8 +196,8 @@ func TestGetRequest_ReturnsRecord(t *testing.T) {
 	if result["method"] != "POST" {
 		t.Errorf("Expected method=POST, got %v", result["method"])
 	}
-	if result["path"] != "/api/mouls/users/records" {
-		t.Errorf("Expected path=/api/mouls/users/records, got %v", result["path"])
+	if result["path"] != "/api/moul/users/records" {
+		t.Errorf("Expected path=/api/moul/users/records, got %v", result["path"])
 	}
 }
 

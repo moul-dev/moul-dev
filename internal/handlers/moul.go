@@ -84,12 +84,12 @@ func (h *MoulHandler) CreateMoul(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, m)
 }
 
-// ListMouls returns all metadata for registered mouls.
-func (h *MoulHandler) ListMouls(c *echo.Context) error {
-	mouls, err := db.LoadAllMouls(h.DB)
+// ListMoul returns all metadata for registered moul.
+func (h *MoulHandler) ListMoul(c *echo.Context) error {
+	mouls, err := db.LoadAllMoul(h.DB)
 	if err != nil {
-		logger.Error("Failed to fetch mouls", "err", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve mouls")
+		logger.Error("Failed to fetch moul", "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve moul")
 	}
 	return c.JSON(http.StatusOK, mouls)
 }
@@ -118,8 +118,8 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to drop table")
 	}
 
-	// Delete from _mouls metadata
-	_, err = h.DB.Delete("_mouls", dbx.HashExp{"name": name}).Execute()
+	// Delete from _moul metadata
+	_, err = h.DB.Delete("_moul", dbx.HashExp{"name": name}).Execute()
 	if err != nil {
 		logger.Error("Failed to delete metadata for moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete moul metadata")
@@ -201,7 +201,7 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to sync table columns")
 	}
 
-	// Update metadata in _mouls
+	// Update metadata in _moul
 	if err := db.UpdateMoulMetadata(h.DB, name, updated); err != nil {
 		logger.Error("Failed to update metadata for moul", "moul", updated.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update moul metadata")

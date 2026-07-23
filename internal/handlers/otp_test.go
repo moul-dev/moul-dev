@@ -38,10 +38,10 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	// Register Routes
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.POST("/api/mouls/:moulName/otp/request", authHandler.RequestOTP)
-	e.POST("/api/mouls/:moulName/auth-with-otp", authHandler.AuthWithOTP)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.POST("/api/moul/:moulName/otp/request", authHandler.RequestOTP)
+	e.POST("/api/moul/:moulName/auth-with-otp", authHandler.AuthWithOTP)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)
@@ -54,7 +54,7 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 		Name: "users",
 		Type: "auth",
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for users moul creation, got %d", resp.StatusCode)
 	}
@@ -64,7 +64,7 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 	requestPayload := map[string]string{
 		"email": reqEmail,
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/otp/request", requestPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/otp/request", requestPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for OTP request, got %d", resp.StatusCode)
 	}
@@ -84,7 +84,7 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 		"email": reqEmail,
 		"code":  "000000",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-otp", verifyBadPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-otp", verifyBadPayload, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 Bad Request for incorrect OTP verification, got %d", resp.StatusCode)
 	}
@@ -94,7 +94,7 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 		"email": reqEmail,
 		"code":  otpCode.String,
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-otp", verifyGoodPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-otp", verifyGoodPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for correct OTP verification, got %d", resp.StatusCode)
 	}

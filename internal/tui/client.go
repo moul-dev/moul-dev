@@ -34,7 +34,7 @@ func NewClient(baseURL, adminKey string) *Client {
 
 // CheckConnection sends a quick ping/list request to check if the server is responsive.
 func (c *Client) CheckConnection() error {
-	_, err := c.ListMouls()
+	_, err := c.ListMoul()
 	return err
 }
 
@@ -95,34 +95,34 @@ func (c *Client) request(method, path string, body interface{}, responseData int
 	return nil
 }
 
-// ListMouls fetches all registered collections.
-func (c *Client) ListMouls() ([]schema.Moul, error) {
+// ListMoul fetches all registered collections.
+func (c *Client) ListMoul() ([]schema.Moul, error) {
 	var mouls []schema.Moul
-	err := c.request("GET", "/api/mouls", nil, &mouls)
+	err := c.request("GET", "/api/moul", nil, &mouls)
 	return mouls, err
 }
 
 // CreateMoul creates a new database table and schema.
 func (c *Client) CreateMoul(m *schema.Moul) error {
-	return c.request("POST", "/api/mouls", m, nil)
+	return c.request("POST", "/api/moul", m, nil)
 }
 
 // UpdateMoul updates an existing collection schema and table.
 func (c *Client) UpdateMoul(name string, m *schema.Moul) error {
-	path := fmt.Sprintf("/api/mouls/%s", name)
+	path := fmt.Sprintf("/api/moul/%s", name)
 	return c.request("PATCH", path, m, nil)
 }
 
 // DeleteMoul deletes a collection by name.
 func (c *Client) DeleteMoul(name string) error {
-	path := fmt.Sprintf("/api/mouls/%s", name)
+	path := fmt.Sprintf("/api/moul/%s", name)
 	return c.request("DELETE", path, nil, nil)
 }
 
 // ListRecords fetches records of a specific moul.
 func (c *Client) ListRecords(moulName string, expand ...string) ([]map[string]interface{}, error) {
 	var records []map[string]interface{}
-	path := fmt.Sprintf("/api/mouls/%s/records", moulName)
+	path := fmt.Sprintf("/api/moul/%s/records", moulName)
 	if len(expand) > 0 {
 		path = fmt.Sprintf("%s?expand=%s", path, strings.Join(expand, ","))
 	}
@@ -133,7 +133,7 @@ func (c *Client) ListRecords(moulName string, expand ...string) ([]map[string]in
 // GetRecord fetches a single record of a specific moul by ID.
 func (c *Client) GetRecord(moulName string, id string, expand ...string) (map[string]interface{}, error) {
 	var record map[string]interface{}
-	path := fmt.Sprintf("/api/mouls/%s/records/%s", moulName, id)
+	path := fmt.Sprintf("/api/moul/%s/records/%s", moulName, id)
 	if len(expand) > 0 {
 		path = fmt.Sprintf("%s?expand=%s", path, strings.Join(expand, ","))
 	}
@@ -144,7 +144,7 @@ func (c *Client) GetRecord(moulName string, id string, expand ...string) (map[st
 // CreateRecord inserts a new record into a moul.
 func (c *Client) CreateRecord(moulName string, data map[string]interface{}) (map[string]interface{}, error) {
 	var record map[string]interface{}
-	path := fmt.Sprintf("/api/mouls/%s/records", moulName)
+	path := fmt.Sprintf("/api/moul/%s/records", moulName)
 	err := c.request("POST", path, data, &record)
 	return record, err
 }
@@ -152,14 +152,14 @@ func (c *Client) CreateRecord(moulName string, data map[string]interface{}) (map
 // UpdateRecord updates an existing record.
 func (c *Client) UpdateRecord(moulName string, id string, data map[string]interface{}) (map[string]interface{}, error) {
 	var record map[string]interface{}
-	path := fmt.Sprintf("/api/mouls/%s/records/%s", moulName, id)
+	path := fmt.Sprintf("/api/moul/%s/records/%s", moulName, id)
 	err := c.request("PATCH", path, data, &record)
 	return record, err
 }
 
 // DeleteRecord deletes a record by ID.
 func (c *Client) DeleteRecord(moulName string, id string) error {
-	path := fmt.Sprintf("/api/mouls/%s/records/%s", moulName, id)
+	path := fmt.Sprintf("/api/moul/%s/records/%s", moulName, id)
 	return c.request("DELETE", path, nil, nil)
 }
 
@@ -180,7 +180,7 @@ func (c *Client) Login(authMoul, identity, password string) (string, error) {
 		Token string                 `json:"token"`
 		User  map[string]interface{} `json:"record"`
 	}
-	path := fmt.Sprintf("/api/mouls/%s/auth-with-password", authMoul)
+	path := fmt.Sprintf("/api/moul/%s/auth-with-password", authMoul)
 	if err := c.request("POST", path, payload, &respData); err != nil {
 		return "", err
 	}
@@ -273,7 +273,7 @@ func (c *Client) UpdateSettings(settings map[string]string) (map[string]string, 
 // GetEmailTemplates fetches the email templates for a specific auth moul.
 func (c *Client) GetEmailTemplates(moulName string) (*schema.EmailTemplates, error) {
 	var templates schema.EmailTemplates
-	path := fmt.Sprintf("/api/mouls/%s/email-templates", moulName)
+	path := fmt.Sprintf("/api/moul/%s/email-templates", moulName)
 	err := c.request("GET", path, nil, &templates)
 	return &templates, err
 }
@@ -281,7 +281,7 @@ func (c *Client) GetEmailTemplates(moulName string) (*schema.EmailTemplates, err
 // UpdateEmailTemplates updates the email templates for a specific auth moul.
 func (c *Client) UpdateEmailTemplates(moulName string, templates *schema.EmailTemplates) (*schema.EmailTemplates, error) {
 	var updated schema.EmailTemplates
-	path := fmt.Sprintf("/api/mouls/%s/email-templates", moulName)
+	path := fmt.Sprintf("/api/moul/%s/email-templates", moulName)
 	err := c.request("PUT", path, templates, &updated)
 	return &updated, err
 }
@@ -295,7 +295,7 @@ func (c *Client) SendTestEmail(moulName string, email string, template string) (
 	var resp struct {
 		Message string `json:"message"`
 	}
-	path := fmt.Sprintf("/api/mouls/%s/email-templates/test", moulName)
+	path := fmt.Sprintf("/api/moul/%s/email-templates/test", moulName)
 	err := c.request("POST", path, payload, &resp)
 	return resp.Message, err
 }

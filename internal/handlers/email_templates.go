@@ -26,7 +26,7 @@ func renderEmailTemplate(tmplStr string, data interface{}) (string, error) {
 }
 
 func findWorkerTable(dbConn *dbx.DB) (string, error) {
-	mouls, err := db.LoadAllMouls(dbConn)
+	mouls, err := db.LoadAllMoul(dbConn)
 	if err != nil {
 		return "", err
 	}

@@ -39,8 +39,8 @@ func TestDeviceFlowIntegration(t *testing.T) {
 	recordHandler := handlers.NewRecordHandler(dbConn)
 	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
 
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
 
 	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
 	e.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)

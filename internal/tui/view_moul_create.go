@@ -454,7 +454,7 @@ func (m *Model) saveMoulForm() tea.Cmd {
 		if err != nil {
 			return createMoulResultMsg{err: err, isEdit: isEdit}
 		}
-		mouls, err := m.Client.ListMouls()
+		mouls, err := m.Client.ListMoul()
 		return createMoulResultMsg{mouls: mouls, err: err, isEdit: isEdit}
 	}
 }

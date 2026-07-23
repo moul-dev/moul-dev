@@ -36,11 +36,11 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	// Register Routes
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/mouls/:moulName/records", recordHandler.ListRecords)
-	e.PATCH("/api/mouls/:moulName/records/:id", recordHandler.UpdateRecord)
-	e.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
+	e.PATCH("/api/moul/:moulName/records/:id", recordHandler.UpdateRecord)
+	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)
@@ -60,7 +60,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 			DeleteRule: "auth.id == id",
 		},
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for users moul creation, got %d", resp.StatusCode)
 	}
@@ -82,7 +82,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 			DeleteRule: "auth.id == author_id",
 		},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls", createPostsPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul", createPostsPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for posts moul creation, got %d", resp.StatusCode)
 	}
@@ -94,7 +94,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		"password":        "Password1",
 		"passwordConfirm": "Password1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userAPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userAPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Expected 201 Created for user registration, got %d. Body: %s", resp.StatusCode, string(body))
@@ -108,7 +108,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		"identity": "usera@example.com",
 		"password": "Password1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", loginAPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", loginAPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for user login, got %d", resp.StatusCode)
 	}
@@ -122,13 +122,13 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		"body":      "Hello World!",
 		"author_id": userAID,
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/records", postPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("Expected 401 Unauthorized for unauthenticated post creation, got %d", resp.StatusCode)
 	}
 
 	// --- STEP 6: Create Post (Authenticated as User A) -> Should Succeed ---
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/records", postPayload, userAToken)
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, userAToken)
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for authenticated post creation, got %d", resp.StatusCode)
 	}
@@ -143,7 +143,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		"password":        "Password2",
 		"passwordConfirm": "Password2",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userBPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userBPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for user B registration, got %d", resp.StatusCode)
 	}
@@ -154,7 +154,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		"identity": "userb",
 		"password": "Password2",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", loginBPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", loginBPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for user B login, got %d", resp.StatusCode)
 	}
@@ -166,7 +166,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	updatePayload := map[string]interface{}{
 		"title": "Hacked Title",
 	}
-	resp = patchJSON(t, client, server.URL+"/api/mouls/posts/records/"+postID, updatePayload, userBToken)
+	resp = patchJSON(t, client, server.URL+"/api/moul/posts/records/"+postID, updatePayload, userBToken)
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("Expected 403 Forbidden when User B tries to update User A's post, got %d", resp.StatusCode)
 	}
@@ -175,7 +175,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	updatePayloadSelf := map[string]interface{}{
 		"title": "Updated Title",
 	}
-	resp = patchJSON(t, client, server.URL+"/api/mouls/posts/records/"+postID, updatePayloadSelf, userAToken)
+	resp = patchJSON(t, client, server.URL+"/api/moul/posts/records/"+postID, updatePayloadSelf, userAToken)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK when User A updates their own post, got %d", resp.StatusCode)
 	}
@@ -203,15 +203,15 @@ func TestHandlersEdgeCases(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	// Register all routes
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.GET("/api/mouls", moulHandler.ListMouls)
-	e.DELETE("/api/mouls/:name", moulHandler.DeleteMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/mouls/:moulName/records", recordHandler.ListRecords)
-	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
-	e.PATCH("/api/mouls/:moulName/records/:id", recordHandler.UpdateRecord)
-	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
-	e.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.GET("/api/moul", moulHandler.ListMoul)
+	e.DELETE("/api/moul/:name", moulHandler.DeleteMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
+	e.PATCH("/api/moul/:moulName/records/:id", recordHandler.UpdateRecord)
+	e.DELETE("/api/moul/:moulName/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -219,17 +219,17 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// --- 1. CreateMoul Edge Cases ---
 	// Empty name
-	resp := postJSON(t, client, server.URL+"/api/mouls", map[string]interface{}{"name": ""}, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", map[string]interface{}{"name": ""}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for empty moul name, got %d", resp.StatusCode)
 	}
 	// Name starts with underscore
-	resp = postJSON(t, client, server.URL+"/api/mouls", map[string]interface{}{"name": "_test"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul", map[string]interface{}{"name": "_test"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for name starting with underscore, got %d", resp.StatusCode)
 	}
 	// Invalid request body (bad JSON)
-	req, _ := http.NewRequest("POST", server.URL+"/api/mouls", bytes.NewReader([]byte("{invalid-json}")))
+	req, _ := http.NewRequest("POST", server.URL+"/api/moul", bytes.NewReader([]byte("{invalid-json}")))
 	req.Header.Set("Content-Type", "application/json")
 	resp, _ = client.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
@@ -248,7 +248,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 			DeleteRule: "auth.id == id",
 		},
 	}
-	postJSON(t, client, server.URL+"/api/mouls", usersMoul, "")
+	postJSON(t, client, server.URL+"/api/moul", usersMoul, "")
 
 	postsMoul := schema.Moul{
 		Name: "posts",
@@ -268,12 +268,12 @@ func TestHandlersEdgeCases(t *testing.T) {
 			DeleteRule: "auth.id == author_id",
 		},
 	}
-	postJSON(t, client, server.URL+"/api/mouls", postsMoul, "")
+	postJSON(t, client, server.URL+"/api/moul", postsMoul, "")
 
-	// --- 2. ListMouls ---
-	resp = getJSON(t, client, server.URL+"/api/mouls", "")
+	// --- 2. ListMoul ---
+	resp = getJSON(t, client, server.URL+"/api/moul", "")
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected 200 OK for ListMouls, got %d", resp.StatusCode)
+		t.Errorf("Expected 200 OK for ListMoul, got %d", resp.StatusCode)
 	}
 	var moulsList []interface{}
 	parseJSON(t, resp, &moulsList)
@@ -283,36 +283,36 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// --- 3. DeleteMoul Edge Cases ---
 	// Delete nonexistent
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/nonexistent", "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/nonexistent", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for deleting nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Success path: Create and delete dummy
 	dummyMoul := schema.Moul{Name: "dummy"}
-	postJSON(t, client, server.URL+"/api/mouls", dummyMoul, "")
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/dummy", "")
+	postJSON(t, client, server.URL+"/api/moul", dummyMoul, "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/dummy", "")
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("Expected 204 for successful moul deletion, got %d", resp.StatusCode)
 	}
 
 	// --- 4. AuthWithPassword Edge Cases ---
 	// Moul not found
-	resp = postJSON(t, client, server.URL+"/api/mouls/nonexistent/auth-with-password", map[string]interface{}{"identity": "admin", "password": "123"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/nonexistent/auth-with-password", map[string]interface{}{"identity": "admin", "password": "123"}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for auth-with-password on nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Not auth moul
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/auth-with-password", map[string]interface{}{"identity": "admin", "password": "123"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/auth-with-password", map[string]interface{}{"identity": "admin", "password": "123"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for auth-with-password on non-auth moul, got %d", resp.StatusCode)
 	}
 	// Empty fields
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "", "password": ""}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", map[string]interface{}{"identity": "", "password": ""}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for empty auth fields, got %d", resp.StatusCode)
 	}
 	// Invalid request body (bad JSON)
-	req, _ = http.NewRequest("POST", server.URL+"/api/mouls/users/auth-with-password", bytes.NewReader([]byte("{invalid-json}")))
+	req, _ = http.NewRequest("POST", server.URL+"/api/moul/users/auth-with-password", bytes.NewReader([]byte("{invalid-json}")))
 	req.Header.Set("Content-Type", "application/json")
 	resp, _ = client.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
@@ -326,7 +326,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 		"password":        "CorrectPass1",
 		"passwordConfirm": "CorrectPass1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 for test user registration, got %d", resp.StatusCode)
 	}
@@ -335,17 +335,17 @@ func TestHandlersEdgeCases(t *testing.T) {
 	userID := userRec["id"].(string)
 
 	// Auth with wrong credentials
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "nonexistent@example.com", "password": "CorrectPass1"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", map[string]interface{}{"identity": "nonexistent@example.com", "password": "CorrectPass1"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for wrong identity, got %d", resp.StatusCode)
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "wrong_pass"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "wrong_pass"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for wrong password, got %d", resp.StatusCode)
 	}
 
 	// Auth success
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "CorrectPass1"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", map[string]interface{}{"identity": "testuser", "password": "CorrectPass1"}, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 for correct auth, got %d", resp.StatusCode)
 	}
@@ -354,31 +354,31 @@ func TestHandlersEdgeCases(t *testing.T) {
 	token := loginRes["token"].(string)
 
 	// Register another test user to test uniqueness constraints
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for duplicate user registration, got %d", resp.StatusCode)
 	}
 
 	// --- 5. CreateRecord Edge Cases ---
 	// Moul not found
-	resp = postJSON(t, client, server.URL+"/api/mouls/nonexistent/records", map[string]interface{}{}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/nonexistent/records", map[string]interface{}{}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for CreateRecord on nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Invalid JSON
-	req, _ = http.NewRequest("POST", server.URL+"/api/mouls/posts/records", bytes.NewReader([]byte("{invalid-json}")))
+	req, _ = http.NewRequest("POST", server.URL+"/api/moul/posts/records", bytes.NewReader([]byte("{invalid-json}")))
 	req.Header.Set("Content-Type", "application/json")
 	resp, _ = client.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for invalid JSON body on CreateRecord, got %d", resp.StatusCode)
 	}
 	// Auth collection: incomplete fields
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", map[string]interface{}{"username": "onlyname"}, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", map[string]interface{}{"username": "onlyname"}, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for incomplete auth record creation, got %d", resp.StatusCode)
 	}
 	// Auth collection: password mismatch
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", map[string]interface{}{
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", map[string]interface{}{
 		"username":        "user2",
 		"email":           "user2@e.com",
 		"password":        "pass1",
@@ -396,13 +396,13 @@ func TestHandlersEdgeCases(t *testing.T) {
 		"tags":      []string{"low", "price"},
 		"author_id": userID,
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/records", postPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthenticated CreateRecord, got %d", resp.StatusCode)
 	}
 
 	// Create posts (authenticated)
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/records", postPayload, token)
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, token)
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 for authenticated CreateRecord (Cheap Post), got %d", resp.StatusCode)
 	}
@@ -417,7 +417,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 		"tags":      []string{"high", "value"},
 		"author_id": userID,
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/posts/records", expensivePayload, token)
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", expensivePayload, token)
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 for authenticated CreateRecord (Expensive Post), got %d", resp.StatusCode)
 	}
@@ -427,13 +427,13 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// --- 6. ListRecords ---
 	// Nonexistent moul
-	resp = getJSON(t, client, server.URL+"/api/mouls/nonexistent/records", "")
+	resp = getJSON(t, client, server.URL+"/api/moul/nonexistent/records", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for ListRecords on nonexistent moul, got %d", resp.StatusCode)
 	}
 
 	// Get posts list (list rule is `price > 50`)
-	resp = getJSON(t, client, server.URL+"/api/mouls/posts/records", "")
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records", "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for ListRecords, got %d", resp.StatusCode)
 	}
@@ -449,39 +449,39 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// --- 7. GetRecord Edge Cases ---
 	// Moul not found
-	resp = getJSON(t, client, server.URL+"/api/mouls/nonexistent/records/1", "")
+	resp = getJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for GetRecord on nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Record not found
-	resp = getJSON(t, client, server.URL+"/api/mouls/posts/records/nonexistent", "")
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records/nonexistent", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record, got %d", resp.StatusCode)
 	}
 	// Unauthorized: view other user's record (view rule `auth.id == id`)
-	resp = getJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, "")
+	resp = getJSON(t, client, server.URL+"/api/moul/users/records/"+userID, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthorized GetRecord, got %d", resp.StatusCode)
 	}
 	// Success (users record with auth token)
-	resp = getJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, token)
+	resp = getJSON(t, client, server.URL+"/api/moul/users/records/"+userID, token)
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200 for authorized GetRecord, got %d", resp.StatusCode)
 	}
 
 	// --- 8. UpdateRecord Edge Cases ---
 	// Moul not found
-	resp = patchJSON(t, client, server.URL+"/api/mouls/nonexistent/records/1", map[string]interface{}{}, "")
+	resp = patchJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", map[string]interface{}{}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for UpdateRecord on nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Record not found
-	resp = patchJSON(t, client, server.URL+"/api/mouls/posts/records/nonexistent", map[string]interface{}{}, token)
+	resp = patchJSON(t, client, server.URL+"/api/moul/posts/records/nonexistent", map[string]interface{}{}, token)
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record update, got %d", resp.StatusCode)
 	}
 	// Invalid request body (bad JSON)
-	req, _ = http.NewRequest("PATCH", server.URL+"/api/mouls/posts/records/"+cheapPostID, bytes.NewReader([]byte("{invalid-json}")))
+	req, _ = http.NewRequest("PATCH", server.URL+"/api/moul/posts/records/"+cheapPostID, bytes.NewReader([]byte("{invalid-json}")))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, _ = client.Do(req)
@@ -489,12 +489,12 @@ func TestHandlersEdgeCases(t *testing.T) {
 		t.Errorf("Expected 400 for bad JSON body on UpdateRecord, got %d", resp.StatusCode)
 	}
 	// Empty update parameters -> Success
-	resp = patchJSON(t, client, server.URL+"/api/mouls/posts/records/"+cheapPostID, map[string]interface{}{}, token)
+	resp = patchJSON(t, client, server.URL+"/api/moul/posts/records/"+cheapPostID, map[string]interface{}{}, token)
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200 OK for empty UpdateRecord, got %d", resp.StatusCode)
 	}
 	// Auth collection: password mismatch
-	resp = patchJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, map[string]interface{}{
+	resp = patchJSON(t, client, server.URL+"/api/moul/users/records/"+userID, map[string]interface{}{
 		"password":        "NewPass99",
 		"passwordConfirm": "mismatchpass",
 	}, token)
@@ -502,7 +502,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 		t.Errorf("Expected 400 for password mismatch on user update, got %d", resp.StatusCode)
 	}
 	// Auth collection: valid password update
-	resp = patchJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, map[string]interface{}{
+	resp = patchJSON(t, client, server.URL+"/api/moul/users/records/"+userID, map[string]interface{}{
 		"password":        "NewPass99",
 		"passwordConfirm": "NewPass99",
 	}, token)
@@ -512,22 +512,22 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// --- 9. DeleteRecord Edge Cases ---
 	// Moul not found
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/nonexistent/records/1", "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for DeleteRecord on nonexistent moul, got %d", resp.StatusCode)
 	}
 	// Record not found
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/posts/records/nonexistent", token)
+	resp = deleteJSON(t, client, server.URL+"/api/moul/posts/records/nonexistent", token)
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record delete, got %d", resp.StatusCode)
 	}
 	// Unauthorized: delete post without token (delete rule is `auth.id == author_id`)
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/posts/records/"+cheapPostID, "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/posts/records/"+cheapPostID, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthorized DeleteRecord, got %d", resp.StatusCode)
 	}
 	// Success delete
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/posts/records/"+cheapPostID, token)
+	resp = deleteJSON(t, client, server.URL+"/api/moul/posts/records/"+cheapPostID, token)
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("Expected 204 for successful DeleteRecord, got %d", resp.StatusCode)
 	}
@@ -640,11 +640,11 @@ func TestMoulAssociations(t *testing.T) {
 	moulHandler := &handlers.MoulHandler{DB: dbConn}
 
 	e := echo.New()
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/mouls/:moulName/records", recordHandler.ListRecords)
-	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
-	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
+	e.DELETE("/api/moul/:moulName/records/:id", recordHandler.DeleteRecord)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -658,7 +658,7 @@ func TestMoulAssociations(t *testing.T) {
 			{Name: "name", Type: "text"},
 		},
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createCategoriesPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createCategoriesPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for categories moul, got %d", resp.StatusCode)
 	}
@@ -670,7 +670,7 @@ func TestMoulAssociations(t *testing.T) {
 			DeleteRule: "true",
 		},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for users moul, got %d", resp.StatusCode)
 	}
@@ -682,7 +682,7 @@ func TestMoulAssociations(t *testing.T) {
 		"password":        "Password1",
 		"passwordConfirm": "Password1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for user, got %d", resp.StatusCode)
 	}
@@ -694,7 +694,7 @@ func TestMoulAssociations(t *testing.T) {
 	categoryPayload := map[string]interface{}{
 		"name": "Electronics",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/categories/records", categoryPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/categories/records", categoryPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for category, got %d", resp.StatusCode)
 	}
@@ -726,7 +726,7 @@ func TestMoulAssociations(t *testing.T) {
 			},
 		},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls", createProductsPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul", createProductsPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for products moul, got %d", resp.StatusCode)
 	}
@@ -738,7 +738,7 @@ func TestMoulAssociations(t *testing.T) {
 		"category": "nonexistent-id",
 		"buyers":   []string{userID},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", invalidProdPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/products/records", invalidProdPayload, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("Expected 400 Bad Request for invalid category ID, got %d", resp.StatusCode)
 	}
@@ -749,7 +749,7 @@ func TestMoulAssociations(t *testing.T) {
 		"category": categoryID,
 		"buyers":   []string{userID, "nonexistent-user"},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", invalidProdPayload2, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/products/records", invalidProdPayload2, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("Expected 400 Bad Request for invalid buyer ID, got %d", resp.StatusCode)
 	}
@@ -760,7 +760,7 @@ func TestMoulAssociations(t *testing.T) {
 		"category": categoryID,
 		"buyers":   []string{userID},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/products/records", validProdPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/products/records", validProdPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for valid product, got %d", resp.StatusCode)
 	}
@@ -770,7 +770,7 @@ func TestMoulAssociations(t *testing.T) {
 
 	// 4. Test Expansion
 	// Retrieve product without expansion
-	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	resp = getJSON(t, client, server.URL+"/api/moul/products/records/"+productID, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
 	}
@@ -781,7 +781,7 @@ func TestMoulAssociations(t *testing.T) {
 	}
 
 	// Retrieve product with expansion
-	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID+"?expand=category,buyers", "")
+	resp = getJSON(t, client, server.URL+"/api/moul/products/records/"+productID+"?expand=category,buyers", "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
 	}
@@ -809,13 +809,13 @@ func TestMoulAssociations(t *testing.T) {
 
 	// 5. Test automatic deletion cleanup (nullify / remove reference)
 	// Delete category
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/categories/records/"+categoryID, "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/categories/records/"+categoryID, "")
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Expected 204 No Content, got %d", resp.StatusCode)
 	}
 
 	// Verify category field in product is cleared
-	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	resp = getJSON(t, client, server.URL+"/api/moul/products/records/"+productID, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
 	}
@@ -826,13 +826,13 @@ func TestMoulAssociations(t *testing.T) {
 	}
 
 	// Delete user
-	resp = deleteJSON(t, client, server.URL+"/api/mouls/users/records/"+userID, "")
+	resp = deleteJSON(t, client, server.URL+"/api/moul/users/records/"+userID, "")
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Expected 204 No Content, got %d", resp.StatusCode)
 	}
 
 	// Verify buyers array in product is cleared (empty)
-	resp = getJSON(t, client, server.URL+"/api/mouls/products/records/"+productID, "")
+	resp = getJSON(t, client, server.URL+"/api/moul/products/records/"+productID, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
 	}
@@ -852,9 +852,9 @@ func TestUpdateMoul(t *testing.T) {
 
 	moulHandler := handlers.NewMoulHandler(dbConn)
 	e := echo.New()
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.GET("/api/mouls", moulHandler.ListMouls)
-	e.PATCH("/api/mouls/:name", moulHandler.UpdateMoul)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.GET("/api/moul", moulHandler.ListMoul)
+	e.PATCH("/api/moul/:name", moulHandler.UpdateMoul)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -871,7 +871,7 @@ func TestUpdateMoul(t *testing.T) {
 			ListRule: "",
 		},
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for CreateMoul, got %d", resp.StatusCode)
 	}
@@ -888,7 +888,7 @@ func TestUpdateMoul(t *testing.T) {
 			ListRule: "price > 0",
 		},
 	}
-	resp = patchJSON(t, client, server.URL+"/api/mouls/items", updatePayload, "")
+	resp = patchJSON(t, client, server.URL+"/api/moul/items", updatePayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for UpdateMoul, got %d", resp.StatusCode)
 	}
@@ -905,13 +905,13 @@ func TestUpdateMoul(t *testing.T) {
 		Fields: updated.Fields,
 		Rules: updated.Rules,
 	}
-	resp = patchJSON(t, client, server.URL+"/api/mouls/items", renamePayload, "")
+	resp = patchJSON(t, client, server.URL+"/api/moul/items", renamePayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for rename UpdateMoul, got %d", resp.StatusCode)
 	}
 
 	// Verify 'products' exists and 'items' is gone
-	resp = getJSON(t, client, server.URL+"/api/mouls", "")
+	resp = getJSON(t, client, server.URL+"/api/moul", "")
 	var moulsList []schema.Moul
 	parseJSON(t, resp, &moulsList)
 	foundProducts := false
@@ -929,14 +929,14 @@ func TestUpdateMoul(t *testing.T) {
 	}
 
 	// 4. Update non-existent collection -> 404
-	resp = patchJSON(t, client, server.URL+"/api/mouls/nonexistent", updatePayload, "")
+	resp = patchJSON(t, client, server.URL+"/api/moul/nonexistent", updatePayload, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("Expected 404 for updating non-existent moul, got %d", resp.StatusCode)
 	}
 
 	// 5. Update with invalid name -> 400
 	invalidPayload := schema.Moul{Name: "_invalid"}
-	resp = patchJSON(t, client, server.URL+"/api/mouls/products", invalidPayload, "")
+	resp = patchJSON(t, client, server.URL+"/api/moul/products", invalidPayload, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("Expected 400 for updating moul with invalid name, got %d", resp.StatusCode)
 	}

@@ -56,7 +56,7 @@ func TestEmailTemplates(t *testing.T) {
 
 	// Admin routes
 	adminKey := "super-admin-key"
-	adminGroup := e.Group("/api/mouls", middleware.RequireAdminKey(adminKey))
+	adminGroup := e.Group("/api/moul", middleware.RequireAdminKey(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.GET("/:moulName/email-templates", authHandler.GetEmailTemplates)
 	adminGroup.PUT("/:moulName/email-templates", authHandler.UpdateEmailTemplates)
@@ -72,7 +72,7 @@ func TestEmailTemplates(t *testing.T) {
 		Name: "users",
 		Type: "auth",
 	}
-	resp, err := doRequest(client, "POST", server.URL+"/api/mouls", usersMoul, adminKey)
+	resp, err := doRequest(client, "POST", server.URL+"/api/moul", usersMoul, adminKey)
 	if err != nil {
 		t.Fatalf("Create users request failed: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestEmailTemplates(t *testing.T) {
 		Name: "posts",
 		Type: "base",
 	}
-	resp, err = doRequest(client, "POST", server.URL+"/api/mouls", postsMoul, adminKey)
+	resp, err = doRequest(client, "POST", server.URL+"/api/moul", postsMoul, adminKey)
 	if err != nil {
 		t.Fatalf("Create posts request failed: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestEmailTemplates(t *testing.T) {
 	resp.Body.Close()
 
 	// 5. Get default templates for users (auth)
-	resp, err = doRequest(client, "GET", server.URL+"/api/mouls/users/email-templates", nil, adminKey)
+	resp, err = doRequest(client, "GET", server.URL+"/api/moul/users/email-templates", nil, adminKey)
 	if err != nil {
 		t.Fatalf("GET templates failed: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestEmailTemplates(t *testing.T) {
 	}
 
 	// 6. Get templates for posts (non-auth) - should fail
-	resp, err = doRequest(client, "GET", server.URL+"/api/mouls/posts/email-templates", nil, adminKey)
+	resp, err = doRequest(client, "GET", server.URL+"/api/moul/posts/email-templates", nil, adminKey)
 	if err != nil {
 		t.Fatalf("GET non-auth templates failed: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestEmailTemplates(t *testing.T) {
 	updatedTemplates.OTP.Subject = "New Custom OTP Subject"
 	updatedTemplates.OTP.Body = "Custom OTP is {{.OTP}}"
 
-	resp, err = doRequest(client, "PUT", server.URL+"/api/mouls/users/email-templates", updatedTemplates, adminKey)
+	resp, err = doRequest(client, "PUT", server.URL+"/api/moul/users/email-templates", updatedTemplates, adminKey)
 	if err != nil {
 		t.Fatalf("PUT templates failed: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestEmailTemplates(t *testing.T) {
 	resp.Body.Close()
 
 	// 8. Re-fetch templates to confirm they updated
-	resp, err = doRequest(client, "GET", server.URL+"/api/mouls/users/email-templates", nil, adminKey)
+	resp, err = doRequest(client, "GET", server.URL+"/api/moul/users/email-templates", nil, adminKey)
 	if err != nil {
 		t.Fatalf("GET updated templates failed: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestEmailTemplates(t *testing.T) {
 		"email":    "test@example.com",
 		"template": "otp",
 	}
-	resp, err = doRequest(client, "POST", server.URL+"/api/mouls/users/email-templates/test", testPayload, adminKey)
+	resp, err = doRequest(client, "POST", server.URL+"/api/moul/users/email-templates/test", testPayload, adminKey)
 	if err != nil {
 		t.Fatalf("POST test email failed: %v", err)
 	}

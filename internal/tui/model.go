@@ -1102,7 +1102,7 @@ func (m *Model) connectCmd() tea.Cmd {
 			}
 		}
 
-		mouls, err := m.Client.ListMouls()
+		mouls, err := m.Client.ListMoul()
 		return connectResultMsg{mouls: mouls, err: err}
 	}
 }

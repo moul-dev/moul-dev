@@ -844,7 +844,7 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	}
 
 	// Clean up relations
-	allMouls, err := db.LoadAllMouls(h.DB)
+	allMouls, err := db.LoadAllMoul(h.DB)
 	if err == nil {
 		for _, otherMoul := range allMouls {
 			for _, field := range otherMoul.Fields {

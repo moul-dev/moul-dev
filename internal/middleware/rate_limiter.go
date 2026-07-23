@@ -100,7 +100,7 @@ func getMoulAndAction(c *echo.Context) (string, string) {
 		return moulName, "auth"
 	}
 
-	if path == "/api/mouls/:moulName/records" {
+	if path == "/api/moul/:moulName/records" {
 		if method == http.MethodPost {
 			return moulName, "create"
 		}
@@ -109,7 +109,7 @@ func getMoulAndAction(c *echo.Context) (string, string) {
 		}
 	}
 
-	if path == "/api/mouls/:moulName/records/:id" {
+	if path == "/api/moul/:moulName/records/:id" {
 		if method == http.MethodGet {
 			return moulName, "view"
 		}

@@ -46,7 +46,7 @@ func TestRequestTracker_CreatesVisitOnFirstRequest(t *testing.T) {
 		return c.String(http.StatusOK, "OK")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/mouls/test/records", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/moul/test/records", nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -218,7 +218,7 @@ func TestRequestTracker_EnqueuesRequestData(t *testing.T) {
 		return c.String(http.StatusCreated, "Created")
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/mouls/users/records", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/moul/users/records", nil)
 	req.Header.Set("User-Agent", "TestBot/1.0")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)

@@ -15,10 +15,10 @@ func TestInitDB(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Verify _mouls table exists by query
-	_, err = db.NewQuery("SELECT 1 FROM _mouls").Execute()
+	// Verify _moul table exists by query
+	_, err = db.NewQuery("SELECT 1 FROM _moul").Execute()
 	if err != nil {
-		t.Errorf("Expected _mouls table to exist, query returned error: %v", err)
+		t.Errorf("Expected _moul table to exist, query returned error: %v", err)
 	}
 
 	// Error path: Invalid file path to fail DB creation
@@ -86,10 +86,10 @@ func TestCreateMoulTableAndMetadata(t *testing.T) {
 		t.Fatalf("SaveMoulMetadata failed: %v", err)
 	}
 
-	// 3. Load All Mouls
-	allMouls, err := LoadAllMouls(db)
+	// 3. Load All Moul
+	allMouls, err := LoadAllMoul(db)
 	if err != nil {
-		t.Fatalf("LoadAllMouls failed: %v", err)
+		t.Fatalf("LoadAllMoul failed: %v", err)
 	}
 
 	if len(allMouls) != 2 {

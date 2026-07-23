@@ -88,7 +88,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupGroup.POST("", setupHandler.SetupRootUser)
 
 	// 1. Moul schema management (Admin-protected)
-	adminGroup := e.Group("/api/mouls", middleware.RequireAuthOrAdmin(adminKey))
+	adminGroup := e.Group("/api/moul", middleware.RequireAuthOrAdmin(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.PATCH("/:name", moulHandler.UpdateMoul)
 	adminGroup.PUT("/:name", moulHandler.UpdateMoul)
@@ -109,19 +109,19 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.Static("/storage", "storage")
 
 	// Public moul listing (read-only, no admin key needed)
-	e.GET("/api/mouls", moulHandler.ListMouls)
+	e.GET("/api/moul", moulHandler.ListMoul)
 
 	// 2. Auth collections
 	authGroup := e.Group("")
-	authGroup.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
-	authGroup.POST("/api/mouls/:moulName/otp/request", authHandler.RequestOTP)
-	authGroup.POST("/api/mouls/:moulName/auth-with-otp", authHandler.AuthWithOTP)
-	authGroup.POST("/api/mouls/:moulName/passkey/register/options", authHandler.PasskeyRegisterOptions)
-	authGroup.POST("/api/mouls/:moulName/passkey/register/verify", authHandler.PasskeyRegisterVerify)
-	authGroup.POST("/api/mouls/:moulName/passkey/signup/options", authHandler.PasskeySignupOptions)
-	authGroup.POST("/api/mouls/:moulName/passkey/signup/verify", authHandler.PasskeySignupVerify)
-	authGroup.POST("/api/mouls/:moulName/passkey/login/options", authHandler.PasskeyLoginOptions)
-	authGroup.POST("/api/mouls/:moulName/passkey/login/verify", authHandler.PasskeyLoginVerify)
+	authGroup.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	authGroup.POST("/api/moul/:moulName/otp/request", authHandler.RequestOTP)
+	authGroup.POST("/api/moul/:moulName/auth-with-otp", authHandler.AuthWithOTP)
+	authGroup.POST("/api/moul/:moulName/passkey/register/options", authHandler.PasskeyRegisterOptions)
+	authGroup.POST("/api/moul/:moulName/passkey/register/verify", authHandler.PasskeyRegisterVerify)
+	authGroup.POST("/api/moul/:moulName/passkey/signup/options", authHandler.PasskeySignupOptions)
+	authGroup.POST("/api/moul/:moulName/passkey/signup/verify", authHandler.PasskeySignupVerify)
+	authGroup.POST("/api/moul/:moulName/passkey/login/options", authHandler.PasskeyLoginOptions)
+	authGroup.POST("/api/moul/:moulName/passkey/login/verify", authHandler.PasskeyLoginVerify)
 	authGroup.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
 	authGroup.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
 	authGroup.GET("/device", deviceFlowHandler.RenderDeviceForm)
@@ -131,11 +131,11 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 
 	// 3. Record management (Data CRUD) — protected by per-moul rules
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/mouls/:moulName/records", recordHandler.ListRecords)
-	e.GET("/api/mouls/:moulName/records/:id", recordHandler.GetRecord)
-	e.PATCH("/api/mouls/:moulName/records/:id", recordHandler.UpdateRecord)
-	e.DELETE("/api/mouls/:moulName/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
+	e.PATCH("/api/moul/:moulName/records/:id", recordHandler.UpdateRecord)
+	e.DELETE("/api/moul/:moulName/records/:id", recordHandler.DeleteRecord)
 
 	// 4. Analytics visits log (JWT-protected)
 	e.GET("/api/visits", visitsHandler.ListVisits)

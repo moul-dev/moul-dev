@@ -49,7 +49,7 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 		case "r":
 			// Refresh moul schemas
 			return func() tea.Msg {
-				mouls, err := m.Client.ListMouls()
+				mouls, err := m.Client.ListMoul()
 				if err != nil {
 					return ErrMsg{err}
 				}

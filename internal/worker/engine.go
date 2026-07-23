@@ -277,7 +277,7 @@ func (e *Engine) loop() {
 
 func (e *Engine) pollAndRunJobs() {
 	// Find all tables that are of type "worker"
-	mouls, err := db.LoadAllMouls(e.db)
+	mouls, err := db.LoadAllMoul(e.db)
 	if err != nil {
 		e.logger.Error("Failed to fetch mouls to poll background jobs", "error", err)
 		return

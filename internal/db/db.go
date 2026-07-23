@@ -13,16 +13,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// InitDB initializes the SQLite database and creates the _mouls meta-table.
+// InitDB initializes the SQLite database and creates the _moul meta-table.
 func InitDB(dbPath string) (*dbx.DB, error) {
 	db, err := dbx.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
 
-	// Create meta-table _mouls
+	// Create meta-table _moul
 	_, err = db.NewQuery(`
-		CREATE TABLE IF NOT EXISTS _mouls (
+		CREATE TABLE IF NOT EXISTS _moul (
 			id TEXT PRIMARY KEY,
 			name TEXT UNIQUE NOT NULL,
 			type TEXT NOT NULL,
@@ -33,11 +33,11 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _mouls meta table: %w", err)
+		return nil, fmt.Errorf("failed to create _moul meta table: %w", err)
 	}
 
-	// Ensure email_templates column exists in _mouls for backwards compatibility
-	_, _ = db.NewQuery("ALTER TABLE _mouls ADD COLUMN email_templates TEXT;").Execute()
+	// Ensure email_templates column exists in _moul for backwards compatibility
+	_, _ = db.NewQuery("ALTER TABLE _moul ADD COLUMN email_templates TEXT;").Execute()
 
 	// Create meta-table _visits
 	_, err = db.NewQuery(`
@@ -309,7 +309,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 	return nil
 }
 
-// SaveMoulMetadata inserts or updates a moul's meta definition in the _mouls table.
+// SaveMoulMetadata inserts or updates a moul's meta definition in the _moul table.
 func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	fieldsJSON, err := m.SerializeFields()
 	if err != nil {
@@ -337,7 +337,7 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	m.CreatedAt = now
 	m.UpdatedAt = now
 
-	_, err = db.Insert("_mouls", dbx.Params{
+	_, err = db.Insert("_moul", dbx.Params{
 		"id":              m.ID,
 		"name":            m.Name,
 		"type":            m.Type,
@@ -355,8 +355,8 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	return nil
 }
 
-// LoadAllMouls retrieves all defined mouls from the meta-table.
-func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
+// LoadAllMoul retrieves all defined mouls from the meta-table.
+func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 	var rows []struct {
 		ID             string         `db:"id"`
 		Name           string         `db:"name"`
@@ -369,10 +369,10 @@ func LoadAllMouls(db *dbx.DB) ([]*schema.Moul, error) {
 	}
 
 	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
-		From("_mouls").
+		From("_moul").
 		All(&rows)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to fetch mouls: %w", err)
+		return nil, fmt.Errorf("failed to fetch moul: %w", err)
 	}
 
 	var mouls []*schema.Moul
@@ -428,7 +428,7 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 	}
 
 	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
-		From("_mouls").
+		From("_moul").
 		Where(dbx.HashExp{"name": name}).
 		One(&row)
 	if err != nil {
@@ -469,14 +469,14 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 	}, nil
 }
 
-// UpdateMoulEmailTemplates updates the email templates in the _mouls metadata table.
+// UpdateMoulEmailTemplates updates the email templates in the _moul metadata table.
 func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.EmailTemplates) error {
 	bytes, err := json.Marshal(templates)
 	if err != nil {
 		return fmt.Errorf("failed to marshal email templates: %w", err)
 	}
 
-	_, err = db.Update("_mouls", dbx.Params{
+	_, err = db.Update("_moul", dbx.Params{
 		"email_templates": string(bytes),
 		"updated_at":      time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": moulID}).Execute()
@@ -576,7 +576,7 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 	return nil
 }
 
-// UpdateMoulMetadata updates an existing moul's meta definition in the _mouls table.
+// UpdateMoulMetadata updates an existing moul's meta definition in the _moul table.
 func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 	fieldsJSON, err := m.SerializeFields()
 	if err != nil {
@@ -612,7 +612,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 		"updated_at":      m.UpdatedAt,
 	}
 
-	_, err = db.Update("_mouls", params, dbx.HashExp{"name": origName}).Execute()
+	_, err = db.Update("_moul", params, dbx.HashExp{"name": origName}).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to update metadata for moul %s: %w", m.Name, err)
 	}

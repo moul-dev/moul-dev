@@ -43,11 +43,11 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 	visitsHandler := handlers.NewVisitsHandler(dbConn)
 
 	// Register Routes
-	e.POST("/api/mouls", moulHandler.CreateMoul)
-	e.POST("/api/mouls/:moulName/records", recordHandler.CreateRecord)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
 	e.GET("/api/visits", visitsHandler.ListVisits)
 	e.GET("/api/visits/:id", visitsHandler.GetVisit)
-	e.POST("/api/mouls/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -59,7 +59,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 		Name: "users",
 		Type: "auth",
 	}
-	resp := postJSON(t, client, server.URL+"/api/mouls", createUsersPayload, "")
+	resp := postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for users moul creation, got %d", resp.StatusCode)
 	}
@@ -72,7 +72,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 			{Name: "color", Type: "text"},
 		},
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls", createClicksPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul", createClicksPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for clicks moul creation, got %d", resp.StatusCode)
 	}
@@ -84,7 +84,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 		"password":        "Password1",
 		"passwordConfirm": "Password1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/records", userPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/records", userPayload, "")
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected 201 Created for user registration, got %d", resp.StatusCode)
 	}
@@ -93,7 +93,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 		"identity": "admin@example.com",
 		"password": "Password1",
 	}
-	resp = postJSON(t, client, server.URL+"/api/mouls/users/auth-with-password", authPayload, "")
+	resp = postJSON(t, client, server.URL+"/api/moul/users/auth-with-password", authPayload, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for authentication, got %d", resp.StatusCode)
 	}
@@ -111,7 +111,7 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 		"landing_page": "https://moul.dev/landing?utm_source=facebook",
 	}
 
-	req, _ := http.NewRequest("POST", server.URL+"/api/mouls/clicks/records", jsonReader(t, eventPayload))
+	req, _ := http.NewRequest("POST", server.URL+"/api/moul/clicks/records", jsonReader(t, eventPayload))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "TestBrowser/1.0 (Windows NT)")
 	req.Header.Set("X-Forwarded-For", "8.8.8.8")
