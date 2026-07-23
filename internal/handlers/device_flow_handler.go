@@ -463,13 +463,11 @@ const htmlTemplate = `<!DOCTYPE html>
         .alert-error {
             --alert-bg: var(--error-bg);
             --alert-border: var(--error-border);
-            border-left: 4px solid var(--text-color);
             color: var(--text-color);
         }
         .alert-success {
             --alert-bg: var(--success-bg);
             --alert-border: var(--success-border);
-            border-left: 4px solid var(--text-color);
             color: var(--text-color);
             text-align: center;
         }
@@ -497,7 +495,7 @@ const htmlTemplate = `<!DOCTYPE html>
             
             {{if .Error}}
                 <div class="alert alert-error">
-                    <strong>Error:</strong> {{.Error}}
+                    Error: {{.Error}}
                 </div>
             {{end}}
             
