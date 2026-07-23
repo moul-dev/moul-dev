@@ -101,6 +101,8 @@ func parseFieldsString(str string) []schema.MoulField {
 
 // initMoulForm initializes the collection creation form.
 func (m *Model) initMoulForm() {
+	m.isEditingMoul = false
+	m.editingMoulName = ""
 	m.newMoulName = ""
 	m.newMoulType = "base"
 	m.newMoulListRule = ""
@@ -109,6 +111,54 @@ func (m *Model) initMoulForm() {
 	m.newMoulUpdateRule = ""
 	m.newMoulDeleteRule = ""
 	m.newMoulFieldsList = []schema.MoulField{}
+	m.moulWizardState = "metadata"
+	m.isEditingField = false
+
+	m.MoulForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Collection Name").
+				Placeholder("e.g. posts").
+				Value(&m.newMoulName).
+				Validate(func(str string) error {
+					name := strings.TrimSpace(str)
+					if name == "" {
+						return fmt.Errorf("collection name is required")
+					}
+					if strings.HasPrefix(name, "_") {
+						return fmt.Errorf("collection name cannot start with underscore")
+					}
+					if !tableNamePattern.MatchString(name) {
+						return fmt.Errorf("invalid name: must start with a letter and contain only letters, numbers, or underscores (max 63 chars)")
+					}
+					return nil
+				}),
+
+			huh.NewSelect[string]().
+				Title("Collection Type").
+				Options(
+					huh.NewOption("Base (Standard Table)", "base"),
+					huh.NewOption("Auth (User Management Table)", "auth"),
+					huh.NewOption("Worker (Job Queue Table)", "worker"),
+					huh.NewOption("Analytic (Traffic Tracking Table)", "analytic"),
+				).
+				Value(&m.newMoulType),
+		),
+	).WithTheme(ThemeCustom)
+}
+
+// initMoulFormForEdit initializes the collection edit form with existing collection data.
+func (m *Model) initMoulFormForEdit(moul schema.Moul) {
+	m.isEditingMoul = true
+	m.editingMoulName = moul.Name
+	m.newMoulName = moul.Name
+	m.newMoulType = moul.Type
+	m.newMoulListRule = moul.Rules.ListRule
+	m.newMoulViewRule = moul.Rules.ViewRule
+	m.newMoulCreateRule = moul.Rules.CreateRule
+	m.newMoulUpdateRule = moul.Rules.UpdateRule
+	m.newMoulDeleteRule = moul.Rules.DeleteRule
+	m.newMoulFieldsList = append([]schema.MoulField{}, moul.Fields...)
 	m.moulWizardState = "metadata"
 	m.isEditingField = false
 
@@ -363,13 +413,14 @@ func (m *Model) initMoulRulesForm() {
 	).WithTheme(ThemeCustom)
 }
 
-// createMoulResultMsg is sent after the CreateMoul API call completes.
+// createMoulResultMsg is sent after the CreateMoul or UpdateMoul API call completes.
 type createMoulResultMsg struct {
-	mouls []schema.Moul
-	err   error
+	mouls  []schema.Moul
+	err    error
+	isEdit bool
 }
 
-// saveMoulForm creates a Moul schema and issues the backend API request.
+// saveMoulForm creates or updates a Moul schema and issues the backend API request.
 func (m *Model) saveMoulForm() tea.Cmd {
 	listRule := strings.TrimSpace(m.newMoulListRule)
 	viewRule := strings.TrimSpace(m.newMoulViewRule)
@@ -390,17 +441,25 @@ func (m *Model) saveMoulForm() tea.Cmd {
 		},
 	}
 
+	isEdit := m.isEditingMoul
+	origName := m.editingMoulName
+
 	return func() tea.Msg {
-		err := m.Client.CreateMoul(newMoul)
+		var err error
+		if isEdit {
+			err = m.Client.UpdateMoul(origName, newMoul)
+		} else {
+			err = m.Client.CreateMoul(newMoul)
+		}
 		if err != nil {
-			return createMoulResultMsg{err: err}
+			return createMoulResultMsg{err: err, isEdit: isEdit}
 		}
 		mouls, err := m.Client.ListMouls()
-		return createMoulResultMsg{mouls: mouls, err: err}
+		return createMoulResultMsg{mouls: mouls, err: err, isEdit: isEdit}
 	}
 }
 
-// viewMoulCreate renders the collection creation screen.
+// viewMoulCreate renders the collection creation or update screen.
 func (m *Model) viewMoulCreate() string {
 	var errMsg string
 	if m.Err != nil {
@@ -486,9 +545,14 @@ func (m *Model) viewMoulCreate() string {
 		))
 	}
 
+	headerTitle := "Create New Collection"
+	if m.isEditingMoul {
+		headerTitle = fmt.Sprintf("Update Collection: %s", m.editingMoulName)
+	}
+
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
-		HeaderStyle.Render("Create New Collection"),
+		HeaderStyle.Render(headerTitle),
 		"",
 		errMsg,
 		innerView,

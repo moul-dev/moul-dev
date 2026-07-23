@@ -116,6 +116,8 @@ type Model struct {
 	fieldToEdit            string
 	editingFieldName       string
 	isEditingField         bool
+	isEditingMoul          bool
+	editingMoulName        string
 	moulWizardState        string // "metadata", "fields", "add_field", "edit_select", "delete_select", "rules"
 
 	// Device Auth Data
@@ -343,7 +345,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.MoulForm.State = huh.StateNormal
 		} else {
 			m.Mouls = msg.mouls
-			m.SuccessMsg = "Collection created successfully!"
+			if msg.isEdit {
+				m.SuccessMsg = "Collection updated successfully!"
+			} else {
+				m.SuccessMsg = "Collection created successfully!"
+			}
 			m.State = StateDashboard
 		}
 		return m, nil

@@ -82,6 +82,11 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 					}
 				}
 			}
+		case "u":
+			// Update collection schema
+			m.State = StateMoulCreate
+			m.initMoulFormForEdit(*moul)
+			return m.MoulForm.Init()
 		case "tab":
 			if moul.Type == "auth" {
 				m.collectionActiveTab = 1
@@ -213,7 +218,7 @@ func (m *Model) viewRecordList() string {
 	}
 
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [r] Refresh  [Esc] Back"))
+	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [u] Edit Schema  [r] Refresh  [Esc] Back"))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }

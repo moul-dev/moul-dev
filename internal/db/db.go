@@ -486,3 +486,137 @@ func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.Email
 	}
 	return nil
 }
+
+// RenameMoulTable renames a physical SQLite table from oldName to newName.
+func RenameMoulTable(db *dbx.DB, oldName, newName string) error {
+	if err := ValidateTableName(newName); err != nil {
+		return fmt.Errorf("unsafe new moul name: %w", err)
+	}
+	if err := ValidateTableName(oldName); err != nil {
+		return fmt.Errorf("unsafe old moul name: %w", err)
+	}
+
+	query := fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", QuoteIdentifier(oldName), QuoteIdentifier(newName))
+	_, err := db.NewQuery(query).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to rename table %s to %s: %w", oldName, newName, err)
+	}
+	return nil
+}
+
+// SyncMoulTableColumns inspects an existing SQLite table and adds any newly defined fields as new columns.
+func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
+	if err := ValidateTableName(m.Name); err != nil {
+		return fmt.Errorf("unsafe moul name: %w", err)
+	}
+
+	rows := []struct {
+		Cid       int            `db:"cid"`
+		Name      string         `db:"name"`
+		Type      string         `db:"type"`
+		NotNull   int            `db:"notnull"`
+		DfltValue sql.NullString `db:"dflt_value"`
+		Pk        int            `db:"pk"`
+	}{}
+	query := fmt.Sprintf("PRAGMA table_info(%s);", QuoteIdentifier(m.Name))
+	if err := db.NewQuery(query).All(&rows); err != nil {
+		return fmt.Errorf("failed to inspect columns for table %s: %w", m.Name, err)
+	}
+
+	existingCols := make(map[string]bool)
+	for _, row := range rows {
+		existingCols[strings.ToLower(row.Name)] = true
+	}
+
+	for _, field := range m.Fields {
+		lowerName := strings.ToLower(field.Name)
+		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
+			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
+			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" {
+			continue
+		}
+		if m.Type == "worker" {
+			if lowerName == "state" || lowerName == "queue" || lowerName == "worker" ||
+				lowerName == "args" || lowerName == "meta" || lowerName == "tags" ||
+				lowerName == "errors" || lowerName == "attempt" || lowerName == "max_attempts" ||
+				lowerName == "priority" || lowerName == "inserted_at" || lowerName == "scheduled_at" ||
+				lowerName == "attempted_at" || lowerName == "attempted_by" ||
+				lowerName == "cancelled_at" || lowerName == "completed_at" || lowerName == "discarded_at" {
+				continue
+			}
+		}
+		if m.Type == "analytic" {
+			if lowerName == "visit_token" || lowerName == "visitor_token" ||
+				lowerName == "user_id" || lowerName == "name" ||
+				lowerName == "properties" || lowerName == "time" {
+				continue
+			}
+		}
+
+		if existingCols[lowerName] {
+			continue
+		}
+
+		sqliteType := "TEXT"
+		switch field.Type {
+		case "number":
+			sqliteType = "NUMERIC"
+		case "bool":
+			sqliteType = "INTEGER"
+		case "json", "file", "relation":
+			sqliteType = "TEXT"
+		}
+
+		alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", QuoteIdentifier(m.Name), QuoteIdentifier(field.Name), sqliteType)
+		if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
+			return fmt.Errorf("failed to add column %s to table %s: %w", field.Name, m.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// UpdateMoulMetadata updates an existing moul's meta definition in the _mouls table.
+func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
+	fieldsJSON, err := m.SerializeFields()
+	if err != nil {
+		return err
+	}
+	rulesJSON, err := m.SerializeRules()
+	if err != nil {
+		return err
+	}
+
+	templatesJSON := "{}"
+	if m.Type == "auth" {
+		if m.EmailTemplates == nil {
+			defaults := schema.GetDefaultEmailTemplates()
+			m.EmailTemplates = &defaults
+		}
+		bytes, err := json.Marshal(m.EmailTemplates)
+		if err != nil {
+			return err
+		}
+		templatesJSON = string(bytes)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	m.UpdatedAt = now
+
+	params := dbx.Params{
+		"name":            m.Name,
+		"type":            m.Type,
+		"fields":          fieldsJSON,
+		"rules":           rulesJSON,
+		"email_templates": templatesJSON,
+		"updated_at":      m.UpdatedAt,
+	}
+
+	_, err = db.Update("_mouls", params, dbx.HashExp{"name": origName}).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to update metadata for moul %s: %w", m.Name, err)
+	}
+
+	return nil
+}
+

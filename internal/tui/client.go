@@ -107,6 +107,12 @@ func (c *Client) CreateMoul(m *schema.Moul) error {
 	return c.request("POST", "/api/mouls", m, nil)
 }
 
+// UpdateMoul updates an existing collection schema and table.
+func (c *Client) UpdateMoul(name string, m *schema.Moul) error {
+	path := fmt.Sprintf("/api/mouls/%s", name)
+	return c.request("PATCH", path, m, nil)
+}
+
 // DeleteMoul deletes a collection by name.
 func (c *Client) DeleteMoul(name string) error {
 	path := fmt.Sprintf("/api/mouls/%s", name)

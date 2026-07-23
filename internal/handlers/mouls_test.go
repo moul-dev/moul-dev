@@ -844,6 +844,104 @@ func TestMoulAssociations(t *testing.T) {
 	}
 }
 
+func TestUpdateMoul(t *testing.T) {
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to init in-memory database: %v", err)
+	}
+
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	e := echo.New()
+	e.POST("/api/mouls", moulHandler.CreateMoul)
+	e.GET("/api/mouls", moulHandler.ListMouls)
+	e.PATCH("/api/mouls/:name", moulHandler.UpdateMoul)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create 'items' base collection
+	createPayload := schema.Moul{
+		Name: "items",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+		},
+		Rules: schema.MoulRules{
+			ListRule: "",
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/mouls", createPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for CreateMoul, got %d", resp.StatusCode)
+	}
+
+	// 2. Update collection rules and add a new field 'price'
+	updatePayload := schema.Moul{
+		Name: "items",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "price", Type: "number"},
+		},
+		Rules: schema.MoulRules{
+			ListRule: "price > 0",
+		},
+	}
+	resp = patchJSON(t, client, server.URL+"/api/mouls/items", updatePayload, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for UpdateMoul, got %d", resp.StatusCode)
+	}
+	var updated schema.Moul
+	parseJSON(t, resp, &updated)
+	if len(updated.Fields) != 2 || updated.Rules.ListRule != "price > 0" {
+		t.Fatalf("Unexpected updated schema: %+v", updated)
+	}
+
+	// 3. Rename collection from 'items' to 'products'
+	renamePayload := schema.Moul{
+		Name: "products",
+		Type: "base",
+		Fields: updated.Fields,
+		Rules: updated.Rules,
+	}
+	resp = patchJSON(t, client, server.URL+"/api/mouls/items", renamePayload, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for rename UpdateMoul, got %d", resp.StatusCode)
+	}
+
+	// Verify 'products' exists and 'items' is gone
+	resp = getJSON(t, client, server.URL+"/api/mouls", "")
+	var moulsList []schema.Moul
+	parseJSON(t, resp, &moulsList)
+	foundProducts := false
+	foundItems := false
+	for _, m := range moulsList {
+		if m.Name == "products" {
+			foundProducts = true
+		}
+		if m.Name == "items" {
+			foundItems = true
+		}
+	}
+	if !foundProducts || foundItems {
+		t.Fatalf("Expected products collection to exist and items to be renamed, got mouls: %+v", moulsList)
+	}
+
+	// 4. Update non-existent collection -> 404
+	resp = patchJSON(t, client, server.URL+"/api/mouls/nonexistent", updatePayload, "")
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Expected 404 for updating non-existent moul, got %d", resp.StatusCode)
+	}
+
+	// 5. Update with invalid name -> 400
+	invalidPayload := schema.Moul{Name: "_invalid"}
+	resp = patchJSON(t, client, server.URL+"/api/mouls/products", invalidPayload, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for updating moul with invalid name, got %d", resp.StatusCode)
+	}
+}
+
 func TestMain(m *testing.M) {
 	// Initialize JWT for all handler tests
 	auth.InitJWT("test-secret-key-for-unit-tests-1234")

@@ -88,15 +88,17 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupGroup.POST("", setupHandler.SetupRootUser)
 
 	// 1. Moul schema management (Admin-protected)
-	adminGroup := e.Group("/api/mouls", middleware.RequireAdminKey(adminKey))
+	adminGroup := e.Group("/api/mouls", middleware.RequireAuthOrAdmin(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
+	adminGroup.PATCH("/:name", moulHandler.UpdateMoul)
+	adminGroup.PUT("/:name", moulHandler.UpdateMoul)
 	adminGroup.DELETE("/:name", moulHandler.DeleteMoul)
 	adminGroup.GET("/:moulName/email-templates", authHandler.GetEmailTemplates)
 	adminGroup.PUT("/:moulName/email-templates", authHandler.UpdateEmailTemplates)
 	adminGroup.POST("/:moulName/email-templates/test", authHandler.SendTestEmail)
 
 	// Admin settings management (Admin-protected)
-	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAdminKey(adminKey))
+	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAuthOrAdmin(adminKey))
 	adminSettingsGroup.GET("", settingsHandler.GetSettings)
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 

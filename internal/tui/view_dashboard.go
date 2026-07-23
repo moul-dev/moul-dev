@@ -40,6 +40,12 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 			m.State = StateMoulCreate
 			m.initMoulForm()
 			return m.MoulForm.Init()
+		case "e", "u":
+			if m.ActiveSidebarIndex >= 0 && m.ActiveSidebarIndex < len(m.Mouls) {
+				m.State = StateMoulCreate
+				m.initMoulFormForEdit(m.Mouls[m.ActiveSidebarIndex])
+				return m.MoulForm.Init()
+			}
 		case "r":
 			// Refresh moul schemas
 			return func() tea.Msg {
@@ -191,7 +197,7 @@ func (m *Model) renderSidebar(width int) string {
 
 	// Add hotkey hints at the bottom of the sidebar
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" n      New collection\n r      Refresh schemas\n Esc    Disconnect\n ctrl+c Quit"))
+	s.WriteString(HelpStyle.Render(" n      New collection\n e      Edit collection\n r      Refresh schemas\n Esc    Disconnect\n ctrl+c Quit"))
 
 	return SidebarStyle.Width(width).Height(m.Height - 2).Render(s.String())
 }
@@ -232,7 +238,7 @@ func (m *Model) viewDashboardMoulInfo(idx int, width int) string {
 		rulesStr,
 		FormLabelStyle.Render("METADATA"),
 		fmt.Sprintf("  • ID:          %s\n  • Created At:  %s\n  • Updated At:  %s\n", moul.ID, formatTime(moul.CreatedAt), formatTime(moul.UpdatedAt)),
-		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to view and manage records.\nPress [n] to create a new collection."),
+		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to view and manage records.\nPress [e] to update collection schema.\nPress [n] to create a new collection."),
 	)
 
 	return ContentStyle.Width(width).Render(content)
