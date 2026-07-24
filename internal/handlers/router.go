@@ -21,6 +21,8 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
 
+	docsHandler := NewDocsHandler()
+
 	// ── Global Middleware ────────────────────────────────────────────
 
 	// Request body size limit (5MB)
@@ -48,7 +50,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/docs"}),
 	))
 
 	// HTTP Request logging
@@ -81,6 +83,12 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupHandler := NewSetupHandler(dbConn)
 
 	// ── API Routes ──────────────────────────────────────────────────
+
+	// Documentation endpoints
+	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/docs/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/docs", docsHandler.ServeAPIDocs)
+	e.GET("/docs/", docsHandler.ServeAPIDocs)
 
 	// Setup management (Admin-protected)
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))

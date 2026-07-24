@@ -73,6 +73,15 @@ For local file storage and database backup (via Litestream), you can run a local
 
 ## API Documentation
 
+### Interactive API Docs & OpenAPI Specification
+
+`moul-dev` serves an embedded interactive API Documentation page and the raw OpenAPI 3.0 specification file directly from the engine:
+
+- **Interactive API Documentation UI**: [http://localhost:8090/docs](http://localhost:8090/docs) (Powered by **Scalar API Reference**, with option to switch to **Swagger UI** via `/docs?ui=swagger`).
+- **Raw OpenAPI Specification**: [http://localhost:8090/openapi.yml](http://localhost:8090/openapi.yml) (also available at `/docs/openapi.yml`).
+
+---
+
 ### 1. Moul (Schema) Management
 
 #### Create a Moul
