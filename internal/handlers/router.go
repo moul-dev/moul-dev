@@ -16,12 +16,17 @@ import (
 )
 
 // NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
-func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, adminKey string, isDev bool) *echo.Echo {
+func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, adminKey string, isDev bool, version ...string) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
 
-	docsHandler := NewDocsHandler()
+	appVersion := "dev"
+	if len(version) > 0 && version[0] != "" {
+		appVersion = version[0]
+	}
+
+	docsHandler := NewDocsHandler(appVersion)
 
 	// ── Global Middleware ────────────────────────────────────────────
 

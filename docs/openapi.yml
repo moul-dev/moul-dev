@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Moul API Reference
-  version: 1.0.0
+  version: dev
   description: |
     `moul-dev` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 

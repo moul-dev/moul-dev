@@ -25,7 +25,7 @@ func TestDocsEndpoints(t *testing.T) {
 
 	client := server.Client()
 
-	t.Run("GET /openapi.yml serves spec", func(t *testing.T) {
+	t.Run("GET /openapi.yml serves spec with default dev version", func(t *testing.T) {
 		resp, err := client.Get(server.URL + "/openapi.yml")
 		if err != nil {
 			t.Fatalf("GET /openapi.yml failed: %v", err)
@@ -45,6 +45,9 @@ func TestDocsEndpoints(t *testing.T) {
 		}
 		if !strings.Contains(string(body), "Moul API Reference") {
 			t.Errorf("Expected body to contain 'Moul API Reference', got snippet: %s", string(body[:100]))
+		}
+		if !strings.Contains(string(body), "version: dev") {
+			t.Errorf("Expected spec to contain 'version: dev'")
 		}
 	})
 
@@ -88,6 +91,9 @@ func TestDocsEndpoints(t *testing.T) {
 		if !strings.Contains(string(body), "Scalar UI") || !strings.Contains(string(body), "@scalar/api-reference") {
 			t.Errorf("Expected body to contain Scalar API Reference UI setup")
 		}
+		if !strings.Contains(string(body), "<span class=\"badge\">dev</span>") {
+			t.Errorf("Expected badge to display dev version")
+		}
 	})
 
 	t.Run("GET /docs?ui=swagger serves Swagger UI", func(t *testing.T) {
@@ -106,6 +112,55 @@ func TestDocsEndpoints(t *testing.T) {
 		}
 		if !strings.Contains(string(body), "SwaggerUIBundle") {
 			t.Errorf("Expected body to contain SwaggerUIBundle setup")
+		}
+		if !strings.Contains(string(body), "<span class=\"badge\">dev</span>") {
+			t.Errorf("Expected badge to display dev version")
+		}
+	})
+}
+
+func TestDocsEndpointsCustomVersion(t *testing.T) {
+	e := echo.New()
+	releaseVersion := "v2026.7"
+	docsHandler := handlers.NewDocsHandler(releaseVersion)
+
+	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/docs", docsHandler.ServeAPIDocs)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	t.Run("GET /openapi.yml serves spec with release version", func(t *testing.T) {
+		resp, err := client.Get(server.URL + "/openapi.yml")
+		if err != nil {
+			t.Fatalf("GET /openapi.yml failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		if !strings.Contains(string(body), "version: v2026.7") {
+			t.Errorf("Expected spec to contain 'version: v2026.7', got body snippet:\n%s", string(body[:200]))
+		}
+	})
+
+	t.Run("GET /docs displays release version badge", func(t *testing.T) {
+		resp, err := client.Get(server.URL + "/docs")
+		if err != nil {
+			t.Fatalf("GET /docs failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		if !strings.Contains(string(body), "<span class=\"badge\">v2026.7</span>") {
+			t.Errorf("Expected badge to display 'v2026.7'")
 		}
 	})
 }

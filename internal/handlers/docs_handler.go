@@ -2,31 +2,44 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/docs"
 )
 
 // DocsHandler handles API documentation endpoints.
-type DocsHandler struct{}
+type DocsHandler struct {
+	version string
+	spec    []byte
+}
 
 // NewDocsHandler creates a new instance of DocsHandler.
-func NewDocsHandler() *DocsHandler {
-	return &DocsHandler{}
+func NewDocsHandler(version ...string) *DocsHandler {
+	v := "dev"
+	if len(version) > 0 && version[0] != "" {
+		v = version[0]
+	}
+	return &DocsHandler{
+		version: v,
+		spec:    docs.GetSpec(v),
+	}
 }
 
 // ServeOpenAPISpec serves the raw openapi.yml spec file.
 func (h *DocsHandler) ServeOpenAPISpec(c *echo.Context) error {
-	return c.Blob(http.StatusOK, "text/yaml; charset=utf-8", docs.Spec)
+	return c.Blob(http.StatusOK, "text/yaml; charset=utf-8", h.spec)
 }
 
 // ServeAPIDocs serves the interactive HTML API documentation viewer.
 func (h *DocsHandler) ServeAPIDocs(c *echo.Context) error {
 	ui := c.QueryParam("ui")
+	html := scalarUIHTML
 	if ui == "swagger" {
-		return c.HTML(http.StatusOK, swaggerUIHTML)
+		html = swaggerUIHTML
 	}
-	return c.HTML(http.StatusOK, scalarUIHTML)
+	rendered := strings.ReplaceAll(html, "{{VERSION}}", h.version)
+	return c.HTML(http.StatusOK, rendered)
 }
 
 const scalarUIHTML = `<!DOCTYPE html>
@@ -131,7 +144,7 @@ const scalarUIHTML = `<!DOCTYPE html>
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
       </svg>
       Moul
-      <span class="badge">v1.0.0</span>
+      <span class="badge">{{VERSION}}</span>
     </a>
     <div class="docs-actions">
       <div class="ui-switch">
@@ -257,7 +270,7 @@ const swaggerUIHTML = `<!DOCTYPE html>
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
       </svg>
       Moul
-      <span class="badge">v1.0.0</span>
+      <span class="badge">{{VERSION}}</span>
     </a>
     <div class="docs-actions">
       <div class="ui-switch">

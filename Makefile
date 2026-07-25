@@ -1,6 +1,7 @@
 export MOUL_ENV ?= development
 export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
+VERSION ?= dev
 
 .PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui
 
@@ -19,7 +20,7 @@ dev:
 # Build for production with stripped debug symbols and metadata
 build:
 	mkdir -p bin
-	go build -ldflags="-s -w" -o bin/moul-dev cmd/moul-dev/main.go
+	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul-dev cmd/moul-dev/main.go
 
 # Run the Go unit and integration tests
 test-go:
@@ -221,7 +222,7 @@ tui:
 # Build the TUI client binary
 build-tui:
 	mkdir -p bin
-	go build -ldflags="-s -w" -o bin/moul cmd/moul/main.go
+	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul cmd/moul/main.go
 
 # Start local MinIO server with local data directory
 minio-start:

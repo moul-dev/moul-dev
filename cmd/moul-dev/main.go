@@ -141,7 +141,7 @@ func runStart() {
 	analyticsEngine.StartFlusher(ctx)
 
 	// ── Echo server ─────────────────────────────────────────────────
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, isDev)
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, isDev, Version)
 
 	// ── Start server with StartConfig for graceful shutdown ──────────
 	logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
