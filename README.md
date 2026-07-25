@@ -6,6 +6,37 @@
 
 ---
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Technical Stack](#technical-stack)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Run Local Server](#run-local-server)
+  - [Run Go Unit/Integration Tests](#run-go-unitintegration-tests)
+  - [Run Local S3 (MinIO)](#run-local-s3-minio)
+- [Documentation & API Spec (`/docs`)](#documentation--api-spec-docs)
+  - [Repository `/docs` Directory](#repository-docs-directory)
+  - [Interactive Runtime `/docs` Endpoint](#interactive-runtime-docs-endpoint)
+- [API Reference](#api-reference)
+  - [1. Moul (Schema) Management](#1-moul-schema-management)
+  - [2. Record (Data) Management](#2-record-data-management)
+  - [3. Visits Management](#3-visits-management)
+  - [4. Request Tracking](#4-request-tracking)
+  - [5. Authentication Management](#5-authentication-management)
+- [Programmatic Go Worker API](#programmatic-go-worker-api)
+  - [1. Register and Start Worker Engine](#1-register-and-start-worker-engine)
+  - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
+  - [3. Programmatic Go Analytics API](#3-programmatic-go-analytics-api)
+- [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
+- [Access Rules & Filters Syntax](#access-rules--filters-syntax)
+- [Verification Flows (cURL Scripts)](#verification-flows-curl-scripts)
+- [TUI Admin Console (`moul`)](#tui-admin-console-moul)
+  - [Build and Run](#build-and-run)
+  - [Keyboard Controls Guide](#keyboard-controls-guide)
+
+---
+
 ## Key Features
 
 1. **Dynamic Moul (Tables)**: Create, list, and delete database tables and schemas at runtime via HTTP API.
@@ -22,7 +53,7 @@
 
 ## Technical Stack
 
-- **HTTP Framework**: [Echo v4](https://echo.labstack.com)
+- **HTTP Framework**: [Echo v5](https://echo.labstack.com)
 - **Database Abstraction**: [pocketbase/dbx](https://github.com/pocketbase/dbx)
 - **SQLite Driver**: [modernc.org/sqlite](https://github.com/modernc/sqlite) (Pure Go, CGO-free)
 - **Expression Engine**: [expr-lang/expr](https://github.com/expr-lang/expr)
@@ -71,16 +102,28 @@ For local file storage and database backup (via Litestream), you can run a local
 
 ---
 
-## API Documentation
+## Documentation & API Spec (`/docs`)
 
-### Interactive API Docs & OpenAPI Specification
+`moul-dev` provides complete OpenAPI 3.0 documentation both in the repository codebase and as live interactive endpoints served directly by the engine.
 
-`moul-dev` serves an embedded interactive API Documentation page and the raw OpenAPI 3.0 specification file directly from the engine:
+### Repository `/docs` Directory
 
-- **Interactive API Documentation UI**: [http://localhost:8090/docs](http://localhost:8090/docs) (Powered by **Scalar API Reference**, with option to switch to **Swagger UI** via `/docs?ui=swagger`).
-- **Raw OpenAPI Specification**: [http://localhost:8090/openapi.yml](http://localhost:8090/openapi.yml) (also available at `/docs/openapi.yml`).
+The [`/docs`](docs) directory in the codebase houses:
+- **`docs/openapi.yml`**: The comprehensive OpenAPI 3.0 specification file defining all endpoints, schemas, parameters, response codes, and authentication flows (Password, Email OTP, WebAuthn Passkey).
+- **`docs/docs.go`**: Uses Go's `//go:embed openapi.yml` directive to embed the OpenAPI spec directly into the compiled Go binary. This enables single-binary deployments without external file dependencies.
+
+### Interactive Runtime `/docs` Endpoint
+
+When the server is running (`make run`), the following routes are available:
+
+- **Interactive API Documentation UI**: [http://localhost:8090/docs](http://localhost:8090/docs)
+  - Powered by **Scalar API Reference** by default.
+  - Switch to **Swagger UI** dynamically via [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger).
+- **Raw OpenAPI Specification**: [http://localhost:8090/openapi.yml](http://localhost:8090/openapi.yml) (or `/docs/openapi.yml`) for exporting to Postman, Insomnia, or API client generation tools.
 
 ---
+
+## API Reference
 
 ### 1. Moul (Schema) Management
 
@@ -225,7 +268,7 @@ Query the session logs recorded by the analytics engine. These endpoints require
 
 ---
 
-### 3.1 Request Tracking
+### 4. Request Tracking
 
 All incoming HTTP requests are tracked by default. The engine maintains two tables:
 - **`_visits`**: One row per visitor session (deduplicated by `moul_visitor` cookie). Captures browser, OS, device type, geo (via GeoIP), UTM parameters, referrer, and landing page.
@@ -283,11 +326,11 @@ Request tracking is implemented as a global middleware that runs on every reques
 
 ---
 
-### 4. Authentication Management
+### 5. Authentication Management
 
 Auth-type collections support three authentication flows: Password, Email OTP, and Passkeys.
 
-#### 4.1. Password Authentication
+#### 5.1 Password Authentication
 
 ##### Authenticate with Password
 - **HTTP Method**: `POST`
@@ -313,7 +356,7 @@ Auth-type collections support three authentication flows: Password, Email OTP, a
 }
 ```
 
-#### 4.2. Email OTP Authentication
+#### 5.2 Email OTP Authentication
 
 ##### Request OTP
 - **HTTP Method**: `POST`
@@ -337,7 +380,7 @@ Auth-type collections support three authentication flows: Password, Email OTP, a
 }
 ```
 
-#### 4.3. Passkey (WebAuthn) Authentication
+#### 5.3 Passkey (WebAuthn) Authentication
 
 ##### Register Passkey (Authenticated User)
 1. **Request Registration Options**:
@@ -518,7 +561,7 @@ make test-analytics
 
 ---
 
-## TUI Admin Console (moul)
+## TUI Admin Console (`moul`)
 
 `moul` comes with a powerful, modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem to manage schemas, CRUD records, monitor background workers, and view visitor session metrics.
 
@@ -579,4 +622,3 @@ Your connection settings are securely saved to `~/.config/moul.json` for easy au
 - `Enter` / `v`: Open detailed visit payload (OS, browser, referrer UTM parameters).
 - `f`: Refresh visits.
 - `Esc`: Go back to dashboard.
-
