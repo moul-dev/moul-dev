@@ -8,15 +8,19 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
+	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
 func TestDocsEndpoints(t *testing.T) {
 	e := echo.New()
-	docsHandler := handlers.NewDocsHandler()
+	docsHandler := handlers.NewDocsHandler(nil)
 
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/docs/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs", docsHandler.ServeAPIDocs)
 	e.GET("/docs/", docsHandler.ServeAPIDocs)
 
@@ -48,6 +52,29 @@ func TestDocsEndpoints(t *testing.T) {
 		}
 		if !strings.Contains(string(body), "version: dev") {
 			t.Errorf("Expected spec to contain 'version: dev'")
+		}
+	})
+
+	t.Run("GET /openapi.json serves JSON spec with default dev version", func(t *testing.T) {
+		resp, err := client.Get(server.URL + "/openapi.json")
+		if err != nil {
+			t.Fatalf("GET /openapi.json failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200 OK, got %d", resp.StatusCode)
+		}
+		contentType := resp.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "application/json") {
+			t.Errorf("Expected Content-Type starting with application/json, got %s", contentType)
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		if !strings.Contains(string(body), "\"title\": \"Moul API Reference\"") {
+			t.Errorf("Expected body to contain '\"title\": \"Moul API Reference\"'")
 		}
 	})
 
@@ -122,7 +149,7 @@ func TestDocsEndpoints(t *testing.T) {
 func TestDocsEndpointsCustomVersion(t *testing.T) {
 	e := echo.New()
 	releaseVersion := "v2026.7"
-	docsHandler := handlers.NewDocsHandler(releaseVersion)
+	docsHandler := handlers.NewDocsHandler(nil, releaseVersion)
 
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
 	e.GET("/docs", docsHandler.ServeAPIDocs)
@@ -161,6 +188,93 @@ func TestDocsEndpointsCustomVersion(t *testing.T) {
 		}
 		if !strings.Contains(string(body), "<span class=\"badge\">v2026.7</span>") {
 			t.Errorf("Expected badge to display 'v2026.7'")
+		}
+	})
+}
+
+func TestDynamicLiveDocsSpec(t *testing.T) {
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	testMoul := &schema.Moul{
+		ID:   "moul-products",
+		Name: "products",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "price", Type: "number"},
+			{Name: "description", Type: "text"},
+		},
+		Rules: schema.MoulRules{
+			ListRule:   "",
+			CreateRule: "auth.id != ''",
+			ViewRule:   "",
+			UpdateRule: "auth.id != ''",
+			DeleteRule: "auth.id != ''",
+		},
+	}
+	if err := db.CreateMoulTable(dbConn, testMoul); err != nil {
+		t.Fatalf("Failed to create test moul table: %v", err)
+	}
+	if err := db.SaveMoulMetadata(dbConn, testMoul); err != nil {
+		t.Fatalf("Failed to save test moul metadata: %v", err)
+	}
+
+	e := echo.New()
+	docsHandler := handlers.NewDocsHandler(dbConn, "v2026.7")
+	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/openapi.json", docsHandler.ServeOpenAPISpecJSON)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	t.Run("Live OpenAPI spec dynamically includes created collection and endpoints", func(t *testing.T) {
+		resp, err := client.Get(server.URL + "/openapi.yml")
+		if err != nil {
+			t.Fatalf("GET /openapi.yml failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		bodyStr := string(bodyBytes)
+
+		if !strings.Contains(bodyStr, "Collection: products") {
+			t.Errorf("Expected live spec to contain 'Collection: products'")
+		}
+		if !strings.Contains(bodyStr, "/api/moul/products/records") {
+			t.Errorf("Expected live spec to contain '/api/moul/products/records'")
+		}
+		if !strings.Contains(bodyStr, "productsInput:") || !strings.Contains(bodyStr, "price:") {
+			t.Errorf("Expected live spec to contain products schema and fields")
+		}
+	})
+
+	t.Run("Live OpenAPI JSON spec dynamically includes created collection", func(t *testing.T) {
+		resp, err := client.Get(server.URL + "/openapi.json")
+		if err != nil {
+			t.Fatalf("GET /openapi.json failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		bodyStr := string(bodyBytes)
+
+		if !strings.Contains(bodyStr, "/api/moul/products/records") {
+			t.Errorf("Expected live JSON spec to contain '/api/moul/products/records'")
+		}
+		if !strings.Contains(bodyStr, "\"products\"") {
+			t.Errorf("Expected live JSON spec to contain products schema")
 		}
 	})
 }

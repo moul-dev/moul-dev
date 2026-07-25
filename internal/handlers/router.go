@@ -26,7 +26,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 		appVersion = version[0]
 	}
 
-	docsHandler := NewDocsHandler(appVersion)
+	docsHandler := NewDocsHandler(dbConn, appVersion)
 
 	// ── Global Middleware ────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/docs"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs"}),
 	))
 
 	// HTTP Request logging
@@ -91,7 +91,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Documentation endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs/openapi.yml", docsHandler.ServeOpenAPISpec)
+	e.GET("/docs/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs", docsHandler.ServeAPIDocs)
 	e.GET("/docs/", docsHandler.ServeAPIDocs)
 

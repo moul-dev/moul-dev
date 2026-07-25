@@ -332,6 +332,21 @@ Auth-type collections support three authentication flows: Password, Email OTP, a
 
 #### 5.1 Password Authentication
 
+##### Sign Up with Password
+- **HTTP Method**: `POST`
+- **Path**: `/api/moul/:moulName/records`
+- **Request Body**:
+```json
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "Password123",
+  "passwordConfirm": "Password123"
+}
+```
+- **Response**: `201 Created` with the newly registered user record. Password complexity is validated and stored as a secure bcrypt hash (`passwordHash`).
+*Note: Public signups require the collection's `createRule` to allow record creation (e.g., set to `""`).*
+
 ##### Authenticate with Password
 - **HTTP Method**: `POST`
 - **Path**: `/api/moul/:moulName/auth-with-password`

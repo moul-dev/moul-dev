@@ -9,9 +9,50 @@ info:
     - **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.
     - **User Endpoints**: Protected by Bearer tokens (`Authorization: Bearer <JWT>`) generated upon successful user authentication.
     - **Dynamic Record Operations**: Checked at runtime by the HCL-like expression rules defined on the parent collection (e.g. `createRule`, `listRule`).
+
+    ### Supported Authentication & Signup Flows
+    - **Password Flow**:
+      - **Signup**: Create a record in an `auth` collection via `POST /api/moul/{moulName}/records` with `username`, `email`, `password`, and `passwordConfirm`. Passwords are validated for complexity and automatically hashed using bcrypt.
+      - **Login**: `POST /api/moul/{moulName}/auth-with-password` with `identity` (username or email) and `password`.
+    - **Email OTP Flow**:
+      - **Signup & Login**: `POST /api/moul/{moulName}/otp/request` sends a 6-digit OTP code to the email (automatically creating a new user record if the email does not exist yet). Verify code with `POST /api/moul/{moulName}/auth-with-otp`.
+    - **Passkey (WebAuthn) Flow**:
+      - **Signup**: `POST /api/moul/{moulName}/passkey/signup/options` and `POST /api/moul/{moulName}/passkey/signup/verify`.
+      - **Login**: `POST /api/moul/{moulName}/passkey/login/options` and `POST /api/moul/{moulName}/passkey/login/verify`.
+      - **Register Existing User**: `POST /api/moul/{moulName}/passkey/register/options` and `POST /api/moul/{moulName}/passkey/register/verify`.
 servers:
   - url: http://localhost:8090
     description: Local development server
+tags:
+  - name: Setup Management
+    description: Endpoints for checking setup status and registering initial root admin users.
+  - name: Moul Schema Management
+    description: Endpoints for creating, listing, inspecting, updating, and deleting collection schemas and HCL rules.
+  - name: User Authentication
+    description: |
+      Complete end-user authentication and registration endpoints supporting three auth strategies:
+      - **Password Auth**:
+        - **Signup**: Submit `username`, `email`, `password`, and `passwordConfirm` via `POST /api/moul/{moulName}/records`.
+        - **Login**: Authenticate with `identity` and `password` via `POST /api/moul/{moulName}/auth-with-password`.
+      - **Email OTP**:
+        - **Signup & Login**: Request OTP via `POST /api/moul/{moulName}/otp/request` (auto-registers new emails). Verify with `POST /api/moul/{moulName}/auth-with-otp`.
+      - **Passkey (WebAuthn)**:
+        - **Signup**: Request options (`POST /api/moul/{moulName}/passkey/signup/options`) and verify assertion (`POST /api/moul/{moulName}/passkey/signup/verify`).
+        - **Login**: Request options (`POST /api/moul/{moulName}/passkey/login/options`) and verify assertion (`POST /api/moul/{moulName}/passkey/login/verify`).
+        - **Register Key**: Authenticated users add keys via `/passkey/register/options` and `/passkey/register/verify`.
+  - name: Dynamic Records CRUD
+    description: Dynamic record operations (Create, List, Get, Update, Delete) governed by collection HCL rules.
+  - name: OAuth2 Device Flow
+    description: OAuth2 Device Authorization Grant flow for CLI, terminal apps, and constrained devices.
+  - name: Admin Email Templates Management
+    description: Admin endpoints to customize transactional email templates (OTP, Password Reset, Verification).
+  - name: Admin Settings Management
+    description: Admin endpoints for global server settings configuration.
+  - name: File Storage
+    description: File upload handler endpoint supporting multipart storage uploads.
+  - name: Analytics & Request Observability
+    description: Administrative and tracking endpoints for HTTP requests and site visit analytics.
+
 paths:
   /api/setup:
     get:
@@ -90,13 +131,13 @@ paths:
 
   /api/moul:
     get:
-      summary: List Mouls
+      summary: List Moul
       description: Lists the metadata schemas of all registered collections.
       tags:
         - Moul Schema Management
       responses:
         '200':
-          description: List of registered mouls.
+          description: List of registered moul.
           content:
             application/json:
               schema:
@@ -539,7 +580,9 @@ paths:
   /api/moul/{moulName}/auth-with-password:
     post:
       summary: Password Authentication
-      description: Authenticates identity against the designated auth moul collection and yields a signed JWT.
+      description: |
+        Authenticates identity (username or email) against the designated auth moul collection and yields a signed JWT token.
+        Note: New user signup for password authentication is performed by creating a record in the auth collection via `POST /api/moul/{moulName}/records` with `username`, `email`, `password`, and `passwordConfirm`.
       tags:
         - User Authentication
       parameters:
@@ -562,9 +605,14 @@ paths:
                 identity:
                   type: string
                   description: Email or username.
+                  example: "user@example.com"
                 password:
                   type: string
                   description: Plain text password.
+                  example: "Password123"
+            example:
+              identity: "user@example.com"
+              password: "Password123"
       responses:
         '200':
           description: Authentication successful.
@@ -606,6 +654,9 @@ paths:
                 email:
                   type: string
                   format: email
+                  example: "user@example.com"
+            example:
+              email: "user@example.com"
       responses:
         '200':
           description: OTP code generated and printed.
@@ -648,9 +699,14 @@ paths:
                 email:
                   type: string
                   format: email
+                  example: "user@example.com"
                 code:
                   type: string
                   description: 6-digit numeric OTP code.
+                  example: "123456"
+            example:
+              email: "user@example.com"
+              code: "123456"
       responses:
         '200':
           description: Verification successful, token generated.
@@ -766,6 +822,9 @@ paths:
                 email:
                   type: string
                   format: email
+                  example: "newuser@example.com"
+            example:
+              email: "newuser@example.com"
       responses:
         '200':
           description: Options and session token payload.
@@ -845,6 +904,9 @@ paths:
                 identity:
                   type: string
                   description: Email or Username of the user.
+                  example: "user@example.com"
+            example:
+              identity: "user@example.com"
       responses:
         '200':
           description: Login request options payload.
@@ -1115,6 +1177,7 @@ paths:
       summary: Create Record
       description: |
         Creates a new record. Evaluates `createRule` against the auth context first.
+        - **Auth Moul**: Creating a record signs up a new user when `username`, `email`, `password`, and `passwordConfirm` are provided. Passwords are validated for complexity and securely hashed with bcrypt into `passwordHash`.
         - **Worker Moul**: Creating a record enqueues a background job and wakes the worker thread.
         - **Analytic Moul**: Creating a record tracking an event; resolves browser, OS, GeoIP, and cookie sessions.
       tags:
@@ -1138,6 +1201,11 @@ paths:
               type: object
               description: Dynamic fields mapping matching the collection schema.
               additionalProperties: true
+            example:
+              username: "johndoe"
+              email: "john@example.com"
+              password: "Password123"
+              passwordConfirm: "Password123"
       responses:
         '201':
           description: Record created successfully. Returns the populated row.
