@@ -20,6 +20,19 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
 
+	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
+	pragmas := []string{
+		"PRAGMA journal_mode=WAL;",
+		"PRAGMA busy_timeout=5000;",
+		"PRAGMA synchronous=NORMAL;",
+		"PRAGMA foreign_keys=ON;",
+	}
+	for _, pragma := range pragmas {
+		if _, err := db.NewQuery(pragma).Execute(); err != nil {
+			return nil, fmt.Errorf("failed to execute pragma (%s): %w", pragma, err)
+		}
+	}
+
 	// Create meta-table _moul
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _moul (
