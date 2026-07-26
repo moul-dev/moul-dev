@@ -25,20 +25,23 @@ func RandomID() string {
 // Singularize converts a plural table name to its singular form.
 func Singularize(name string) string {
 	name = strings.ToLower(name)
+	if len(name) <= 3 {
+		return name
+	}
 	if strings.HasSuffix(name, "ies") {
 		return name[:len(name)-3] + "y"
 	}
-	if strings.HasSuffix(name, "es") {
-		if strings.HasSuffix(name, "sses") {
-			return name[:len(name)-2] // e.g. classes -> class
-		}
-		return name[:len(name)-2]
+	if strings.HasSuffix(name, "sses") {
+		return name[:len(name)-2] // e.g. classes -> class, passes -> pass, addresses -> address
+	}
+	if strings.HasSuffix(name, "ches") || strings.HasSuffix(name, "shes") || strings.HasSuffix(name, "xes") || strings.HasSuffix(name, "zes") || strings.HasSuffix(name, "oes") {
+		return name[:len(name)-2] // e.g. matches -> match, dishes -> dish, boxes -> box, heroes -> hero
 	}
 	if strings.HasSuffix(name, "s") {
 		if strings.HasSuffix(name, "ss") {
-			return name
+			return name // e.g. glass -> glass, pass -> pass
 		}
-		return name[:len(name)-1]
+		return name[:len(name)-1] // e.g. users -> user, posts -> post, articles -> article, pages -> page, rules -> rule
 	}
 	return name
 }
