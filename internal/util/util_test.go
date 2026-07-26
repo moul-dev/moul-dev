@@ -57,3 +57,27 @@ func TestSingularize(t *testing.T) {
 		}
 	}
 }
+
+func TestSlugifyFilename(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"My Profile Photo (2026) & Info!.PNG", "my-profile-photo-2026-info.png"},
+		{"hello_world.png", "hello_world.png"},
+		{"Space File (1).jpeg", "space-file-1.jpeg"},
+		{"TEST---MULTIPLE---HYPHENS.pdf", "test-multiple-hyphens.pdf"},
+		{"!!!.png", "file.png"},
+		{"", "file"},
+		{"noext", "noext"},
+		{"My-Document-v1.0.docx", "my-document-v1-0.docx"},
+	}
+
+	for _, test := range tests {
+		actual := SlugifyFilename(test.input)
+		if actual != test.expected {
+			t.Errorf("SlugifyFilename(%q) = %q; expected %q", test.input, actual, test.expected)
+		}
+	}
+}
+

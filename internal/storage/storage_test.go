@@ -158,3 +158,23 @@ func TestUploadFileLocalImage(t *testing.T) {
 		t.Errorf("sm image not found locally at: %s", smPath)
 	}
 }
+
+func TestUploadFileSanitizedFilename(t *testing.T) {
+	db, cleanup := prepareTestDB(t)
+	defer cleanup()
+
+	content := []byte("Some contents")
+	originalFilename := "My Dirty File (2026) #1!.TXT"
+	contentType := "text/plain"
+
+	info, err := UploadFile(context.Background(), db, content, originalFilename, contentType)
+	if err != nil {
+		t.Fatalf("UploadFile failed: %v", err)
+	}
+
+	expectedFilename := "my-dirty-file-2026-1.txt"
+	if info.Filename != expectedFilename {
+		t.Errorf("Expected sanitized filename %q, got %q", expectedFilename, info.Filename)
+	}
+}
+

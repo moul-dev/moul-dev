@@ -58,11 +58,13 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 		return nil, fmt.Errorf("failed to load settings: %w", err)
 	}
 
-	ext := filepath.Ext(originalFilename)
+	sanitizedFilename := util.SlugifyFilename(originalFilename)
+	ext := filepath.Ext(sanitizedFilename)
 	if ext == "" {
 		// Try to guess from content type
 		if exts, err := mime.ExtensionsByType(contentType); err == nil && len(exts) > 0 {
 			ext = exts[0]
+			sanitizedFilename = sanitizedFilename + ext
 		}
 	}
 
@@ -151,7 +153,7 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 	}
 
 	info := &FileInfo{
-		Filename: originalFilename,
+		Filename: sanitizedFilename,
 		URL:      originalURL,
 	}
 

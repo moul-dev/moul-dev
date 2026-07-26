@@ -3,6 +3,7 @@ package util
 import (
 	"crypto/rand"
 	"math/big"
+	"path/filepath"
 	"strings"
 )
 
@@ -41,3 +42,58 @@ func Singularize(name string) string {
 	}
 	return name
 }
+
+// SlugifyFilename converts a filename into a clean, URL- and filesystem-friendly slug.
+// E.g., "My Profile Photo (2026) & Info!.PNG" -> "my-profile-photo-2026-info.png"
+func SlugifyFilename(filename string) string {
+	if filename == "" {
+		return "file"
+	}
+
+	ext := filepath.Ext(filename)
+	base := strings.TrimSuffix(filename, ext)
+
+	// Clean extension: lowercase and keep only alphanumeric chars after leading dot
+	ext = strings.ToLower(ext)
+	var cleanExt strings.Builder
+	if len(ext) > 1 && ext[0] == '.' {
+		cleanExt.WriteByte('.')
+		for i := 1; i < len(ext); i++ {
+			c := ext[i]
+			if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+				cleanExt.WriteByte(c)
+			}
+		}
+	}
+
+	// Clean base: lowercase, replace spaces and non-alphanumeric chars (except '_' and '-') with hyphens
+	base = strings.ToLower(base)
+	var sb strings.Builder
+	inHyphen := false
+
+	for _, r := range base {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
+			sb.WriteRune(r)
+			inHyphen = false
+		} else if r == '-' {
+			if !inHyphen {
+				sb.WriteRune('-')
+				inHyphen = true
+			}
+		} else {
+			// Space, dots, or special symbols -> single hyphen
+			if !inHyphen && sb.Len() > 0 {
+				sb.WriteRune('-')
+				inHyphen = true
+			}
+		}
+	}
+
+	cleanBase := strings.Trim(sb.String(), "-")
+	if cleanBase == "" {
+		cleanBase = "file"
+	}
+
+	return cleanBase + cleanExt.String()
+}
+
