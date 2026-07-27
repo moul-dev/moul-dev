@@ -12,6 +12,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
@@ -179,6 +180,7 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 	logger.Info("========================================")
 
 	// If worker Engine is available, enqueue a SendEmail job
+	sent := false
 	if h.Engine != nil {
 		tableName, err := findWorkerTable(h.DB)
 		if err != nil {
@@ -195,14 +197,25 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 			})
 			if err != nil {
 				logger.Error("Failed to enqueue OTP SendEmail job", "err", err)
+			} else {
+				sent = true
 			}
 		} else {
 			logger.Warn("No worker collection found. Cannot enqueue background SendEmail job.")
 		}
 	}
 
+	if !sent && h.Mailer != nil {
+		_ = h.Mailer.Send(c.Request().Context(), &mailer.Email{
+			To:       []string{email},
+			Subject:  subject,
+			HTMLBody: body,
+			TextBody: body,
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "OTP generated and sent successfully (check server logs/console for code)",
+		"message": "OTP generated and sent successfully",
 	})
 }
 

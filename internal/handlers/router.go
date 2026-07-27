@@ -10,13 +10,14 @@ import (
 	echoMiddleware "github.com/labstack/echo/v5/middleware"
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/pocketbase/dbx"
 )
 
 // NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
-func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, adminKey string, isDev bool, version ...string) *echo.Echo {
+func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, adminKey string, isDev bool, version ...string) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
@@ -73,6 +74,10 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.Use(middleware.DynamicRateLimiter(adminKey))
 
 	// ── Handlers initialization ─────────────────────────────────────
+	if mailService == nil {
+		mailService, _ = mailer.NewMailer(dbConn)
+	}
+
 	moulHandler := NewMoulHandler(dbConn)
 	recordHandler := NewRecordHandler(dbConn)
 	recordHandler.Engine = workerEngine
@@ -80,10 +85,12 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev
 	authHandler := NewAuthHandler(dbConn)
 	authHandler.Engine = workerEngine
+	authHandler.Mailer = mailService
 	deviceFlowHandler := NewDeviceFlowHandler(dbConn)
 	visitsHandler := NewVisitsHandler(dbConn)
 	requestsHandler := NewRequestsHandler(dbConn)
 	settingsHandler := NewSettingsHandler(dbConn)
+	settingsHandler.Mailer = mailService
 	uploadHandler := NewUploadHandler(dbConn)
 	setupHandler := NewSetupHandler(dbConn)
 

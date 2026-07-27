@@ -108,7 +108,7 @@ func TestTUIE2E(t *testing.T) {
 	adminKey := "e2e-test-admin-key"
 	auth.InitJWT("e2e-test-jwt-secret-key-123456789")
 
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, true)
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, nil, adminKey, true)
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 

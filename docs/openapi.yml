@@ -20,6 +20,14 @@ info:
       - **Signup**: `POST /api/moul/{moulName}/passkey/signup/options` and `POST /api/moul/{moulName}/passkey/signup/verify`.
       - **Login**: `POST /api/moul/{moulName}/passkey/login/options` and `POST /api/moul/{moulName}/passkey/login/verify`.
       - **Register Existing User**: `POST /api/moul/{moulName}/passkey/register/options` and `POST /api/moul/{moulName}/passkey/register/verify`.
+
+    ### Supported Email Delivery Providers
+    - **Amazon SES**: AWS SES v2 REST API integration with automatic SigV4 signing.
+    - **Resend**: Modern developer email delivery API.
+    - **Mailgun**: Transactional email API supporting US & EU regions.
+    - **SendGrid**: Transactional Mail Send API v3.
+    - **Cloudflare Email Sending**: Cloudflare Email REST API and Worker HTTP endpoints.
+    - **Console**: Local development fallback logging emails directly to the server console.
 servers:
   - url: http://localhost:8090
     description: Local development server
@@ -485,7 +493,7 @@ paths:
   /api/settings:
     get:
       summary: Get Settings
-      description: Returns all server settings (S3 config, Litestream, Rate Limiting, IPs) as key-value pairs.
+      description: Returns all server settings (S3 config, Litestream, Rate Limiting, IPs, Email Delivery) as key-value pairs.
       tags:
         - Settings & System Config
       security:
@@ -506,7 +514,7 @@ paths:
           $ref: '#/components/responses/500InternalError'
     patch:
       summary: Update Settings
-      description: Modifies server settings and reloads runtime configurations (like rate limits and allowed IPs) dynamically.
+      description: Modifies server settings and reloads runtime configurations (rate limits, allowed IPs, mailer providers) dynamically.
       tags:
         - Settings & System Config
       security:
@@ -520,6 +528,14 @@ paths:
               type: object
               description: Map of settings key-value strings to update.
               example:
+                email_enabled: "true"
+                email_provider: "resend"
+                email_from_address: "noreply@example.com"
+                email_from_name: "Moul App"
+                email_api_key: "re_123456789"
+                email_domain: "mg.example.com"
+                email_region: "us-east-1"
+                email_endpoint: "https://api.resend.com/emails"
                 file_s3_enabled: "true"
                 file_s3_bucket: "my-uploads-bucket"
                 rate_limiting_enabled: "true"
@@ -1554,6 +1570,39 @@ components:
           $ref: '#/components/schemas/EmailTemplate'
         login_alert:
           $ref: '#/components/schemas/EmailTemplate'
+    EmailConfig:
+      type: object
+      description: Server settings for multi-provider transactional email delivery.
+      properties:
+        email_enabled:
+          type: string
+          enum: ["true", "false"]
+          description: Master switch to enable or disable actual email dispatch.
+        email_provider:
+          type: string
+          enum: [console, ses, resend, mailgun, sendgrid, cloudflare]
+          description: Active email delivery service driver.
+        email_from_address:
+          type: string
+          description: Default sender email address (e.g. `noreply@example.com`).
+        email_from_name:
+          type: string
+          description: Default sender display name (e.g. `Moul App`).
+        email_api_key:
+          type: string
+          description: API key or AWS Access Key ID.
+        email_api_secret:
+          type: string
+          description: API secret or AWS Secret Access Key.
+        email_domain:
+          type: string
+          description: Domain name (for Mailgun) or Account ID (for Cloudflare).
+        email_region:
+          type: string
+          description: Region identifier (e.g. `us-east-1` for AWS SES or `us`/`eu` for Mailgun).
+        email_endpoint:
+          type: string
+          description: Custom API endpoint URL or Cloudflare Worker endpoint URL.
     Moul:
       type: object
       properties:

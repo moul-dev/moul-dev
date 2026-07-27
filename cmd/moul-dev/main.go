@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
@@ -121,12 +123,44 @@ func runStart() {
 	}
 	defer analyticsEngine.Close()
 
+	// ── Mailer Service ───────────────────────────────────────────────
+	mailService, err := mailer.NewMailer(dbConn)
+	if err != nil {
+		logger.Error("Failed to initialize mailer service", "err", err)
+	}
+
 	// ── Worker Engine ───────────────────────────────────────────────
 	workerEngine := worker.NewEngine(dbConn)
 
-	// Register a default worker handler as an example
+	// Register SendEmail worker handler
 	workerEngine.Register("SendEmail", func(ctx context.Context, job *worker.Job) error {
-		logger.Info("Successfully processed SendEmail job", "jobID", job.ID, "args", job.Args)
+		toStr, _ := job.Args["to"].(string)
+		subjectStr, _ := job.Args["subject"].(string)
+		bodyStr, _ := job.Args["body"].(string)
+		fromStr, _ := job.Args["from"].(string)
+		fromNameStr, _ := job.Args["from_name"].(string)
+
+		var recipients []string
+		if toStr != "" {
+			for _, r := range strings.Split(toStr, ",") {
+				if trimmed := strings.TrimSpace(r); trimmed != "" {
+					recipients = append(recipients, trimmed)
+				}
+			}
+		}
+
+		emailMsg := &mailer.Email{
+			From:     fromStr,
+			FromName: fromNameStr,
+			To:       recipients,
+			Subject:  subjectStr,
+			HTMLBody: bodyStr,
+			TextBody: bodyStr,
+		}
+
+		if mailService != nil {
+			return mailService.Send(ctx, emailMsg)
+		}
 		return nil
 	})
 
@@ -141,7 +175,7 @@ func runStart() {
 	analyticsEngine.StartFlusher(ctx)
 
 	// ── Echo server ─────────────────────────────────────────────────
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, adminKey, isDev, Version)
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, adminKey, isDev, Version)
 
 	// ── Start server with StartConfig for graceful shutdown ──────────
 	logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)

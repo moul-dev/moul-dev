@@ -153,9 +153,19 @@ type Model struct {
 	settingRootIPEnabled         string
 	settingRootAllowedIPs        string
 	rootIPsInputs                []textinput.Model
+	settingEmailEnabled          string
+	settingEmailProvider         string
+	settingEmailFromAddress      string
+	settingEmailFromName         string
+	settingEmailAPIKey           string
+	settingEmailAPISecret        string
+	settingEmailDomain           string
+	settingEmailRegion           string
+	settingEmailEndpoint         string
+	emailInputs                  []textinput.Model
 
 	// Settings Tabs & Custom Inputs
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -247,6 +257,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingRateLimitingEnabled = msg.Settings["rate_limiting_enabled"]
 		m.settingRootIPEnabled = msg.Settings["root_user_ip_enabled"]
 		m.settingRootAllowedIPs = msg.Settings["root_user_allowed_ips"]
+		m.settingEmailEnabled = msg.Settings["email_enabled"]
+		m.settingEmailProvider = msg.Settings["email_provider"]
+		m.settingEmailFromAddress = msg.Settings["email_from_address"]
+		m.settingEmailFromName = msg.Settings["email_from_name"]
+		m.settingEmailAPIKey = msg.Settings["email_api_key"]
+		m.settingEmailAPISecret = msg.Settings["email_api_secret"]
+		m.settingEmailDomain = msg.Settings["email_domain"]
+		m.settingEmailRegion = msg.Settings["email_region"]
+		m.settingEmailEndpoint = msg.Settings["email_endpoint"]
 		
 		m.settingRateLimitingRules = nil
 		rulesJSON := msg.Settings["rate_limiting_rules"]
@@ -746,7 +765,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 4) % 4
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 5) % 5
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -755,7 +774,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 4
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 5
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -870,6 +889,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if m.settingsActiveTab == 3 {
 					m.rootIPsInputs[f.inputIdx], cmd = m.rootIPsInputs[f.inputIdx].Update(msg)
 					*f.strVal = m.rootIPsInputs[f.inputIdx].Value()
+				} else if m.settingsActiveTab == 4 {
+					m.emailInputs[f.inputIdx], cmd = m.emailInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.emailInputs[f.inputIdx].Value()
 				}
 				if cmd != nil {
 					cmds = append(cmds, cmd)

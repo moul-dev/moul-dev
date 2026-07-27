@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/pocketbase/dbx"
 )
@@ -176,6 +177,7 @@ func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
 	logger.Info("========================================")
 
 	// If worker Engine is available, enqueue a SendEmail job
+	sent := false
 	if h.Engine != nil {
 		tableName, err := findWorkerTable(h.DB)
 		if err != nil {
@@ -194,12 +196,25 @@ func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
 				logger.Error("Failed to enqueue SendEmail test job", "err", err)
 				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to queue test email")
 			}
+			sent = true
 		} else {
 			logger.Warn("No worker collection found. Cannot enqueue background SendEmail job.")
 		}
 	}
 
+	if !sent && h.Mailer != nil {
+		if err := h.Mailer.Send(c.Request().Context(), &mailer.Email{
+			To:       []string{payload.Email},
+			Subject:  subject,
+			HTMLBody: body,
+			TextBody: body,
+		}); err != nil {
+			logger.Error("Failed to send test email directly via Mailer", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to send test email: "+err.Error())
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Test email sent/queued successfully (check server logs/console for details)",
+		"message": "Test email sent/queued successfully",
 	})
 }

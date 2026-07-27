@@ -4,12 +4,14 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/pocketbase/dbx"
 )
 
 type SettingsHandler struct {
-	DB *dbx.DB
+	DB     *dbx.DB
+	Mailer *mailer.Mailer
 }
 
 func NewSettingsHandler(dbConn *dbx.DB) *SettingsHandler {
@@ -63,6 +65,15 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"rate_limiting_rules":             true,
 		"root_user_ip_enabled":            true,
 		"root_user_allowed_ips":           true,
+		"email_enabled":                  true,
+		"email_provider":                 true,
+		"email_from_address":             true,
+		"email_from_name":                true,
+		"email_api_key":                  true,
+		"email_api_secret":               true,
+		"email_domain":                   true,
+		"email_region":                   true,
+		"email_endpoint":                 true,
 	}
 
 	tx, err := h.DB.Begin()
@@ -86,9 +97,12 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit settings: "+err.Error())
 	}
 
-	// Reload rate limiter middleware configuration
+	// Reload rate limiter middleware configuration and mailer service
 	_ = middleware.ReloadRateLimiter(h.DB)
 	_ = middleware.ReloadRootIPs(h.DB)
+	if h.Mailer != nil {
+		_ = h.Mailer.Reload(h.DB)
+	}
 
 	// Return updated settings
 	return h.GetSettings(c)

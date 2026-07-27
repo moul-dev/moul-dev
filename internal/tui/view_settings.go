@@ -81,6 +81,24 @@ func (m *Model) getSettingsFields() []settingField {
 				inputIdx: 0,
 			})
 		}
+	} else if m.settingsActiveTab == 4 {
+		fields = append(fields, settingField{
+			label:   "Email Delivery Enabled",
+			isBool:  true,
+			boolVal: &m.settingEmailEnabled,
+		})
+		if m.settingEmailEnabled == "true" {
+			fields = append(fields,
+				settingField{label: "Provider (console/ses/resend/mailgun/sendgrid/cloudflare)", strVal: &m.settingEmailProvider, inputIdx: 0},
+				settingField{label: "From Address", strVal: &m.settingEmailFromAddress, inputIdx: 1},
+				settingField{label: "From Name", strVal: &m.settingEmailFromName, inputIdx: 2},
+				settingField{label: "API Key / Access Key", strVal: &m.settingEmailAPIKey, inputIdx: 3},
+				settingField{label: "API Secret / Secret Key", strVal: &m.settingEmailAPISecret, inputIdx: 4},
+				settingField{label: "Domain / Account ID", strVal: &m.settingEmailDomain, inputIdx: 5},
+				settingField{label: "Region", strVal: &m.settingEmailRegion, inputIdx: 6},
+				settingField{label: "Custom Endpoint / Worker URL", strVal: &m.settingEmailEndpoint, inputIdx: 7},
+			)
+		}
 	}
 	return fields
 }
@@ -145,6 +163,31 @@ func (m *Model) initSettingsInputs() {
 		m.rootIPsInputs[0].Placeholder = "e.g. 127.0.0.1, 192.168.1.0/24 (leave empty to disable)"
 	}
 
+	if len(m.emailInputs) == 0 {
+		m.emailInputs = make([]textinput.Model, 8)
+		for i := range m.emailInputs {
+			t := textinput.New()
+			t.CharLimit = 256
+
+			s := t.Styles()
+			s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+			s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+			t.SetStyles(s)
+
+			m.emailInputs[i] = t
+		}
+		m.emailInputs[0].Placeholder = "console, ses, resend, mailgun, sendgrid, cloudflare"
+		m.emailInputs[1].Placeholder = "e.g. noreply@example.com"
+		m.emailInputs[2].Placeholder = "e.g. Moul Dev"
+		m.emailInputs[3].Placeholder = "API key or AWS Access Key"
+		m.emailInputs[4].Placeholder = "••••••••"
+		m.emailInputs[4].EchoMode = textinput.EchoPassword
+		m.emailInputs[4].EchoCharacter = '•'
+		m.emailInputs[5].Placeholder = "Domain for Mailgun or Account ID for Cloudflare"
+		m.emailInputs[6].Placeholder = "e.g. us-east-1 or eu"
+		m.emailInputs[7].Placeholder = "Optional custom endpoint or Cloudflare worker URL"
+	}
+
 	// Load values from model state
 	m.storageInputs[0].SetValue(m.settingFileS3Bucket)
 	m.storageInputs[1].SetValue(m.settingFileS3Endpoint)
@@ -160,6 +203,15 @@ func (m *Model) initSettingsInputs() {
 	m.liteInputs[5].SetValue(m.settingLiteReplica)
 
 	m.rootIPsInputs[0].SetValue(m.settingRootAllowedIPs)
+
+	m.emailInputs[0].SetValue(m.settingEmailProvider)
+	m.emailInputs[1].SetValue(m.settingEmailFromAddress)
+	m.emailInputs[2].SetValue(m.settingEmailFromName)
+	m.emailInputs[3].SetValue(m.settingEmailAPIKey)
+	m.emailInputs[4].SetValue(m.settingEmailAPISecret)
+	m.emailInputs[5].SetValue(m.settingEmailDomain)
+	m.emailInputs[6].SetValue(m.settingEmailRegion)
+	m.emailInputs[7].SetValue(m.settingEmailEndpoint)
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -175,6 +227,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.liteInputs[f.inputIdx].Blur()
 			} else if m.settingsActiveTab == 3 {
 				m.rootIPsInputs[f.inputIdx].Blur()
+			} else if m.settingsActiveTab == 4 {
+				m.emailInputs[f.inputIdx].Blur()
 			}
 		}
 	}
@@ -189,6 +243,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.liteInputs[f.inputIdx].Focus()
 			} else if m.settingsActiveTab == 3 {
 				m.rootIPsInputs[f.inputIdx].Focus()
+			} else if m.settingsActiveTab == 4 {
+				m.emailInputs[f.inputIdx].Focus()
 			}
 		}
 	}
@@ -205,6 +261,9 @@ func (m *Model) blurAllSettingsInputs() {
 	}
 	for i := range m.rootIPsInputs {
 		m.rootIPsInputs[i].Blur()
+	}
+	for i := range m.emailInputs {
+		m.emailInputs[i].Blur()
 	}
 }
 
@@ -236,6 +295,15 @@ func (m *Model) saveSettingsForm() {
 		"rate_limiting_rules":             string(rulesJSON),
 		"root_user_ip_enabled":            m.settingRootIPEnabled,
 		"root_user_allowed_ips":           m.settingRootAllowedIPs,
+		"email_enabled":                  m.settingEmailEnabled,
+		"email_provider":                 m.settingEmailProvider,
+		"email_from_address":             m.settingEmailFromAddress,
+		"email_from_name":                m.settingEmailFromName,
+		"email_api_key":                  m.settingEmailAPIKey,
+		"email_api_secret":               m.settingEmailAPISecret,
+		"email_domain":                   m.settingEmailDomain,
+		"email_region":                   m.settingEmailRegion,
+		"email_endpoint":                 m.settingEmailEndpoint,
 	}
 
 	_, err = m.Client.UpdateSettings(payload)
@@ -338,6 +406,17 @@ func (m *Model) viewSettings() string {
 		}
 	} else {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT USER IPS  "))
+	}
+
+	// Email Delivery Tab
+	if m.settingsActiveTab == 4 {
+		if m.settingsFocusIndex == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ EMAIL DELIVERY ◀"))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  EMAIL DELIVERY  "))
+		}
+	} else {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL DELIVERY  "))
 	}
 
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")

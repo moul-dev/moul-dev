@@ -128,6 +128,15 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		"rate_limiting_rules":            `[{"label":"*:auth","max_requests":10,"interval":3,"targeted_users":"all"},{"label":"/","max_requests":300,"interval":5,"targeted_users":"all"}]`,
 		"root_user_ip_enabled":           "false",
 		"root_user_allowed_ips":          "",
+		"email_enabled":                  "false",
+		"email_provider":                 "console",
+		"email_from_address":             "",
+		"email_from_name":                "",
+		"email_api_key":                  "",
+		"email_api_secret":               "",
+		"email_domain":                   "",
+		"email_region":                   "us-east-1",
+		"email_endpoint":                 "",
 	}
 	for k, v := range defaultSettings {
 		var exists int
