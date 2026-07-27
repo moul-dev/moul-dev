@@ -37,10 +37,10 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 
 	// Register Routes
 	e.POST("/api/moul", moulHandler.CreateMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.POST("/api/moul/:moulName/passkey/register/options", authHandler.PasskeyRegisterOptions)
-	e.POST("/api/moul/:moulName/passkey/signup/options", authHandler.PasskeySignupOptions)
-	e.POST("/api/moul/:moulName/passkey/login/options", authHandler.PasskeyLoginOptions)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.POST("/api/moul/:name/passkey/register/options", authHandler.PasskeyRegisterOptions)
+	e.POST("/api/moul/:name/passkey/signup/options", authHandler.PasskeySignupOptions)
+	e.POST("/api/moul/:name/passkey/login/options", authHandler.PasskeyLoginOptions)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)

@@ -58,9 +58,9 @@ func TestEmailTemplates(t *testing.T) {
 	adminKey := "super-admin-key"
 	adminGroup := e.Group("/api/moul", middleware.RequireAdminKey(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
-	adminGroup.GET("/:moulName/email-templates", authHandler.GetEmailTemplates)
-	adminGroup.PUT("/:moulName/email-templates", authHandler.UpdateEmailTemplates)
-	adminGroup.POST("/:moulName/email-templates/test", authHandler.SendTestEmail)
+	adminGroup.GET("/:name/email-templates", authHandler.GetEmailTemplates)
+	adminGroup.PUT("/:name/email-templates", authHandler.UpdateEmailTemplates)
+	adminGroup.POST("/:name/email-templates/test", authHandler.SendTestEmail)
 
 	server := httptest.NewServer(e)
 	defer server.Close()

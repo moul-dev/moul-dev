@@ -32,7 +32,7 @@ type AuthRequest struct {
 
 // AuthWithPassword verifies credentials and returns a signed JWT token.
 func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {

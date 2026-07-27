@@ -147,7 +147,7 @@ func buildWebAuthnUser(recordMap map[string]interface{}) *WebAuthnUser {
 
 // PasskeyRegisterOptions generates registration credentials options for an authenticated user.
 func (h *AuthHandler) PasskeyRegisterOptions(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -200,7 +200,7 @@ func (h *AuthHandler) PasskeyRegisterOptions(c *echo.Context) error {
 
 // PasskeyRegisterVerify verifies credential signature and registers a passkey for an authenticated user.
 func (h *AuthHandler) PasskeyRegisterVerify(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	sessionToken := c.QueryParam("sessionToken")
 	if sessionToken == "" {
 		sessionToken = c.Request().Header.Get("X-Session-Token")
@@ -249,7 +249,7 @@ func (h *AuthHandler) PasskeyRegisterVerify(c *echo.Context) error {
 
 // PasskeySignupOptions starts registration options for a new user.
 func (h *AuthHandler) PasskeySignupOptions(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -332,7 +332,7 @@ func (h *AuthHandler) PasskeySignupOptions(c *echo.Context) error {
 
 // PasskeySignupVerify verifies credential signature and creates the new user with their first passkey.
 func (h *AuthHandler) PasskeySignupVerify(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -412,7 +412,7 @@ func (h *AuthHandler) PasskeySignupVerify(c *echo.Context) error {
 
 // PasskeyLoginOptions begins assertion details for passkey login.
 func (h *AuthHandler) PasskeyLoginOptions(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -475,7 +475,7 @@ func (h *AuthHandler) PasskeyLoginOptions(c *echo.Context) error {
 
 // PasskeyLoginVerify verifies assertion signature and issues JWT.
 func (h *AuthHandler) PasskeyLoginVerify(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

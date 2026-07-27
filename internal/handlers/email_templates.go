@@ -41,7 +41,7 @@ func findWorkerTable(dbConn *dbx.DB) (string, error) {
 
 // GetEmailTemplates retrieves the email templates for the given auth moul collection.
 func (h *AuthHandler) GetEmailTemplates(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -65,7 +65,7 @@ func (h *AuthHandler) GetEmailTemplates(c *echo.Context) error {
 
 // UpdateEmailTemplates updates the email templates for the given auth moul collection.
 func (h *AuthHandler) UpdateEmailTemplates(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -99,7 +99,7 @@ type TestEmailPayload struct {
 
 // SendTestEmail sends a mock/test email using the specified template config.
 func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {

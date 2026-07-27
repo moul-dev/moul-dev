@@ -49,8 +49,8 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 
 	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
 	e.POST("/api/moul", moulHandler.CreateMoul, middleware.RequireAdminKey(adminKey))
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
 
 	server := httptest.NewServer(e)
 	defer server.Close()

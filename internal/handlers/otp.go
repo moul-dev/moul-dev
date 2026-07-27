@@ -45,7 +45,7 @@ func generateOTP() (string, error) {
 
 // RequestOTP generates a 6-digit OTP, prints it to the console, and updates the DB.
 func (h *AuthHandler) RequestOTP(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -221,7 +221,7 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 
 // AuthWithOTP verifies OTP and returns a signed JWT token.
 func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {

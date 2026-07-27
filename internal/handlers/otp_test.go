@@ -39,9 +39,9 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 
 	// Register Routes
 	e.POST("/api/moul", moulHandler.CreateMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.POST("/api/moul/:moulName/otp/request", authHandler.RequestOTP)
-	e.POST("/api/moul/:moulName/auth-with-otp", authHandler.AuthWithOTP)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.POST("/api/moul/:name/otp/request", authHandler.RequestOTP)
+	e.POST("/api/moul/:name/auth-with-otp", authHandler.AuthWithOTP)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)

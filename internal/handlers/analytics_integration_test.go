@@ -44,10 +44,10 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 
 	// Register Routes
 	e.POST("/api/moul", moulHandler.CreateMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
 	e.GET("/api/visits", visitsHandler.ListVisits)
 	e.GET("/api/visits/:id", visitsHandler.GetVisit)
-	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
 	defer server.Close()

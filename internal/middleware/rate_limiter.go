@@ -90,7 +90,7 @@ func (s *limiterState) startCleanup(interval time.Duration) {
 func getMoulAndAction(c *echo.Context) (string, string) {
 	path := c.Path()
 	method := c.Request().Method
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 
 	if moulName == "" {
 		return "", ""
@@ -100,7 +100,7 @@ func getMoulAndAction(c *echo.Context) (string, string) {
 		return moulName, "auth"
 	}
 
-	if path == "/api/moul/:moulName/records" {
+	if path == "/api/moul/:name/records" {
 		if method == http.MethodPost {
 			return moulName, "create"
 		}
@@ -109,7 +109,7 @@ func getMoulAndAction(c *echo.Context) (string, string) {
 		}
 	}
 
-	if path == "/api/moul/:moulName/records/:id" {
+	if path == "/api/moul/:name/records/:id" {
 		if method == http.MethodGet {
 			return moulName, "view"
 		}

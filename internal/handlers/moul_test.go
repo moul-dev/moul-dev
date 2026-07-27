@@ -37,10 +37,10 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 
 	// Register Routes
 	e.POST("/api/moul", moulHandler.CreateMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
-	e.PATCH("/api/moul/:moulName/records/:id", recordHandler.UpdateRecord)
-	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
+	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
+	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
 
 	// Start test HTTP server
 	server := httptest.NewServer(e)
@@ -206,12 +206,12 @@ func TestHandlersEdgeCases(t *testing.T) {
 	e.POST("/api/moul", moulHandler.CreateMoul)
 	e.GET("/api/moul", moulHandler.ListMoul)
 	e.DELETE("/api/moul/:name", moulHandler.DeleteMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
-	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
-	e.PATCH("/api/moul/:moulName/records/:id", recordHandler.UpdateRecord)
-	e.DELETE("/api/moul/:moulName/records/:id", recordHandler.DeleteRecord)
-	e.POST("/api/moul/:moulName/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
+	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
+	e.DELETE("/api/moul/:name/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -641,10 +641,10 @@ func TestMoulAssociations(t *testing.T) {
 
 	e := echo.New()
 	e.POST("/api/moul", moulHandler.CreateMoul)
-	e.POST("/api/moul/:moulName/records", recordHandler.CreateRecord)
-	e.GET("/api/moul/:moulName/records", recordHandler.ListRecords)
-	e.GET("/api/moul/:moulName/records/:id", recordHandler.GetRecord)
-	e.DELETE("/api/moul/:moulName/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
+	e.DELETE("/api/moul/:name/records/:id", recordHandler.DeleteRecord)
 
 	server := httptest.NewServer(e)
 	defer server.Close()

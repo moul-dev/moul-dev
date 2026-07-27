@@ -53,7 +53,7 @@ func nullStringMapToMap(m dbx.NullStringMap) map[string]interface{} {
 
 // CreateRecord handles inserting a dynamic record in a moul table.
 func (h *RecordHandler) CreateRecord(c *echo.Context) error {
-	moulName := c.Param( "moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -461,7 +461,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 
 // ListRecords queries records filtering dynamically by auth listRules.
 func (h *RecordHandler) ListRecords(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -506,7 +506,7 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 
 // GetRecord returns a single record by ID.
 func (h *RecordHandler) GetRecord(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -554,7 +554,7 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 
 // UpdateRecord handles partial updates on fields.
 func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -792,7 +792,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 // DeleteRecord deletes a record by ID.
 func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
-	moulName := c.Param("moulName")
+	moulName := c.Param("name")
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
