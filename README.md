@@ -10,44 +10,50 @@
 
 - [Key Features](#key-features)
 - [Technical Stack](#technical-stack)
-- [Getting Started](#getting-started)
+- [Local Development Guide](#local-development-guide)
   - [Prerequisites](#prerequisites)
+  - [Environment Configuration](#environment-configuration)
   - [Run Local Server](#run-local-server)
-  - [Run Go Unit/Integration Tests](#run-go-unitintegration-tests)
-  - [Run Local S3 (MinIO)](#run-local-s3-minio)
-- [Documentation & API Spec (`/docs`)](#documentation--api-spec-docs)
-  - [Repository `/docs` Directory](#repository-docs-directory)
+  - [Live Reloading (Hot Reload)](#live-reloading-hot-reload)
+  - [Local S3 Storage (MinIO)](#local-s3-storage-minio)
+  - [Testing & Verification Flows](#testing--verification-flows)
+- [Documentation & API Specification (`/docs`)](#documentation--api-specification-docs)
   - [Interactive Runtime `/docs` Endpoint](#interactive-runtime-docs-endpoint)
-- [API Reference](#api-reference)
-  - [1. Moul (Schema) Management](#1-moul-schema-management)
-  - [2. Record (Data) Management](#2-record-data-management)
-  - [3. Visits Management](#3-visits-management)
-  - [4. Request Tracking](#4-request-tracking)
-  - [5. Authentication Management](#5-authentication-management)
-- [Programmatic Go Worker API](#programmatic-go-worker-api)
+  - [OpenAPI Specification Files](#openapi-specification-files)
+  - [Embedded OpenAPI Spec in Go](#embedded-openapi-spec-in-go)
+- [Moul TUI Admin Console (`moul`)](#moul-tui-admin-console-moul)
+  - [Overview](#overview)
+  - [Build and Run](#build-and-run)
+  - [Connection Setup & Config Storage](#connection-setup--config-storage)
+  - [TUI Features & Capabilities](#tui-features--capabilities)
+  - [Keyboard Controls Guide](#keyboard-controls-guide)
+- [Programmatic Go API](#programmatic-go-api)
   - [1. Register and Start Worker Engine](#1-register-and-start-worker-engine)
   - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
-  - [3. Programmatic Go Analytics API](#3-programmatic-go-analytics-api)
+  - [3. Programmatic Analytics API](#3-programmatic-analytics-api)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
-- [Verification Flows (cURL Scripts)](#verification-flows-curl-scripts)
-- [TUI Admin Console (`moul`)](#tui-admin-console-moul)
-  - [Build and Run](#build-and-run)
-  - [Keyboard Controls Guide](#keyboard-controls-guide)
+- [Deployment Information](#deployment-information)
+  - [Single-Binary Production Build](#single-binary-production-build)
+  - [Production Environment Variables](#production-environment-variables)
+  - [Litestream Automated S3 Backup & Disaster Recovery](#litestream-automated-s3-backup--disaster-recovery)
+  - [Systemd Service Deployment Example](#systemd-service-deployment-example)
 
 ---
 
 ## Key Features
 
-1. **Dynamic Moul (Tables)**: Create, list, and delete database tables and schemas at runtime via HTTP API.
-2. **Dynamic Record CRUD**: Perform complete CRUD operations on any dynamic moul using raw JSON payloads.
+1. **Dynamic Moul (Tables)**: Create, list, update, and delete database tables and schemas at runtime via HTTP API or TUI.
+2. **Dynamic Record CRUD**: Perform complete CRUD operations on any dynamic moul using raw JSON payloads governed by HCL-like authorization rules.
 3. **Bcrypt Password Hashing**: Auth-type moul automatically hash passwords securely when inserting or updating records.
 4. **JWT-Based Authentication**: Issue signed JWT tokens on successful logins and parse/verify them automatically using Bearer token middleware.
-5. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
-6. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with support for queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
-7. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local deployment.
-8. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. The engine parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution and a server-side Go API.
-9. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
+5. **Multi-Factor & Modern Auth**: Built-in support for Password, Email OTP, WebAuthn Passkeys, and OAuth2 Device Flow.
+6. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
+7. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
+8. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment.
+9. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
+10. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
+11. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
 
 ---
 
@@ -56,417 +62,241 @@
 - **HTTP Framework**: [Echo v5](https://echo.labstack.com)
 - **Database Abstraction**: [pocketbase/dbx](https://github.com/pocketbase/dbx)
 - **SQLite Driver**: [modernc.org/sqlite](https://github.com/modernc/sqlite) (Pure Go, CGO-free)
+- **TUI Framework**: [Charm Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 - **Expression Engine**: [expr-lang/expr](https://github.com/expr-lang/expr)
 - **JWT Handling**: [golang-jwt/jwt](https://github.com/golang-jwt/jwt)
+- **Database Replication / Backup**: [Litestream](https://litestream.io/) (Embedded Go S3 replication)
 - **Structured Logging**: Standard library `log/slog`
 
 ---
 
-## Getting Started
+## Local Development Guide
 
 ### Prerequisites
+
 - **Go**: Version 1.25 or higher
+- **Air** *(Optional, for live reload)*: Install via `go install github.com/air-verse/air@latest` or `brew install air`
+- **MinIO & MinIO Client (`mc`)** *(Optional, for local S3 testing)*: `brew install minio minio-client` on macOS
+
+### Environment Configuration
+
+The engine reads environment variables from a `.env` file in the project root if present. Default environment setup for local development:
+
+```env
+MOUL_ENV=development
+MOUL_PORT=8090
+MOUL_JWT_SECRET=test-secret-key-for-unit-tests-1234
+MOUL_ADMIN_KEY=test-admin-key-1234
+MOUL_DB_PATH=moul-local.db
+```
 
 ### Run Local Server
-To start the Echo HTTP server and background worker engine on port `:8090` (this automatically creates or opens the local SQLite database file `moul-local.db`):
+
+Start the Echo HTTP server and background worker engine on port `:8090` (this automatically creates or opens the local SQLite database file `moul-local.db`):
+
 ```bash
 make run
+# Or directly via Go:
+go run cmd/moul-dev/main.go start
 ```
 
-### Run Go Unit/Integration Tests
-To execute the comprehensive unit and integration tests (which run against isolated database files cleaned up automatically):
+### Live Reloading (Hot Reload)
+
+For active local development with instant code recompilation on change:
+
 ```bash
-make test-go
+make dev
+# Runs air using .air.toml
 ```
 
-### Run Local S3 (MinIO)
-For local file storage and database backup (via Litestream), you can run a local MinIO server.
+### Local S3 Storage (MinIO)
+
+For testing file uploads and Litestream database backups locally against an S3 API:
 
 1. **Start MinIO server**:
-   Ensure you have `minio` and `mc` installed (e.g., `brew install minio minio-client` on macOS). Then run:
    ```bash
    make minio-start
    ```
-   This starts the MinIO server locally, storing data in `tmp/minio` (Console at http://localhost:9001).
+   Starts MinIO server storing data in `tmp/minio` (Console available at [http://localhost:9001](http://localhost:9001), credentials: `minioadmin` / `minioadmin`).
 
-2. **Configure the MinIO Client (mc)**:
+2. **Configure MinIO Client (`mc`)**:
    In a separate terminal, register the `moul-local` alias:
    ```bash
    make minio-setup
    ```
 
-3. **Create Buckets Manually**:
-   Create buckets manually using `mc` or via the web console at http://localhost:9001 (default credentials: `minioadmin` / `minioadmin`):
-   - For file uploads: `mc mb moul-local/moul-bucket`
-   - For Litestream backups: `mc mb moul-local/moul-litestream`
+3. **Create Storage Buckets**:
+   ```bash
+   mc mb moul-local/moul-bucket
+   mc mb moul-local/moul-litestream
+   ```
+
+### Testing & Verification Flows
+
+`moul-dev` includes unit tests, integration tests, and automated cURL verification flows.
+
+#### 1. Unit & Integration Tests
+```bash
+# Run all Go package tests
+make test-go
+
+# Run tests with code coverage output
+make test-coverage
+
+# Run TUI tests
+make test-tui
+```
+
+#### 2. Automated cURL Flow Scripts
+Ensure the server is running (`make run`) in a separate terminal before executing flow tests:
+
+- **Verify Dynamic CRUD, JWT Auth, and Rules Enforcement**:
+  ```bash
+  make test-flow
+  ```
+- **Verify Asynchronous Background Worker Queue**:
+  ```bash
+  make test-worker
+  ```
+- **Verify First-Party Analytics and Visit Resolution**:
+  ```bash
+  make test-analytics
+  ```
 
 ---
 
-## Documentation & API Spec (`/docs`)
+## Documentation & API Specification (`/docs`)
 
-`moul-dev` provides complete OpenAPI 3.0 documentation both in the repository codebase and as live interactive endpoints served directly by the engine.
-
-### Repository `/docs` Directory
-
-The [`/docs`](docs) directory in the codebase houses:
-- **`docs/openapi.yml`**: The comprehensive OpenAPI 3.0 specification file defining all endpoints, schemas, parameters, response codes, and authentication flows (Password, Email OTP, WebAuthn Passkey).
-- **`docs/docs.go`**: Uses Go's `//go:embed openapi.yml` directive to embed the OpenAPI spec directly into the compiled Go binary. This enables single-binary deployments without external file dependencies.
+`moul-dev` maintains an accurate OpenAPI 3.0 specification serving interactive API documentation directly from the running engine.
 
 ### Interactive Runtime `/docs` Endpoint
 
-When the server is running (`make run`), the following routes are available:
+When the server is running (`make run`), interactive API documentation is accessible in your browser:
 
-- **Interactive API Documentation UI**: [http://localhost:8090/docs](http://localhost:8090/docs)
-  - Powered by **Scalar API Reference** by default.
-  - Switch to **Swagger UI** dynamically via [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger).
-- **Raw OpenAPI Specification**: [http://localhost:8090/openapi.yml](http://localhost:8090/openapi.yml) (or `/docs/openapi.yml`) for exporting to Postman, Insomnia, or API client generation tools.
+- **Scalar API Reference (Default)**: [http://localhost:8090/docs](http://localhost:8090/docs)
+- **Swagger UI**: [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger)
 
----
+### OpenAPI Specification Files
 
-## API Reference
+The OpenAPI spec is available in both YAML and JSON formats for exporting to Postman, Insomnia, or API SDK generator tools:
 
-### 1. Moul (Schema) Management
+- **YAML Spec**: [http://localhost:8090/openapi.yml](http://localhost:8090/openapi.yml) (or `/docs/openapi.yml`)
+- **JSON Spec**: [http://localhost:8090/openapi.json](http://localhost:8090/openapi.json) (or `/docs/openapi.json`)
+- **Repository File**: [`docs/openapi.yml`](docs/openapi.yml)
 
-#### Create a Moul
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul`
-- **Request Body Examples**:
+### Embedded OpenAPI Spec in Go
 
-##### Create a standard `base` collection:
-```json
-{
-  "name": "posts",
-  "type": "base",
-  "fields": [
-    { "name": "title", "type": "text" },
-    { "name": "body", "type": "text" },
-    { "name": "author_id", "type": "text" }
-  ],
-  "rules": {
-    "listRule": "",
-    "viewRule": "",
-    "createRule": "auth.id != nil",
-    "updateRule": "auth.id == author_id",
-    "deleteRule": "auth.id == author_id"
-  }
-}
-```
-
-##### Create a `worker` job collection:
-Worker moul are dedicated collections that represent background job queues. Setting `type` to `"worker"` dynamically instantiates the table with an Oban-compatible job schema:
-```json
-{
-  "name": "background_tasks",
-  "type": "worker"
-}
-```
-
-##### Create an `analytic` event collection:
-Analytic moul are event tracking tables. Setting `type` to `"analytic"` dynamically creates the table with standard system fields (`visit_token`, `visitor_token`, `user_id`, `name`, `properties`, `time`) and allows you to append optional custom fields:
-```json
-{
-  "name": "events",
-  "type": "analytic",
-  "fields": [
-    { "name": "path", "type": "text" }
-  ]
-}
-```
-
-#### List Moul
-- **HTTP Method**: `GET`
-- **Path**: `/api/moul`
-
-#### Delete a Moul
-- **HTTP Method**: `DELETE`
-- **Path**: `/api/moul/:name`
+The specification file is embedded into the compiled binary via Go's `//go:embed openapi.yml` directive in [`docs/docs.go`](docs/docs.go). This ensures single-binary deployments serve live API docs without requiring external static asset files.
 
 ---
 
-### 2. Record (Data) Management
+## Moul TUI Admin Console (`moul`)
 
-All record IDs generated by the engine are prefixed with the singular name of the moul (e.g. `user-LpI7pWl7NnOq62K`, `post-bSvPNdw4Y1TwXQp`, or `background_task-jMuZupkFcz`).
+### Overview
 
-#### Create a Record (or Enqueue a Job)
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul/:name/records`
-- **Request Body Example (Standard/Auth)**:
-```json
-{
-  "title": "My Post Title",
-  "body": "Hello world",
-  "author_id": "user-LpI7pWl7NnOq62K"
-}
+`moul` comes with a modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem (`bubbletea`, `bubbles`, `lipgloss`). It provides full administration over your engine directly from the command line without opening a browser.
+
+![TUI Demo](assets/device-oauth-demo.png)
+
+### Build and Run
+
+#### Run via Go
+```bash
+make tui
+# Or:
+go run cmd/moul/main.go
 ```
 
-##### Request Body Example (Worker Moul):
-Posting to a `"worker"` moul table enqueues a background job and triggers the worker engine immediately:
-```json
-{
-  "worker": "SendEmail",
-  "queue": "mailers",
-  "priority": 1,
-  "args": {
-    "to": "user@example.com",
-    "subject": "Hello background worker!"
-  },
-  "max_attempts": 5
-}
+#### Build Compiled TUI Binary
+```bash
+make build-tui
+./bin/moul
 ```
 
-- **Supported Job Fields**:
-  - `worker` (string, required): The name of the registered worker.
-  - `queue` (string, optional): Target queue name (defaults to `"default"`).
-  - `priority` (integer, optional): Job priority where `0` is highest priority (defaults to `0`).
-  - `args` (JSON, optional): Payload arguments passed to the handler (defaults to `{}`).
-  - `meta` (JSON, optional): Custom metadata dictionary (defaults to `{}`).
-  - `tags` (JSON array, optional): Job tag list (defaults to `[]`).
-  - `max_attempts` (integer, optional): Retry limit before discarding (defaults to `20`).
-  - `scheduled_at` (string RFC3339, optional): Delay execution until this time (defaults to now).
+### Connection Setup & Config Storage
 
-##### Request Body Example (Analytic Moul):
-Posting to an `"analytic"` moul table records an event and manages session/visit resolution:
-```json
-{
-  "name": "btn_click",
-  "properties": {
-    "color": "blue"
-  },
-  "landing_page": "https://moul.dev/landing?utm_source=fb&utm_medium=social"
-}
-```
-The engine resolves `visit_token` and `visitor_token` automatically:
-1. It checks the JSON body (`visit_token`/`visitor_token`).
-2. It checks headers (`X-Visit-Token`/`X-Visitor-Token`).
-3. It checks cookies (`moul_visit`/`moul_visitor`).
+On initial startup, `moul` prompts for connection credentials:
+1. **Server URL**: Server address (defaults to `http://localhost:8090`).
+2. **Admin Key**: The security key configured on the server (`MOUL_ADMIN_KEY`).
 
-If none are found, the engine generates fresh tokens, returns them in response headers, and drops cookies (`moul_visit` expires in 30 minutes, `moul_visitor` in 2 years) to maintain session continuity.
+Credentials and connection state are securely saved to `~/.config/moul.json` (with fallback to system keyring where available) for automatic re-connection on subsequent launches.
 
-- **Supported Event Fields**:
-  - `name` (string, required): The name of the recorded event.
-  - `properties` (JSON object, optional): Custom metadata about the event.
-  - `landing_page` (string, optional): Current page URL to extract UTM parameters.
-  - `referrer` (string, optional): Referrer URL to resolve the referring domain.
+### TUI Features & Capabilities
 
-#### List/Query Records
-- **HTTP Method**: `GET`
-- **Path**: `/api/moul/:name/records`
-*(For worker moul, returns all jobs and their execution states, e.g. `"completed"`, `"executing"`, `"available"`, `"discarded"`).*
+- **Dashboard**: High-level system overview displaying collection counters, active workers, visit statistics, and quick system links.
+- **Collection Schema Management**: Create new collections (`base`, `auth`, `worker`, `analytic`), add/remove fields, choose field types, and write HCL access control rules.
+- **Dynamic Record CRUD Console**: Browse collection records with pagination, inspect JSON payloads, add new records, edit existing records, and delete records.
+- **Background Workers Monitor**: Real-time view of background job queues (`executing`, `available`, `completed`, `discarded`). Inspect job parameters, view error stack traces, force-retry failed jobs (`r`), or discard jobs (`c`).
+- **Analytics & Visits Observatory**: Authenticate user credentials (`l`) to inspect live site visit logs (`_visits`) including OS, browser, device type, resolved GeoIP location, landing page, and UTM campaign tracking parameters.
+- **Email Templates Editor**: Customize transactional email templates (OTP verification, Password Reset) per auth collection and send live test emails.
+- **System Settings Panel**: Configure server SMTP/email delivery providers (Amazon SES, Resend, Mailgun, SendGrid, Cloudflare, Console), CORS policy, rate limits, and storage options.
+
+### Keyboard Controls Guide
+
+| Screen | Key | Action |
+| :--- | :--- | :--- |
+| **Global** | `ctrl+c` | Exit program |
+| **Connection Screen** | `Tab` / `Shift+Tab` | Navigate inputs |
+| | `Enter` | Connect to server |
+| **Dashboard** | `↑`/`↓` or `k`/`j` | Navigate collections and options |
+| | `Enter` / `l` / `→` | Open selected item |
+| | `r` | Refresh schema list from server |
+| | `Esc` | Disconnect and return to login screen |
+| **Record List** | `↑`/`↓` or `k`/`j` | Scroll record list |
+| | `Enter` / `v` | Inspect detailed JSON payload |
+| | `n` | Create new record |
+| | `e` | Edit selected record |
+| | `d` | Delete selected record |
+| | `r` | Refresh record list |
+| | `Esc` / `h` / `←` | Back to dashboard |
+| **Worker Monitor** | `↑`/`↓` or `k`/`j` | Scroll job queue |
+| | `Enter` / `v` | View job details & stack trace |
+| | `r` | Force-retry failed job |
+| | `c` | Discard/cancel job |
+| | `f` | Refresh worker status |
+| | `Esc` | Back to dashboard |
+| **Analytics Console** | `l` | Log in user to retrieve JWT token |
+| | `↑`/`↓` or `k`/`j` | Scroll visit logs |
+| | `Enter` / `v` | View visit metadata & UTM details |
+| | `f` | Refresh visits |
+| | `Esc` | Back to dashboard |
 
 ---
 
-### 3. Visits Management
-Query the session logs recorded by the analytics engine. These endpoints require a valid JWT bearer token.
+## Programmatic Go API
 
-#### List Visits
-- **HTTP Method**: `GET`
-- **Path**: `/api/visits`
-
-#### Get Specific Visit
-- **HTTP Method**: `GET`
-- **Path**: `/api/visits/:id`
-
----
-
-### 4. Request Tracking
-
-All incoming HTTP requests are tracked by default. The engine maintains two tables:
-- **`_visits`**: One row per visitor session (deduplicated by `moul_visitor` cookie). Captures browser, OS, device type, geo (via GeoIP), UTM parameters, referrer, and landing page.
-- **`_requests`**: One row per HTTP request, linked to `_visits` via `visit_id`. Captures method, path, status code, and response time.
-
-#### Architecture
-
-```mermaid
-flowchart LR
-    A["HTTP Request"] --> B["RequestTracker Middleware"]
-    B --> C{"Visit cookie exists?"}
-    C -->|Yes| D["Reuse existing _visits row"]
-    C -->|No| E["Create new _visits row + set cookies"]
-    D --> F["Process request handler"]
-    E --> F
-    F --> G["Enqueue RequestData to channel"]
-    G --> H["Background Flusher goroutine"]
-    H -->|"Every 5s or 100 items"| I["Batch INSERT into _requests"]
-```
-
-Request tracking is implemented as a global middleware that runs on every request. Visit sessions are created synchronously (to set cookies), while per-request data is buffered and batch-inserted asynchronously to minimize latency impact.
-
-**Excluded paths** (not tracked): `/api/visits`, `/api/requests` — to avoid self-referential noise.
-
-#### List Tracked Requests
-- **HTTP Method**: `GET`
-- **Path**: `/api/requests`
-- **Query Parameters**:
-  - `page` (integer, optional): Page number (defaults to `1`).
-  - `perPage` (integer, optional): Items per page, max 200 (defaults to `50`).
-- **Response**:
-```json
-{
-  "page": 1,
-  "perPage": 50,
-  "totalItems": 142,
-  "totalPages": 3,
-  "items": [
-    {
-      "id": "req-abc123",
-      "visit_id": "550e8400-e29b-41d4-a716-446655440000",
-      "method": "POST",
-      "path": "/api/moul/users/records",
-      "status_code": "201",
-      "response_time_ms": "42",
-      "created_at": "2026-07-03T09:00:00Z"
-    }
-  ]
-}
-```
-
-#### Get Specific Request
-- **HTTP Method**: `GET`
-- **Path**: `/api/requests/:id`
-
----
-
-### 5. Authentication Management
-
-Auth-type collections support three authentication flows: Password, Email OTP, and Passkeys.
-
-#### 5.1 Password Authentication
-
-##### Sign Up with Password
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul/:name/records`
-- **Request Body**:
-```json
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "Password123",
-  "passwordConfirm": "Password123"
-}
-```
-- **Response**: `201 Created` with the newly registered user record. Password complexity is validated and stored as a secure bcrypt hash (`passwordHash`).
-*Note: Public signups require the collection's `createRule` to allow record creation (e.g., set to `""`).*
-
-##### Authenticate with Password
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul/:name/auth-with-password`
-- **Request Body**:
-```json
-{
-  "identity": "username_or_email",
-  "password": "Password123"
-}
-```
-- **Response**:
-```json
-{
-  "token": "JWT_TOKEN",
-  "record": {
-    "id": "users-LpI7pW...",
-    "username": "username",
-    "email": "user@example.com",
-    "created_at": "...",
-    "updated_at": "..."
-  }
-}
-```
-
-#### 5.2 Email OTP Authentication
-
-##### Request OTP
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul/:name/otp/request`
-- **Request Body**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-*Note: If the email is not registered yet, an account will be automatically created (auto-signup) upon successful OTP verification.*
-
-##### Verify OTP / Authenticate
-- **HTTP Method**: `POST`
-- **Path**: `/api/moul/:name/auth-with-otp`
-- **Request Body**:
-```json
-{
-  "email": "user@example.com",
-  "code": "123456"
-}
-```
-
-#### 5.3 Passkey (WebAuthn) Authentication
-
-##### Register Passkey (Authenticated User)
-1. **Request Registration Options**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/register/options`
-   - **Headers**: `Authorization: Bearer <JWT_TOKEN>`
-   - **Response**: Returns WebAuthn registration options + a unique `sessionToken`.
-2. **Verify Registration**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/register/verify?sessionToken=<TOKEN>`
-   - **Headers**: `Authorization: Bearer <JWT_TOKEN>`
-   - **Request Body**: Raw browser credentials assertion JSON object (`navigator.credentials.create()`).
-
-##### Sign Up with Passkey (New User)
-1. **Request Signup Options**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/signup/options`
-   - **Request Body**: `{"email": "newuser@example.com"}`
-   - **Response**: Returns WebAuthn registration options + a unique `sessionToken`.
-2. **Verify Signup**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/signup/verify?sessionToken=<TOKEN>`
-   - **Request Body**: Raw browser credentials assertion JSON object.
-   - **Response**: Returns JWT token + new user record.
-
-##### Login with Passkey (Existing User)
-1. **Request Login Options**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/login/options`
-   - **Request Body**: `{"identity": "username_or_email"}`
-   - **Response**: Returns WebAuthn login options + a unique `sessionToken`.
-2. **Verify Login**:
-   - **HTTP Method**: `POST`
-   - **Path**: `/api/moul/:name/passkey/login/verify?sessionToken=<TOKEN>`
-   - **Request Body**: Raw browser assertion response JSON object (`navigator.credentials.get()`).
-   - **Response**: Returns JWT token + user record.
-
----
-
-## Programmatic Go Worker API
-
-For backend processing, you can register custom execution handlers in Go and enqueue jobs programmatically.
+In addition to HTTP endpoints, backend processing and custom background worker tasks can be implemented programmatically in Go.
 
 ### 1. Register and Start Worker Engine
+
 ```go
 import (
 	"context"
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
-// 1. Initialize engine
+// 1. Initialize worker engine
 workerEngine := worker.NewEngine(dbConn)
 
-// 2. Register job handler
+// 2. Register custom execution handler
 workerEngine.Register("SendEmail", func(ctx context.Context, job *worker.Job) error {
 	to := job.Args["to"].(string)
 	subject := job.Args["subject"].(string)
 	
-	// Execute background logic...
+	// Execute custom background logic...
 	println("Sending email to " + to)
 	return nil
 })
 
-// 3. Start processing loop
+// 3. Start processing loop with context cancellation
 ctx, cancel := context.WithCancel(context.Background())
 defer cancel()
 workerEngine.Start(ctx)
-defer workerEngine.Stop() // Gracefully waits for running tasks to finish
+defer workerEngine.Stop() // Gracefully awaits running tasks to complete
 ```
 
 ### 2. Enqueue Job Programmatically from Go
+
 ```go
 jobOpts := map[string]interface{}{
 	"worker": "SendEmail",
@@ -480,8 +310,8 @@ jobOpts := map[string]interface{}{
 job, err := workerEngine.Enqueue(context.Background(), "background_tasks", jobOpts)
 ```
 
-### 3. Programmatic Go Analytics API
-You can also record events programmatically using the analytics engine in Go:
+### 3. Programmatic Analytics API
+
 ```go
 import (
 	"context"
@@ -505,135 +335,120 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ## Worker Engine Architecture & Operations
 
 - **State Transitions**: Jobs navigate states (`available` -> `executing` -> `completed` / `discarded`). Historical execution records are retained for metric inspections.
-- **Failures & Exponential Backoffs**: If a job handler returns an error or panics, the engine logs the error details, increments `attempt`, and reschedules the job with an exponential backoff (`(attempt^2 * 10) + 10` seconds + jitter) until it reaches `max_attempts`, at which point it becomes `discarded`.
-- **Immediate Wakeups**: Upon enqueuing a job via HTTP or Go API, the engine is immediately signaled through an in-memory channel to wake up and process the job without waiting for the 1-second polling ticker.
-- **Graceful Shutdown**: The engine stops fetching new jobs immediately on interrupt signals, and blocks shutdown until all currently executing job handlers return (or context timeout occurs).
+- **Failures & Exponential Backoffs**: If a job handler returns an error or panics, the engine logs error details, increments `attempt`, and reschedules execution with an exponential backoff (`(attempt^2 * 10) + 10` seconds + jitter) until reaching `max_attempts` (default: 20), after which it transitions to `discarded`.
+- **Immediate Dispatch**: Enqueuing a job via HTTP or Go API immediately signals the worker engine over an in-memory channel, executing available jobs without waiting for polling tickers.
+- **Graceful Shutdown**: On OS interrupt signals (`SIGINT`/`SIGTERM`), worker fetching halts immediately while existing running task handlers are given a graceful timeout to finish execution cleanly.
 
 ---
 
 ## Access Rules & Filters Syntax
 
-Moul supports a comprehensive rules and filter syntax for API collections. Each Moul (table) can be configured with five distinct rules matching client request contexts:
-- `listRule` - Limits which records can be returned in lists.
-- `viewRule` - Controls access to viewing a single record.
-- `createRule` - Validates fields/permissions before a record is inserted.
-- `updateRule` - Checks current record fields and incoming values before update.
-- `deleteRule` - Validates permissions before a record is deleted.
+Each Moul (table) supports five HCL-like expression rules evaluated on client API requests:
+- `listRule` - Restricts records returned in collection list queries.
+- `viewRule` - Controls access to view a single record by ID.
+- `createRule` - Validates fields/permissions before record insertion.
+- `updateRule` - Validates current record fields and incoming values before update.
+- `deleteRule` - Validates permissions before record deletion.
 
-### 1. Variables and Request Context
-Rules can access fields from the record being evaluated and request variables using the `@request` namespace:
-- `@request.auth.id` - ID of the authenticated user.
-- `@request.body.fieldName` - Incoming request payload parameters.
-- `@request.headers.header_name` - Request headers (normalized to lowercase, dashes replaced with underscores).
-- `@request.query.paramName` - URL query parameters.
-- `@request.method` - The HTTP request method (e.g., `GET`, `POST`).
+### Rule Expression Syntax Reference
 
-### 2. Operators
-- `=`, `!=`, `>`, `>=`, `<`, `<=` - Standard comparisons.
-- `~` - Case-insensitive LIKE/Contains (auto-wraps right-hand string with `%` wildcards if not present).
-- `!~` - Case-insensitive NOT LIKE/Contains.
-- `?=` (and `?!=`, `?~`, `?!~`, etc.) - Wildcard modifiers to match at least one item inside an array or multi-relation field (e.g., `allowed_users.id ?= @request.auth.id`).
-
-### 3. Modifiers
-- `:lower` - Converts a string to lowercase (e.g., `title:lower = "hello"`).
-- `:length` - Returns length/count of slice, select, or relation fields (e.g., `tags:length = 2`).
-- `:isset` - Checks if a body parameter was submitted (e.g., `@request.body.role:isset = false`).
-- `:changed` - Checks if a body parameter was changed compared to the database record (e.g., `@request.body.role:changed = false`).
-- `:each` - Asserts a condition matches for every item in an array/relation (e.g., `tags:each ~ "tag"`).
-
-### 4. Special Functions
-- `geoDistance(lonA, latA, lonB, latB)` - Computes the Haversine distance in kilometers between two coordinates.
-- `strftime(format, [time-value, modifiers...])` - Formats dates using SQLite's native `strftime` function.
-
-### 5. Cross-Collection Queries (`@collection`)
-Query other tables/collections directly within a rule. Comparisons targeting the same table name/alias are grouped together and executed as a single combined join/exists check:
-```hcl
-@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'
-```
+- **Request Context Variables**: `@request.auth.id`, `@request.body.fieldName`, `@request.headers.header_name`, `@request.query.paramName`, `@request.method`
+- **Operators**: `=`, `!=`, `>`, `>=`, `<`, `<=`, `~` (LIKE/contains), `!~` (NOT LIKE)
+- **Wildcard Array Modifiers**: `?=` (e.g. `allowed_users.id ?= @request.auth.id`)
+- **Field Modifiers**: `:lower`, `:length`, `:isset`, `:changed`, `:each`
+- **Helper Functions**: `geoDistance(lonA, latA, lonB, latB)`, `strftime(format, timeVal)`
+- **Cross-Collection Join Queries**: `@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'`
 
 ---
 
-## Verification Flows (cURL Scripts)
+## Deployment Information
 
-We provide comprehensive cURL flow scripts in the `Makefile` to quickly verify everything is running correctly.
+### Single-Binary Production Build
 
-Ensure the server is running first via `make run` in a separate terminal.
+`moul-dev` compiles into a single, self-contained binary containing the HTTP engine, worker processor, embedded web docs, and CGO-free SQLite database driver.
 
-### Verify Dynamic CRUD, JWT Auth, and Rule Evaluations:
+To build the production binary with stripped debug symbols and version metadata:
+
 ```bash
-make test-flow
+make build
+# Creates executable at bin/moul-dev
 ```
 
-### Verify Background Worker Job Processing:
-```bash
-make test-worker
+### Production Environment Variables
+
+Set the following environment variables on your production server or container:
+
+| Variable | Required | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `MOUL_ENV` | Yes | Application environment mode | `production` |
+| `MOUL_ADMIN_KEY` | Yes | Master administrative secret key | `super-secret-admin-key-9988` |
+| `MOUL_JWT_SECRET` | Yes | Secret key for signing JWT tokens | `jwt-secret-key-production-3344` |
+| `MOUL_PORT` | No | HTTP listening port (default: 8090) | `8090` |
+| `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
+| `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
+| `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |
+
+### Litestream Automated S3 Backup & Disaster Recovery
+
+`moul-dev` includes built-in [Litestream](https://litestream.io/) replication directly in the binary for real-time, point-in-time SQLite replication to S3-compatible cloud storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces).
+
+#### Enabling Replication in Production
+
+To enable background replication, set the following environment variables before running `moul-dev start`:
+
+```env
+LITESTREAM_ENABLED=true
+LITESTREAM_S3_BUCKET=my-moul-backups
+LITESTREAM_ACCESS_KEY_ID=YOUR_AWS_OR_S3_ACCESS_KEY
+LITESTREAM_SECRET_ACCESS_KEY=YOUR_AWS_OR_S3_SECRET_KEY
+LITESTREAM_REGION=us-east-1
+# Optional for S3-compatible services (MinIO, R2, Cloudflare, DigitalOcean):
+LITESTREAM_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
+LITESTREAM_S3_FORCE_PATH_STYLE=false
 ```
 
-### Verify First-Party Analytics and Visits Resolution:
+When enabled, `moul-dev` automatically streams SQLite Write-Ahead Log (WAL) changes to S3 asynchronously with zero downtime.
+
+#### Database Disaster Recovery / Restore
+
+To restore a database state from S3 backup onto a new server:
+
 ```bash
-make test-analytics
+# Run restore command using the same Litestream S3 env configuration
+./bin/moul-dev restore
+# Or via Makefile:
+make restore
 ```
 
----
+### Systemd Service Deployment Example
 
-## TUI Admin Console (`moul`)
+For VPS deployments (Ubuntu/Debian), create a systemd service at `/etc/systemd/system/moul.service`:
 
-`moul` comes with a powerful, modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem to manage schemas, CRUD records, monitor background workers, and view visitor session metrics.
+```ini
+[Unit]
+Description=Moul Dynamic Database & Engine
+After=network.target
 
-### Build and Run
+[Service]
+Type=simple
+User=moul
+Group=moul
+WorkingDirectory=/var/lib/moul
+ExecStart=/usr/local/bin/moul-dev start
+Restart=always
+RestartSec=5
+Environment=MOUL_ENV=production
+Environment=MOUL_ADMIN_KEY=your-production-admin-key
+Environment=MOUL_JWT_SECRET=your-production-jwt-secret
+Environment=MOUL_DB_PATH=/var/lib/moul/moul.db
+LimitNOFILE=65536
 
-To run the TUI console:
-```bash
-make run-tui
+[Install]
+WantedBy=multi-user.target
 ```
 
-To compile it to a binary:
+Enable and start the service:
 ```bash
-make build-tui
-./bin/moul
+sudo systemctl daemon-reload
+sudo systemctl enable --now moul
 ```
-
-On first startup, the TUI will prompt for:
-1. **Server URL**: The `moul-dev` server address (defaults to `http://localhost:8090`).
-2. **Admin Key**: The admin security key configured on the server (e.g. `test-admin-key-1234`).
-
-Your connection settings are securely saved to `~/.config/moul.json` for easy auto-connection in the future.
-
-### Keyboard Controls Guide
-
-#### Global
-- `ctrl+c`: Exit program.
-
-#### Connection Screen
-- `Tab` / `Shift+Tab`: Focus next/previous input.
-- `Enter` (on submit button): Connect to server.
-
-#### Navigation & Dashboard
-- `↑`/`↓` or `k`/`j`: Move selection up/down.
-- `Enter` / `l` / `→`: Open selected collection or system panel.
-- `r`: Refresh schemas from server.
-- `Esc`: Disconnect and return to connection setup.
-
-#### Records List Screen
-- `↑`/`↓` or `k`/`j`: Navigate rows.
-- `Enter` / `v`: Open detailed JSON payload view.
-- `n`: Create a new record.
-- `e`: Edit highlighted record.
-- `d`: Delete highlighted record.
-- `r`: Refresh list.
-- `Esc` / `h` / `←`: Go back to dashboard.
-
-#### Background Workers Monitor
-- `↑`/`↓` or `k`/`j`: Navigate background jobs.
-- `Enter` / `v`: View job parameters & stack trace.
-- `r`: Force-retry selected job (resets status to `available` and triggers run).
-- `c`: Cancel/Discard selected job.
-- `f`: Refresh list.
-- `Esc`: Go back to dashboard.
-
-#### Analytics Console
-- `l`: Enter user login credentials (requires a standard user account in the `users` auth collection) to retrieve a JWT token.
-- `↑`/`↓` or `k`/`j`: Scroll visits.
-- `Enter` / `v`: Open detailed visit payload (OS, browser, referrer UTM parameters).
-- `f`: Refresh visits.
-- `Esc`: Go back to dashboard.
