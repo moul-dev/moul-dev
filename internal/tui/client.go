@@ -300,3 +300,40 @@ func (c *Client) SendTestEmail(moulName string, email string, template string) (
 	return resp.Message, err
 }
 
+// FeatureFlagItem represents a feature flag item in TUI.
+type FeatureFlagItem struct {
+	ID           string                 `json:"id"`
+	Key          string                 `json:"key"`
+	Description  string                 `json:"description"`
+	Enabled      bool                   `json:"enabled"`
+	DefaultValue string                 `json:"default_value"`
+	Gates        map[string]interface{} `json:"gates"`
+	CreatedAt    string                 `json:"created_at"`
+	UpdatedAt    string                 `json:"updated_at"`
+}
+
+// ListFeatureFlags retrieves all feature flags from the API.
+func (c *Client) ListFeatureFlags() ([]FeatureFlagItem, error) {
+	var flags []FeatureFlagItem
+	err := c.request("GET", "/api/feature-flags", nil, &flags)
+	return flags, err
+}
+
+// UpdateFeatureFlag updates a feature flag by key.
+func (c *Client) UpdateFeatureFlag(key string, payload map[string]interface{}) error {
+	path := fmt.Sprintf("/api/feature-flags/%s", key)
+	return c.request("PATCH", path, payload, nil)
+}
+
+// CreateFeatureFlag creates a feature flag.
+func (c *Client) CreateFeatureFlag(payload map[string]interface{}) error {
+	return c.request("POST", "/api/feature-flags", payload, nil)
+}
+
+// DeleteFeatureFlag deletes a feature flag by key.
+func (c *Client) DeleteFeatureFlag(key string) error {
+	path := fmt.Sprintf("/api/feature-flags/%s", key)
+	return c.request("DELETE", path, nil, nil)
+}
+
+

@@ -34,6 +34,7 @@ const (
 	StateSettings
 	StateEmailTemplateEdit
 	StateTestEmailSend
+	StateFeatureFlags
 )
 
 // Model is the main state container for the moul TUI.
@@ -49,7 +50,11 @@ type Model struct {
 
 	// Navigation & Sidebar
 	Mouls              []schema.Moul
-	ActiveSidebarIndex int // 0 to len(mouls)-1 for collections, len(mouls) for workers, len(mouls)+1 for analytics
+	ActiveSidebarIndex int // 0 to len(mouls)-1 for collections, len(mouls) for workers, len(mouls)+1 for analytics, len(mouls)+2 for feature flags, len(mouls)+3 for settings
+
+	// Feature Flags Screen
+	FeatureFlags      []FeatureFlagItem
+	SelectedFlagIndex int
 
 	// Records Screen
 	Records             []map[string]interface{}
@@ -745,6 +750,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case StateAnalytics:
 		cmd := m.updateAnalytics(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+
+	case StateFeatureFlags:
+		cmd := m.updateFeatureFlags(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}

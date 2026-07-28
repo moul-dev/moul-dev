@@ -103,9 +103,25 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 			updated_at TEXT NOT NULL
 		);
 	`).Execute()
+	// Create meta-table _feature_flags
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _feature_flags (
+			id TEXT PRIMARY KEY,
+			key TEXT UNIQUE NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			default_value TEXT NOT NULL DEFAULT 'false',
+			gates TEXT NOT NULL DEFAULT '{}',
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON _feature_flags(key);
+	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _rootUsers table: %w", err)
+		return nil, fmt.Errorf("failed to create _feature_flags table: %w", err)
 	}
+
+
 
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{

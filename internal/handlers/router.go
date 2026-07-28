@@ -93,6 +93,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	settingsHandler.Mailer = mailService
 	uploadHandler := NewUploadHandler(dbConn)
 	setupHandler := NewSetupHandler(dbConn)
+	flagsHandler := NewFlagsHandler(dbConn)
 
 	// ── API Routes ──────────────────────────────────────────────────
 
@@ -108,6 +109,15 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
 	setupGroup.GET("", setupHandler.CheckSetupStatus)
 	setupGroup.POST("", setupHandler.SetupRootUser)
+
+	// Feature flags management & evaluation (Admin-protected)
+	flagsGroup := e.Group("/api/feature-flags", middleware.RequireAuthOrAdmin(adminKey))
+	flagsGroup.GET("", flagsHandler.ListFlags)
+	flagsGroup.POST("", flagsHandler.CreateFlag)
+	flagsGroup.GET("/:key", flagsHandler.GetFlag)
+	flagsGroup.PATCH("/:key", flagsHandler.UpdateFlag)
+	flagsGroup.DELETE("/:key", flagsHandler.DeleteFlag)
+	flagsGroup.POST("/:key/eval", flagsHandler.EvaluateFlag)
 
 	// 1. Moul schema management (Admin-protected)
 	adminGroup := e.Group("/api/moul", middleware.RequireAuthOrAdmin(adminKey))

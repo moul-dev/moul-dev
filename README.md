@@ -54,12 +54,14 @@
 9. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
 10. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
 11. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
+12. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 
 ---
 
 ## Technical Stack
 
 - **HTTP Framework**: [Echo v5](https://echo.labstack.com)
+- **Feature Flag SDK**: [OpenFeature Go SDK](https://github.com/open-feature/go-sdk) (with `fun_with_flags` gate engine)
 - **Database Abstraction**: [pocketbase/dbx](https://github.com/pocketbase/dbx)
 - **SQLite Driver**: [modernc.org/sqlite](https://github.com/modernc/sqlite) (Pure Go, CGO-free)
 - **TUI Framework**: [Charm Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)

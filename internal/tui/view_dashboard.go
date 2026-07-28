@@ -22,10 +22,10 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 			if m.ActiveSidebarIndex > 0 {
 				m.ActiveSidebarIndex--
 			} else {
-				m.ActiveSidebarIndex = len(m.Mouls) + 2 // wrap to bottom
+				m.ActiveSidebarIndex = len(m.Mouls) + 3 // wrap to bottom
 			}
 		case "down", "j":
-			totalItems := len(m.Mouls) + 3
+			totalItems := len(m.Mouls) + 4
 			if m.ActiveSidebarIndex < totalItems-1 {
 				m.ActiveSidebarIndex++
 			} else {
@@ -83,6 +83,10 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 		m.SelectedVisitIndex = 0
 		return m.fetchVisits()
 	} else if idx == len(m.Mouls)+2 {
+		m.State = StateFeatureFlags
+		m.SelectedFlagIndex = 0
+		return m.fetchFeatureFlags()
+	} else if idx == len(m.Mouls)+3 {
 		return m.fetchSettings()
 	}
 	return nil
@@ -112,6 +116,8 @@ func (m *Model) viewDashboard() string {
 	} else if idx == len(m.Mouls)+1 {
 		rightContent = m.viewDashboardAnalyticsInfo(rightWidth)
 	} else if idx == len(m.Mouls)+2 {
+		rightContent = m.viewFeatureFlags(rightWidth, rightHeight)
+	} else if idx == len(m.Mouls)+3 {
 		rightContent = m.viewDashboardSettingsInfo(rightWidth)
 	}
 
@@ -184,9 +190,19 @@ func (m *Model) renderSidebar(width int) string {
 		s.WriteString(SidebarItemInactiveStyle.Render(analyticsLine))
 	}
 	s.WriteString("\n")
- 
+
+	// Feature Flags
+	flagsIdx := len(m.Mouls) + 2
+	flagsLine := " 🚩 Feature Flags"
+	if m.ActiveSidebarIndex == flagsIdx {
+		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(flagsLine))
+	} else {
+		s.WriteString(SidebarItemInactiveStyle.Render(flagsLine))
+	}
+	s.WriteString("\n")
+
 	// Settings
-	settingsIdx := len(m.Mouls) + 2
+	settingsIdx := len(m.Mouls) + 3
 	settingsLine := " ⚙️ Settings"
 	if m.ActiveSidebarIndex == settingsIdx {
 		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(settingsLine))

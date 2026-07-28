@@ -341,7 +341,12 @@ func TestTUIE2E(t *testing.T) {
 
 	_ = update(tea.KeyPressMsg{Text: "down"})
 	if m.ActiveSidebarIndex != 3 {
-		t.Fatalf("Expected ActiveSidebarIndex 3, got %d", m.ActiveSidebarIndex)
+		t.Fatalf("Expected ActiveSidebarIndex 3 (Feature Flags), got %d", m.ActiveSidebarIndex)
+	}
+
+	_ = update(tea.KeyPressMsg{Text: "down"})
+	if m.ActiveSidebarIndex != 4 {
+		t.Fatalf("Expected ActiveSidebarIndex 4 (Settings), got %d", m.ActiveSidebarIndex)
 	}
 
 	_ = update(tea.KeyPressMsg{Text: "down"})
@@ -350,12 +355,12 @@ func TestTUIE2E(t *testing.T) {
 	}
 
 	_ = update(tea.KeyPressMsg{Text: "up"})
-	if m.ActiveSidebarIndex != 3 {
-		t.Fatalf("Expected ActiveSidebarIndex to wrap to 3, got %d", m.ActiveSidebarIndex)
+	if m.ActiveSidebarIndex != 4 {
+		t.Fatalf("Expected ActiveSidebarIndex to wrap to 4, got %d", m.ActiveSidebarIndex)
 	}
 
 	// ── STEP 7: Settings Configuration ───────────────────────────────
-	// Currently at index 3 (Settings)
+	// Currently at index 4 (Settings)
 	cmd = update(tea.KeyPressMsg{Text: "enter"})
 	if cmd == nil {
 		t.Fatal("Expected fetchSettings command, got nil")
