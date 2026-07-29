@@ -7,12 +7,12 @@ info:
 
     ### Authentication and Authorization
     - **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.
-    - **User Endpoints**: Protected by Bearer tokens (`Authorization: Bearer <JWT>`) generated upon successful user authentication.
+    - **User Endpoints**: Protected by Bearer tokens (`Authorization: Bearer <token>`) generated upon successful user authentication.
     - **Dynamic Record Operations**: Checked at runtime by the HCL-like expression rules defined on the parent collection (e.g. `createRule`, `listRule`).
 
     ### Supported Authentication & Signup Flows
     - **Password Flow**:
-      - **Signup**: Create a record in an `auth` collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`. Passwords are validated for complexity and automatically hashed using bcrypt.
+      - **Signup**: Create a record in an `auth` collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`. Passwords are validated for complexity and automatically hashed.
       - **Login**: `POST /api/moul/{name}/auth-with-password` with `identity` (username or email) and `password`.
     - **Email OTP Flow**:
       - **Signup & Login**: `POST /api/moul/{name}/otp/request` sends a 6-digit OTP code to the email (automatically creating a new user record if the email does not exist yet). Verify code with `POST /api/moul/{name}/auth-with-otp`.
@@ -589,7 +589,7 @@ paths:
         '400':
           description: Missing file in multipart form-data.
         '401':
-          description: Authorization failed (requires either a valid JWT user or admin key).
+          description: Authorization failed (requires either a valid authenticated user or admin key).
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -597,7 +597,7 @@ paths:
     post:
       summary: Password Authentication
       description: |
-        Authenticates identity (username or email) against the designated auth moul collection and yields a signed JWT token.
+        Authenticates identity (username or email) against the designated auth moul collection and yields an authentication token.
         Note: New user signup for password authentication is performed by creating a record in the auth collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`.
       tags:
         - User Authentication
@@ -692,7 +692,7 @@ paths:
   /api/moul/{name}/auth-with-otp:
     post:
       summary: Verify OTP / Authenticate
-      description: Verifies OTP code sent to user email and returns a signed JWT on success.
+      description: Verifies OTP code sent to user email and returns an authentication token on success.
       tags:
         - User Authentication
       parameters:
@@ -861,7 +861,7 @@ paths:
   /api/moul/{name}/passkey/signup/verify:
     post:
       summary: Verify Passkey Signup
-      description: Confirms client WebAuthn registration, auto-creates user record, and logs them in with JWT.
+      description: Confirms client WebAuthn registration, auto-creates user record, and logs them in.
       tags:
         - User Authentication
       parameters:
@@ -1031,7 +1031,7 @@ paths:
   /api/oauth2/device/token:
     post:
       summary: OAuth2 Device Token Request
-      description: Polling endpoint for client devices to acquire JWT access token after authorization.
+      description: Polling endpoint for client devices to acquire access token after authorization.
       tags:
         - OAuth2 Device Flow
       requestBody:
@@ -1193,7 +1193,7 @@ paths:
       summary: Create Record
       description: |
         Creates a new record. Evaluates `createRule` against the auth context first.
-        - **Auth Moul**: Creating a record signs up a new user when `username`, `email`, `password`, and `passwordConfirm` are provided. Passwords are validated for complexity and securely hashed with bcrypt into `passwordHash`.
+        - **Auth Moul**: Creating a record signs up a new user when `username`, `email`, `password`, and `passwordConfirm` are provided. Passwords are validated for complexity and securely hashed into `passwordHash`.
         - **Worker Moul**: Creating a record enqueues a background job and wakes the worker thread.
         - **Analytic Moul**: Creating a record tracking an event; resolves browser, OS, GeoIP, and cookie sessions.
       tags:
@@ -1490,8 +1490,7 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: User JSON Web Token for authentication.
+      description: User bearer token for authentication.
   responses:
     401Unauthorized:
       description: Authentication required or invalid key provided.
@@ -1646,7 +1645,7 @@ components:
       properties:
         token:
           type: string
-          description: Signed JSON Web Token (JWT).
+          description: Authentication token.
         record:
           type: object
           description: Populated fields of the authenticated user record.

@@ -45,16 +45,14 @@
 
 1. **Dynamic Moul (Tables)**: Create, list, update, and delete database tables and schemas at runtime via HTTP API or TUI.
 2. **Dynamic Record CRUD**: Perform complete CRUD operations on any dynamic moul using raw JSON payloads governed by HCL-like authorization rules.
-3. **Bcrypt Password Hashing**: Auth-type moul automatically hash passwords securely when inserting or updating records.
-4. **JWT-Based Authentication**: Issue signed JWT tokens on successful logins and parse/verify them automatically using Bearer token middleware.
-5. **Multi-Factor & Modern Auth**: Built-in support for Password, Email OTP, WebAuthn Passkeys, and OAuth2 Device Flow.
-6. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
-7. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
-8. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment.
-9. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
-10. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
-11. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
-12. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
+3. **Multi-Factor & Modern Auth**: Built-in support for Password, Email OTP, WebAuthn Passkeys, and OAuth2 Device Flow.
+4. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
+5. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
+6. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment.
+7. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
+8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
+9. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
+10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 
 ---
 
@@ -152,7 +150,7 @@ make test-tui
 #### 2. Automated cURL Flow Scripts
 Ensure the server is running (`make run`) in a separate terminal before executing flow tests:
 
-- **Verify Dynamic CRUD, JWT Auth, and Rules Enforcement**:
+- **Verify Dynamic CRUD, Auth, and Rules Enforcement**:
   ```bash
   make test-flow
   ```
