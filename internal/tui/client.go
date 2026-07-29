@@ -336,4 +336,22 @@ func (c *Client) DeleteFeatureFlag(key string) error {
 	return c.request("DELETE", path, nil, nil)
 }
 
+// EvaluationResultItem represents the evaluation response from the server.
+type EvaluationResultItem struct {
+	Value  interface{} `json:"value"`
+	Reason string      `json:"reason"`
+}
+
+// EvaluateFeatureFlag evaluates a feature flag with a given context map.
+func (c *Client) EvaluateFeatureFlag(key string, evalCtx map[string]interface{}) (*EvaluationResultItem, error) {
+	payload := map[string]interface{}{
+		"context": evalCtx,
+	}
+	var res EvaluationResultItem
+	path := fmt.Sprintf("/api/feature-flags/%s/eval", key)
+	err := c.request("POST", path, payload, &res)
+	return &res, err
+}
+
+
 

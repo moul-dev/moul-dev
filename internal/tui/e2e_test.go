@@ -613,4 +613,75 @@ func TestTUIE2E(t *testing.T) {
 	if !strings.Contains(m.SuccessMsg, "updated successfully") {
 		t.Fatalf("Expected success message, got %q", m.SuccessMsg)
 	}
+
+	// ── STEP 13: Feature Flags Management ────────────────────────────
+	_ = update(tea.KeyPressMsg{Text: "esc"})
+	if m.State != StateDashboard {
+		t.Fatalf("Expected StateDashboard, got %d", m.State)
+	}
+
+	m.ActiveSidebarIndex = len(m.Mouls) + 2 // Feature Flags
+	cmd = update(tea.KeyPressMsg{Text: "enter"})
+	if cmd == nil {
+		t.Fatal("Expected fetchFeatureFlags command, got nil")
+	}
+	msg = cmd()
+	if _, ok := msg.(featureFlagsMsg); !ok {
+		t.Fatalf("Expected featureFlagsMsg, got %T", msg)
+	}
+	_ = update(msg)
+	if m.State != StateFeatureFlags {
+		t.Fatalf("Expected StateFeatureFlags, got %d", m.State)
+	}
+
+	// Create feature flag
+	err = m.Client.CreateFeatureFlag(map[string]interface{}{
+		"key":           "beta_ui_dashboard",
+		"description":   "Enable v2 dashboard",
+		"enabled":       true,
+		"default_value": "false",
+		"gates": map[string]interface{}{
+			"percentage": map[string]interface{}{
+				"percentage": 50.0,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test feature flag: %v", err)
+	}
+
+	// Refresh feature flags
+	cmd = update(tea.KeyPressMsg{Text: "r"})
+	msg = cmd()
+	_ = update(msg)
+
+	if len(m.FeatureFlags) != 1 {
+		t.Fatalf("Expected 1 feature flag, got %d", len(m.FeatureFlags))
+	}
+	if m.FeatureFlags[0].Key != "beta_ui_dashboard" {
+		t.Fatalf("Expected flag key 'beta_ui_dashboard', got %q", m.FeatureFlags[0].Key)
+	}
+
+	// Test EvaluateFeatureFlag API
+	evalRes, err := m.Client.EvaluateFeatureFlag("beta_ui_dashboard", map[string]interface{}{"user_id": "user_abc"})
+	if err != nil {
+		t.Fatalf("Failed to evaluate feature flag: %v", err)
+	}
+	if evalRes == nil || evalRes.Reason == "" {
+		t.Fatalf("Expected valid evaluation result, got %v", evalRes)
+	}
+
+	// Toggle feature flag
+	cmd = update(tea.KeyPressMsg{Text: "space"})
+	if cmd != nil {
+		msg = cmd()
+		_ = update(msg)
+	}
+
+	// Delete feature flag
+	cmd = update(tea.KeyPressMsg{Text: "d"})
+	if cmd != nil {
+		msg = cmd()
+		_ = update(msg)
+	}
 }

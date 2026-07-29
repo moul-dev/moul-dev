@@ -35,6 +35,8 @@ const (
 	StateEmailTemplateEdit
 	StateTestEmailSend
 	StateFeatureFlags
+	StateFeatureFlagForm
+	StateFeatureFlagEval
 )
 
 // Model is the main state container for the moul TUI.
@@ -184,6 +186,22 @@ type Model struct {
 	EmailTemplateForm     *huh.Form
 	testEmailRecipient    string
 	TestEmailForm         *huh.Form
+
+	// Feature Flag form data
+	isEditingFlag        bool
+	flagFormKey          string
+	flagFormDescription  string
+	flagFormEnabled      bool
+	flagFormDefaultValue string
+	flagFormPercentage   string
+	flagFormActors       string
+	flagFormGroups       string
+	FeatureFlagForm      *huh.Form
+
+	flagEvalKey          string
+	flagEvalContextJSON  string
+	flagEvalResult       *EvaluationResultItem
+	FeatureFlagEvalForm  *huh.Form
 }
 
 // NewModel initializes the TUI model with default values.
@@ -319,6 +337,26 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Err = nil
 		}
 		m.State = StateRecordList
+		return m, nil
+
+	case featureFlagSavedMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.SuccessMsg = ""
+		} else {
+			m.Err = nil
+		}
+		m.State = StateFeatureFlags
+		return m, m.fetchFeatureFlags()
+
+	case featureFlagEvalMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.flagEvalResult = nil
+		} else {
+			m.Err = nil
+			m.flagEvalResult = msg.result
+		}
 		return m, nil
 
 	case setupStatusMsg:
@@ -485,7 +523,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		if m.State == StateMoulCreate && msg.String() == "esc" {
+		if (m.State == StateFeatureFlagForm || m.State == StateFeatureFlagEval) && (msg.String() == "esc" || msg.String() == "escape") {
+			m.State = StateFeatureFlags
+			m.Err = nil
+			m.flagEvalResult = nil
+			return m, nil
+		}
+
+		if m.State == StateFeatureFlags && (msg.String() == "esc" || msg.String() == "escape" || msg.String() == "left" || msg.String() == "h") {
+			m.State = StateDashboard
+			m.Err = nil
+			m.SuccessMsg = ""
+			return m, nil
+		}
+
+		if m.State == StateMoulCreate && (msg.String() == "esc" || msg.String() == "escape") {
 			switch m.moulWizardState {
 			case "add_field", "edit_select", "delete_select", "rules":
 				m.initMoulActionForm()
@@ -937,6 +989,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.State = StateRecordList
 			return m, nil
 		}
+
+	case StateFeatureFlagForm:
+		newForm, cmd := m.FeatureFlagForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.FeatureFlagForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.FeatureFlagForm.State == huh.StateCompleted {
+			return m, m.saveFeatureFlagForm()
+		} else if m.FeatureFlagForm.State == huh.StateAborted {
+			m.State = StateFeatureFlags
+			return m, nil
+		}
+
+	case StateFeatureFlagEval:
+		newForm, cmd := m.FeatureFlagEvalForm.Update(msg)
+		if f, ok := newForm.(*huh.Form); ok {
+			m.FeatureFlagEvalForm = f
+		}
+		cmds = append(cmds, cmd)
+
+		if m.FeatureFlagEvalForm.State == huh.StateCompleted {
+			return m, m.evaluateFeatureFlagCmd()
+		} else if m.FeatureFlagEvalForm.State == huh.StateAborted {
+			m.State = StateFeatureFlags
+			return m, nil
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -957,6 +1037,8 @@ func (m *Model) renderBreadcrumbs() string {
 		} else if idx == len(m.Mouls)+1 {
 			crumbs = append(crumbs, "System", "Visitor Analytics")
 		} else if idx == len(m.Mouls)+2 {
+			crumbs = append(crumbs, "System", "Feature Flags")
+		} else if idx == len(m.Mouls)+3 {
 			crumbs = append(crumbs, "System", "Settings")
 		}
 	case StateRecordList:
@@ -1005,6 +1087,17 @@ func (m *Model) renderBreadcrumbs() string {
 		crumbs = append(crumbs, "Collections", "Create Collection")
 	case StateSettings:
 		crumbs = append(crumbs, "System", "Settings")
+	case StateFeatureFlags:
+		crumbs = append(crumbs, "System", "Feature Flags")
+	case StateFeatureFlagForm:
+		crumbs = append(crumbs, "System", "Feature Flags")
+		if m.isEditingFlag {
+			crumbs = append(crumbs, "Edit Flag")
+		} else {
+			crumbs = append(crumbs, "New Flag")
+		}
+	case StateFeatureFlagEval:
+		crumbs = append(crumbs, "System", "Feature Flags", "Evaluate Flag")
 	}
 
 	var formatted []string
@@ -1060,6 +1153,12 @@ func (m *Model) View() tea.View {
 		content = m.viewAnalytics()
 	case StateMoulCreate:
 		content = m.viewMoulCreate()
+	case StateFeatureFlags:
+		content = m.viewFeatureFlagsPage()
+	case StateFeatureFlagForm:
+		content = m.viewFeatureFlagForm()
+	case StateFeatureFlagEval:
+		content = m.viewFeatureFlagEval()
 	case StateSettings:
 		content = m.viewSettings()
 	}
