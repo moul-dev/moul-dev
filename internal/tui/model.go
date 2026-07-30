@@ -16,6 +16,7 @@ import (
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/sysmon"
 )
 
 type AppState int
@@ -37,6 +38,7 @@ const (
 	StateFeatureFlags
 	StateFeatureFlagForm
 	StateFeatureFlagEval
+	StateSystemMonitor
 )
 
 // Model is the main state container for the moul TUI.
@@ -52,7 +54,10 @@ type Model struct {
 
 	// Navigation & Sidebar
 	Mouls              []schema.Moul
-	ActiveSidebarIndex int // 0 to len(mouls)-1 for collections, len(mouls) for workers, len(mouls)+1 for analytics, len(mouls)+2 for feature flags, len(mouls)+3 for settings
+	ActiveSidebarIndex int // 0 to len(mouls)-1 for collections, len(mouls) for workers, len(mouls)+1 for analytics, len(mouls)+2 for feature flags, len(mouls)+3 for sysmon, len(mouls)+4 for settings
+
+	// System Monitoring Screen
+	SystemStatus *sysmon.SystemStatusResponse
 
 	// Feature Flags Screen
 	FeatureFlags      []FeatureFlagItem
@@ -359,6 +364,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case systemMetricsMsg:
+		if msg.err != nil {
+			m.Err = msg.err
+			m.SystemStatus = nil
+		} else {
+			m.Err = nil
+			m.SystemStatus = msg.status
+		}
+		return m, nil
+
 	case setupStatusMsg:
 		if msg.err != nil {
 			m.Err = msg.err
@@ -585,7 +600,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.setupRootUserCmd()
 		}
 
-	case StateDashboard:
+	case StateDashboard, StateSystemMonitor:
 		cmd := m.updateDashboard(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
@@ -1027,7 +1042,7 @@ func (m *Model) renderBreadcrumbs() string {
 	crumbs = append(crumbs, "MOUL")
 
 	switch m.State {
-	case StateDashboard:
+	case StateDashboard, StateSystemMonitor:
 		crumbs = append(crumbs, "Dashboard")
 		idx := m.ActiveSidebarIndex
 		if idx >= 0 && idx < len(m.Mouls) {
@@ -1039,6 +1054,8 @@ func (m *Model) renderBreadcrumbs() string {
 		} else if idx == len(m.Mouls)+2 {
 			crumbs = append(crumbs, "System", "Feature Flags")
 		} else if idx == len(m.Mouls)+3 {
+			crumbs = append(crumbs, "System", "System Monitor")
+		} else if idx == len(m.Mouls)+4 {
 			crumbs = append(crumbs, "System", "Settings")
 		}
 	case StateRecordList:
@@ -1131,7 +1148,7 @@ func (m *Model) View() tea.View {
 		content = m.viewConnect()
 		v.SetContent(content)
 		return v
-	case StateDashboard:
+	case StateDashboard, StateSystemMonitor:
 		content = m.viewDashboard()
 	case StateRecordList:
 		if m.collectionActiveTab == 1 {

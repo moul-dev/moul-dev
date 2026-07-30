@@ -20,6 +20,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
+	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
@@ -168,6 +169,15 @@ func runStart() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// ── System Monitoring (Telegraf UDS) ────────────────────────────
+	socketPath := envy.Get("MOUL_TELEGRAF_SOCKET_PATH", "/tmp/moul-telegraf.sock")
+	sysmonCollector := sysmon.NewCollector(socketPath)
+	if err := sysmonCollector.Start(ctx); err != nil {
+		logger.Error("Failed to start system monitoring collector", "err", err)
+	} else {
+		defer sysmonCollector.Close()
+	}
+
 	workerEngine.Start(ctx)
 	defer workerEngine.Stop()
 
@@ -175,7 +185,7 @@ func runStart() {
 	analyticsEngine.StartFlusher(ctx)
 
 	// ── Echo server ─────────────────────────────────────────────────
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, adminKey, isDev, Version)
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, sysmonCollector, adminKey, isDev, Version)
 
 	// ── Start server with StartConfig for graceful shutdown ──────────
 	logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)

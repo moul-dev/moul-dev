@@ -53,6 +53,7 @@
 8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
 9. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
+11. **Telegraf Host System Monitoring**: High-performance Unix Domain Socket listener (`/tmp/moul-telegraf.sock`) receiving metric streams (CPU, memory, disk space, network, system load) from Telegraf for real-time observability in the TUI console and REST API.
 
 ---
 
@@ -60,6 +61,7 @@
 
 - **HTTP Framework**: [Echo v5](https://echo.labstack.com)
 - **Feature Flag SDK**: [OpenFeature Go SDK](https://github.com/open-feature/go-sdk) (with `fun_with_flags` gate engine)
+- **Host System Monitoring**: [Telegraf](https://www.influxdata.com/time-series-platform/telegraf/) over Unix Domain Sockets (JSON over UDS stream)
 - **Database Abstraction**: [pocketbase/dbx](https://github.com/pocketbase/dbx)
 - **SQLite Driver**: [modernc.org/sqlite](https://github.com/modernc/sqlite) (Pure Go, CGO-free)
 - **TUI Framework**: [Charm Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
@@ -108,6 +110,24 @@ For active local development with instant code recompilation on change:
 make dev
 # Runs air using .air.toml
 ```
+
+### Local Telegraf Host System Monitoring
+
+To stream live host metrics (CPU %, Memory %, Disk space, System load, Network I/O) into `moul-dev` and view them in the `moul` TUI console:
+
+1. **Install Telegraf** *(macOS via Homebrew)*:
+   ```bash
+   brew install telegraf
+   ```
+
+2. **Start Telegraf agent** *(in a separate terminal window while `make run` is active)*:
+   ```bash
+   make telegraf
+   # Or directly:
+   telegraf --config assets/telegraf.conf
+   ```
+
+Once Telegraf connects to `/tmp/moul-telegraf.sock`, the status badge in the TUI System Monitor view automatically changes to `🟢 TELEGRAF SOCKET ACTIVE`.
 
 ### Local S3 Storage (MinIO)
 

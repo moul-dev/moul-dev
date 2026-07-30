@@ -60,6 +60,9 @@ func TestClientInitialization(t *testing.T) {
 }
 
 func TestConfigLoadSave(t *testing.T) {
+	os.Setenv("MOUL_TEST_ENV", "true")
+	useFallback = true
+
 	// Temporarily override user home dir for config testing to avoid polluting actual user config
 	tempDir, err := os.MkdirTemp("", "moul-tui-test")
 	if err != nil {

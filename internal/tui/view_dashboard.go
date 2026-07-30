@@ -22,10 +22,10 @@ func (m *Model) updateDashboard(msg tea.Msg) tea.Cmd {
 			if m.ActiveSidebarIndex > 0 {
 				m.ActiveSidebarIndex--
 			} else {
-				m.ActiveSidebarIndex = len(m.Mouls) + 3 // wrap to bottom
+				m.ActiveSidebarIndex = len(m.Mouls) + 4 // wrap to bottom
 			}
 		case "down", "j":
-			totalItems := len(m.Mouls) + 4
+			totalItems := len(m.Mouls) + 5
 			if m.ActiveSidebarIndex < totalItems-1 {
 				m.ActiveSidebarIndex++
 			} else {
@@ -87,6 +87,9 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 		m.SelectedFlagIndex = 0
 		return m.fetchFeatureFlags()
 	} else if idx == len(m.Mouls)+3 {
+		m.State = StateSystemMonitor
+		return m.fetchSystemMetrics()
+	} else if idx == len(m.Mouls)+4 {
 		return m.fetchSettings()
 	}
 	return nil
@@ -118,6 +121,8 @@ func (m *Model) viewDashboard() string {
 	} else if idx == len(m.Mouls)+2 {
 		rightContent = m.viewFeatureFlags(rightWidth, rightHeight)
 	} else if idx == len(m.Mouls)+3 {
+		rightContent = m.viewDashboardSysmonInfo(rightWidth)
+	} else if idx == len(m.Mouls)+4 {
 		rightContent = m.viewDashboardSettingsInfo(rightWidth)
 	}
 
@@ -201,8 +206,18 @@ func (m *Model) renderSidebar(width int) string {
 	}
 	s.WriteString("\n")
 
+	// System Monitor
+	sysmonIdx := len(m.Mouls) + 3
+	sysmonLine := " 🖥️ System Monitor"
+	if m.ActiveSidebarIndex == sysmonIdx {
+		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(sysmonLine))
+	} else {
+		s.WriteString(SidebarItemInactiveStyle.Render(sysmonLine))
+	}
+	s.WriteString("\n")
+
 	// Settings
-	settingsIdx := len(m.Mouls) + 3
+	settingsIdx := len(m.Mouls) + 4
 	settingsLine := " ⚙️ Settings"
 	if m.ActiveSidebarIndex == settingsIdx {
 		s.WriteString(SidebarItemActiveStyle.Width(width - 2).Render(settingsLine))

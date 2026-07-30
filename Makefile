@@ -3,11 +3,15 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui
+.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui telegraf
 
 # Start the Echo server locally
 run:
 	go run cmd/moul-dev/main.go start
+
+# Run Telegraf agent locally streaming metrics to /tmp/moul-telegraf.sock
+telegraf:
+	telegraf --config assets/telegraf.conf
 
 # Restore database from Litestream S3 backup
 restore:
@@ -24,11 +28,11 @@ build:
 
 # Run the Go unit and integration tests
 test-go:
-	GOTOOLCHAIN=go1.25.8 go test -v -cover ./internal/...
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.25.8 go test -v -cover ./internal/...
 
 # Run tests and output coverage report
 test-coverage:
-	GOTOOLCHAIN=go1.25.8 go test -v -coverprofile=coverage.out ./internal/...
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.25.8 go test -v -coverprofile=coverage.out ./internal/...
 	GOTOOLCHAIN=go1.25.8 go tool cover -func=coverage.out
 
 # Remove SQLite database

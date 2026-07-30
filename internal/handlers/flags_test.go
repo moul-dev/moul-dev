@@ -26,7 +26,7 @@ func TestFeatureFlagsAPI(t *testing.T) {
 	analyticsEngine, _ := analytics.NewEngine(dbConn, "")
 
 	adminKey := "test-secret-key"
-	router := handlers.NewRouter(dbConn, nil, analyticsEngine, nil, adminKey, true)
+	router := handlers.NewRouter(dbConn, nil, analyticsEngine, nil, nil, adminKey, true)
 	server := httptest.NewServer(router)
 	defer server.Close()
 

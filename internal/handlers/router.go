@@ -12,12 +12,13 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/pocketbase/dbx"
 )
 
 // NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
-func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, adminKey string, isDev bool, version ...string) *echo.Echo {
+func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, adminKey string, isDev bool, version ...string) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
@@ -176,6 +177,12 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// 5. Request tracking log (JWT-protected)
 	e.GET("/api/requests", requestsHandler.ListRequests)
 	e.GET("/api/requests/:id", requestsHandler.GetRequest)
+
+	// 6. System monitoring metrics (JWT/Admin-protected)
+	sysmonHandler := NewSysmonHandler(sysmonCollector)
+	sysmonGroup := e.Group("/api/system/metrics", middleware.RequireAuthOrAdmin(adminKey))
+	sysmonGroup.GET("", sysmonHandler.GetMetrics)
+	sysmonGroup.POST("", sysmonHandler.PushMetrics)
 
 	return e
 }

@@ -108,7 +108,7 @@ func TestTUIE2E(t *testing.T) {
 	adminKey := "e2e-test-admin-key"
 	auth.InitJWT("e2e-test-jwt-secret-key-123456789")
 
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, nil, adminKey, true)
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, nil, nil, adminKey, true)
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
@@ -346,7 +346,12 @@ func TestTUIE2E(t *testing.T) {
 
 	_ = update(tea.KeyPressMsg{Text: "down"})
 	if m.ActiveSidebarIndex != 4 {
-		t.Fatalf("Expected ActiveSidebarIndex 4 (Settings), got %d", m.ActiveSidebarIndex)
+		t.Fatalf("Expected ActiveSidebarIndex 4 (System Monitor), got %d", m.ActiveSidebarIndex)
+	}
+
+	_ = update(tea.KeyPressMsg{Text: "down"})
+	if m.ActiveSidebarIndex != 5 {
+		t.Fatalf("Expected ActiveSidebarIndex 5 (Settings), got %d", m.ActiveSidebarIndex)
 	}
 
 	_ = update(tea.KeyPressMsg{Text: "down"})
@@ -355,12 +360,23 @@ func TestTUIE2E(t *testing.T) {
 	}
 
 	_ = update(tea.KeyPressMsg{Text: "up"})
-	if m.ActiveSidebarIndex != 4 {
-		t.Fatalf("Expected ActiveSidebarIndex to wrap to 4, got %d", m.ActiveSidebarIndex)
+	if m.ActiveSidebarIndex != 5 {
+		t.Fatalf("Expected ActiveSidebarIndex to wrap to 5, got %d", m.ActiveSidebarIndex)
+	}
+
+	// ── STEP 6b: System Monitor View Selection ───────────────────────
+	m.ActiveSidebarIndex = 4 // System Monitor
+	cmd = update(tea.KeyPressMsg{Text: "enter"})
+	if m.State != StateSystemMonitor {
+		t.Fatalf("Expected state StateSystemMonitor, got %d", m.State)
+	}
+	sysView := m.View().Content
+	if sysView == "" || strings.TrimSpace(sysView) == "" {
+		t.Fatal("System Monitor view returned empty screen")
 	}
 
 	// ── STEP 7: Settings Configuration ───────────────────────────────
-	// Currently at index 4 (Settings)
+	m.ActiveSidebarIndex = 5 // Settings
 	cmd = update(tea.KeyPressMsg{Text: "enter"})
 	if cmd == nil {
 		t.Fatal("Expected fetchSettings command, got nil")

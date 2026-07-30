@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/sysmon"
 )
 
 // Client wraps all communication with the moul-dev API.
@@ -350,6 +351,13 @@ func (c *Client) EvaluateFeatureFlag(key string, evalCtx map[string]interface{})
 	var res EvaluationResultItem
 	path := fmt.Sprintf("/api/feature-flags/%s/eval", key)
 	err := c.request("POST", path, payload, &res)
+	return &res, err
+}
+
+// GetSystemMetrics fetches host system metrics telemetry from the server.
+func (c *Client) GetSystemMetrics() (*sysmon.SystemStatusResponse, error) {
+	var res sysmon.SystemStatusResponse
+	err := c.request("GET", "/api/system/metrics", nil, &res)
 	return &res, err
 }
 
