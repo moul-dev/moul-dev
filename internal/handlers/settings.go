@@ -6,12 +6,14 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/pocketbase/dbx"
 )
 
 type SettingsHandler struct {
-	DB     *dbx.DB
-	Mailer *mailer.Mailer
+	DB         *dbx.DB
+	Mailer     *mailer.Mailer
+	TLSManager *tls.Manager
 }
 
 func NewSettingsHandler(dbConn *dbx.DB) *SettingsHandler {
@@ -74,6 +76,12 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"email_domain":                   true,
 		"email_region":                   true,
 		"email_endpoint":                 true,
+		"tls_enabled":                    true,
+		"tls_domains":                    true,
+		"tls_email":                      true,
+		"tls_use_staging":                true,
+		"tls_http_port":                  true,
+		"tls_https_port":                 true,
 	}
 
 	tx, err := h.DB.Begin()
@@ -97,11 +105,14 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit settings: "+err.Error())
 	}
 
-	// Reload rate limiter middleware configuration and mailer service
+	// Reload rate limiter middleware configuration, mailer service, and TLS manager
 	_ = middleware.ReloadRateLimiter(h.DB)
 	_ = middleware.ReloadRootIPs(h.DB)
 	if h.Mailer != nil {
 		_ = h.Mailer.Reload(h.DB)
+	}
+	if h.TLSManager != nil {
+		_ = h.TLSManager.Reload(h.DB)
 	}
 
 	// Return updated settings

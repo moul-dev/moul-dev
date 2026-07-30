@@ -36,7 +36,7 @@ func TestEmailSettingsAndUpdate(t *testing.T) {
 		t.Fatalf("Failed to initialize mailer: %v", err)
 	}
 
-	e := handlers.NewRouter(dbConn, nil, analyticsEngine, mailService, nil, adminKey, true)
+	e := handlers.NewRouter(dbConn, nil, analyticsEngine, mailService, nil, nil, adminKey, true)
 	server := httptest.NewServer(e)
 	defer server.Close()
 
@@ -143,7 +143,7 @@ func TestSendTestEmailHandler(t *testing.T) {
 		t.Fatalf("Failed to initialize mailer: %v", err)
 	}
 
-	e := handlers.NewRouter(dbConn, nil, analyticsEngine, mailService, nil, adminKey, true)
+	e := handlers.NewRouter(dbConn, nil, analyticsEngine, mailService, nil, nil, adminKey, true)
 	server := httptest.NewServer(e)
 	defer server.Close()
 

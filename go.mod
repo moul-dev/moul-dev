@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
 	github.com/benbjohnson/litestream v0.5.13
+	github.com/caddyserver/certmagic v0.25.4
 	github.com/charmbracelet/log v1.0.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/expr-lang/expr v1.17.8
@@ -50,6 +51,7 @@ require (
 	github.com/aws/smithy-go v1.27.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/caddyserver/zerossl v0.1.5 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -78,7 +80,8 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jalaali/go-jalaali v0.0.0-20210801064154-80525e88d958 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/magefile/mage v1.14.0 // indirect
@@ -86,6 +89,8 @@ require (
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
+	github.com/mholt/acmez/v3 v3.1.6 // indirect
+	github.com/miekg/dns v1.1.72 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
@@ -107,13 +112,19 @@ require (
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.uber.org/mock v0.6.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
+	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	modernc.org/libc v1.73.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

@@ -21,6 +21,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
+	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/internal/updater"
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
@@ -209,18 +210,44 @@ func runStart() {
 	// Start Analytics Request Flusher
 	analyticsEngine.StartFlusher(ctx)
 
-	// ── Echo server ─────────────────────────────────────────────────
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, sysmonCollector, adminKey, isDev, Version)
-
-	// ── Start server with StartConfig for graceful shutdown ──────────
-	logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
-	sc := echo.StartConfig{
-		Address:         ":8090",
-		GracefulTimeout: 10 * time.Second,
+	// ── TLS / CertMagic Manager ──────────────────────────────────────
+	tlsManager, err := tls.NewManager(dbConn)
+	if err != nil {
+		logger.Error("Failed to initialize TLS Manager", "err", err)
+	} else if tlsManager.IsEnabled() {
+		if err := tlsManager.StartHTTPListener(ctx); err != nil {
+			logger.Error("Failed to start TLS HTTP listener", "err", err)
+		}
 	}
 
-	if err := sc.Start(ctx, e); err != nil && err != http.ErrServerClosed {
-		logger.Fatal("Server failed to start", "err", err)
+	// ── Echo server ─────────────────────────────────────────────────
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, sysmonCollector, tlsManager, adminKey, isDev, Version)
+
+	// ── Start server with StartConfig for graceful shutdown ──────────
+	if tlsManager != nil && tlsManager.IsEnabled() {
+		tlsCfg, err := tlsManager.GetTLSConfig()
+		if err != nil {
+			logger.Fatal("Failed to configure TLS for Echo server", "err", err)
+		}
+		addr := ":" + tlsManager.HTTPSPort()
+		logger.Info("Starting moul-dev engine server (HTTPS)", "version", Version, "addr", "https://localhost"+addr, "env", moulEnv)
+		sc := echo.StartConfig{
+			Address:         addr,
+			TLSConfig:       tlsCfg,
+			GracefulTimeout: 10 * time.Second,
+		}
+		if err := sc.StartTLS(ctx, e, "", ""); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server failed to start TLS", "err", err)
+		}
+	} else {
+		logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
+		sc := echo.StartConfig{
+			Address:         ":8090",
+			GracefulTimeout: 10 * time.Second,
+		}
+		if err := sc.Start(ctx, e); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server failed to start", "err", err)
+		}
 	}
 
 	logger.Info("Server stopped gracefully")

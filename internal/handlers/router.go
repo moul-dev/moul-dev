@@ -13,12 +13,13 @@ import (
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
+	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/pocketbase/dbx"
 )
 
 // NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
-func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, adminKey string, isDev bool, version ...string) *echo.Echo {
+func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, tlsManager *tls.Manager, adminKey string, isDev bool, version ...string) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
@@ -92,6 +93,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	requestsHandler := NewRequestsHandler(dbConn)
 	settingsHandler := NewSettingsHandler(dbConn)
 	settingsHandler.Mailer = mailService
+	settingsHandler.TLSManager = tlsManager
 	uploadHandler := NewUploadHandler(dbConn)
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)

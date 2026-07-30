@@ -123,6 +123,19 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 
 
 
+	// Create meta-table _certmagic
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _certmagic (
+			key TEXT PRIMARY KEY,
+			value BLOB,
+			modified TEXT NOT NULL,
+			is_dir INTEGER NOT NULL DEFAULT 0
+		);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _certmagic table: %w", err)
+	}
+
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
 		"file_s3_enabled":                "false",
@@ -153,6 +166,12 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		"email_domain":                   "",
 		"email_region":                   "us-east-1",
 		"email_endpoint":                 "",
+		"tls_enabled":                    "false",
+		"tls_domains":                    "",
+		"tls_email":                      "",
+		"tls_use_staging":                "false",
+		"tls_http_port":                  "80",
+		"tls_https_port":                 "443",
 	}
 	for k, v := range defaultSettings {
 		var exists int
