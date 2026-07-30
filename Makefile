@@ -3,7 +3,7 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui telegraf
+.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui telegraf web-dev web-build web-install
 
 # Start the Echo server locally
 run:
@@ -244,4 +244,14 @@ test-tui:
 	@mkdir -p tmp
 	MOUL_TEST_ARTIFACT_DIR=$(shell pwd)/tmp go test -v ./internal/tui/...
 
+# Run website development server
+web-dev:
+	bun --cwd website dev
 
+# Build production website
+web-build:
+	bun --cwd website build
+
+# Install website dependencies
+web-install:
+	bun --cwd website install

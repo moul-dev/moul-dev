@@ -42,3 +42,11 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+
+# Website
+website/node_modules/
+website/dist/
+website/.source/
+website/.wrangler/
+website/.env.local
+
