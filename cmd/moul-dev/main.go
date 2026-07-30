@@ -21,6 +21,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
+	"github.com/moul-dev/moul-dev/internal/updater"
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
@@ -34,8 +35,10 @@ func printUsage() {
 	fmt.Println("Commands:")
 	fmt.Println("  start    Start the moul-dev engine server (default)")
 	fmt.Println("  restore  Restore database from Litestream S3 backup")
+	fmt.Println("  update   Update moul-dev binary to the latest release")
 	fmt.Println()
 	fmt.Println("Options:")
+	fmt.Println("  -f, --force             Force update even if already at latest version")
 	fmt.Println("  -v, --version, version  Print version information and exit")
 	fmt.Println("  -h, --help, help        Show help and usage instructions")
 }
@@ -51,6 +54,8 @@ func main() {
 		runStart()
 	case "restore":
 		runRestore()
+	case "update", "-u", "-update", "--update":
+		runUpdate()
 	case "-v", "-version", "--version", "version":
 		fmt.Printf("moul-dev version %s\n", Version)
 	case "-h", "-help", "--help", "help":
@@ -58,6 +63,26 @@ func main() {
 	default:
 		fmt.Printf("Unknown command: %s\n\n", cmd)
 		printUsage()
+		os.Exit(1)
+	}
+}
+
+func runUpdate() {
+	force := false
+	for _, arg := range os.Args[2:] {
+		if arg == "-f" || arg == "--force" {
+			force = true
+		}
+	}
+
+	opts := updater.Options{
+		AppName:    "moul-dev",
+		CurrentVer: Version,
+		Force:      force,
+	}
+
+	if err := updater.Update(opts); err != nil {
+		fmt.Fprintf(os.Stderr, "Error updating moul-dev: %v\n", err)
 		os.Exit(1)
 	}
 }
