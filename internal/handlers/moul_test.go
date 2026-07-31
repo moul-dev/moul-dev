@@ -437,14 +437,90 @@ func TestHandlersEdgeCases(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for ListRecords, got %d", resp.StatusCode)
 	}
-	var postsList []map[string]interface{}
-	parseJSON(t, resp, &postsList)
+	var postsResult struct {
+		Page       int                      `json:"page"`
+		PerPage    int                      `json:"perPage"`
+		TotalItems int                      `json:"totalItems"`
+		TotalPages int                      `json:"totalPages"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &postsResult)
 	// Cheap Post (price 10) should be filtered out by list rule `price > 50`.
 	// Expensive Post (price 100) should be included.
-	if len(postsList) != 1 {
-		t.Errorf("Expected 1 post in list, got %d. List: %v", len(postsList), postsList)
-	} else if postsList[0]["id"] != expensivePostID {
-		t.Errorf("Expected post ID %s, got %v", expensivePostID, postsList[0]["id"])
+	if postsResult.TotalItems != 1 || len(postsResult.Items) != 1 {
+		t.Errorf("Expected 1 post in list, got totalItems=%d, items len=%d", postsResult.TotalItems, len(postsResult.Items))
+	} else if postsResult.Items[0]["id"] != expensivePostID {
+		t.Errorf("Expected post ID %s, got %v", expensivePostID, postsResult.Items[0]["id"])
+	}
+
+	// --- 6b. Server-side Filtering, Sorting, and Pagination ---
+	// Create another post matching ListRule (price > 50)
+	midPostPayload := map[string]interface{}{
+		"title":     "Mid Post",
+		"price":     75,
+		"active":    true,
+		"tags":      []string{"mid"},
+		"author_id": userID,
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", midPostPayload, token)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for Mid Post creation, got %d", resp.StatusCode)
+	}
+
+	// Filter query param: filter="price >= 80"
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?filter=price>=80", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for filtered ListRecords, got %d", resp.StatusCode)
+	}
+	var filteredRes struct {
+		TotalItems int                      `json:"totalItems"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &filteredRes)
+	if filteredRes.TotalItems != 1 || len(filteredRes.Items) != 1 || filteredRes.Items[0]["id"] != expensivePostID {
+		t.Errorf("Expected expensive post only, got totalItems=%d", filteredRes.TotalItems)
+	}
+
+	// Sorting query param: sort="-price"
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?sort=-price", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for sorted ListRecords, got %d", resp.StatusCode)
+	}
+	var sortedRes struct {
+		Items []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &sortedRes)
+	if len(sortedRes.Items) != 2 || sortedRes.Items[0]["id"] != expensivePostID {
+		t.Errorf("Expected expensive post first when sorting by -price, got %v", sortedRes.Items)
+	}
+
+	// Pagination query param: page=1&perPage=1
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?sort=-price&page=1&perPage=1", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for page 1, got %d", resp.StatusCode)
+	}
+	var page1Res struct {
+		Page       int                      `json:"page"`
+		PerPage    int                      `json:"perPage"`
+		TotalItems int                      `json:"totalItems"`
+		TotalPages int                      `json:"totalPages"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &page1Res)
+	if page1Res.Page != 1 || page1Res.PerPage != 1 || page1Res.TotalItems != 2 || page1Res.TotalPages != 2 || len(page1Res.Items) != 1 {
+		t.Errorf("Unexpected page 1 result: %+v", page1Res)
+	}
+
+	// Invalid filter field -> 400 Bad Request
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?filter=nonexistent_col=1", "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected 400 Bad Request for invalid filter field, got %d", resp.StatusCode)
+	}
+
+	// Invalid sort field -> 400 Bad Request
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?sort=nonexistent_col", "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected 400 Bad Request for invalid sort field, got %d", resp.StatusCode)
 	}
 
 	// --- 7. GetRecord Edge Cases ---

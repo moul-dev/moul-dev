@@ -120,15 +120,53 @@ func (c *Client) DeleteMoul(name string) error {
 	return c.request("DELETE", path, nil, nil)
 }
 
+// RecordListResult represents the paginated response for listing records.
+type RecordListResult struct {
+	Page       int                      `json:"page"`
+	PerPage    int                      `json:"perPage"`
+	TotalItems int                      `json:"totalItems"`
+	TotalPages int                      `json:"totalPages"`
+	Items      []map[string]interface{} `json:"items"`
+}
+
+// ListRecordsPaginated fetches paginated records of a specific moul with filtering and sorting.
+func (c *Client) ListRecordsPaginated(moulName string, page, perPage int, sort, filter string, expand ...string) (*RecordListResult, error) {
+	path := fmt.Sprintf("/api/moul/%s/records", moulName)
+	var params []string
+	if page > 0 {
+		params = append(params, fmt.Sprintf("page=%d", page))
+	}
+	if perPage > 0 {
+		params = append(params, fmt.Sprintf("perPage=%d", perPage))
+	}
+	if sort != "" {
+		params = append(params, fmt.Sprintf("sort=%s", sort))
+	}
+	if filter != "" {
+		params = append(params, fmt.Sprintf("filter=%s", filter))
+	}
+	if len(expand) > 0 {
+		params = append(params, fmt.Sprintf("expand=%s", strings.Join(expand, ",")))
+	}
+	if len(params) > 0 {
+		path = fmt.Sprintf("%s?%s", path, strings.Join(params, "&"))
+	}
+
+	var res RecordListResult
+	err := c.request("GET", path, nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // ListRecords fetches records of a specific moul.
 func (c *Client) ListRecords(moulName string, expand ...string) ([]map[string]interface{}, error) {
-	var records []map[string]interface{}
-	path := fmt.Sprintf("/api/moul/%s/records", moulName)
-	if len(expand) > 0 {
-		path = fmt.Sprintf("%s?expand=%s", path, strings.Join(expand, ","))
+	res, err := c.ListRecordsPaginated(moulName, 1, 500, "", "", expand...)
+	if err != nil {
+		return nil, err
 	}
-	err := c.request("GET", path, nil, &records)
-	return records, err
+	return res.Items, nil
 }
 
 // GetRecord fetches a single record of a specific moul by ID.

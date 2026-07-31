@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -459,7 +460,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, recordMap)
 }
 
-// ListRecords queries records filtering dynamically by auth listRules.
+// ListRecords queries records using server-side filtering, sorting, and pagination.
 func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	moulName := c.Param("name")
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -471,37 +472,137 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	// Fetch all records
+	authUser := middleware.GetAuthRecord(c)
+	reqCtx := buildRequestContext(c, nil)
+
+	// Extract pagination params
+	page := 1
+	if pageStr := c.QueryParam("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 30
+	if perPageStr := c.QueryParam("perPage"); perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil && pp > 0 {
+			perPage = pp
+		}
+	}
+	if perPage > 500 {
+		perPage = 500
+	}
+
+	// 1. Build ListRule SQL
+	var ruleSQL string
+	var ruleParams dbx.Params
+	isRootUser := authUser != nil && authUser["moul"] == "_rootUsers"
+	if moul.Rules.ListRule != "" && !isRootUser {
+		rSQL, rParams, err := rules.BuildFilterSQL(moul.Rules.ListRule, moul, authUser, reqCtx)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ListRule expression: "+err.Error())
+		}
+		ruleSQL = rSQL
+		ruleParams = rParams
+	}
+
+	// 2. Build Filter Param SQL
+	var filterSQL string
+	var filterParams dbx.Params
+	filterParam := c.QueryParam("filter")
+	if filterParam != "" {
+		fSQL, fParams, err := rules.BuildFilterSQL(filterParam, moul, authUser, reqCtx)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid filter parameter: "+err.Error())
+		}
+		filterSQL = fSQL
+		filterParams = fParams
+	}
+
+	// Combine WHERE expressions and merge params
+	combinedParams := make(dbx.Params)
+	var whereSQLs []string
+	if ruleSQL != "" {
+		whereSQLs = append(whereSQLs, fmt.Sprintf("(%s)", ruleSQL))
+		for k, v := range ruleParams {
+			combinedParams[k] = v
+		}
+	}
+	if filterSQL != "" {
+		whereSQLs = append(whereSQLs, fmt.Sprintf("(%s)", filterSQL))
+		for k, v := range filterParams {
+			combinedParams[k] = v
+		}
+	}
+
+	var fullWhereSQL string
+	if len(whereSQLs) > 0 {
+		fullWhereSQL = strings.Join(whereSQLs, " AND ")
+	}
+
+	// 3. Build Sort SQL
+	sortParam := c.QueryParam("sort")
+	sortExprs, err := rules.BuildSortSQL(sortParam, moul)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid sort parameter: "+err.Error())
+	}
+	if len(sortExprs) == 0 {
+		if rules.IsValidField("id", moul) {
+			sortExprs = []string{"id ASC"}
+		}
+	}
+
+	// 4. Count matching total records
+	countSelect := h.DB.Select("COUNT(1)").From(moulName)
+	if fullWhereSQL != "" {
+		countSelect.Where(dbx.NewExp(fullWhereSQL, combinedParams))
+	}
+
+	var totalItems int
+	err = countSelect.Row(&totalItems)
+	if err != nil && err != sql.ErrNoRows {
+		logger.Error("Failed to count records", "moul", moulName, "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	totalPages := 0
+	if totalItems > 0 {
+		totalPages = int(math.Ceil(float64(totalItems) / float64(perPage)))
+	}
+
+	// 5. Query paginated records
+	dataSelect := h.DB.Select("*").From(moulName)
+	if fullWhereSQL != "" {
+		dataSelect.Where(dbx.NewExp(fullWhereSQL, combinedParams))
+	}
+	if len(sortExprs) > 0 {
+		dataSelect.OrderBy(sortExprs...)
+	}
+	offset := (page - 1) * perPage
+	dataSelect.Limit(int64(perPage)).Offset(int64(offset))
+
 	var rawRecords []dbx.NullStringMap
-	err = h.DB.Select("*").From(moulName).All(&rawRecords)
+	err = dataSelect.All(&rawRecords)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Error("Failed to list records", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	authUser := middleware.GetAuthRecord(c)
-	var authorizedRecords []map[string]interface{}
+	items := make([]map[string]interface{}, 0, len(rawRecords))
 	expandParam := c.QueryParam("expand")
-
 	for _, rec := range rawRecords {
 		record := normalizeRecord(moul, nullStringMapToMap(rec))
 		h.expandRelations(moul, record, expandParam)
-		var allowed bool
-		var ruleErr error
-		if authUser != nil && authUser["moul"] == "_rootUsers" {
-			allowed = true
-		} else {
-			allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.ListRule, authUser, record, buildRequestContext(c, nil))
-		}
-		if ruleErr != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
-		}
-		if allowed {
-			authorizedRecords = append(authorizedRecords, record)
-		}
+		items = append(items, record)
 	}
 
-	return c.JSON(http.StatusOK, authorizedRecords)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"page":       page,
+		"perPage":    perPage,
+		"totalItems": totalItems,
+		"totalPages": totalPages,
+		"items":      items,
+	})
 }
 
 // GetRecord returns a single record by ID.
