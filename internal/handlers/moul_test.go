@@ -296,7 +296,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// --- 4. AuthWithPassword Edge Cases ---
-	// Moul not found
+	// Not found
 	resp = postJSON(t, client, server.URL+"/api/moul/nonexistent/auth-with-password", map[string]interface{}{"identity": "admin", "password": "123"}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for auth-with-password on nonexistent moul, got %d", resp.StatusCode)
@@ -360,7 +360,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// --- 5. CreateRecord Edge Cases ---
-	// Moul not found
+	// Not found
 	resp = postJSON(t, client, server.URL+"/api/moul/nonexistent/records", map[string]interface{}{}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for CreateRecord on nonexistent moul, got %d", resp.StatusCode)
@@ -524,7 +524,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// --- 7. GetRecord Edge Cases ---
-	// Moul not found
+	// Not found
 	resp = getJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for GetRecord on nonexistent moul, got %d", resp.StatusCode)
@@ -546,7 +546,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// --- 8. UpdateRecord Edge Cases ---
-	// Moul not found
+	// Not found
 	resp = patchJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", map[string]interface{}{}, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for UpdateRecord on nonexistent moul, got %d", resp.StatusCode)
@@ -587,7 +587,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	}
 
 	// --- 9. DeleteRecord Edge Cases ---
-	// Moul not found
+	// Not found
 	resp = deleteJSON(t, client, server.URL+"/api/moul/nonexistent/records/1", "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for DeleteRecord on nonexistent moul, got %d", resp.StatusCode)

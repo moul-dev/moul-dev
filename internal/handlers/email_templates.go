@@ -45,7 +45,7 @@ func (h *AuthHandler) GetEmailTemplates(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for email templates", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -69,7 +69,7 @@ func (h *AuthHandler) UpdateEmailTemplates(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for email templates update", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -103,7 +103,7 @@ func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for test email", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")

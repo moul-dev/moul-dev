@@ -105,7 +105,7 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")
@@ -138,7 +138,7 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	origMoul, err := db.LoadMoulByName(h.DB, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")

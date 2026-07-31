@@ -41,7 +41,7 @@ func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for auth", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -122,7 +122,7 @@ func (h *AuthHandler) RequestPasswordReset(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for password reset request", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -248,7 +248,7 @@ func (h *AuthHandler) ConfirmPasswordReset(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for password reset confirm", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -330,7 +330,7 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul for token refresh", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")

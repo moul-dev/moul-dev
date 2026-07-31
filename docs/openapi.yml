@@ -272,7 +272,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
           content:
             application/json:
               schema:
@@ -334,7 +334,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
           content:
             application/json:
               schema:
@@ -368,7 +368,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
           content:
             application/json:
               schema:
@@ -404,7 +404,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
     put:
@@ -440,7 +440,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -494,7 +494,7 @@ paths:
         '401':
           $ref: '#/components/responses/401Unauthorized'
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -706,7 +706,7 @@ paths:
         '400':
           description: Invalid credentials or collection is not an auth collection.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -751,7 +751,7 @@ paths:
         '400':
           description: Missing email or invalid collection type.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -803,7 +803,7 @@ paths:
         '400':
           description: Invalid/expired token or password complexity validation error.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -832,7 +832,7 @@ paths:
         '401':
           description: Unauthorized or revoked token.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -865,7 +865,7 @@ paths:
         '400':
           description: Missing or malformed Authorization header.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
 
@@ -1412,7 +1412,7 @@ paths:
         '400':
           description: Rule evaluation error or bad request.
         '404':
-          description: Moul not found.
+          description: Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
     post:
@@ -1502,7 +1502,7 @@ paths:
         '403':
           description: Forbidden.
         '404':
-          description: Record or Moul not found.
+          description: Record or Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
     patch:
@@ -1548,7 +1548,7 @@ paths:
         '403':
           description: Forbidden.
         '404':
-          description: Record or Moul not found.
+          description: Record or Not found.
         '500':
           $ref: '#/components/responses/500InternalError'
     delete:

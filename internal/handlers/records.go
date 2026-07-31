@@ -58,7 +58,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -466,7 +466,7 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -613,7 +613,7 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -661,7 +661,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
@@ -899,7 +899,7 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		logger.Error("Failed to load moul", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")

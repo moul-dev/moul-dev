@@ -151,7 +151,7 @@ func (h *AuthHandler) PasskeyRegisterOptions(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -253,7 +253,7 @@ func (h *AuthHandler) PasskeySignupOptions(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -416,7 +416,7 @@ func (h *AuthHandler) PasskeyLoginOptions(c *echo.Context) error {
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Moul not found")
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
