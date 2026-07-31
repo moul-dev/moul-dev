@@ -97,6 +97,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	uploadHandler := NewUploadHandler(dbConn)
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)
+	webhookHandler := NewWebhookHandler(dbConn)
 
 	// ── API Routes ──────────────────────────────────────────────────
 
@@ -131,6 +132,14 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	adminGroup.GET("/:name/email-templates", authHandler.GetEmailTemplates)
 	adminGroup.PUT("/:name/email-templates", authHandler.UpdateEmailTemplates)
 	adminGroup.POST("/:name/email-templates/test", authHandler.SendTestEmail)
+	adminGroup.GET("/:name/webhooks", webhookHandler.ListWebhooks)
+	adminGroup.POST("/:name/webhooks", webhookHandler.CreateWebhook)
+	adminGroup.GET("/:name/webhooks/:id", webhookHandler.GetWebhook)
+	adminGroup.PATCH("/:name/webhooks/:id", webhookHandler.UpdateWebhook)
+	adminGroup.PUT("/:name/webhooks/:id", webhookHandler.UpdateWebhook)
+	adminGroup.DELETE("/:name/webhooks/:id", webhookHandler.DeleteWebhook)
+	adminGroup.POST("/:name/webhooks/:id/test", webhookHandler.TestWebhook)
+	adminGroup.POST("/:name/webhooks/test", webhookHandler.TestWebhook)
 
 	// Admin settings management (Admin-protected)
 	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAuthOrAdmin(adminKey))

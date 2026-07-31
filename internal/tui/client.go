@@ -399,5 +399,43 @@ func (c *Client) GetSystemMetrics() (*sysmon.SystemStatusResponse, error) {
 	return &res, err
 }
 
+// ListWebhooks retrieves all configured webhooks for a collection.
+func (c *Client) ListWebhooks(moulName string) ([]schema.Webhook, error) {
+	var webhooks []schema.Webhook
+	path := fmt.Sprintf("/api/moul/%s/webhooks", moulName)
+	err := c.request("GET", path, nil, &webhooks)
+	return webhooks, err
+}
+
+// CreateWebhook creates a new webhook for a collection.
+func (c *Client) CreateWebhook(moulName string, hook schema.Webhook) (*schema.Webhook, error) {
+	var created schema.Webhook
+	path := fmt.Sprintf("/api/moul/%s/webhooks", moulName)
+	err := c.request("POST", path, hook, &created)
+	return &created, err
+}
+
+// UpdateWebhook updates an existing webhook for a collection.
+func (c *Client) UpdateWebhook(moulName string, hookID string, payload map[string]interface{}) (*schema.Webhook, error) {
+	var updated schema.Webhook
+	path := fmt.Sprintf("/api/moul/%s/webhooks/%s", moulName, hookID)
+	err := c.request("PATCH", path, payload, &updated)
+	return &updated, err
+}
+
+// DeleteWebhook removes a webhook by ID from a collection.
+func (c *Client) DeleteWebhook(moulName string, hookID string) error {
+	path := fmt.Sprintf("/api/moul/%s/webhooks/%s", moulName, hookID)
+	return c.request("DELETE", path, nil, nil)
+}
+
+// TestWebhook triggers a test ping to a webhook.
+func (c *Client) TestWebhook(moulName string, hookID string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	path := fmt.Sprintf("/api/moul/%s/webhooks/%s/test", moulName, hookID)
+	err := c.request("POST", path, nil, &res)
+	return res, err
+}
+
 
 

@@ -53,6 +53,8 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 
 	// Ensure email_templates column exists in _moul for backwards compatibility
 	_, _ = db.NewQuery("ALTER TABLE _moul ADD COLUMN email_templates TEXT;").Execute()
+	// Ensure webhooks column exists in _moul for backwards compatibility
+	_, _ = db.NewQuery("ALTER TABLE _moul ADD COLUMN webhooks TEXT;").Execute()
 
 	// Create meta-table _visits
 	_, err = db.NewQuery(`
@@ -407,6 +409,11 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 		templatesJSON = string(bytes)
 	}
 
+	webhooksJSON, err := m.SerializeWebhooks()
+	if err != nil {
+		return err
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 	m.CreatedAt = now
 	m.UpdatedAt = now
@@ -418,6 +425,7 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 		"fields":          fieldsJSON,
 		"rules":           rulesJSON,
 		"email_templates": templatesJSON,
+		"webhooks":        webhooksJSON,
 		"created_at":      m.CreatedAt,
 		"updated_at":      m.UpdatedAt,
 	}).Execute()
@@ -438,11 +446,12 @@ func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 		Fields         string         `db:"fields"`
 		Rules          string         `db:"rules"`
 		EmailTemplates sql.NullString `db:"email_templates"`
+		Webhooks       sql.NullString `db:"webhooks"`
 		CreatedAt      string         `db:"created_at"`
 		UpdatedAt      string         `db:"updated_at"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at").
 		From("_moul").
 		All(&rows)
 	if err != nil && err != sql.ErrNoRows {
@@ -454,6 +463,7 @@ func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 		var fields []schema.MoulField
 		var rules schema.MoulRules
 		var templates *schema.EmailTemplates
+		var webhooks []schema.Webhook
 
 		if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
 			return nil, err
@@ -466,6 +476,9 @@ func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 			if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
 				templates = &t
 			}
+		}
+		if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
+			_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
 		}
 
 		if templates == nil && row.Type == "auth" {
@@ -480,6 +493,7 @@ func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 			Fields:         fields,
 			Rules:          rules,
 			EmailTemplates: templates,
+			Webhooks:       webhooks,
 			CreatedAt:      row.CreatedAt,
 			UpdatedAt:      row.UpdatedAt,
 		})
@@ -497,11 +511,12 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 		Fields         string         `db:"fields"`
 		Rules          string         `db:"rules"`
 		EmailTemplates sql.NullString `db:"email_templates"`
+		Webhooks       sql.NullString `db:"webhooks"`
 		CreatedAt      string         `db:"created_at"`
 		UpdatedAt      string         `db:"updated_at"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at").
 		From("_moul").
 		Where(dbx.HashExp{"name": name}).
 		One(&row)
@@ -512,6 +527,7 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 	var fields []schema.MoulField
 	var rules schema.MoulRules
 	var templates *schema.EmailTemplates
+	var webhooks []schema.Webhook
 
 	if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
 		return nil, err
@@ -524,6 +540,9 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 		if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
 			templates = &t
 		}
+	}
+	if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
+		_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
 	}
 
 	if templates == nil && row.Type == "auth" {
@@ -538,6 +557,7 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 		Fields:         fields,
 		Rules:          rules,
 		EmailTemplates: templates,
+		Webhooks:       webhooks,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	}, nil
@@ -675,6 +695,11 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 		templatesJSON = string(bytes)
 	}
 
+	webhooksJSON, err := m.SerializeWebhooks()
+	if err != nil {
+		return err
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 	m.UpdatedAt = now
 
@@ -684,6 +709,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 		"fields":          fieldsJSON,
 		"rules":           rulesJSON,
 		"email_templates": templatesJSON,
+		"webhooks":        webhooksJSON,
 		"updated_at":      m.UpdatedAt,
 	}
 

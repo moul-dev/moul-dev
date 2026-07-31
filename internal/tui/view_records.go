@@ -18,7 +18,10 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
-	if moul.Type == "auth" && m.collectionActiveTab == 1 {
+	if m.collectionActiveTab == 1 {
+		return m.updateWebhooksTab(msg)
+	}
+	if m.collectionActiveTab == 2 && moul.Type == "auth" {
 		return m.updateEmailTemplatesTab(msg)
 	}
 
@@ -87,11 +90,28 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 			m.State = StateMoulCreate
 			m.initMoulFormForEdit(*moul)
 			return m.MoulForm.Init()
+		case "w":
+			// Jump to Webhooks tab
+			m.collectionActiveTab = 1
+			m.SelectedWebhookIndex = 0
+			return m.fetchWebhooksCmd()
 		case "tab":
-			if moul.Type == "auth" {
+			if m.collectionActiveTab == 0 {
 				m.collectionActiveTab = 1
-				m.selectedTemplateIndex = 0
-				return m.fetchEmailTemplatesCmd()
+				m.SelectedWebhookIndex = 0
+				return m.fetchWebhooksCmd()
+			} else if m.collectionActiveTab == 1 {
+				if moul.Type == "auth" {
+					m.collectionActiveTab = 2
+					m.selectedTemplateIndex = 0
+					return m.fetchEmailTemplatesCmd()
+				} else {
+					m.collectionActiveTab = 0
+					return m.fetchRecords()
+				}
+			} else {
+				m.collectionActiveTab = 0
+				return m.fetchRecords()
 			}
 		case "r":
 			// Refresh
@@ -122,20 +142,25 @@ func (m *Model) viewRecordList() string {
 	}
 
 	var s strings.Builder
-	if moul.Type == "auth" {
-		var tabs []string
-		if m.collectionActiveTab == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ RECORDS ◀"))
+	var tabs []string
+	if m.collectionActiveTab == 0 {
+		tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ RECORDS ◀"))
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  WEBHOOKS  "))
+		if moul.Type == "auth" {
 			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL TEMPLATES  "))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RECORDS  "))
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ EMAIL TEMPLATES ◀"))
 		}
-		s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n")
+	} else if m.collectionActiveTab == 1 {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RECORDS  "))
+		tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ WEBHOOKS ◀"))
+		if moul.Type == "auth" {
+			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL TEMPLATES  "))
+		}
 	} else {
-		s.WriteString(HeaderStyle.Render(fmt.Sprintf("Records in: %s", moul.Name)))
-		s.WriteString("\n")
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RECORDS  "))
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  WEBHOOKS  "))
+		tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ EMAIL TEMPLATES ◀"))
 	}
+	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n")
 
 	if m.SuccessMsg != "" {
 		s.WriteString(AlertSuccessStyle.Render(m.SuccessMsg))

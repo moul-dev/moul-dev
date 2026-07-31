@@ -35,6 +35,16 @@ type EmailTemplates struct {
 	LoginAlert         EmailTemplate `json:"login_alert"`
 }
 
+type Webhook struct {
+	ID        string   `json:"id"`
+	URL       string   `json:"url"`
+	Events    []string `json:"events"`
+	Secret    string   `json:"secret,omitempty"`
+	Enabled   bool     `json:"enabled"`
+	CreatedAt string   `json:"created_at,omitempty"`
+	UpdatedAt string   `json:"updated_at,omitempty"`
+}
+
 type Moul struct {
 	ID             string          `json:"id"`
 	Name           string          `json:"name"`
@@ -42,6 +52,7 @@ type Moul struct {
 	Fields         []MoulField     `json:"fields"`
 	Rules          MoulRules       `json:"rules"`
 	EmailTemplates *EmailTemplates `json:"email_templates,omitempty"`
+	Webhooks       []Webhook       `json:"webhooks,omitempty"`
 	CreatedAt      string          `json:"created_at"`
 	UpdatedAt      string          `json:"updated_at"`
 }
@@ -83,6 +94,18 @@ func (m *Moul) SerializeFields() (string, error) {
 // Helper to serialize Rules to JSON for SQLite storage
 func (m *Moul) SerializeRules() (string, error) {
 	bytes, err := json.Marshal(m.Rules)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+// Helper to serialize Webhooks to JSON for SQLite storage
+func (m *Moul) SerializeWebhooks() (string, error) {
+	if m.Webhooks == nil {
+		return "[]", nil
+	}
+	bytes, err := json.Marshal(m.Webhooks)
 	if err != nil {
 		return "", err
 	}

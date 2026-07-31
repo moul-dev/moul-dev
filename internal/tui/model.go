@@ -39,6 +39,7 @@ const (
 	StateFeatureFlagForm
 	StateFeatureFlagEval
 	StateSystemMonitor
+	StateWebhookForm
 )
 
 // Model is the main state container for the moul TUI.
@@ -63,6 +64,16 @@ type Model struct {
 	FeatureFlags      []FeatureFlagItem
 	SelectedFlagIndex int
 
+	// Webhooks
+	Webhooks             []schema.Webhook
+	SelectedWebhookIndex int
+	webhookFormURL       string
+	webhookFormEvents    string
+	webhookFormSecret    string
+	webhookFormEnabled   bool
+	editingWebhookID     string
+	webhookTestResult    string
+
 	// Records Screen
 	Records             []map[string]interface{}
 	SelectedRecordIndex int
@@ -85,6 +96,7 @@ type Model struct {
 	RecordForm         *huh.Form
 	AnalyticsLoginForm *huh.Form
 	MoulForm           *huh.Form
+	WebhookForm        *huh.Form
 
 	// Analytics Login Data
 	analyticsEmail     string
@@ -323,6 +335,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case EmailTemplatesMsg:
 		m.emailTemplates = msg.Templates
 		return m, nil
+
+	case WebhookSavedMsg:
+		if msg.Err != nil {
+			m.Err = msg.Err
+		} else {
+			m.SuccessMsg = "Webhook saved successfully!"
+			m.Err = nil
+		}
+		m.State = StateRecordList
+		return m, m.fetchWebhooksCmd()
 
 	case emailTemplatesSavedMsg:
 		if msg.err != nil {
@@ -1032,6 +1054,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.State = StateFeatureFlags
 			return m, nil
 		}
+
+	case StateWebhookForm:
+		cmd := m.updateWebhookForm(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -1062,10 +1090,17 @@ func (m *Model) renderBreadcrumbs() string {
 		crumbs = append(crumbs, "Collections")
 		if moul := m.currentMoul(); moul != nil {
 			if m.collectionActiveTab == 1 {
+				crumbs = append(crumbs, moul.Name, "Webhooks")
+			} else if m.collectionActiveTab == 2 {
 				crumbs = append(crumbs, moul.Name, "Email Templates")
 			} else {
 				crumbs = append(crumbs, moul.Name, "Records")
 			}
+		}
+	case StateWebhookForm:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Webhooks", "Edit")
 		}
 	case StateEmailTemplateEdit:
 		crumbs = append(crumbs, "Collections")
@@ -1152,9 +1187,15 @@ func (m *Model) View() tea.View {
 		content = m.viewDashboard()
 	case StateRecordList:
 		if m.collectionActiveTab == 1 {
+			content = m.renderWebhooksTab()
+		} else if m.collectionActiveTab == 2 {
 			content = m.viewEmailTemplates()
 		} else {
 			content = m.viewRecordList()
+		}
+	case StateWebhookForm:
+		if m.WebhookForm != nil {
+			content = m.WebhookForm.View()
 		}
 	case StateEmailTemplateEdit:
 		content = m.viewEmailTemplateEdit()

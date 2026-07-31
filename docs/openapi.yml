@@ -498,6 +498,174 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
+  /api/moul/{name}/webhooks:
+    get:
+      summary: List Collection Webhooks
+      description: Returns all configured webhooks for a collection.
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhooks list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Webhook'
+    post:
+      summary: Create Collection Webhook
+      description: Adds a new outbound HTTP webhook trigger to a collection.
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Webhook'
+      responses:
+        '201':
+          description: Webhook created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+
+  /api/moul/{name}/webhooks/{id}:
+    get:
+      summary: Get Webhook by ID
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook config.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+    patch:
+      summary: Update Webhook by ID
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Webhook'
+      responses:
+        '200':
+          description: Webhook updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+    delete:
+      summary: Delete Webhook by ID
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Webhook deleted.
+
+  /api/moul/{name}/webhooks/{id}/test:
+    post:
+      summary: Test Webhook
+      description: "Triggers a ping test payload (event: ping) to the specified webhook target."
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test execution results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                  duration_ms:
+                    type: integer
+                  response:
+                    type: string
+                  success:
+                    type: boolean
+
   /api/settings:
     get:
       summary: Get Settings
@@ -1846,6 +2014,38 @@ components:
           $ref: '#/components/schemas/MoulRules'
         email_templates:
           $ref: '#/components/schemas/EmailTemplates'
+        webhooks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Webhook:
+      type: object
+      required:
+        - url
+      properties:
+        id:
+          type: string
+          description: Unique webhook identifier.
+        url:
+          type: string
+          description: Target HTTP URL for webhook dispatch.
+        events:
+          type: array
+          items:
+            type: string
+          description: Event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, `*`).
+        secret:
+          type: string
+          description: Optional HMAC-SHA256 secret key.
+        enabled:
+          type: boolean
+          description: Whether the webhook is enabled.
         created_at:
           type: string
           format: date-time

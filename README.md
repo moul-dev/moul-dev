@@ -54,6 +54,7 @@
 9. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Telegraf Host System Monitoring**: High-performance Unix Domain Socket listener (`/tmp/moul-telegraf.sock`) receiving metric streams (CPU, memory, disk space, network, system load) from Telegraf for real-time observability in the TUI console and REST API.
+12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
 
 ---
 
@@ -349,6 +350,47 @@ params := &analytics.EventParams{
 
 event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```
+
+---
+
+## Outbound HTTP Webhooks
+
+Moul collections support outbound HTTP webhooks registered per collection to enable integrations with external automation tools and services.
+
+### Event Triggers & Hook Lifecycles
+
+- **`*:before` Hooks** (`create:before`, `update:before`, `delete:before`): Executed **synchronously** before physical database operations. If the target webhook returns a non-2xx HTTP status code or fails to respond within 5s timeout, the record operation is rejected and an error is returned to the client.
+- **`*:after` Hooks** (`create:after`, `update:after`, `delete:after`): Executed **asynchronously** in the background after successful database operations without delaying client response latency.
+- **Wildcard & Shorthand Matching**: Setting event `"create"` matches both `create:before` and `create:after`. Setting `"*"`, `""`, or `"all"` matches all events.
+
+### Payload & Signature Format
+
+Outbound webhook POST requests include the following headers and payload:
+- `Content-Type: application/json`
+- `X-Moul-Event`: Event trigger name (e.g. `create:before`)
+- `X-Moul-Webhook-ID`: Unique webhook ID
+- `X-Moul-Timestamp`: Event RFC3339 timestamp
+- `X-Moul-Signature`: HMAC-SHA256 hex digest of payload body computed using the configured `secret` key.
+
+**JSON Payload**:
+```json
+{
+  "event": "update:after",
+  "moul": "products",
+  "record": { "id": "prod-123", "name": "Widget Updated", "price": 49.99 },
+  "old_record": { "id": "prod-123", "name": "Widget", "price": 39.99 },
+  "timestamp": "2026-07-31T19:54:08Z"
+}
+```
+
+### Webhook Management Endpoints
+
+- `GET /api/moul/:name/webhooks` - List all webhooks for a collection.
+- `POST /api/moul/:name/webhooks` - Create a new webhook for a collection.
+- `GET /api/moul/:name/webhooks/:id` - Get webhook configuration by ID.
+- `PATCH /api/moul/:name/webhooks/:id` - Update webhook configuration by ID.
+- `DELETE /api/moul/:name/webhooks/:id` - Remove a webhook by ID.
+- `POST /api/moul/:name/webhooks/:id/test` - Trigger a ping test payload (`event: "ping"`) to verify webhook receiver connectivity.
 
 ---
 

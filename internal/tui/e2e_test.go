@@ -580,7 +580,18 @@ func TestTUIE2E(t *testing.T) {
 	msg = cmd() // fetchRecords
 	_ = update(msg)
 
-	// Press tab to switch to templates
+	// Press tab to switch to webhooks tab first
+	cmd = update(tea.KeyPressMsg{Text: "tab"})
+	if cmd == nil {
+		t.Fatal("Expected fetchWebhooksCmd command, got nil")
+	}
+	msg = cmd()
+	if _, ok := msg.(WebhooksMsg); !ok {
+		t.Fatalf("Expected WebhooksMsg, got %T", msg)
+	}
+	_ = update(msg)
+
+	// Press tab again to switch to email templates tab
 	cmd = update(tea.KeyPressMsg{Text: "tab"})
 	if cmd == nil {
 		t.Fatal("Expected fetchEmailTemplatesCmd command, got nil")
@@ -590,8 +601,8 @@ func TestTUIE2E(t *testing.T) {
 		t.Fatalf("Expected EmailTemplatesMsg, got %T", msg)
 	}
 	_ = update(msg)
-	if m.collectionActiveTab != 1 {
-		t.Fatalf("Expected collectionActiveTab to be 1, got %d", m.collectionActiveTab)
+	if m.collectionActiveTab != 2 {
+		t.Fatalf("Expected collectionActiveTab to be 2, got %d", m.collectionActiveTab)
 	}
 
 	// Move template selection down and up

@@ -18,6 +18,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
+	"github.com/moul-dev/moul-dev/internal/webhooks"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
@@ -430,6 +431,16 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
 	}
 
+	// Dispatch create:before webhook
+	if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+		Event:     "create:before",
+		Moul:      moulName,
+		Record:    insertData,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
 	// Perform SQLite INSERT
 	_, err = h.DB.Insert(moulName, dbx.Params(insertData)).Execute()
 	if err != nil {
@@ -457,6 +468,15 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, recordMap, expandParam)
+
+	// Dispatch create:after webhook
+	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+		Event:     "create:after",
+		Moul:      moulName,
+		Record:    recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	})
+
 	return c.JSON(http.StatusCreated, recordMap)
 }
 
@@ -867,6 +887,18 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		if moul.Type != "worker" {
 			updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
 		}
+
+		// Dispatch update:before webhook
+		if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+			Event:     "update:before",
+			Moul:      moulName,
+			Record:    updateParams,
+			OldRecord: recordMap,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+		}); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
 		_, err = h.DB.Update(moulName, updateParams, dbx.HashExp{"id": id}).Execute()
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -885,10 +917,20 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	recordMap = normalizeRecord(moul, nullStringMapToMap(updatedRecord))
+	updatedRecordMap := normalizeRecord(moul, nullStringMapToMap(updatedRecord))
 	expandParam := c.QueryParam("expand")
-	h.expandRelations(moul, recordMap, expandParam)
-	return c.JSON(http.StatusOK, recordMap)
+	h.expandRelations(moul, updatedRecordMap, expandParam)
+
+	// Dispatch update:after webhook
+	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+		Event:     "update:after",
+		Moul:      moulName,
+		Record:    updatedRecordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	})
+
+	return c.JSON(http.StatusOK, updatedRecordMap)
 }
 
 // DeleteRecord deletes a record by ID.
@@ -937,12 +979,32 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
 	}
 
+	// Dispatch delete:before webhook
+	if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+		Event:     "delete:before",
+		Moul:      moulName,
+		Record:    recordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
 	// Delete
 	_, err = h.DB.Delete(moulName, dbx.HashExp{"id": id}).Execute()
 	if err != nil {
 		logger.Error("Failed to delete record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete record")
 	}
+
+	// Dispatch delete:after webhook
+	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
+		Event:     "delete:after",
+		Moul:      moulName,
+		Record:    recordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	})
 
 	// Clean up relations
 	allMouls, err := db.LoadAllMoul(h.DB)
