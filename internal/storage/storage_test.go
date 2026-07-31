@@ -178,3 +178,78 @@ func TestUploadFileSanitizedFilename(t *testing.T) {
 	}
 }
 
+func TestListAndDeleteFilesLocal(t *testing.T) {
+	db, cleanup := prepareTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// 1. Initially empty
+	files, err := ListFiles(ctx, db)
+	if err != nil {
+		t.Fatalf("ListFiles failed: %v", err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("Expected 0 files initially, got %d", len(files))
+	}
+
+	// 2. Upload file 1
+	info1, err := UploadFile(ctx, db, []byte("Hello text file"), "doc.txt", "text/plain")
+	if err != nil {
+		t.Fatalf("UploadFile 1 failed: %v", err)
+	}
+
+	// 3. Upload file 2
+	imgData := createTestPNG(t, 200, 200)
+	info2, err := UploadFile(ctx, db, imgData, "pic.png", "image/png")
+	if err != nil {
+		t.Fatalf("UploadFile 2 failed: %v", err)
+	}
+
+	// 4. List files (should have 2)
+	files, err = ListFiles(ctx, db)
+	if err != nil {
+		t.Fatalf("ListFiles failed after upload: %v", err)
+	}
+	if len(files) != 2 {
+		t.Fatalf("Expected 2 files after upload, got %d", len(files))
+	}
+
+	// 5. Delete file 1 by ID
+	err = DeleteFile(ctx, db, info1.ID)
+	if err != nil {
+		t.Fatalf("DeleteFile failed for file 1: %v", err)
+	}
+
+	// Verify local directory of file 1 removed
+	localPath1 := filepath.Join(".", info1.URL)
+	if _, err := os.Stat(localPath1); !os.IsNotExist(err) {
+		t.Errorf("Expected local file 1 to be removed from disk, but it exists at %s", localPath1)
+	}
+
+	// 6. List files again (should have 1)
+	files, err = ListFiles(ctx, db)
+	if err != nil {
+		t.Fatalf("ListFiles failed after delete: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 file remaining, got %d", len(files))
+	}
+	if files[0].ID != info2.ID {
+		t.Errorf("Expected remaining file to be %s, got %s", info2.ID, files[0].ID)
+	}
+
+	// 7. Delete file 2 by full URL path
+	err = DeleteFile(ctx, db, info2.URL)
+	if err != nil {
+		t.Fatalf("DeleteFile by URL failed for file 2: %v", err)
+	}
+
+	// 8. Delete non-existent file
+	err = DeleteFile(ctx, db, "nonexistentid123")
+	if err == nil {
+		t.Errorf("Expected error deleting non-existent file ID, got nil")
+	}
+}
+
+

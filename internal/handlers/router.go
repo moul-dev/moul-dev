@@ -137,8 +137,13 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	adminSettingsGroup.GET("", settingsHandler.GetSettings)
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 
-	// File upload endpoint (Requires auth or admin key)
+	// File upload & storage management endpoints (Requires auth or admin key)
 	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET("/api/upload", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET("/api/files", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE("/api/upload/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE("/api/files/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+
 
 	// Static local storage directory serving
 	e.Static("/storage", "storage")

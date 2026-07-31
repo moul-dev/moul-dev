@@ -556,6 +556,27 @@ paths:
           $ref: '#/components/responses/500InternalError'
 
   /api/upload:
+    get:
+      summary: List Uploaded Files
+      description: Returns a list of all stored files and their metadata (including thumbnail maps and thumbhashes), sorted newest first.
+      tags:
+        - File Storage
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: List of stored files.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileInfo'
+        '401':
+          description: Authorization failed (requires either a valid authenticated user or admin key).
+        '500':
+          $ref: '#/components/responses/500InternalError'
     post:
       summary: Upload File
       description: Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg).
@@ -592,6 +613,44 @@ paths:
           description: Authorization failed (requires either a valid authenticated user or admin key).
         '500':
           $ref: '#/components/responses/500InternalError'
+
+  /api/upload/{path}:
+    delete:
+      summary: Delete Uploaded File
+      description: Deletes an uploaded file and all associated thumbnails and metadata by file ID or path.
+      tags:
+        - File Storage
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: File ID (e.g. `abc123xyz`) or key/path to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+        '400':
+          description: Missing or invalid file identifier.
+        '401':
+          description: Authorization failed.
+        '404':
+          description: File not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
 
   /api/moul/{name}/auth-with-password:
     post:
@@ -1629,6 +1688,9 @@ components:
     FileInfo:
       type: object
       properties:
+        id:
+          type: string
+          description: Unique file identifier prefix.
         filename:
           type: string
         url:
@@ -1640,6 +1702,15 @@ components:
           additionalProperties:
             type: string
           description: Thumbnail resolutions dictionary mapping sizes (sm, md, lg) to URLs.
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes.
+        created_at:
+          type: string
+          format: date-time
+          description: Upload timestamp.
+
     AuthResponse:
       type: object
       properties:

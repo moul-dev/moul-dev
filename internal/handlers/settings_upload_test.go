@@ -48,6 +48,11 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 
 	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET("/api/upload", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET("/api/files", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE("/api/upload/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE("/api/files/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+
 	e.POST("/api/moul", moulHandler.CreateMoul, middleware.RequireAdminKey(adminKey))
 	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
 	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
@@ -251,4 +256,82 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	if !ok || len(retrievedFilesArray) != 1 {
 		t.Fatalf("Expected retrieved 'files' field to be a JSON array, got: %v", retrievedRecord["files"])
 	}
+
+	// --- 6. Test File List & Delete HTTP Endpoints ---
+	// A. GET /api/upload without auth -> 401
+	req, _ = http.NewRequest("GET", server.URL+"/api/upload", nil)
+	resp, _ = client.Do(req)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected 401 for unauthorized GET /api/upload, got %d", resp.StatusCode)
+	}
+
+	// B. GET /api/upload with Admin Key -> 200, contains 2 files
+	req, _ = http.NewRequest("GET", server.URL+"/api/upload", nil)
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("GET /api/upload failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200 for authorized GET /api/upload, got %d", resp.StatusCode)
+	}
+	var allFiles []map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&allFiles)
+	resp.Body.Close()
+
+	if len(allFiles) != 2 {
+		t.Fatalf("Expected 2 files in /api/upload listing, got %d", len(allFiles))
+	}
+
+	// Extract ID of test_doc.txt
+	var docID string
+	for _, f := range allFiles {
+		if f["filename"] == "test_doc.txt" {
+			docID = f["id"].(string)
+			break
+		}
+	}
+	if docID == "" {
+		t.Fatalf("Could not find test_doc.txt in files listing: %+v", allFiles)
+	}
+
+	// C. DELETE /api/upload/:id with Bearer token -> 200 OK
+	req, _ = http.NewRequest("DELETE", server.URL+"/api/upload/"+docID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("DELETE /api/upload/%s failed: %v", docID, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200 for DELETE /api/upload/%s, got %d", docID, resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// D. GET /api/files alias with Bearer token -> 200 OK, should now have 1 file
+	req, _ = http.NewRequest("GET", server.URL+"/api/files", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("GET /api/files failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200 for GET /api/files, got %d", resp.StatusCode)
+	}
+	var remainingFiles []map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&remainingFiles)
+	resp.Body.Close()
+
+	if len(remainingFiles) != 1 {
+		t.Fatalf("Expected 1 file remaining after delete, got %d", len(remainingFiles))
+	}
+
+	// E. DELETE /api/upload/:id for non-existent file -> 404 Not Found
+	req, _ = http.NewRequest("DELETE", server.URL+"/api/upload/nonexistentid99", nil)
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, _ = client.Do(req)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 404 for deleting non-existent file, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
 }
+
