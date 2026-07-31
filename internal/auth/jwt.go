@@ -87,3 +87,26 @@ func VerifyToken(tokenString string) (*Claims, error) {
 
 	return claims, nil
 }
+
+// VerifyTokenAllowExpired parses and validates token signature without failing on expired token claims.
+func VerifyTokenAllowExpired(tokenString string) (*Claims, error) {
+	mustBeReady()
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtSecretKey, nil
+	}, jwt.WithoutClaimsValidation())
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return claims, nil
+}

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 
@@ -57,8 +58,8 @@ func getRootIPsConfig() (bool, string) {
 const AuthContextKey = "auth"
 
 // LoadAuthContextMiddleware reads the Authorization header, validates the JWT,
-// and maps the verified user details into the Echo context.
-func LoadAuthContextMiddleware() echo.MiddlewareFunc {
+// checks token revocation status, and maps the verified user details into the Echo context.
+func LoadAuthContextMiddleware(dbConn ...*dbx.DB) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
@@ -73,6 +74,13 @@ func LoadAuthContextMiddleware() echo.MiddlewareFunc {
 			}
 
 			tokenString := parts[1]
+
+			if len(dbConn) > 0 && dbConn[0] != nil {
+				if db.IsTokenRevoked(dbConn[0], tokenString) {
+					return next(c)
+				}
+			}
+
 			claims, err := auth.VerifyToken(tokenString)
 			if err != nil {
 				// Invalid token is ignored or left as unauthenticated.

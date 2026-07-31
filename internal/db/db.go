@@ -1,7 +1,9 @@
 package db
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -136,6 +138,18 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		return nil, fmt.Errorf("failed to create _certmagic table: %w", err)
 	}
 
+	// Create meta-table _revoked_tokens
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _revoked_tokens (
+			token_hash TEXT PRIMARY KEY,
+			expires_at TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON _revoked_tokens(expires_at);
+	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _revoked_tokens table: %w", err)
+	}
+
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
 		"file_s3_enabled":                "false",
@@ -248,7 +262,8 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		lowerName := strings.ToLower(field.Name)
 		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
 			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
-			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" {
+			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" ||
+			lowerName == "resettoken" || lowerName == "resettokenexpiresat" {
 			continue
 		}
 		if m.Type == "worker" {
@@ -298,7 +313,9 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 				passwordHash TEXT,
 				otpCode TEXT,
 				otpExpiresAt TEXT,
-				passkeys TEXT
+				passkeys TEXT,
+				resetToken TEXT,
+				resetTokenExpiresAt TEXT
 				%s
 			);
 		`, quotedName, columnsSQL)
@@ -589,7 +606,8 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		lowerName := strings.ToLower(field.Name)
 		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
 			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
-			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" {
+			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" ||
+			lowerName == "resettoken" || lowerName == "resettokenexpiresat" {
 			continue
 		}
 		if m.Type == "worker" {
@@ -675,5 +693,54 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 	}
 
 	return nil
+}
+
+// EnsureAuthColumns makes sure an auth collection table contains system columns resetToken and resetTokenExpiresAt.
+func EnsureAuthColumns(dbConn *dbx.DB, moulName string) error {
+	if err := ValidateTableName(moulName); err != nil {
+		return err
+	}
+	quotedName := QuoteIdentifier(moulName)
+	_, _ = dbConn.NewQuery(fmt.Sprintf("ALTER TABLE %s ADD COLUMN resetToken TEXT;", quotedName)).Execute()
+	_, _ = dbConn.NewQuery(fmt.Sprintf("ALTER TABLE %s ADD COLUMN resetTokenExpiresAt TEXT;", quotedName)).Execute()
+	return nil
+}
+
+func hashToken(tokenString string) string {
+	hash := sha256.Sum256([]byte(tokenString))
+	return hex.EncodeToString(hash[:])
+}
+
+// RevokeToken marks a JWT token string as revoked until its expiration time.
+func RevokeToken(dbConn *dbx.DB, tokenString string, expiresAt time.Time) error {
+	if dbConn == nil || tokenString == "" {
+		return nil
+	}
+	tokenHash := hashToken(tokenString)
+	expStr := expiresAt.UTC().Format(time.RFC3339)
+	_, err := dbConn.Insert("_revoked_tokens", dbx.Params{
+		"token_hash": tokenHash,
+		"expires_at": expStr,
+	}).Execute()
+	return err
+}
+
+// IsTokenRevoked checks if a JWT token has been revoked.
+func IsTokenRevoked(dbConn *dbx.DB, tokenString string) bool {
+	if dbConn == nil || tokenString == "" {
+		return false
+	}
+	tokenHash := hashToken(tokenString)
+	var count int
+	nowStr := time.Now().UTC().Format(time.RFC3339)
+	err := dbConn.Select("COUNT(*)").From("_revoked_tokens").
+		Where(dbx.And(
+			dbx.HashExp{"token_hash": tokenHash},
+			dbx.NewExp("expires_at > {:now}", dbx.Params{"now": nowStr}),
+		)).Row(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
 }
 

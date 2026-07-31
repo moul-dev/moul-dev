@@ -14,6 +14,10 @@ info:
     - **Password Flow**:
       - **Signup**: Create a record in an `auth` collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`. Passwords are validated for complexity and automatically hashed.
       - **Login**: `POST /api/moul/{name}/auth-with-password` with `identity` (username or email) and `password`.
+      - **Password Reset**: Request reset via `POST /api/moul/{name}/request-password-reset` and confirm reset with token via `POST /api/moul/{name}/confirm-password-reset`.
+    - **Session & Token Management**:
+      - **Refresh**: Issue a fresh JWT token using `POST /api/moul/{name}/refresh`.
+      - **Logout**: Revoke current JWT token using `POST /api/moul/{name}/logout`.
     - **Email OTP Flow**:
       - **Signup & Login**: `POST /api/moul/{name}/otp/request` sends a 6-digit OTP code to the email (automatically creating a new user record if the email does not exist yet). Verify code with `POST /api/moul/{name}/auth-with-otp`.
     - **Passkey (WebAuthn) Flow**:
@@ -42,6 +46,10 @@ tags:
       - **Password Auth**:
         - **Signup**: Submit `username`, `email`, `password`, and `passwordConfirm` via `POST /api/moul/{name}/records`.
         - **Login**: Authenticate with `identity` and `password` via `POST /api/moul/{name}/auth-with-password`.
+        - **Password Reset**: Request reset (`POST /api/moul/{name}/request-password-reset`) and confirm reset (`POST /api/moul/{name}/confirm-password-reset`).
+      - **Token Refresh & Logout**:
+        - **Refresh**: Refresh JWT token (`POST /api/moul/{name}/refresh`).
+        - **Logout**: Revoke current JWT token (`POST /api/moul/{name}/logout`).
       - **Email OTP**:
         - **Signup & Login**: Request OTP via `POST /api/moul/{name}/otp/request` (auto-registers new emails). Verify with `POST /api/moul/{name}/auth-with-otp`.
       - **Passkey (WebAuthn)**:
@@ -697,6 +705,165 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
           description: Invalid credentials or collection is not an auth collection.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/moul/{name}/request-password-reset:
+    post:
+      summary: Request Password Reset
+      description: Generates a password reset token for the specified user email and sends a reset link using the collection's Password Reset email template.
+      tags:
+        - User Authentication
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Registered email address.
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Password reset link dispatched if email exists.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "If the email exists, a password reset link has been sent."
+        '400':
+          description: Missing email or invalid collection type.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/moul/{name}/confirm-password-reset:
+    post:
+      summary: Confirm Password Reset
+      description: Resets user password using a valid, unexpired reset token.
+      tags:
+        - User Authentication
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                  description: Password reset token received via email.
+                password:
+                  type: string
+                  description: New password.
+                  example: "NewPassword123"
+                passwordConfirm:
+                  type: string
+                  description: Optional confirmation matching new password.
+                  example: "NewPassword123"
+      responses:
+        '200':
+          description: Password successfully reset.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset successfully"
+        '400':
+          description: Invalid/expired token or password complexity validation error.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/moul/{name}/refresh:
+    post:
+      summary: Refresh JWT Token
+      description: Issues a fresh JWT token for an active authentication session, revoking the previous JWT token.
+      tags:
+        - User Authentication
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized or revoked token.
+        '404':
+          description: Moul not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/moul/{name}/logout:
+    post:
+      summary: User Logout
+      description: Revokes the current Bearer JWT token, preventing it from being used for future authenticated requests.
+      tags:
+        - User Authentication
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the auth collection.
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '400':
+          description: Missing or malformed Authorization header.
         '404':
           description: Moul not found.
         '500':

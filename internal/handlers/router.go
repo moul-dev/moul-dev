@@ -54,7 +54,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	}))
 
 	// Auth context loader (JWT extraction from Authorization header)
-	e.Use(middleware.LoadAuthContextMiddleware())
+	e.Use(middleware.LoadAuthContextMiddleware(dbConn))
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
@@ -154,6 +154,11 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// 2. Auth collections
 	authGroup := e.Group("")
 	authGroup.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
+	authGroup.POST("/api/moul/:name/request-password-reset", authHandler.RequestPasswordReset)
+	authGroup.POST("/api/moul/:name/confirm-password-reset", authHandler.ConfirmPasswordReset)
+	authGroup.POST("/api/moul/:name/refresh", authHandler.RefreshToken)
+	authGroup.POST("/api/moul/:name/auth-refresh", authHandler.RefreshToken)
+	authGroup.POST("/api/moul/:name/logout", authHandler.Logout)
 	authGroup.POST("/api/moul/:name/otp/request", authHandler.RequestOTP)
 	authGroup.POST("/api/moul/:name/auth-with-otp", authHandler.AuthWithOTP)
 	authGroup.POST("/api/moul/:name/passkey/register/options", authHandler.PasskeyRegisterOptions)
