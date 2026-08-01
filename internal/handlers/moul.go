@@ -44,6 +44,11 @@ func (h *MoulHandler) CreateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid moul name: must start with a letter and contain only letters, digits, or underscores (max 63 chars)")
 	}
 
+	// Validate fields
+	if err := validateMoulFields(m); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
 	// Default to base type
 	if m.Type != "auth" && m.Type != "worker" && m.Type != "analytic" {
 		m.Type = "base"
@@ -161,6 +166,10 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid moul name: must start with a letter and contain only letters, digits, or underscores (max 63 chars)")
 	}
 
+	if err := validateMoulFields(updated); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
 	updated.ID = origMoul.ID
 	updated.CreatedAt = origMoul.CreatedAt
 	if updated.Type == "" {
@@ -208,5 +217,33 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, updated)
+}
+
+func validateMoulFields(m *schema.Moul) error {
+	for i := range m.Fields {
+		f := &m.Fields[i]
+		if f.Type == "relation" {
+			if f.RelationConfig == nil {
+				return fmt.Errorf("relation field %q requires relationConfig", f.Name)
+			}
+			f.RelationConfig.TargetMoul = strings.TrimSpace(f.RelationConfig.TargetMoul)
+			if f.RelationConfig.TargetMoul == "" {
+				return fmt.Errorf("relation field %q requires targetMoul", f.Name)
+			}
+			f.RelationConfig.Cardinality = strings.TrimSpace(f.RelationConfig.Cardinality)
+			if f.RelationConfig.Cardinality != "1:1" && f.RelationConfig.Cardinality != "1:N" && f.RelationConfig.Cardinality != "M:N" {
+				return fmt.Errorf("invalid cardinality %q for field %q (allowed: 1:1, 1:N, M:N)", f.RelationConfig.Cardinality, f.Name)
+			}
+			onDel := strings.ToUpper(strings.TrimSpace(f.RelationConfig.OnDelete))
+			if onDel == "" {
+				onDel = schema.OnDeleteSetNull
+			}
+			if onDel != schema.OnDeleteCascade && onDel != schema.OnDeleteSetNull && onDel != schema.OnDeleteRestrict {
+				return fmt.Errorf("invalid onDelete %q for field %q (allowed: CASCADE, SET_NULL, RESTRICT)", f.RelationConfig.OnDelete, f.Name)
+			}
+			f.RelationConfig.OnDelete = onDel
+		}
+	}
+	return nil
 }
 

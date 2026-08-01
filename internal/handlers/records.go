@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -245,6 +246,13 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 							}
 							if !exists {
 								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", strVal, targetMoul))
+							}
+							if card == "1:1" {
+								var count int
+								err := h.DB.Select("COUNT(1)").From(moulName).Where(dbx.HashExp{field.Name: strVal}).Row(&count)
+								if err == nil && count > 0 {
+									return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("1:1 relation field %s already references record %s", field.Name, strVal))
+								}
 							}
 						}
 						insertData[field.Name] = strVal
@@ -769,6 +777,13 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 							if !exists {
 								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", strVal, targetMoul))
 							}
+							if card == "1:1" {
+								var count int
+								err := h.DB.Select("COUNT(1)").From(moulName).Where(dbx.NewExp(fmt.Sprintf("%s = {:val} AND id != {:id}", db.QuoteIdentifier(field.Name)), dbx.Params{"val": strVal, "id": id})).Row(&count)
+								if err == nil && count > 0 {
+									return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("1:1 relation field %s already references record %s", field.Name, strVal))
+								}
+							}
 						}
 						updateParams[field.Name] = strVal
 					} else if card == "M:N" {
@@ -979,64 +994,52 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
 	}
 
-	// Dispatch delete:before webhook
-	if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
-		Event:     "delete:before",
-		Moul:      moulName,
-		Record:    recordMap,
-		OldRecord: recordMap,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
-	}); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	// Delete
-	_, err = h.DB.Delete(moulName, dbx.HashExp{"id": id}).Execute()
-	if err != nil {
+	if err := h.deleteRecordAndCascade(c.Request().Context(), moul, recordMap, id); err != nil {
+		if strings.Contains(err.Error(), "RESTRICT constraint") {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
 		logger.Error("Failed to delete record", "record", id, "moul", moulName, "err", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete record")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete record: "+err.Error())
 	}
 
-	// Dispatch delete:after webhook
-	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
-		Event:     "delete:after",
-		Moul:      moulName,
-		Record:    recordMap,
-		OldRecord: recordMap,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
-	})
+	return c.NoContent(http.StatusNoContent)
+}
 
-	// Clean up relations
+func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema.Moul, recordMap map[string]interface{}, id string) error {
+	moulName := moul.Name
+
+	// 1. Check RESTRICT constraints across all collections
 	allMouls, err := db.LoadAllMoul(h.DB)
 	if err == nil {
 		for _, otherMoul := range allMouls {
 			for _, field := range otherMoul.Fields {
 				if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.TargetMoul == moulName {
-					card := field.RelationConfig.Cardinality
-					if card == "1:1" || card == "1:N" {
-						_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: ""}, dbx.HashExp{field.Name: id}).Execute()
-					} else if card == "M:N" {
-						var rawRecs []dbx.NullStringMap
-						if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).All(&rawRecs); qErr == nil {
-							for _, rawRec := range rawRecs {
-								recMap := nullStringMapToMap(rawRec)
-								recID, _ := recMap["id"].(string)
-								rawVal, _ := recMap[field.Name].(string)
-								if rawVal != "" {
-									var ids []string
-									if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
-										found := false
-										var newIDs []string
-										for _, item := range ids {
-											if item == id {
-												found = true
-											} else {
-												newIDs = append(newIDs, item)
+					onDel := field.RelationConfig.OnDelete
+					if onDel == "" {
+						onDel = schema.OnDeleteSetNull
+					}
+					if onDel == schema.OnDeleteRestrict {
+						card := field.RelationConfig.Cardinality
+						if card == "1:1" || card == "1:N" {
+							var count int
+							err := h.DB.Select("COUNT(1)").From(otherMoul.Name).Where(dbx.HashExp{field.Name: id}).Row(&count)
+							if err == nil && count > 0 {
+								return fmt.Errorf("cannot delete record %s in %s: referenced by %s.%s (RESTRICT constraint)", id, moulName, otherMoul.Name, field.Name)
+							}
+						} else if card == "M:N" {
+							var rawRecs []dbx.NullStringMap
+							if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
+								for _, rawRec := range rawRecs {
+									recMap := nullStringMapToMap(rawRec)
+									rawVal, _ := recMap[field.Name].(string)
+									if rawVal != "" {
+										var ids []string
+										if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+											for _, item := range ids {
+												if item == id {
+													return fmt.Errorf("cannot delete record %s in %s: referenced by %s.%s (RESTRICT constraint)", id, moulName, otherMoul.Name, field.Name)
+												}
 											}
-										}
-										if found {
-											newJSON, _ := json.Marshal(newIDs)
-											_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: string(newJSON)}, dbx.HashExp{"id": recID}).Execute()
 										}
 									}
 								}
@@ -1048,7 +1051,124 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 		}
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	// 2. Dispatch delete:before webhook
+	if err := webhooks.DispatchBefore(ctx, moul.Webhooks, webhooks.Payload{
+		Event:     "delete:before",
+		Moul:      moulName,
+		Record:    recordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}); err != nil {
+		return err
+	}
+
+	// 3. Perform SQL delete
+	_, err = h.DB.Delete(moulName, dbx.HashExp{"id": id}).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to delete record: %w", err)
+	}
+
+	// 4. Dispatch delete:after webhook
+	webhooks.DispatchAfter(ctx, moul.Webhooks, webhooks.Payload{
+		Event:     "delete:after",
+		Moul:      moulName,
+		Record:    recordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	})
+
+	// 5. Handle CASCADE and SET_NULL for referencing collections
+	if allMouls != nil {
+		for _, otherMoul := range allMouls {
+			for _, field := range otherMoul.Fields {
+				if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.TargetMoul == moulName {
+					onDel := field.RelationConfig.OnDelete
+					if onDel == "" {
+						onDel = schema.OnDeleteSetNull
+					}
+					card := field.RelationConfig.Cardinality
+
+					if onDel == schema.OnDeleteCascade {
+						var toDeleteIDs []string
+						if card == "1:1" || card == "1:N" {
+							var rawRecs []dbx.NullStringMap
+							if qErr := h.DB.Select("id").From(otherMoul.Name).Where(dbx.HashExp{field.Name: id}).All(&rawRecs); qErr == nil {
+								for _, rawRec := range rawRecs {
+									recMap := nullStringMapToMap(rawRec)
+									if recID, ok := recMap["id"].(string); ok && recID != "" {
+										toDeleteIDs = append(toDeleteIDs, recID)
+									}
+								}
+							}
+						} else if card == "M:N" {
+							var rawRecs []dbx.NullStringMap
+							if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
+								for _, rawRec := range rawRecs {
+									recMap := nullStringMapToMap(rawRec)
+									recID, _ := recMap["id"].(string)
+									rawVal, _ := recMap[field.Name].(string)
+									if rawVal != "" {
+										var ids []string
+										if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+											for _, item := range ids {
+												if item == id {
+													toDeleteIDs = append(toDeleteIDs, recID)
+													break
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+
+						// Recursively delete referencing records
+						targetOtherMoul := otherMoul
+						for _, childID := range toDeleteIDs {
+							var childRec dbx.NullStringMap
+							if childErr := h.DB.Select("*").From(targetOtherMoul.Name).Where(dbx.HashExp{"id": childID}).One(&childRec); childErr == nil {
+								childMap := normalizeRecord(targetOtherMoul, nullStringMapToMap(childRec))
+								_ = h.deleteRecordAndCascade(ctx, targetOtherMoul, childMap, childID)
+							}
+						}
+					} else if onDel == schema.OnDeleteSetNull {
+						if card == "1:1" || card == "1:N" {
+							_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: ""}, dbx.HashExp{field.Name: id}).Execute()
+						} else if card == "M:N" {
+							var rawRecs []dbx.NullStringMap
+							if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
+								for _, rawRec := range rawRecs {
+									recMap := nullStringMapToMap(rawRec)
+									recID, _ := recMap["id"].(string)
+									rawVal, _ := recMap[field.Name].(string)
+									if rawVal != "" {
+										var ids []string
+										if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+											found := false
+											var newIDs []string
+											for _, item := range ids {
+												if item == id {
+													found = true
+												} else {
+													newIDs = append(newIDs, item)
+												}
+											}
+											if found {
+												newJSON, _ := json.Marshal(newIDs)
+												_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: string(newJSON)}, dbx.HashExp{"id": recID}).Execute()
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Helper to safely convert interface to int

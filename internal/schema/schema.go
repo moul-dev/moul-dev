@@ -2,9 +2,16 @@ package schema
 
 import "encoding/json"
 
+const (
+	OnDeleteCascade  = "CASCADE"
+	OnDeleteSetNull  = "SET_NULL"
+	OnDeleteRestrict = "RESTRICT"
+)
+
 type RelationConfig struct {
 	TargetMoul  string `json:"targetMoul"`
 	Cardinality string `json:"cardinality"` // "1:1", "1:N", "M:N"
+	OnDelete    string `json:"onDelete,omitempty"`    // "CASCADE", "SET_NULL", "RESTRICT"
 }
 
 type MoulField struct {

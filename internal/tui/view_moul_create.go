@@ -228,6 +228,7 @@ func (m *Model) initMoulFieldForm() {
 		m.newFieldType = "text"
 		m.newFieldRelationTarget = ""
 		m.newFieldRelationCard = "1:N"
+		m.newFieldRelationOnDelete = "SET_NULL"
 	} else {
 		var fToEdit *schema.MoulField
 		for i := range m.newMoulFieldsList {
@@ -242,9 +243,14 @@ func (m *Model) initMoulFieldForm() {
 			if fToEdit.Type == "relation" && fToEdit.RelationConfig != nil {
 				m.newFieldRelationTarget = fToEdit.RelationConfig.TargetMoul
 				m.newFieldRelationCard = fToEdit.RelationConfig.Cardinality
+				m.newFieldRelationOnDelete = fToEdit.RelationConfig.OnDelete
+				if m.newFieldRelationOnDelete == "" {
+					m.newFieldRelationOnDelete = "SET_NULL"
+				}
 			} else {
 				m.newFieldRelationTarget = ""
 				m.newFieldRelationCard = "1:N"
+				m.newFieldRelationOnDelete = "SET_NULL"
 			}
 		}
 	}
@@ -333,6 +339,15 @@ func (m *Model) initMoulFieldForm() {
 					huh.NewOption("M:N (Many to Many)", "M:N"),
 				).
 				Value(&m.newFieldRelationCard),
+
+			huh.NewSelect[string]().
+				Title("On Delete Behavior").
+				Options(
+					huh.NewOption("SET NULL / Clear reference (Default)", "SET_NULL"),
+					huh.NewOption("CASCADE (Delete referencing records)", "CASCADE"),
+					huh.NewOption("RESTRICT (Prevent deletion if referenced)", "RESTRICT"),
+				).
+				Value(&m.newFieldRelationOnDelete),
 		).WithHideFunc(func() bool {
 			return m.newFieldType != "relation"
 		}),

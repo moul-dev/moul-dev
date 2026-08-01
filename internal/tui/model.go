@@ -131,6 +131,7 @@ type Model struct {
 	newFieldType           string
 	newFieldRelationTarget string
 	newFieldRelationCard   string
+	newFieldRelationOnDelete string
 	MoulActionForm         *huh.Form
 	MoulFieldForm          *huh.Form
 	MoulRulesForm          *huh.Form
@@ -746,6 +747,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newField.RelationConfig = &schema.RelationConfig{
 						TargetMoul:  m.newFieldRelationTarget,
 						Cardinality: m.newFieldRelationCard,
+						OnDelete:    m.newFieldRelationOnDelete,
 					}
 				}
 

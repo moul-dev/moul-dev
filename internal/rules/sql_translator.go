@@ -47,12 +47,20 @@ var standardFields = map[string]bool{
 	"landing_page":           true,
 }
 
-// IsValidField checks if a field name exists in the moul schema or standard fields.
+// IsValidField checks if a field name exists in the moul schema or standard fields, or is a valid relation path.
 func IsValidField(fieldName string, moul *schema.Moul) bool {
 	if standardFields[fieldName] {
 		return true
 	}
 	if moul != nil {
+		if strings.Contains(fieldName, ".") {
+			parts := strings.Split(fieldName, ".")
+			for _, f := range moul.Fields {
+				if f.Name == parts[0] && f.Type == "relation" {
+					return true
+				}
+			}
+		}
 		for _, f := range moul.Fields {
 			if f.Name == fieldName {
 				return true
@@ -62,7 +70,7 @@ func IsValidField(fieldName string, moul *schema.Moul) bool {
 	return false
 }
 
-// BuildSortSQL converts a comma-separated sort string (e.g. "-created,title", "@random")
+// BuildSortSQL converts a comma-separated sort string (e.g. "-created,title", "@random", "-author.name")
 // into sanitized SQL ORDER BY expressions.
 func BuildSortSQL(sortStr string, moul *schema.Moul) ([]string, error) {
 	if strings.TrimSpace(sortStr) == "" {
@@ -92,6 +100,29 @@ func BuildSortSQL(sortStr string, moul *schema.Moul) ([]string, error) {
 
 		if !IsValidField(fieldName, moul) {
 			return nil, fmt.Errorf("invalid sort field %q", fieldName)
+		}
+
+		if strings.Contains(fieldName, ".") && moul != nil {
+			relParts := strings.Split(fieldName, ".")
+			var targetField *schema.MoulField
+			for _, f := range moul.Fields {
+				if f.Name == relParts[0] && f.Type == "relation" && f.RelationConfig != nil {
+					tf := f
+					targetField = &tf
+					break
+				}
+			}
+			if targetField != nil {
+				targetMoul := targetField.RelationConfig.TargetMoul
+				card := targetField.RelationConfig.Cardinality
+				subCol := relParts[1]
+				if card == "1:1" || card == "1:N" {
+					result = append(result, fmt.Sprintf("(SELECT %s FROM %s WHERE %s.id = %s) %s", subCol, targetMoul, targetMoul, relParts[0], direction))
+				} else if card == "M:N" {
+					result = append(result, fmt.Sprintf("(SELECT %s FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value LIMIT 1) %s", subCol, targetMoul, relParts[0], targetMoul, direction))
+				}
+				continue
+			}
 		}
 
 		result = append(result, fmt.Sprintf("%s %s", fieldName, direction))
@@ -251,6 +282,11 @@ func (b *sqlBuilder) parseComparison() (string, error) {
 
 	leftTok := b.tokens[b.pos]
 
+	// Handle relational field paths (e.g. author.name = "Alice", buyers.email ~ "example.com")
+	if leftTok.Type == TokenIdentifier && b.isRelationPath(leftTok.Value) {
+		return b.parseRelationalComparison()
+	}
+
 	// Handle @collection subqueries (e.g. @collection.posts.user_id = id)
 	if leftTok.Type == TokenIdentifier && strings.HasPrefix(leftTok.Value, "@collection.") {
 		return b.parseCollectionSubquery()
@@ -344,6 +380,97 @@ func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 
 	subquery := fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.%s %s %s)", targetTable, targetTable, targetField, sqlOp, rightCond)
 	return subquery, nil
+}
+
+func (b *sqlBuilder) isRelationPath(fieldName string) bool {
+	if !strings.Contains(fieldName, ".") {
+		return false
+	}
+	parts := strings.Split(fieldName, ".")
+	if b.moul == nil {
+		return false
+	}
+	for _, f := range b.moul.Fields {
+		if f.Name == parts[0] && f.Type == "relation" && f.RelationConfig != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *sqlBuilder) parseRelationalComparison() (string, error) {
+	leftTok := b.tokens[b.pos]
+	b.pos++
+
+	if b.pos >= len(b.tokens) || b.tokens[b.pos].Type != TokenOperator {
+		return "", fmt.Errorf("expected operator after relational path %s", leftTok.Value)
+	}
+	opTok := b.tokens[b.pos]
+	b.pos++
+
+	if b.pos >= len(b.tokens) {
+		return "", fmt.Errorf("missing right operand for relational path %s", leftTok.Value)
+	}
+	rightTok := b.tokens[b.pos]
+	b.pos++
+
+	rightExpr, rightVal, rightIsCol, err := b.resolveToken(rightTok)
+	if err != nil {
+		return "", err
+	}
+
+	parts := strings.Split(leftTok.Value, ".")
+	relFieldName := parts[0]
+
+	var relField *schema.MoulField
+	if b.moul != nil {
+		for _, f := range b.moul.Fields {
+			if f.Name == relFieldName && f.Type == "relation" && f.RelationConfig != nil {
+				tf := f
+				relField = &tf
+				break
+			}
+		}
+	}
+	if relField == nil {
+		return "", fmt.Errorf("invalid relation field %q in path %q", relFieldName, leftTok.Value)
+	}
+
+	targetMoul := relField.RelationConfig.TargetMoul
+	card := relField.RelationConfig.Cardinality
+	targetField := strings.Join(parts[1:], ".")
+
+	sqlOp := b.mapOperator(opTok.Value)
+
+	var rightCond string
+	if rightIsCol {
+		rightCond = rightExpr
+	} else if rightVal != nil {
+		pName := b.nextParamName()
+		if sqlOp == "LIKE" || sqlOp == "NOT LIKE" {
+			b.params[pName] = "%" + fmt.Sprintf("%v", rightVal) + "%"
+		} else {
+			b.params[pName] = rightVal
+		}
+		rightCond = fmt.Sprintf("{:%s}", pName)
+	} else {
+		if rightExpr != "" {
+			rightCond = rightExpr
+		} else {
+			if sqlOp == "=" {
+				return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s IS NULL)", targetMoul, targetMoul, relFieldName, targetMoul, targetField), nil
+			}
+			return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s IS NOT NULL)", targetMoul, targetMoul, relFieldName, targetMoul, targetField), nil
+		}
+	}
+
+	if card == "1:1" || card == "1:N" {
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s %s %s)", targetMoul, targetMoul, relFieldName, targetMoul, targetField, sqlOp, rightCond), nil
+	} else if card == "M:N" {
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value AND %s.%s %s %s)", targetMoul, relFieldName, targetMoul, targetMoul, targetField, sqlOp, rightCond), nil
+	}
+
+	return "", fmt.Errorf("unsupported relation cardinality %q", card)
 }
 
 func (b *sqlBuilder) resolveToken(tok Token) (expr string, val interface{}, isColumn bool, err error) {
