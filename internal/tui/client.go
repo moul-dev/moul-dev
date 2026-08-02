@@ -160,6 +160,37 @@ func (c *Client) ListRecordsPaginated(moulName string, page, perPage int, sort, 
 	return &res, nil
 }
 
+// ListRecordsCursor fetches records after a cursor ID for cursor-based pagination.
+func (c *Client) ListRecordsCursor(moulName, after string, perPage int, sort, filter string, expand ...string) (*RecordListResult, error) {
+	path := fmt.Sprintf("/api/moul/%s/records", moulName)
+	var params []string
+	if after != "" {
+		params = append(params, fmt.Sprintf("after=%s", after))
+	}
+	if perPage > 0 {
+		params = append(params, fmt.Sprintf("perPage=%d", perPage))
+	}
+	if sort != "" {
+		params = append(params, fmt.Sprintf("sort=%s", sort))
+	}
+	if filter != "" {
+		params = append(params, fmt.Sprintf("filter=%s", filter))
+	}
+	if len(expand) > 0 {
+		params = append(params, fmt.Sprintf("expand=%s", strings.Join(expand, ",")))
+	}
+	if len(params) > 0 {
+		path = fmt.Sprintf("%s?%s", path, strings.Join(params, "&"))
+	}
+
+	var res RecordListResult
+	err := c.request("GET", path, nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // ListRecords fetches records of a specific moul.
 func (c *Client) ListRecords(moulName string, expand ...string) ([]map[string]interface{}, error) {
 	res, err := c.ListRecordsPaginated(moulName, 1, 500, "", "", expand...)

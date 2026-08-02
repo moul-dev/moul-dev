@@ -1567,6 +1567,12 @@ paths:
           description: Comma-separated relational fields to expand inline.
           schema:
             type: string
+        - name: after
+          in: query
+          required: false
+          description: Cursor record ID to fetch items after for cursor-based pagination.
+          schema:
+            type: string
       responses:
         '200':
           description: List of records matching listRule constraints.

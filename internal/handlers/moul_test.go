@@ -511,6 +511,28 @@ func TestHandlersEdgeCases(t *testing.T) {
 		t.Errorf("Unexpected page 1 result: %+v", page1Res)
 	}
 
+	// Cursor-based pagination query param: after=<id>
+	firstRecordID := page1Res.Items[0]["id"].(string)
+	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?sort=-price&perPage=1&after="+firstRecordID, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for cursor pagination, got %d", resp.StatusCode)
+	}
+	var cursorRes struct {
+		PerPage    int                      `json:"perPage"`
+		TotalItems int                      `json:"totalItems"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &cursorRes)
+	if len(cursorRes.Items) != 1 {
+		t.Fatalf("Expected 1 item for cursor pagination, got %d", len(cursorRes.Items))
+	}
+	if cursorRes.Items[0]["id"] == firstRecordID {
+		t.Errorf("Expected cursor pagination to return item after %s, but got the same item", firstRecordID)
+	}
+	if cursorRes.TotalItems != 2 {
+		t.Errorf("Expected totalItems=2 for cursor query, got %d", cursorRes.TotalItems)
+	}
+
 	// Invalid filter field -> 400 Bad Request
 	resp = getJSON(t, client, server.URL+"/api/moul/posts/records?filter=nonexistent_col=1", "")
 	if resp.StatusCode != http.StatusBadRequest {

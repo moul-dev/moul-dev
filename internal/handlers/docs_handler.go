@@ -210,6 +210,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 				"parameters": []map[string]interface{}{
 					{"name": "page", "in": "query", "description": "Page number (1-indexed)", "schema": map[string]interface{}{"type": "integer", "default": 1}},
 					{"name": "perPage", "in": "query", "description": "Items per page (max 1000)", "schema": map[string]interface{}{"type": "integer", "default": 30}},
+					{"name": "after", "in": "query", "description": "Cursor record ID to fetch items after", "schema": map[string]interface{}{"type": "string"}},
 					{"name": "sort", "in": "query", "description": "Sort expression (e.g. -created_at,name)", "schema": map[string]interface{}{"type": "string"}},
 					{"name": "filter", "in": "query", "description": "Filter condition expression", "schema": map[string]interface{}{"type": "string"}},
 					{"name": "expand", "in": "query", "description": "Comma-separated relation fields to inline expand", "schema": map[string]interface{}{"type": "string"}},

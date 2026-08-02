@@ -619,15 +619,41 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	}
 
 	// 5. Query paginated records
+	dataWhereSQLs := append([]string{}, whereSQLs...)
+	dataParams := make(dbx.Params)
+	for k, v := range combinedParams {
+		dataParams[k] = v
+	}
+
+	after := c.QueryParam("after")
+	if after != "" {
+		cSQL, cParams := buildCursorWhere(h.DB, moulName, moul, sortExprs, after)
+		if cSQL != "" {
+			dataWhereSQLs = append(dataWhereSQLs, fmt.Sprintf("(%s)", cSQL))
+			for k, v := range cParams {
+				dataParams[k] = v
+			}
+		}
+	}
+
+	var dataWhereSQL string
+	if len(dataWhereSQLs) > 0 {
+		dataWhereSQL = strings.Join(dataWhereSQLs, " AND ")
+	}
+
 	dataSelect := h.DB.Select("*").From(moulName)
-	if fullWhereSQL != "" {
-		dataSelect.Where(dbx.NewExp(fullWhereSQL, combinedParams))
+	if dataWhereSQL != "" {
+		dataSelect.Where(dbx.NewExp(dataWhereSQL, dataParams))
 	}
 	if len(sortExprs) > 0 {
 		dataSelect.OrderBy(sortExprs...)
 	}
-	offset := (page - 1) * perPage
-	dataSelect.Limit(int64(perPage)).Offset(int64(offset))
+	if after != "" {
+		dataSelect.Limit(int64(perPage))
+	} else {
+		offset := (page - 1) * perPage
+		dataSelect.Limit(int64(perPage)).Offset(int64(offset))
+	}
 
 	var rawRecords []dbx.NullStringMap
 	err = dataSelect.All(&rawRecords)
@@ -651,6 +677,50 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 		"totalPages": totalPages,
 		"items":      items,
 	})
+}
+
+// buildCursorWhere builds a WHERE SQL clause and parameters for cursor-based pagination (?after=<id>).
+func buildCursorWhere(dbEn dbx.Builder, moulName string, moul *schema.Moul, sortExprs []string, after string) (string, dbx.Params) {
+	if after == "" {
+		return "", nil
+	}
+
+	if len(sortExprs) == 0 || (len(sortExprs) == 1 && (sortExprs[0] == "id ASC" || sortExprs[0] == "id")) {
+		return "id > {:cursor_after}", dbx.Params{"cursor_after": after}
+	}
+	if len(sortExprs) == 1 && sortExprs[0] == "id DESC" {
+		return "id < {:cursor_after}", dbx.Params{"cursor_after": after}
+	}
+
+	// Load record with id = after for cursor comparison values
+	var cursorRec dbx.NullStringMap
+	err := dbEn.Select("*").From(moulName).Where(dbx.HashExp{"id": after}).One(&cursorRec)
+	if err != nil {
+		// Fallback to id > after if cursor record not found
+		return "id > {:cursor_after}", dbx.Params{"cursor_after": after}
+	}
+
+	cursorMap := nullStringMapToMap(cursorRec)
+
+	primarySort := sortExprs[0]
+	parts := strings.Split(strings.TrimSpace(primarySort), " ")
+	col := parts[0]
+	dir := "ASC"
+	if len(parts) > 1 && strings.ToUpper(parts[1]) == "DESC" {
+		dir = "DESC"
+	}
+
+	cursorVal, exists := cursorMap[col]
+	if !exists || cursorVal == nil {
+		return "id > {:cursor_after}", dbx.Params{"cursor_after": after}
+	}
+
+	if dir == "DESC" {
+		return fmt.Sprintf("(%s < {:cursor_val} OR (%s = {:cursor_val} AND id > {:cursor_id}))", col, col),
+			dbx.Params{"cursor_val": cursorVal, "cursor_id": after}
+	}
+	return fmt.Sprintf("(%s > {:cursor_val} OR (%s = {:cursor_val} AND id > {:cursor_id}))", col, col),
+		dbx.Params{"cursor_val": cursorVal, "cursor_id": after}
 }
 
 // GetRecord returns a single record by ID.
