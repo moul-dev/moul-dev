@@ -222,7 +222,22 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 func validateMoulFields(m *schema.Moul) error {
 	for i := range m.Fields {
 		f := &m.Fields[i]
-		if f.Type == "relation" {
+		switch f.Type {
+		case "text", "number", "bool", "json", "file":
+			// standard types
+		case "select":
+			var cleaned []string
+			for _, opt := range f.Options {
+				trimmed := strings.TrimSpace(opt)
+				if trimmed != "" {
+					cleaned = append(cleaned, trimmed)
+				}
+			}
+			if len(cleaned) == 0 {
+				return fmt.Errorf("select field %q requires at least one option", f.Name)
+			}
+			f.Options = cleaned
+		case "relation":
 			if f.RelationConfig == nil {
 				return fmt.Errorf("relation field %q requires relationConfig", f.Name)
 			}
@@ -242,6 +257,8 @@ func validateMoulFields(m *schema.Moul) error {
 				return fmt.Errorf("invalid onDelete %q for field %q (allowed: CASCADE, SET_NULL, RESTRICT)", f.RelationConfig.OnDelete, f.Name)
 			}
 			f.RelationConfig.OnDelete = onDel
+		default:
+			return fmt.Errorf("invalid type %q for field %q", f.Type, f.Name)
 		}
 	}
 	return nil

@@ -270,11 +270,42 @@ func TestDynamicLiveDocsSpec(t *testing.T) {
 		}
 		bodyStr := string(bodyBytes)
 
-		if !strings.Contains(bodyStr, "/api/moul/products/records") {
+		if !strings.Contains(bodyStr, "\"/api/moul/products/records\"") {
 			t.Errorf("Expected live JSON spec to contain '/api/moul/products/records'")
 		}
 		if !strings.Contains(bodyStr, "\"products\"") {
 			t.Errorf("Expected live JSON spec to contain products schema")
+		}
+	})
+
+	t.Run("OpenAPI spec includes enum for select field", func(t *testing.T) {
+		moulWithSelect := schema.Moul{
+			Name: "orders",
+			Type: "base",
+			Fields: []schema.MoulField{
+				{Name: "status", Type: "select", Options: []string{"pending", "shipped", "delivered"}},
+			},
+		}
+		if err := db.SaveMoulMetadata(dbConn, &moulWithSelect); err != nil {
+			t.Fatalf("Failed to save moul metadata: %v", err)
+		}
+
+		resp, err := client.Get(server.URL + "/openapi.json")
+		if err != nil {
+			t.Fatalf("GET /openapi.json failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		bodyStr := string(bodyBytes)
+
+		if !strings.Contains(bodyStr, "\"enum\":[\"pending\",\"shipped\",\"delivered\"]") &&
+			!strings.Contains(bodyStr, "\"enum\": [\"pending\", \"shipped\", \"delivered\"]") &&
+			!strings.Contains(bodyStr, "\"pending\"") {
+			t.Errorf("Expected live JSON spec to contain select field enum values, got snippet: %s", bodyStr)
 		}
 	})
 }

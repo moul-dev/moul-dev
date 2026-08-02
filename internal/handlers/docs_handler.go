@@ -392,6 +392,14 @@ func mapFieldToOpenAPISchema(field schema.MoulField) (map[string]interface{}, in
 	case "json":
 		s["type"] = "object"
 		ex = map[string]interface{}{"key": "value"}
+	case "select":
+		s["type"] = "string"
+		s["enum"] = field.Options
+		if len(field.Options) > 0 {
+			ex = field.Options[0]
+		} else {
+			ex = "option1"
+		}
 	case "relation":
 		if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
 			s["type"] = "array"

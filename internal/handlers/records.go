@@ -224,6 +224,26 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 				} else {
 					insertData[field.Name] = val
 				}
+			} else if field.Type == "select" {
+				if val == nil || val == "" {
+					insertData[field.Name] = ""
+				} else {
+					strVal, ok := val.(string)
+					if !ok {
+						return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Select field %s must be a string", field.Name))
+					}
+					valid := false
+					for _, opt := range field.Options {
+						if opt == strVal {
+							valid = true
+							break
+						}
+					}
+					if !valid {
+						return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value %q for select field %s (allowed: %s)", strVal, field.Name, strings.Join(field.Options, ", ")))
+					}
+					insertData[field.Name] = strVal
+				}
 			} else if field.Type == "relation" {
 				if val == nil || val == "" {
 					if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
@@ -753,6 +773,26 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 					}
 				} else {
 					updateParams[field.Name] = val
+				}
+			} else if field.Type == "select" {
+				if val == nil || val == "" {
+					updateParams[field.Name] = ""
+				} else {
+					strVal, ok := val.(string)
+					if !ok {
+						return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Select field %s must be a string", field.Name))
+					}
+					valid := false
+					for _, opt := range field.Options {
+						if opt == strVal {
+							valid = true
+							break
+						}
+					}
+					if !valid {
+						return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value %q for select field %s (allowed: %s)", strVal, field.Name, strings.Join(field.Options, ", ")))
+					}
+					updateParams[field.Name] = strVal
 				}
 			} else if field.Type == "relation" {
 				if val == nil || val == "" {

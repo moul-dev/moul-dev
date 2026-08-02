@@ -16,7 +16,8 @@ type RelationConfig struct {
 
 type MoulField struct {
 	Name           string          `json:"name"`
-	Type           string          `json:"type"` // "text", "number", "bool", "json", "file", "relation"
+	Type           string          `json:"type"` // "text", "number", "bool", "json", "file", "relation", "select"
+	Options        []string        `json:"options,omitempty"`
 	RelationConfig *RelationConfig `json:"relationConfig,omitempty"`
 }
 

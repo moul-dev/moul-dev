@@ -14,6 +14,9 @@ func TestValidateFieldsString(t *testing.T) {
 		{"title:text", false},
 		{"title:text,views:number,published:bool", false},
 		{"  title:text , views:number , published:bool  ", false},
+		{"status:select:draft|published", false},
+		{"status:select:", true},
+		{"status:select", true},
 		{"title", true},
 		{"title:", true},
 		{":text", true},
@@ -32,11 +35,11 @@ func TestValidateFieldsString(t *testing.T) {
 }
 
 func TestParseFieldsString(t *testing.T) {
-	input := "title:text, views:number, published:bool"
+	input := "title:text, views:number, published:bool, status:select:draft|published"
 	fields := parseFieldsString(input)
 
-	if len(fields) != 3 {
-		t.Fatalf("Expected 3 fields, got %d", len(fields))
+	if len(fields) != 4 {
+		t.Fatalf("Expected 4 fields, got %d", len(fields))
 	}
 
 	expected := []struct {
@@ -46,6 +49,7 @@ func TestParseFieldsString(t *testing.T) {
 		{"title", "text"},
 		{"views", "number"},
 		{"published", "bool"},
+		{"status", "select"},
 	}
 
 	for i, exp := range expected {
@@ -55,5 +59,8 @@ func TestParseFieldsString(t *testing.T) {
 		if fields[i].Type != exp.fType {
 			t.Errorf("Expected fields[%d].Type = %q, got %q", i, exp.fType, fields[i].Type)
 		}
+	}
+	if len(fields[3].Options) != 2 || fields[3].Options[0] != "draft" || fields[3].Options[1] != "published" {
+		t.Errorf("Unexpected select options: %+v", fields[3].Options)
 	}
 }

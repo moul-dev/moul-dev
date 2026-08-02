@@ -129,6 +129,7 @@ type Model struct {
 	newMoulAction          string
 	newFieldName           string
 	newFieldType           string
+	newFieldOptions        string
 	newFieldRelationTarget string
 	newFieldRelationCard   string
 	newFieldRelationOnDelete string
@@ -749,6 +750,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Cardinality: m.newFieldRelationCard,
 						OnDelete:    m.newFieldRelationOnDelete,
 					}
+				} else if m.newFieldType == "select" {
+					var opts []string
+					for _, opt := range strings.Split(m.newFieldOptions, ",") {
+						trimmed := strings.TrimSpace(opt)
+						if trimmed != "" {
+							opts = append(opts, trimmed)
+						}
+					}
+					newField.Options = opts
 				}
 
 				if m.isEditingField {

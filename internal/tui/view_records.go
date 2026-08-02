@@ -465,6 +465,28 @@ func (m *Model) initRecordForm(isEdit bool) {
 			continue
 		}
 
+		if f.Type == "select" {
+			valStr := ""
+			if record != nil {
+				if val, ok := record[f.Name]; ok && val != nil {
+					valStr = fmt.Sprintf("%v", val)
+				}
+			}
+			m.recordFormData[f.Name] = &valStr
+
+			var selectOpts []huh.Option[string]
+			selectOpts = append(selectOpts, huh.NewOption[string]("(none)", ""))
+			for _, opt := range f.Options {
+				selectOpts = append(selectOpts, huh.NewOption[string](opt, opt))
+			}
+
+			fields = append(fields, huh.NewSelect[string]().
+				Title(fmt.Sprintf("%s (select)", f.Name)).
+				Options(selectOpts...).
+				Value(&valStr))
+			continue
+		}
+
 		valStr := ""
 		if record != nil {
 			if val, ok := record[f.Name]; ok && val != nil {

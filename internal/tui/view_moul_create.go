@@ -26,8 +26,8 @@ func validateFieldsString(str string) error {
 			continue
 		}
 		subParts := strings.Split(part, ":")
-		if len(subParts) != 2 && len(subParts) != 4 {
-			return fmt.Errorf("invalid format for %q: must be name:type or name:relation:targetMoul:cardinality", part)
+		if len(subParts) != 2 && len(subParts) != 3 && len(subParts) != 4 {
+			return fmt.Errorf("invalid format for %q: must be name:type, name:select:opt1|opt2, or name:relation:targetMoul:cardinality", part)
 		}
 		fName := strings.TrimSpace(subParts[0])
 		fType := strings.TrimSpace(subParts[1])
@@ -43,6 +43,21 @@ func validateFieldsString(str string) error {
 		case "text", "number", "bool", "json", "file":
 			if len(subParts) != 2 {
 				return fmt.Errorf("field %q of type %q cannot have extra parameters", fName, fType)
+			}
+		case "select":
+			if len(subParts) != 3 {
+				return fmt.Errorf("select field %q must specify options separated by pipes (format: name:select:opt1|opt2)", fName)
+			}
+			opts := strings.Split(subParts[2], "|")
+			hasOpt := false
+			for _, opt := range opts {
+				if strings.TrimSpace(opt) != "" {
+					hasOpt = true
+					break
+				}
+			}
+			if !hasOpt {
+				return fmt.Errorf("select field %q requires at least one option", fName)
 			}
 		case "relation":
 			if len(subParts) != 4 {
@@ -60,7 +75,7 @@ func validateFieldsString(str string) error {
 				return fmt.Errorf("invalid cardinality %q for relation field %q (allowed: 1:1, 1:N, M:N)", cardinality, fName)
 			}
 		default:
-			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, json, file, relation)", fType, fName)
+			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, json, file, relation, select)", fType, fName)
 		}
 	}
 	return nil
@@ -84,6 +99,20 @@ func parseFieldsString(str string) []schema.MoulField {
 			fields = append(fields, schema.MoulField{
 				Name: strings.TrimSpace(subParts[0]),
 				Type: strings.TrimSpace(subParts[1]),
+			})
+		} else if len(subParts) == 3 && strings.TrimSpace(subParts[1]) == "select" {
+			rawOpts := strings.Split(subParts[2], "|")
+			var opts []string
+			for _, o := range rawOpts {
+				trimmed := strings.TrimSpace(o)
+				if trimmed != "" {
+					opts = append(opts, trimmed)
+				}
+			}
+			fields = append(fields, schema.MoulField{
+				Name:    strings.TrimSpace(subParts[0]),
+				Type:    "select",
+				Options: opts,
 			})
 		} else if len(subParts) == 4 && strings.TrimSpace(subParts[1]) == "relation" {
 			fields = append(fields, schema.MoulField{
@@ -226,6 +255,7 @@ func (m *Model) initMoulFieldForm() {
 	if !m.isEditingField {
 		m.newFieldName = ""
 		m.newFieldType = "text"
+		m.newFieldOptions = ""
 		m.newFieldRelationTarget = ""
 		m.newFieldRelationCard = "1:N"
 		m.newFieldRelationOnDelete = "SET_NULL"
@@ -240,6 +270,11 @@ func (m *Model) initMoulFieldForm() {
 		if fToEdit != nil {
 			m.newFieldName = fToEdit.Name
 			m.newFieldType = fToEdit.Type
+			if fToEdit.Type == "select" {
+				m.newFieldOptions = strings.Join(fToEdit.Options, ", ")
+			} else {
+				m.newFieldOptions = ""
+			}
 			if fToEdit.Type == "relation" && fToEdit.RelationConfig != nil {
 				m.newFieldRelationTarget = fToEdit.RelationConfig.TargetMoul
 				m.newFieldRelationCard = fToEdit.RelationConfig.Cardinality
@@ -319,12 +354,37 @@ func (m *Model) initMoulFieldForm() {
 					huh.NewOption("Text (String)", "text"),
 					huh.NewOption("Number (Numeric/Float)", "number"),
 					huh.NewOption("Boolean (True/False)", "bool"),
+					huh.NewOption("Select (Enum / Constrained Options)", "select"),
 					huh.NewOption("JSON (Structured Object/Array)", "json"),
 					huh.NewOption("File (File Metadata)", "file"),
 					huh.NewOption("Association (Relation to other collection)", "relation"),
 				).
 				Value(&m.newFieldType),
 		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Select Options (comma-separated)").
+				Placeholder("e.g. pending, active, archived").
+				Value(&m.newFieldOptions).
+				Validate(func(str string) error {
+					if m.newFieldType == "select" {
+						parts := strings.Split(str, ",")
+						hasOpt := false
+						for _, p := range parts {
+							if strings.TrimSpace(p) != "" {
+								hasOpt = true
+								break
+							}
+						}
+						if !hasOpt {
+							return fmt.Errorf("select field requires at least one option")
+						}
+					}
+					return nil
+				}),
+		).WithHideFunc(func() bool {
+			return m.newFieldType != "select"
+		}),
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Title("Target Collection").
@@ -519,6 +579,8 @@ func (m *Model) viewMoulCreate() string {
 		for _, f := range m.newMoulFieldsList {
 			if f.Type == "relation" && f.RelationConfig != nil {
 				s.WriteString(fmt.Sprintf("  - %s (relation:%s %s)\n", f.Name, f.RelationConfig.TargetMoul, f.RelationConfig.Cardinality))
+			} else if f.Type == "select" {
+				s.WriteString(fmt.Sprintf("  - %s (select: %s)\n", f.Name, strings.Join(f.Options, ", ")))
 			} else {
 				s.WriteString(fmt.Sprintf("  - %s (%s)\n", f.Name, f.Type))
 			}

@@ -1018,6 +1018,110 @@ func TestUpdateMoul(t *testing.T) {
 	}
 }
 
+func TestSelectFieldValidationAndCRUD(t *testing.T) {
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	e := echo.New()
+	e.Use(middleware.LoadAuthContextMiddleware())
+
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	recordHandler := handlers.NewRecordHandler(dbConn)
+
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	// 1. Create collection with invalid select field (empty options) -> 400
+	invalidMoul := schema.Moul{
+		Name: "tasks",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "status", Type: "select", Options: []string{}},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", invalidMoul, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for select field with no options, got %d", resp.StatusCode)
+	}
+
+	// 2. Create collection with valid select field
+	validMoul := schema.Moul{
+		Name: "tasks",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "status", Type: "select", Options: []string{"todo", "in_progress", "done"}},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", validMoul, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for tasks moul creation, got %d", resp.StatusCode)
+	}
+
+	// 3. Create record with invalid select option -> 400
+	invalidRec := map[string]interface{}{
+		"title":  "Task 1",
+		"status": "archived",
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/tasks/records", invalidRec, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for invalid select option, got %d", resp.StatusCode)
+	}
+
+	// 4. Create record with valid select option -> 201
+	validRec := map[string]interface{}{
+		"title":  "Task 1",
+		"status": "in_progress",
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/tasks/records", validRec, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for valid select record creation, got %d", resp.StatusCode)
+	}
+
+	var created map[string]interface{}
+	parseJSON(t, resp, &created)
+	recID, ok := created["id"].(string)
+	if !ok || recID == "" {
+		t.Fatalf("Expected record ID string, got %+v", created["id"])
+	}
+	if created["status"] != "in_progress" {
+		t.Fatalf("Expected status 'in_progress', got %v", created["status"])
+	}
+
+	// 5. Update record with invalid option -> 400
+	invalidUpdate := map[string]interface{}{
+		"status": "invalid_status",
+	}
+	resp = patchJSON(t, client, server.URL+"/api/moul/tasks/records/"+recID, invalidUpdate, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for invalid status update, got %d", resp.StatusCode)
+	}
+
+	// 6. Update record with valid option -> 200
+	validUpdate := map[string]interface{}{
+		"status": "done",
+	}
+	resp = patchJSON(t, client, server.URL+"/api/moul/tasks/records/"+recID, validUpdate, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for valid status update, got %d", resp.StatusCode)
+	}
+	var updated map[string]interface{}
+	parseJSON(t, resp, &updated)
+	if updated["status"] != "done" {
+		t.Fatalf("Expected status 'done', got %v", updated["status"])
+	}
+}
+
 func TestMain(m *testing.M) {
 	// Initialize JWT for all handler tests
 	auth.InitJWT("test-secret-key-for-unit-tests-1234")
