@@ -325,6 +325,8 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
 				state TEXT NOT NULL DEFAULT 'available',
 				queue TEXT NOT NULL DEFAULT 'default',
 				worker TEXT NOT NULL,
@@ -349,6 +351,8 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		createSQL = fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
 				visit_token TEXT NOT NULL,
 				visitor_token TEXT NOT NULL,
 				user_id TEXT,
@@ -415,8 +419,12 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	m.CreatedAt = now
-	m.UpdatedAt = now
+	if m.CreatedAt == "" {
+		m.CreatedAt = now
+	}
+	if m.UpdatedAt == "" {
+		m.UpdatedAt = now
+	}
 
 	_, err = db.Insert("_moul", dbx.Params{
 		"id":              m.ID,

@@ -15,6 +15,8 @@ var standardFields = map[string]bool{
 	"id":                     true,
 	"created":                true,
 	"updated":                true,
+	"created_at":             true,
+	"updated_at":             true,
 	"inserted_at":            true,
 	"scheduled_at":           true,
 	"state":                  true,

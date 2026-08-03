@@ -332,10 +332,8 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	insertData["id"] = recordID
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if moul.Type != "worker" {
-		insertData["created_at"] = now
-		insertData["updated_at"] = now
-	}
+	insertData["created_at"] = now
+	insertData["updated_at"] = now
 
 	// Auth collection specific fields
 	if moul.Type == "auth" {
@@ -1009,9 +1007,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	// Check if there's actually anything to update
 	if len(updateParams) > 0 {
-		if moul.Type != "worker" {
-			updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
-		}
+		updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
 
 		// Dispatch update:before webhook
 		if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{

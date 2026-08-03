@@ -566,11 +566,15 @@ func (m *Model) viewMoulCreate() string {
 			s.WriteString("  - queue (system, text)\n")
 			s.WriteString("  - worker (system, text)\n")
 			s.WriteString("  - inserted_at (system, text)\n")
+			s.WriteString("  - created_at (system, text)\n")
+			s.WriteString("  - updated_at (system, text)\n")
 		} else if m.newMoulType == "analytic" {
 			s.WriteString("  - visit_token (system, text)\n")
 			s.WriteString("  - visitor_token (system, text)\n")
 			s.WriteString("  - name (system, text)\n")
 			s.WriteString("  - time (system, text)\n")
+			s.WriteString("  - created_at (system, text)\n")
+			s.WriteString("  - updated_at (system, text)\n")
 		} else {
 			s.WriteString("  - created_at (system, text)\n")
 			s.WriteString("  - updated_at (system, text)\n")

@@ -174,6 +174,8 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 	insertData["attempt"] = 0
 	insertData["errors"] = "[]"
 	insertData["inserted_at"] = now
+	insertData["created_at"] = now
+	insertData["updated_at"] = now
 
 	queueVal, _ := jobOpts["queue"].(string)
 	if queueVal == "" {

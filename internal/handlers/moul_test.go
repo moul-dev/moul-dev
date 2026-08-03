@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
@@ -1141,6 +1142,115 @@ func TestSelectFieldValidationAndCRUD(t *testing.T) {
 	parseJSON(t, resp, &updated)
 	if updated["status"] != "done" {
 		t.Fatalf("Expected status 'done', got %v", updated["status"])
+	}
+}
+
+func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	analyticsEngine, err := analytics.NewEngine(dbConn, "")
+	if err != nil {
+		t.Fatalf("Failed to initialize analytics engine: %v", err)
+	}
+	defer analyticsEngine.Close()
+
+	e := echo.New()
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	recordHandler := handlers.NewRecordHandler(dbConn)
+	recordHandler.AnalyticsEngine = analyticsEngine
+
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.PUT("/api/moul/:name", moulHandler.UpdateMoul)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create a base collection
+	m := schema.Moul{
+		Name: "articles",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+		},
+	}
+	bodyBytes, _ := json.Marshal(m)
+	resp, err := client.Post(server.URL+"/api/moul", "application/json", bytes.NewReader(bodyBytes))
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Failed to create collection: %v, status: %d", err, resp.StatusCode)
+	}
+	var createdMoul schema.Moul
+	parseJSON(t, resp, &createdMoul)
+	if createdMoul.CreatedAt == "" || createdMoul.UpdatedAt == "" {
+		t.Fatalf("Expected created_at and updated_at to be populated, got created_at=%q, updated_at=%q", createdMoul.CreatedAt, createdMoul.UpdatedAt)
+	}
+
+	// 2. Update collection schema
+	m.Fields = append(m.Fields, schema.MoulField{Name: "summary", Type: "text"})
+	bodyBytes, _ = json.Marshal(m)
+	req, _ := http.NewRequest(http.MethodPut, server.URL+"/api/moul/articles", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Failed to update collection: %v, status: %d", err, resp.StatusCode)
+	}
+	var updatedMoul schema.Moul
+	parseJSON(t, resp, &updatedMoul)
+	if updatedMoul.CreatedAt != createdMoul.CreatedAt {
+		t.Fatalf("Expected created_at to be preserved (%q), got %q", createdMoul.CreatedAt, updatedMoul.CreatedAt)
+	}
+	if updatedMoul.UpdatedAt == "" {
+		t.Fatalf("Expected updated_at to be set on update")
+	}
+
+	// 3. Create a record in worker and analytic collections to ensure created_at/updated_at columns work
+	workerMoul := schema.Moul{Name: "jobs", Type: "worker"}
+	bodyBytes, _ = json.Marshal(workerMoul)
+	resp, err = client.Post(server.URL+"/api/moul", "application/json", bytes.NewReader(bodyBytes))
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Failed to create worker collection: %v, status: %d", err, resp.StatusCode)
+	}
+
+	jobRecord := map[string]interface{}{"worker": "email_worker"}
+	bodyBytes, _ = json.Marshal(jobRecord)
+	resp, err = client.Post(server.URL+"/api/moul/jobs/records", "application/json", bytes.NewReader(bodyBytes))
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Failed to create record in worker collection: %v, status: %d", err, resp.StatusCode)
+	}
+	var createdJob map[string]interface{}
+	parseJSON(t, resp, &createdJob)
+	if createdJob["created_at"] == nil || createdJob["updated_at"] == nil {
+		t.Fatalf("Expected created_at and updated_at on worker record, got %+v", createdJob)
+	}
+
+	analyticMoul := schema.Moul{Name: "page_views", Type: "analytic"}
+	bodyBytes, _ = json.Marshal(analyticMoul)
+	resp, err = client.Post(server.URL+"/api/moul", "application/json", bytes.NewReader(bodyBytes))
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Failed to create analytic collection: %v, status: %d", err, resp.StatusCode)
+	}
+
+	eventRecord := map[string]interface{}{
+		"visit_token":   "vt-123",
+		"visitor_token": "vtr-123",
+		"name":          "pageview",
+		"time":          "2026-08-03T12:00:00Z",
+	}
+	bodyBytes, _ = json.Marshal(eventRecord)
+	resp, err = client.Post(server.URL+"/api/moul/page_views/records", "application/json", bytes.NewReader(bodyBytes))
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Failed to create record in analytic collection: %v, status: %d", err, resp.StatusCode)
+	}
+	var createdEvent map[string]interface{}
+	parseJSON(t, resp, &createdEvent)
+	if createdEvent["created_at"] == nil || createdEvent["updated_at"] == nil {
+		t.Fatalf("Expected created_at and updated_at on analytic record, got %+v", createdEvent)
 	}
 }
 

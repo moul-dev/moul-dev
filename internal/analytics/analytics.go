@@ -381,6 +381,8 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 
 	insertParams := dbx.Params{
 		"id":            eventID,
+		"created_at":    now,
+		"updated_at":    now,
 		"visit_token":   visitToken,
 		"visitor_token": visitorToken,
 		"name":          params.Name,
@@ -396,7 +398,8 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 		lowerName := strings.ToLower(field.Name)
 		if lowerName == "visit_token" || lowerName == "visitor_token" ||
 			lowerName == "user_id" || lowerName == "name" ||
-			lowerName == "properties" || lowerName == "time" || lowerName == "id" {
+			lowerName == "properties" || lowerName == "time" || lowerName == "id" ||
+			lowerName == "created_at" || lowerName == "updated_at" {
 			continue
 		}
 		if val, ok := params.Properties[field.Name]; ok {
