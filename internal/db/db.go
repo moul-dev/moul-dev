@@ -606,7 +606,8 @@ func RenameMoulTable(db *dbx.DB, oldName, newName string) error {
 	return nil
 }
 
-// SyncMoulTableColumns inspects an existing SQLite table and adds any newly defined fields as new columns.
+// SyncMoulTableColumns inspects an existing SQLite table, adds newly defined fields as new columns,
+// and drops columns that are no longer present in the schema (excluding system columns).
 func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 	if err := ValidateTableName(m.Name); err != nil {
 		return fmt.Errorf("unsafe moul name: %w", err)
@@ -630,32 +631,21 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		existingCols[strings.ToLower(row.Name)] = true
 	}
 
+	// systemColumns are managed by moul-dev and must never be added or dropped by schema sync.
+	systemColumns := systemColumnsForType(m.Type)
+
+	// Build the set of user-defined schema field names (lowercase).
+	schemaFields := make(map[string]bool)
+	for _, field := range m.Fields {
+		schemaFields[strings.ToLower(field.Name)] = true
+	}
+
+	// 1. Add columns present in schema but missing from the physical table.
 	for _, field := range m.Fields {
 		lowerName := strings.ToLower(field.Name)
-		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
-			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
-			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" ||
-			lowerName == "resettoken" || lowerName == "resettokenexpiresat" {
+		if systemColumns[lowerName] {
 			continue
 		}
-		if m.Type == "worker" {
-			if lowerName == "state" || lowerName == "queue" || lowerName == "worker" ||
-				lowerName == "args" || lowerName == "meta" || lowerName == "tags" ||
-				lowerName == "errors" || lowerName == "attempt" || lowerName == "max_attempts" ||
-				lowerName == "priority" || lowerName == "inserted_at" || lowerName == "scheduled_at" ||
-				lowerName == "attempted_at" || lowerName == "attempted_by" ||
-				lowerName == "cancelled_at" || lowerName == "completed_at" || lowerName == "discarded_at" {
-				continue
-			}
-		}
-		if m.Type == "analytic" {
-			if lowerName == "visit_token" || lowerName == "visitor_token" ||
-				lowerName == "user_id" || lowerName == "name" ||
-				lowerName == "properties" || lowerName == "time" {
-				continue
-			}
-		}
-
 		if existingCols[lowerName] {
 			continue
 		}
@@ -676,7 +666,61 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		}
 	}
 
+	// 2. Drop columns that exist in the physical table but are no longer in the schema
+	//    (skipping system columns).
+	for _, row := range rows {
+		lowerName := strings.ToLower(row.Name)
+		if systemColumns[lowerName] {
+			continue
+		}
+		if schemaFields[lowerName] {
+			continue
+		}
+		// This is a user-defined column that has been removed from the schema — drop it.
+		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", QuoteIdentifier(m.Name), QuoteIdentifier(row.Name))
+		if _, err := db.NewQuery(dropSQL).Execute(); err != nil {
+			return fmt.Errorf("failed to drop column %s from table %s: %w", row.Name, m.Name, err)
+		}
+	}
+
 	return nil
+}
+
+// systemColumnsForType returns the set of lowercase column names that are managed
+// by moul-dev for a given moul type and must never be added or dropped by schema sync.
+func systemColumnsForType(moulType string) map[string]bool {
+	// Base columns present in every moul type.
+	cols := map[string]bool{
+		"id":         true,
+		"created_at": true,
+		"updated_at": true,
+	}
+	switch moulType {
+	case "auth":
+		for _, c := range []string{
+			"username", "email", "passwordhash",
+			"otpcode", "otpexpiresat", "passkeys",
+			"resettoken", "resettokenexpiresat",
+		} {
+			cols[c] = true
+		}
+	case "worker":
+		for _, c := range []string{
+			"state", "queue", "worker", "args", "meta", "tags",
+			"errors", "attempt", "max_attempts", "priority",
+			"inserted_at", "scheduled_at", "attempted_at", "attempted_by",
+			"cancelled_at", "completed_at", "discarded_at",
+		} {
+			cols[c] = true
+		}
+	case "analytic":
+		for _, c := range []string{
+			"visit_token", "visitor_token", "user_id", "name", "properties", "time",
+		} {
+			cols[c] = true
+		}
+	}
+	return cols
 }
 
 // UpdateMoulMetadata updates an existing moul's meta definition in the _moul table.
