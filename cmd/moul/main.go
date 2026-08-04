@@ -69,8 +69,13 @@ func main() {
 		return
 	}
 
-	if *updateFlag || *updateShortFlag {
+	if *updateFlag || *updateShortFlag || (len(flag.Args()) > 0 && flag.Args()[0] == "update") {
 		force := *forceFlag || *forceShortFlag
+		for _, arg := range flag.Args() {
+			if arg == "-f" || arg == "--force" {
+				force = true
+			}
+		}
 		runUpdateWithForce(force)
 		return
 	}
