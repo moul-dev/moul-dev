@@ -1,3 +1,4 @@
+import { CopyBlock } from '@/components/copy-block'
 import { DodecahedronLogo } from '@/components/dodecahedron-logo'
 import { InteractiveGrid } from '@/components/interactive-grid'
 
@@ -62,7 +63,7 @@ export default function Home() {
             </div>
 
             {/* Heading */}
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-6xl max-w-3xl mx-auto lg:mx-0 leading-[1.1]">
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-6xl max-w-3xl mx-auto lg:mx-0 leading-[1.1] mb-8">
               <span className="block text-fd-foreground mb-4 sm:mb-0">
                 Bring Your Own Compute.
               </span>
@@ -76,6 +77,11 @@ export default function Home() {
                 Simplified.
               </span>
             </h1>
+
+            {/* Install Command */}
+            <div className="flex justify-center lg:justify-start w-full mb-4">
+              <CopyBlock command="curl -fsSL https://moul.dev/install.sh | sh" />
+            </div>
           </div>
 
           {/* Right 3D Dodecahedron Column */}
