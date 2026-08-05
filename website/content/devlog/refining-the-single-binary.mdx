@@ -1,0 +1,53 @@
+---
+title: "Refining the Single Binary: Schema Migration, Cursor Pagination, and Zero-Config HTTPS"
+description: "A summary of recent improvements to Moul: schema synchronization, cursor pagination, automatic TLS, and self-updating binaries."
+date: 2026-08-05
+author: "thasophearak"
+---
+
+Over the past month, I focused on making Moul resilient in production rather than piling on new features. A single-binary backend only works if schema changes, security certificates, and binary updates don't require external scripts or complex operational machinery.
+
+In traditional cloud stacks, small operational tasks rely on external tooling. You write bash scripts, configure Certbot daemons, set up CI deployment runners, or execute manual migration scripts over SSH. In a single-binary architecture, these primitives must live inside the binary itself. It should run on a cheap virtual server without accumulating maintenance debt.
+
+Here is how the latest set of changes makes that vision more reliable.
+
+## Self-Updating Binaries and Simplified Setup
+
+Installing and maintaining a compiled binary should be as straightforward as running it.
+
+- **One-Command Installation:** Added `install.sh` to download and place both `moul` (the TUI console) and `moul-dev` (the server engine) directly into your system path.
+- **In-Place Self-Updates:** Introduced `moul update` and `moul-dev update`. The engine checks GitHub releases, downloads compiled binaries, verifies checksums, and replaces the running executable[^1].
+
+Deployments no longer require building from source on tiny target servers or setting up custom package repositories.
+
+## Dynamic Schema Synchronization
+
+Moul allows defining database schemas—called Mouls—dynamically via REST endpoints or the TUI. But schemas evolve over time, and altering SQLite tables safely requires care.
+
+- **Non-Destructive Column Sync:** The engine now inspects SQLite `PRAGMA table_info` (`SyncMoulTableColumns`) on startup and schema modification, executing non-destructive `ALTER TABLE` statements when fields are added or modified.
+- **Strict Relation Enforcement:** Added validation rules for foreign key relations and introduced `Select/Enum` field types to keep data clean at the database boundary.
+- **Timestamp Standardization:** Every collection now automatically manages `created_at` and `updated_at` fields using standardized RFC3339 UTC timestamps.
+
+It works without manual SQL migrations. The database adapts to your data definitions safely.
+
+## Data Flow: Server-Side Filtering and Cursor Pagination
+
+Offset-based pagination degrades as tables grow larger. Skimming past thousands of rows wastes database IO and slows down client applications.
+
+- **Cursor-Based Pagination:** Replaced offset pagination in `ListRecords` with cursor pagination using indexed primary keys. Query response times remain flat regardless of table depth.
+- **Server-Side Filtering and Sorting:** Added server-side evaluation for queries, allowing clients to slice and order datasets before records hit the network.
+- **Lifecycle Webhooks:** Added webhook dispatches for `create`, `update`, and `delete` operations. External services can react to database changes in real time over simple HTTP POST payloads.
+
+## Infrastructure Primitives: TLS, Telemetry, and Flags
+
+To run independently on a bare server, the binary must manage its own network perimeter and health tracking.
+
+- **Zero-Config TLS:** Integrated CertMagic for automatic ACME TLS certificate acquisition and renewal. Point a domain to your server IP, and `moul-dev` serves HTTPS out of the box.
+- **System Telemetry:** Integrated Telegraf metrics collection directly into the server, exposing CPU, memory, and disk telemetry without running third-party monitoring daemons.
+- **Feature Flags:** Added a light feature flag store managed directly from the `moul` TUI, allowing you to toggle application behavior on the fly.
+
+---
+
+Craftsmanship in software isn't about accumulating features. It's about removing friction and building systems that endure. Moul continues to get smaller, faster, and more self-reliant.
+
+[^1]: On Unix systems, binary replacement uses atomic file renames so running worker loops exit cleanly without interrupting active requests.
