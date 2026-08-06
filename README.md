@@ -55,6 +55,7 @@
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Telegraf Host System Monitoring**: High-performance Unix Domain Socket listener (`/tmp/moul-telegraf.sock`) receiving metric streams (CPU, memory, disk space, network, system load) from Telegraf for real-time observability in the TUI console and REST API.
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
+13. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`moul-dev mcp`) and HTTP SSE (`/api/mcp`).
 
 ---
 
@@ -350,6 +351,57 @@ params := &analytics.EventParams{
 
 event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```
+
+---
+
+## Built-in Model Context Protocol (MCP) Server
+
+`moul-dev` includes a built-in MCP server powered by `github.com/mark3labs/mcp-go`. This allows AI assistants (Claude Desktop, Cursor, AI agents) to inspect, query, and manage your dynamic database, background jobs, feature flags, and host metrics.
+
+### Transport Modes
+
+1. **Stdio Transport Mode (`moul-dev mcp`)**: Runs directly as a CLI subcommand over standard input/output.
+2. **HTTP SSE Mode (`/api/mcp`)**: Enabled automatically on `moul-dev start`. Requires `X-Admin-Key` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+
+### Integration Examples
+
+#### Claude Desktop Configuration (`claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "moul-dev": {
+      "command": "/path/to/moul-dev",
+      "args": ["mcp"],
+      "env": {
+        "MOUL_DB_PATH": "/path/to/moul-local.db"
+      }
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| MCP Tool Name | Description |
+|---|---|
+| `moul_list_collections` | List all dynamic collection schemas and tables |
+| `moul_get_collection` | Get detailed field schema and rules for a collection |
+| `moul_create_collection` | Create a new dynamic collection schema and SQLite table |
+| `moul_delete_collection` | Delete a collection and drop its physical table |
+| `moul_list_records` | Query paginated records from any collection |
+| `moul_get_record` | Retrieve a single record by ID |
+| `moul_create_record` | Insert a new dynamic record |
+| `moul_update_record` | Update an existing record |
+| `moul_delete_record` | Delete a record by ID |
+| `moul_list_worker_jobs` | List background jobs by status/queue |
+| `moul_enqueue_job` | Enqueue a new background job |
+| `moul_cancel_job` | Cancel a pending or retryable worker job |
+| `moul_list_feature_flags` | List all feature flags and gate rules |
+| `moul_set_feature_flag` | Create or update a feature flag |
+| `moul_get_system_metrics` | Fetch host CPU, Memory, Disk, and Load metrics |
+| `moul_get_analytics_summary` | Fetch visitor and request analytics totals |
+| `moul_list_requests` | Query recent HTTP request logs |
 
 ---
 

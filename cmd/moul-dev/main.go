@@ -20,6 +20,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
+	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/internal/updater"
@@ -35,6 +36,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  start    Start the moul-dev engine server (default)")
+	fmt.Println("  mcp      Start built-in MCP server in stdio transport mode")
 	fmt.Println("  restore  Restore database from Litestream S3 backup")
 	fmt.Println("  update   Update moul-dev binary to the latest release")
 	fmt.Println()
@@ -53,6 +55,8 @@ func main() {
 	switch cmd {
 	case "start":
 		runStart()
+	case "mcp":
+		runMCP()
 	case "restore":
 		runRestore()
 	case "update", "-u", "-update", "--update":
@@ -64,6 +68,25 @@ func main() {
 	default:
 		fmt.Printf("Unknown command: %s\n\n", cmd)
 		printUsage()
+		os.Exit(1)
+	}
+}
+
+func runMCP() {
+	dbPath := envy.Get("MOUL_DB_PATH", "moul-local.db")
+	dbConn, err := db.InitDB(dbPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Database initialization failed: %v\n", err)
+		os.Exit(1)
+	}
+	defer dbConn.Close()
+
+	socketPath := envy.Get("MOUL_TELEGRAF_SOCKET_PATH", "/tmp/moul-telegraf.sock")
+	sysmonCollector := sysmon.NewCollector(socketPath)
+
+	srv := moulmcp.NewServer(dbConn, nil, nil, sysmonCollector, Version)
+	if err := srv.ServeStdio(); err != nil {
+		fmt.Fprintf(os.Stderr, "MCP server error: %v\n", err)
 		os.Exit(1)
 	}
 }

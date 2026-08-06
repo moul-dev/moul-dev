@@ -11,6 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
+	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
@@ -58,7 +59,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp"}),
 	))
 
 	// HTTP Request logging
@@ -99,7 +100,14 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	flagsHandler := NewFlagsHandler(dbConn)
 	webhookHandler := NewWebhookHandler(dbConn)
 
+	// Built-in MCP Server
+	mcpServer := moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
+	mcpHandler := NewMCPHandler(mcpServer)
+
 	// ── API Routes ──────────────────────────────────────────────────
+
+	// Built-in MCP Server SSE endpoint (Admin-protected)
+	e.Any("/api/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Documentation endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
