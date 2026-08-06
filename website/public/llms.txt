@@ -1,0 +1,58 @@
+# Moul
+
+> Moul is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go with a built-in Model Context Protocol (MCP) server.
+
+## Overview
+
+Moul (`moul-dev`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
+
+## Core Resources & Documentation
+
+- [AGENTS.md](/AGENTS.md): Complete guide for AI Coding Agents and LLMs interacting with moul-dev.
+- [llms-full.txt](/llms-full.txt): Comprehensive API reference, schema specifications, and complete technical guide for LLMs.
+- [README.md](https://github.com/moul-dev/moul-dev/blob/main/README.md): Main repository README with quickstart and local development instructions.
+- [OpenAPI Spec](/openapi.json): Dynamic live OpenAPI 3.0 specification generated at runtime.
+
+## Core Capabilities
+
+- **Dynamic Collections**: Schema management at runtime via HTTP REST API, TUI, or MCP Server.
+- **Dynamic Record CRUD**: Instant CRUD on dynamic SQLite tables governed by expression-based access rules.
+- **Multi-Factor Auth**: Native support for Passwords, Email OTP, WebAuthn Passkeys, and OAuth2 Device Authorization.
+- **Background Worker Engine**: SQLite-backed persistent queue processor with priority queues, retries, exponential backoffs, and immediate triggers.
+- **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
+- **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via Telegraf Unix Domain Socket listener.
+- **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
+- **Built-in MCP Server**: Native MCP protocol server accessible via `moul-dev mcp` (stdio) and `/api/mcp` (HTTP SSE).
+
+## Built-in MCP Server Tools Summary
+
+- `moul_list_collections`: List all dynamic collection schemas and tables.
+- `moul_get_collection`: Get detailed schema and rules for a collection.
+- `moul_create_collection`: Create a new dynamic collection and table.
+- `moul_delete_collection`: Drop a dynamic collection and table.
+- `moul_list_records`: Query paginated records from a collection.
+- `moul_get_record`: Fetch a single record by ID.
+- `moul_create_record`: Insert a dynamic record payload.
+- `moul_update_record`: Update an existing record by ID.
+- `moul_delete_record`: Delete a record by ID.
+- `moul_list_worker_jobs`: List background jobs by state or queue.
+- `moul_enqueue_job`: Enqueue a background job with arguments.
+- `moul_cancel_job`: Cancel a pending background job.
+- `moul_list_feature_flags`: List feature flags and targeting rules.
+- `moul_set_feature_flag`: Create or update a feature flag.
+- `moul_get_system_metrics`: Fetch host CPU, Memory, Disk, and Load snapshot.
+- `moul_get_analytics_summary`: Fetch visitor and request analytics totals.
+- `moul_list_requests`: Query recent HTTP request logs.
+
+## Essential CLI Commands
+
+```bash
+# Start HTTP engine server (default port 8090)
+moul-dev start
+
+# Start built-in MCP server over stdio
+moul-dev mcp
+
+# Launch Bubble Tea TUI Admin Console
+moul -server http://localhost:8090 -admin-key test-admin-key-1234
+```

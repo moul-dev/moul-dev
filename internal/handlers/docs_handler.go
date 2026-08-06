@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/labstack/echo/v5"
@@ -33,6 +34,42 @@ func NewDocsHandler(dbConn *dbx.DB, version ...string) *DocsHandler {
 		spec:    docs.GetSpec(v),
 		DB:      dbConn,
 	}
+}
+
+// ServeAgentsMD serves AGENTS.md for AI coding agents from embedded binary content.
+func (h *DocsHandler) ServeAgentsMD(c *echo.Context) error {
+	if len(docs.AgentsMD) == 0 {
+		data, err := os.ReadFile("website/public/AGENTS.md")
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotFound, "AGENTS.md not found")
+		}
+		return c.Blob(http.StatusOK, "text/markdown; charset=utf-8", data)
+	}
+	return c.Blob(http.StatusOK, "text/markdown; charset=utf-8", docs.AgentsMD)
+}
+
+// ServeLLMSTxt serves llms.txt standard index from embedded binary content.
+func (h *DocsHandler) ServeLLMSTxt(c *echo.Context) error {
+	if len(docs.LLMSTxt) == 0 {
+		data, err := os.ReadFile("website/public/llms.txt")
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotFound, "llms.txt not found")
+		}
+		return c.Blob(http.StatusOK, "text/plain; charset=utf-8", data)
+	}
+	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", docs.LLMSTxt)
+}
+
+// ServeLLMSFullTxt serves llms-full.txt comprehensive technical reference from embedded binary content.
+func (h *DocsHandler) ServeLLMSFullTxt(c *echo.Context) error {
+	if len(docs.LLMSFullTxt) == 0 {
+		data, err := os.ReadFile("website/public/llms-full.txt")
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotFound, "llms-full.txt not found")
+		}
+		return c.Blob(http.StatusOK, "text/plain; charset=utf-8", data)
+	}
+	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", docs.LLMSFullTxt)
 }
 
 // ServeOpenAPISpec serves the dynamic live openapi.yml spec file.

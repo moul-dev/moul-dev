@@ -1,0 +1,154 @@
+# Moul Technical Specification & Complete Reference (llms-full.txt)
+
+> Full system reference and documentation for LLMs and AI Agents interacting with `moul-dev`.
+
+---
+
+## 1. System Overview & Technical Stack
+
+`moul-dev` is a self-contained dynamic database, multi-factor authentication, background worker processing, feature flag, and observability engine written in Go.
+
+### Core Dependencies
+- **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
+- **Database Abstraction**: `github.com/pocketbase/dbx`
+- **SQLite Engine**: `modernc.org/sqlite` (Pure Go, CGO-free)
+- **TUI Framework**: Charm Bubble Tea (`charm.land/bubbletea/v2`)
+- **MCP Protocol**: `github.com/mark3labs/mcp-go`
+- **Rules Engine**: `github.com/expr-lang/expr`
+- **S3 Replication**: `github.com/benbjohnson/litestream`
+
+---
+
+## 2. Environment Variables & Configuration
+
+The engine reads environment variables from `.env` in the current working directory.
+
+| Variable | Default | Description |
+|---|---|---|
+| `MOUL_ENV` | `development` | Environment mode (`development` or `production`). |
+| `MOUL_PORT` | `8090` | HTTP server listening port. |
+| `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
+| `MOUL_ADMIN_KEY` | Required | Admin key for elevated API endpoints and TUI access. |
+| `MOUL_DB_PATH` | `moul-local.db` | Path to SQLite database file. |
+| `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
+| `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
+| `MOUL_TELEGRAF_SOCKET_PATH` | `/tmp/moul-telegraf.sock` | Path to Telegraf Unix Domain Socket for sysmon telemetry. |
+
+---
+
+## 3. Database Architecture & Meta-Tables
+
+`moul-dev` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
+
+1. **`_moul`**: Stores schema metadata for all dynamic collections.
+   - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `created_at` (TEXT), `updated_at` (TEXT).
+2. **`_visits`**: Stores deduplicated visitor session analytics.
+3. **`_requests`**: Log table storing HTTP request logs asynchronously.
+4. **`_settings`**: Key-value store for app settings (e.g. SMTP config).
+5. **`_feature_flags`**: Feature flag definitions and gate configs.
+
+---
+
+## 4. Collection Schema Specification & Field Types
+
+Collections can be of four primary types:
+- `base`: Standard custom table for user-defined records.
+- `auth`: Authentication collection (includes password, OTP, passkeys, JWT handling).
+- `worker`: Background worker job queue table (stores Oban-style job states).
+- `analytic`: Event tracking collection.
+
+### Supported Field Types
+- `text`: String data.
+- `number`: Numeric float or integer.
+- `bool`: Boolean flag (0 or 1 in SQLite).
+- `json`: Structured JSON payload stored as text.
+- `file`: File upload metadata reference.
+- `select`: Constrained option string matching `options: ["A", "B"]`.
+- `relation`: Relational reference to another collection with `relationConfig: {"targetMoul":"...", "cardinality":"1:1|1:N|M:N", "onDelete":"CASCADE|SET_NULL|RESTRICT"}`.
+
+---
+
+## 5. Authorization Rules Syntax
+
+Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `Delete` operations using expression engine syntax.
+
+### Environment Macros & Placeholders
+- `@request.auth.id`: Authenticated user's ID.
+- `@request.auth.email`: Authenticated user's email.
+- `@request.auth.username`: Authenticated user's username.
+- `@collection.<table_name>.<field_name>`: Evaluates relationship or lookup table fields.
+- `@now`: Current UTC timestamp string.
+
+### Example Rules
+- Allow public read: `""` (empty string)
+- Require authentication: `@request.auth.id != ""`
+- Owner restriction: `id = @request.auth.id` or `user_id = @request.auth.id`
+
+---
+
+## 6. Complete REST API Route Reference
+
+### System & Docs
+- `GET /docs`: Interactive API Documentation UI.
+- `GET /openapi.json`: Dynamic OpenAPI 3.0 Spec (JSON).
+- `GET /openapi.yml`: Dynamic OpenAPI 3.0 Spec (YAML).
+- `GET /AGENTS.md`: Agent documentation guide.
+- `GET /llms.txt`: Standard LLM text reference index.
+- `GET /llms-full.txt`: Complete LLM technical specification.
+
+### Built-in MCP Server (Admin Auth)
+- `ALL /api/mcp*`: Model Context Protocol SSE server endpoint.
+
+### Collection Management (Admin Auth)
+- `GET /api/moul`: List all collection schemas (Public read-only summary).
+- `POST /api/moul`: Create new collection schema (`X-Admin-Key` or Admin Token).
+- `PATCH /api/moul/:name`: Update collection schema.
+- `DELETE /api/moul/:name`: Delete collection schema and drop physical SQLite table.
+
+### Dynamic Record CRUD
+- `GET /api/moul/:name/records`: List paginated records (`page`, `perPage`, `sort`, `filter`).
+- `GET /api/moul/:name/records/:id`: Get single record by ID.
+- `POST /api/moul/:name/records`: Create record.
+- `PATCH /api/moul/:name/records/:id`: Update record by ID.
+- `DELETE /api/moul/:name/records/:id`: Delete record by ID.
+
+### Authentication Endpoints (For `auth` type collections)
+- `POST /api/moul/:name/auth-with-password`: Login with username/email & password.
+- `POST /api/moul/:name/otp/request`: Request email OTP code.
+- `POST /api/moul/:name/auth-with-otp`: Verify OTP code.
+- `POST /api/moul/:name/passkey/login/options`: Get WebAuthn assertion options.
+- `POST /api/moul/:name/passkey/login/verify`: Verify WebAuthn assertion.
+- `POST /api/oauth2/device/authorize`: Init OAuth2 device flow code.
+- `POST /api/oauth2/device/token`: Poll for OAuth2 device access token.
+
+### Feature Flags
+- `GET /api/feature-flags`: List feature flags.
+- `POST /api/feature-flags`: Create feature flag.
+- `GET /api/feature-flags/:key`: Get flag by key.
+- `PATCH /api/feature-flags/:key`: Update flag parameters/gates.
+- `DELETE /api/feature-flags/:key`: Delete flag.
+- `POST /api/feature-flags/:key/eval`: Evaluate flag for a given context.
+
+---
+
+## 7. Built-in MCP Server Tool Specifications
+
+The built-in MCP server provides 17 tools accessible over stdio (`moul-dev mcp`) or HTTP SSE (`/api/mcp`):
+
+1. `moul_list_collections`: List all dynamic collection schemas and tables.
+2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.
+3. `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}`.
+4. `moul_delete_collection`: `{"name": "string"}`.
+5. `moul_list_records`: `{"collection": "string", "page": int, "per_page": int}`.
+6. `moul_get_record`: `{"collection": "string", "id": "string"}`.
+7. `moul_create_record`: `{"collection": "string", "data_json": "string"}`.
+8. `moul_update_record`: `{"collection": "string", "id": "string", "data_json": "string"}`.
+9. `moul_delete_record`: `{"collection": "string", "id": "string"}`.
+10. `moul_list_worker_jobs`: `{"table": "string", "state": "string", "limit": int}`.
+11. `moul_enqueue_job`: `{"table": "string", "worker": "string", "args_json": "string", "queue": "string", "priority": int}`.
+12. `moul_cancel_job`: `{"table": "string", "id": "string"}`.
+13. `moul_list_feature_flags`: List feature flags and targeting rules.
+14. `moul_set_feature_flag`: `{"key": "string", "enabled": bool, "description": "string", "default_value": "string"}`.
+15. `moul_get_system_metrics`: Retrieve host system CPU, RAM, Disk, Load telemetry snapshot.
+16. `moul_get_analytics_summary`: Retrieve visitor and request totals.
+17. `moul_list_requests`: `{"limit": int}` - Query recent HTTP request logs.

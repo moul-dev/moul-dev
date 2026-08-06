@@ -9,6 +9,18 @@ import (
 //go:embed openapi.yml
 var Spec []byte
 
+// AgentsMD holds the raw content of AGENTS.md embedded into the Go binary at compile time.
+//go:embed AGENTS.md
+var AgentsMD []byte
+
+// LLMSTxt holds the raw content of llms.txt embedded into the Go binary at compile time.
+//go:embed llms.txt
+var LLMSTxt []byte
+
+// LLMSFullTxt holds the raw content of llms-full.txt embedded into the Go binary at compile time.
+//go:embed llms-full.txt
+var LLMSFullTxt []byte
+
 var versionRegexp = regexp.MustCompile(`(?m)^(\s*version:\s*)[^\r\n]+`)
 
 // GetSpec returns the raw openapi.yml with the version field updated to version.

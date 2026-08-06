@@ -59,7 +59,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt"}),
 	))
 
 	// HTTP Request logging
@@ -109,13 +109,16 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// Built-in MCP Server SSE endpoint (Admin-protected)
 	e.Any("/api/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
 
-	// Documentation endpoints
+	// Documentation & AI Agent Specification endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
 	e.GET("/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs/openapi.yml", docsHandler.ServeOpenAPISpec)
 	e.GET("/docs/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 	e.GET("/docs", docsHandler.ServeAPIDocs)
 	e.GET("/docs/", docsHandler.ServeAPIDocs)
+	e.GET("/AGENTS.md", docsHandler.ServeAgentsMD)
+	e.GET("/llms.txt", docsHandler.ServeLLMSTxt)
+	e.GET("/llms-full.txt", docsHandler.ServeLLMSFullTxt)
 
 	// Setup management (Admin-protected)
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))

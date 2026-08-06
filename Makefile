@@ -21,8 +21,14 @@ restore:
 dev:
 	air -c .air.toml
 
+# Sync docs from website/public before building binary
+sync-docs:
+	cp -f website/public/AGENTS.md docs/AGENTS.md
+	cp -f website/public/llms.txt docs/llms.txt
+	cp -f website/public/llms-full.txt docs/llms-full.txt
+
 # Build for production with stripped debug symbols and metadata
-build:
+build: sync-docs
 	mkdir -p bin
 	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul-dev cmd/moul-dev/main.go
 
