@@ -34,12 +34,12 @@ build: sync-docs
 
 # Run the Go unit and integration tests
 test-go:
-	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.25.8 go test -v -cover ./internal/...
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -cover ./internal/...
 
 # Run tests and output coverage report
 test-coverage:
-	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.25.8 go test -v -coverprofile=coverage.out ./internal/...
-	GOTOOLCHAIN=go1.25.8 go tool cover -func=coverage.out
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -coverprofile=coverage.out ./internal/...
+	GOTOOLCHAIN=go1.26.5 go tool cover -func=coverage.out
 
 # Remove SQLite database
 clean-db:

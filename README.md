@@ -78,7 +78,7 @@
 
 ### Prerequisites
 
-- **Go**: Version 1.25 or higher
+- **Go**: Version 1.26 or higher
 - **Air** *(Optional, for live reload)*: Install via `go install github.com/air-verse/air@latest` or `brew install air`
 - **MinIO & MinIO Client (`mc`)** *(Optional, for local S3 testing)*: `brew install minio minio-client` on macOS
 
