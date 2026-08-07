@@ -49,9 +49,9 @@ func EvaluateRule(
 		env["auth"] = authRecord
 	} else {
 		env["auth"] = map[string]interface{}{
-			"id":       nil,
-			"username": nil,
-			"email":    nil,
+			"id":       "",
+			"username": "",
+			"email":    "",
 		}
 	}
 

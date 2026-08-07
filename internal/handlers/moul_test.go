@@ -55,10 +55,10 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		Type: "auth",
 		Rules: schema.MoulRules{
 			ListRule:   "",
-			ViewRule:   "auth.id == id",
+			ViewRule:   "id = @request.auth.id",
 			CreateRule: "",
-			UpdateRule: "auth.id == id",
-			DeleteRule: "auth.id == id",
+			UpdateRule: "id = @request.auth.id",
+			DeleteRule: "id = @request.auth.id",
 		},
 	}
 	resp := postJSON(t, client, server.URL+"/api/moul", createUsersPayload, "")
@@ -78,9 +78,9 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		Rules: schema.MoulRules{
 			ListRule:   "",
 			ViewRule:   "",
-			CreateRule: "auth.id != nil",
-			UpdateRule: "auth.id == author_id",
-			DeleteRule: "auth.id == author_id",
+			CreateRule: "@request.auth.id != ''",
+			UpdateRule: "author_id = @request.auth.id",
+			DeleteRule: "author_id = @request.auth.id",
 		},
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul", createPostsPayload, "")
@@ -243,10 +243,10 @@ func TestHandlersEdgeCases(t *testing.T) {
 		Type: "auth",
 		Rules: schema.MoulRules{
 			ListRule:   "",
-			ViewRule:   "auth.id == id",
+			ViewRule:   "id = @request.auth.id",
 			CreateRule: "",
-			UpdateRule: "auth.id == id",
-			DeleteRule: "auth.id == id",
+			UpdateRule: "id = @request.auth.id",
+			DeleteRule: "id = @request.auth.id",
 		},
 	}
 	postJSON(t, client, server.URL+"/api/moul", usersMoul, "")
@@ -264,9 +264,9 @@ func TestHandlersEdgeCases(t *testing.T) {
 		Rules: schema.MoulRules{
 			ListRule:   "price > 50",
 			ViewRule:   "",
-			CreateRule: "auth.id != nil",
-			UpdateRule: "auth.id == author_id",
-			DeleteRule: "auth.id == author_id",
+			CreateRule: "@request.auth.id != ''",
+			UpdateRule: "author_id = @request.auth.id",
+			DeleteRule: "author_id = @request.auth.id",
 		},
 	}
 	postJSON(t, client, server.URL+"/api/moul", postsMoul, "")
@@ -557,7 +557,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record, got %d", resp.StatusCode)
 	}
-	// Unauthorized: view other user's record (view rule `auth.id == id`)
+	// Unauthorized: view other user's record (view rule `id = @request.auth.id`)
 	resp = getJSON(t, client, server.URL+"/api/moul/users/records/"+userID, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthorized GetRecord, got %d", resp.StatusCode)
@@ -620,7 +620,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record delete, got %d", resp.StatusCode)
 	}
-	// Unauthorized: delete post without token (delete rule is `auth.id == author_id`)
+	// Unauthorized: delete post without token (delete rule is `author_id = @request.auth.id`)
 	resp = deleteJSON(t, client, server.URL+"/api/moul/posts/records/"+cheapPostID, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthorized DeleteRecord, got %d", resp.StatusCode)

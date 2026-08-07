@@ -509,9 +509,11 @@ func (b *sqlBuilder) resolveToken(tok Token) (expr string, val interface{}, isCo
 				field = field[idx+1:]
 			}
 			if b.authRecord != nil {
-				return "", b.authRecord[field], false, nil
+				if val, ok := b.authRecord[field]; ok && val != nil {
+					return "", val, false, nil
+				}
 			}
-			return "", nil, false, nil
+			return "", "", false, nil
 		}
 
 		// Request query references: @request.query.param

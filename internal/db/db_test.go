@@ -49,7 +49,7 @@ func TestCreateMoulTableAndMetadata(t *testing.T) {
 			{Name: "metadata", Type: "json"},
 		},
 		Rules: schema.MoulRules{
-			ListRule: "auth.id != nil",
+			ListRule: "@request.auth.id != ''",
 		},
 	}
 

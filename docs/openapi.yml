@@ -2168,12 +2168,20 @@ components:
             cardinality:
               type: string
               enum: ["1:1", "1:N", "M:N"]
+              description: >
+                Relationship cardinality. "1:1" and "1:N" store a single target record ID string.
+                "M:N" stores a JSON array of target record ID strings (e.g. ["id1", "id2"]) in a single TEXT column
+                (no separate physical SQL junction table is created; queries use SQLite json_each subqueries).
+            onDelete:
+              type: string
+              enum: ["CASCADE", "SET_NULL", "RESTRICT"]
+              description: Action to take when a referenced target record is deleted.
     MoulRules:
       type: object
       properties:
         listRule:
           type: string
-          description: Expression to authorize listing records (e.g. `auth.id != nil`).
+          description: Expression to authorize listing records (e.g. `@request.auth.id != ""`).
         viewRule:
           type: string
           description: Expression to authorize viewing a single record.

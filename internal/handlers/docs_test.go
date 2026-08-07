@@ -210,10 +210,10 @@ func TestDynamicLiveDocsSpec(t *testing.T) {
 		},
 		Rules: schema.MoulRules{
 			ListRule:   "",
-			CreateRule: "auth.id != ''",
+			CreateRule: "@request.auth.id != ''",
 			ViewRule:   "",
-			UpdateRule: "auth.id != ''",
-			DeleteRule: "auth.id != ''",
+			UpdateRule: "@request.auth.id != ''",
+			DeleteRule: "@request.auth.id != ''",
 		},
 	}
 	if err := db.CreateMoulTable(dbConn, testMoul); err != nil {

@@ -462,27 +462,27 @@ func (m *Model) initMoulRulesForm() {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("List Access Rule (empty for public)").
-				Placeholder("e.g. auth.id != nil").
+				Placeholder(`e.g. @request.auth.id != ""`).
 				Value(&m.newMoulListRule),
 
 			huh.NewInput().
 				Title("View Access Rule (empty for public)").
-				Placeholder("e.g. auth.id != nil").
+				Placeholder(`e.g. @request.auth.id != ""`).
 				Value(&m.newMoulViewRule),
 
 			huh.NewInput().
 				Title("Create Access Rule (empty for public)").
-				Placeholder("e.g. auth.id != nil").
+				Placeholder(`e.g. @request.auth.id != ""`).
 				Value(&m.newMoulCreateRule),
 
 			huh.NewInput().
 				Title("Update Access Rule (empty for public)").
-				Placeholder("e.g. auth.id == author_id").
+				Placeholder("e.g. author_id = @request.auth.id").
 				Value(&m.newMoulUpdateRule),
 
 			huh.NewInput().
 				Title("Delete Access Rule (empty for public)").
-				Placeholder("e.g. auth.id == author_id").
+				Placeholder("e.g. author_id = @request.auth.id").
 				Value(&m.newMoulDeleteRule),
 		),
 	).WithTheme(ThemeCustom)

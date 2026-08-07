@@ -66,6 +66,8 @@ Collections can be of four primary types:
 - `file`: File upload metadata reference.
 - `select`: Constrained option string matching `options: ["A", "B"]`.
 - `relation`: Relational reference to another collection with `relationConfig: {"targetMoul":"...", "cardinality":"1:1|1:N|M:N", "onDelete":"CASCADE|SET_NULL|RESTRICT"}`.
+  - `1:1` and `1:N` store a single foreign key string ID in a `TEXT` column.
+  - `M:N` uses a **Document / JSON Array model**, storing a JSON array of target record string IDs (e.g. `["id1", "id2"]`) inside a single `TEXT` column. No physical SQL junction table is created; relational queries operate via SQLite `json_each()` subqueries.
 
 ---
 

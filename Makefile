@@ -52,14 +52,14 @@ test-flow:
 	curl -s -X POST http://localhost:8090/api/moul \
 		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
-		-d '{"name": "users", "type": "auth", "rules": {"listRule": "", "viewRule": "auth.id == id", "createRule": "", "updateRule": "auth.id == id", "deleteRule": "auth.id == id"}}'
+		-d '{"name": "users", "type": "auth", "rules": {"listRule": "", "viewRule": "id = @request.auth.id", "createRule": "", "updateRule": "id = @request.auth.id", "deleteRule": "id = @request.auth.id"}}'
 	@echo "\n"
 
 	@echo "=== 2. Creating 'posts' base moul ==="
 	curl -s -X POST http://localhost:8090/api/moul \
 		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
-		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}, {"name": "files", "type": "file"}], "rules": {"listRule": "", "viewRule": "", "createRule": "auth.id != nil", "updateRule": "auth.id == author_id", "deleteRule": "auth.id == author_id"}}'
+		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}, {"name": "files", "type": "file"}], "rules": {"listRule": "", "viewRule": "", "createRule": "@request.auth.id != '\'''\'", "updateRule": "author_id = @request.auth.id", "deleteRule": "author_id = @request.auth.id"}}'
 	@echo "\n"
 
 	@echo "=== 3. Listing all registered moul ==="

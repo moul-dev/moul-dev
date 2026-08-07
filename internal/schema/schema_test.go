@@ -16,8 +16,8 @@ func TestSerializeFieldsAndRules(t *testing.T) {
 			{Name: "status", Type: "select", Options: []string{"draft", "published"}},
 		},
 		Rules: MoulRules{
-			ListRule:   "auth.id != nil",
-			CreateRule: "auth.id != nil",
+			ListRule:   "@request.auth.id != ''",
+			CreateRule: "@request.auth.id != ''",
 		},
 	}
 
@@ -50,7 +50,7 @@ func TestSerializeFieldsAndRules(t *testing.T) {
 		t.Fatalf("Failed to unmarshal rules JSON: %v", err)
 	}
 
-	if rules.ListRule != "auth.id != nil" || rules.CreateRule != "auth.id != nil" || rules.UpdateRule != "" {
+	if rules.ListRule != "@request.auth.id != ''" || rules.CreateRule != "@request.auth.id != ''" || rules.UpdateRule != "" {
 		t.Errorf("Unexpected unmarshaled rules: %+v", rules)
 	}
 }

@@ -104,7 +104,7 @@ func TestBuildFilterSQL(t *testing.T) {
 		},
 		{
 			name:    "auth substitution",
-			filter:  "author_id = auth.id",
+			filter:  "author_id = @request.auth.id",
 			auth:    authRecord,
 			wantSub: "author_id = {:p1}",
 			wantParams: map[string]interface{}{
