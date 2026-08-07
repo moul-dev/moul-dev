@@ -252,63 +252,39 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	return db, nil
 }
 
-// CreateMoulTable dynamically creates the physical SQLite table for a moul.
-func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
-	if err := ValidateTableName(m.Name); err != nil {
-		return fmt.Errorf("unsafe moul name: %w", err)
+func fieldToSQLiteType(fieldType string) string {
+	switch fieldType {
+	case "number":
+		return "NUMERIC"
+	case "bool":
+		return "INTEGER"
+	default:
+		return "TEXT"
 	}
+}
 
-	quotedName := QuoteIdentifier(m.Name)
+// buildCreateTableSQL constructs the SQL DDL for creating a table for a given moul schema.
+func buildCreateTableSQL(tableName string, m *schema.Moul) string {
+	quotedName := QuoteIdentifier(tableName)
+	sysCols := systemColumnsForType(m.Type)
 	var columns []string
 
-	// Map dynamic fields
 	for _, field := range m.Fields {
-		// Avoid overriding system fields
 		lowerName := strings.ToLower(field.Name)
-		if lowerName == "id" || lowerName == "created_at" || lowerName == "updated_at" ||
-			lowerName == "username" || lowerName == "email" || lowerName == "passwordhash" ||
-			lowerName == "otpcode" || lowerName == "otpexpiresat" || lowerName == "passkeys" ||
-			lowerName == "resettoken" || lowerName == "resettokenexpiresat" {
+		if sysCols[lowerName] {
 			continue
 		}
-		if m.Type == "worker" {
-			if lowerName == "state" || lowerName == "queue" || lowerName == "worker" ||
-				lowerName == "args" || lowerName == "meta" || lowerName == "tags" ||
-				lowerName == "errors" || lowerName == "attempt" || lowerName == "max_attempts" ||
-				lowerName == "priority" || lowerName == "inserted_at" || lowerName == "scheduled_at" ||
-				lowerName == "attempted_at" || lowerName == "attempted_by" ||
-				lowerName == "cancelled_at" || lowerName == "completed_at" || lowerName == "discarded_at" {
-				continue
-			}
-		}
-		if m.Type == "analytic" {
-			if lowerName == "visit_token" || lowerName == "visitor_token" ||
-				lowerName == "user_id" || lowerName == "name" ||
-				lowerName == "properties" || lowerName == "time" {
-				continue
-			}
-		}
-
-		sqliteType := "TEXT"
-		switch field.Type {
-		case "number":
-			sqliteType = "NUMERIC"
-		case "bool":
-			sqliteType = "INTEGER"
-		case "json", "file", "relation", "select":
-			sqliteType = "TEXT"
-		}
+		sqliteType := fieldToSQLiteType(field.Type)
 		columns = append(columns, fmt.Sprintf("%s %s", QuoteIdentifier(field.Name), sqliteType))
 	}
 
-	var createSQL string
 	columnsSQL := ""
 	if len(columns) > 0 {
 		columnsSQL = ", " + strings.Join(columns, ", ")
 	}
 
 	if m.Type == "auth" {
-		createSQL = fmt.Sprintf(`
+		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
 				created_at TEXT NOT NULL,
@@ -325,7 +301,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			);
 		`, quotedName, columnsSQL)
 	} else if m.Type == "worker" {
-		createSQL = fmt.Sprintf(`
+		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
 				created_at TEXT NOT NULL,
@@ -351,7 +327,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			);
 		`, quotedName, columnsSQL)
 	} else if m.Type == "analytic" {
-		createSQL = fmt.Sprintf(`
+		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
 				created_at TEXT NOT NULL,
@@ -366,7 +342,7 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			);
 		`, quotedName, columnsSQL)
 	} else {
-		createSQL = fmt.Sprintf(`
+		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
 				created_at TEXT NOT NULL,
@@ -375,13 +351,22 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 			);
 		`, quotedName, columnsSQL)
 	}
+}
 
+// CreateMoulTable dynamically creates the physical SQLite table for a moul.
+func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
+	if err := ValidateTableName(m.Name); err != nil {
+		return fmt.Errorf("unsafe moul name: %w", err)
+	}
+
+	createSQL := buildCreateTableSQL(m.Name, m)
 	_, err := db.NewQuery(createSQL).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create table %s: %w", m.Name, err)
 	}
 
 	if m.Type == "worker" {
+		quotedName := QuoteIdentifier(m.Name)
 		indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, quotedName)
 		_, err = db.NewQuery(indexSQL).Execute()
 		if err != nil {
@@ -609,33 +594,163 @@ func RenameMoulTable(db *dbx.DB, oldName, newName string) error {
 	return nil
 }
 
-// SyncMoulTableColumns inspects an existing SQLite table, adds newly defined fields as new columns,
-// and drops columns that are no longer present in the schema (excluding system columns).
+type tableInfoRow struct {
+	Cid       int            `db:"cid"`
+	Name      string         `db:"name"`
+	Type      string         `db:"type"`
+	NotNull   int            `db:"notnull"`
+	DfltValue sql.NullString `db:"dflt_value"`
+	Pk        int            `db:"pk"`
+}
+
+func buildCastExpression(quotedColName string, targetFieldType string) string {
+	switch targetFieldType {
+	case "number":
+		return fmt.Sprintf("CAST(%s AS NUMERIC)", quotedColName)
+	case "bool":
+		return fmt.Sprintf("CASE WHEN %s IN ('1', 1, 'true', 'TRUE', 't', 'T') THEN 1 ELSE 0 END", quotedColName)
+	default:
+		return fmt.Sprintf("CAST(%s AS TEXT)", quotedColName)
+	}
+}
+
+func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) error {
+	tempTableName := fmt.Sprintf("_moul_temp_%s_%d", m.Name, time.Now().UnixNano())
+
+	tempCreateSQL := buildCreateTableSQL(tempTableName, m)
+	tempCreateSQL = strings.Replace(tempCreateSQL, "CREATE TABLE IF NOT EXISTS", "CREATE TABLE", 1)
+
+	existingMap := make(map[string]tableInfoRow)
+	for _, row := range existingRows {
+		existingMap[strings.ToLower(row.Name)] = row
+	}
+
+	sysCols := systemColumnsForType(m.Type)
+
+	var insertCols []string
+	var selectExprs []string
+
+	// 1. Copy existing system columns
+	for _, row := range existingRows {
+		lowerName := strings.ToLower(row.Name)
+		if sysCols[lowerName] {
+			insertCols = append(insertCols, QuoteIdentifier(row.Name))
+			selectExprs = append(selectExprs, QuoteIdentifier(row.Name))
+		}
+	}
+
+	// 2. Copy user fields present in both physical table and new schema
+	for _, field := range m.Fields {
+		lowerName := strings.ToLower(field.Name)
+		if sysCols[lowerName] {
+			continue
+		}
+
+		if row, exists := existingMap[lowerName]; exists {
+			insertCols = append(insertCols, QuoteIdentifier(field.Name))
+
+			oldType := strings.ToUpper(row.Type)
+			newType := fieldToSQLiteType(field.Type)
+
+			if oldType == newType {
+				selectExprs = append(selectExprs, QuoteIdentifier(row.Name))
+			} else {
+				selectExprs = append(selectExprs, buildCastExpression(QuoteIdentifier(row.Name), field.Type))
+			}
+		}
+	}
+
+	return db.Transactional(func(tx *dbx.Tx) error {
+		if _, err := tx.NewQuery("PRAGMA foreign_keys = OFF;").Execute(); err != nil {
+			return fmt.Errorf("failed to disable foreign keys: %w", err)
+		}
+
+		if _, err := tx.NewQuery(tempCreateSQL).Execute(); err != nil {
+			return fmt.Errorf("failed to create temp table %s: %w", tempTableName, err)
+		}
+
+		if len(insertCols) > 0 {
+			copySQL := fmt.Sprintf(
+				"INSERT INTO %s (%s) SELECT %s FROM %s;",
+				QuoteIdentifier(tempTableName),
+				strings.Join(insertCols, ", "),
+				strings.Join(selectExprs, ", "),
+				QuoteIdentifier(m.Name),
+			)
+			if _, err := tx.NewQuery(copySQL).Execute(); err != nil {
+				return fmt.Errorf("failed to copy data into temp table %s: %w", tempTableName, err)
+			}
+		}
+
+		dropSQL := fmt.Sprintf("DROP TABLE %s;", QuoteIdentifier(m.Name))
+		if _, err := tx.NewQuery(dropSQL).Execute(); err != nil {
+			return fmt.Errorf("failed to drop original table %s: %w", m.Name, err)
+		}
+
+		renameSQL := fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", QuoteIdentifier(tempTableName), QuoteIdentifier(m.Name))
+		if _, err := tx.NewQuery(renameSQL).Execute(); err != nil {
+			return fmt.Errorf("failed to rename temp table %s to %s: %w", tempTableName, m.Name, err)
+		}
+
+		if m.Type == "worker" {
+			indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, QuoteIdentifier(m.Name))
+			if _, err := tx.NewQuery(indexSQL).Execute(); err != nil {
+				return fmt.Errorf("failed to recreate index for worker table %s: %w", m.Name, err)
+			}
+		}
+
+		if _, err := tx.NewQuery("PRAGMA foreign_keys = ON;").Execute(); err != nil {
+			return fmt.Errorf("failed to re-enable foreign keys: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// SyncMoulTableColumns inspects an existing SQLite table, updates columns according to the schema,
+// using fast ALTER TABLE ADD/DROP when possible, and falling back to a full table rebuild for type modifications.
 func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 	if err := ValidateTableName(m.Name); err != nil {
 		return fmt.Errorf("unsafe moul name: %w", err)
 	}
 
-	rows := []struct {
-		Cid       int            `db:"cid"`
-		Name      string         `db:"name"`
-		Type      string         `db:"type"`
-		NotNull   int            `db:"notnull"`
-		DfltValue sql.NullString `db:"dflt_value"`
-		Pk        int            `db:"pk"`
-	}{}
+	rows := []tableInfoRow{}
 	query := fmt.Sprintf("PRAGMA table_info(%s);", QuoteIdentifier(m.Name))
 	if err := db.NewQuery(query).All(&rows); err != nil {
 		return fmt.Errorf("failed to inspect columns for table %s: %w", m.Name, err)
 	}
 
-	existingCols := make(map[string]bool)
-	for _, row := range rows {
-		existingCols[strings.ToLower(row.Name)] = true
+	if len(rows) == 0 {
+		return CreateMoulTable(db, m)
 	}
 
-	// systemColumns are managed by moul-dev and must never be added or dropped by schema sync.
+	existingColsMap := make(map[string]tableInfoRow)
+	for _, row := range rows {
+		existingColsMap[strings.ToLower(row.Name)] = row
+	}
+
 	systemColumns := systemColumnsForType(m.Type)
+	requiresRebuild := false
+
+	// Check if any existing column requires a type change
+	for _, field := range m.Fields {
+		lowerName := strings.ToLower(field.Name)
+		if systemColumns[lowerName] {
+			continue
+		}
+		if row, ok := existingColsMap[lowerName]; ok {
+			expectedType := fieldToSQLiteType(field.Type)
+			currentType := strings.ToUpper(row.Type)
+			if currentType != expectedType {
+				requiresRebuild = true
+				break
+			}
+		}
+	}
+
+	if requiresRebuild {
+		return rebuildMoulTable(db, m, rows)
+	}
 
 	// Build the set of user-defined schema field names (lowercase).
 	schemaFields := make(map[string]bool)
@@ -643,34 +758,24 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		schemaFields[strings.ToLower(field.Name)] = true
 	}
 
-	// 1. Add columns present in schema but missing from the physical table.
+	// 1. Add columns present in schema but missing from physical table.
 	for _, field := range m.Fields {
 		lowerName := strings.ToLower(field.Name)
 		if systemColumns[lowerName] {
 			continue
 		}
-		if existingCols[lowerName] {
+		if _, exists := existingColsMap[lowerName]; exists {
 			continue
 		}
 
-		sqliteType := "TEXT"
-		switch field.Type {
-		case "number":
-			sqliteType = "NUMERIC"
-		case "bool":
-			sqliteType = "INTEGER"
-		case "json", "file", "relation", "select":
-			sqliteType = "TEXT"
-		}
-
+		sqliteType := fieldToSQLiteType(field.Type)
 		alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", QuoteIdentifier(m.Name), QuoteIdentifier(field.Name), sqliteType)
 		if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
 			return fmt.Errorf("failed to add column %s to table %s: %w", field.Name, m.Name, err)
 		}
 	}
 
-	// 2. Drop columns that exist in the physical table but are no longer in the schema
-	//    (skipping system columns).
+	// 2. Drop columns that exist in physical table but are no longer in schema.
 	for _, row := range rows {
 		lowerName := strings.ToLower(row.Name)
 		if systemColumns[lowerName] {
@@ -679,10 +784,11 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		if schemaFields[lowerName] {
 			continue
 		}
-		// This is a user-defined column that has been removed from the schema — drop it.
+
 		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", QuoteIdentifier(m.Name), QuoteIdentifier(row.Name))
 		if _, err := db.NewQuery(dropSQL).Execute(); err != nil {
-			return fmt.Errorf("failed to drop column %s from table %s: %w", row.Name, m.Name, err)
+			// Fallback to table rebuild if ALTER TABLE DROP COLUMN is not supported
+			return rebuildMoulTable(db, m, rows)
 		}
 	}
 
