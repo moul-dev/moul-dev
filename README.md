@@ -498,6 +498,7 @@ Set the following environment variables on your production server or container:
 | `MOUL_ADMIN_KEY` | Yes | Master administrative secret key | `super-secret-admin-key-9988` |
 | `MOUL_JWT_SECRET` | Yes | Secret key for signing JWT tokens | `jwt-secret-key-production-3344` |
 | `MOUL_PORT` | No | HTTP listening port (default: 8090) | `8090` |
+| `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |

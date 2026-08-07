@@ -54,6 +54,64 @@ func nullStringMapToMap(m dbx.NullStringMap) map[string]interface{} {
 	return res
 }
 
+func validateFieldConstraints(field schema.MoulField, val interface{}, isUpdate bool) error {
+	if field.Required {
+		if val == nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q is required", field.Name))
+		}
+		if strVal, ok := val.(string); ok && strings.TrimSpace(strVal) == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q is required and cannot be empty", field.Name))
+		}
+	}
+
+	if val == nil {
+		return nil
+	}
+
+	asFloat := func(v interface{}) (float64, bool) {
+		switch num := v.(type) {
+		case float64:
+			return num, true
+		case float32:
+			return float64(num), true
+		case int:
+			return float64(num), true
+		case int64:
+			return float64(num), true
+		case int32:
+			return float64(num), true
+		case json.Number:
+			if f, err := num.Float64(); err == nil {
+				return f, true
+			}
+		}
+		return 0, false
+	}
+
+	if field.Type == "number" {
+		if numVal, ok := asFloat(val); ok {
+			if field.Min != nil && numVal < *field.Min {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at least %v", field.Name, *field.Min))
+			}
+			if field.Max != nil && numVal > *field.Max {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at most %v", field.Name, *field.Max))
+			}
+		}
+	} else if field.Type == "text" {
+		if strVal, ok := val.(string); ok {
+			runeLen := float64(len([]rune(strVal)))
+			if field.Min != nil && runeLen < *field.Min {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q length must be at least %v characters", field.Name, *field.Min))
+			}
+			if field.Max != nil && runeLen > *field.Max {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q length must be at most %v characters", field.Name, *field.Max))
+			}
+		}
+	}
+
+	return nil
+}
+
 // CreateRecord handles inserting a dynamic record in a moul table.
 func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	moulName := c.Param("name")
@@ -205,7 +263,14 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 
 	// Validate fields in body against schema
 	for _, field := range moul.Fields {
-		if val, ok := body[field.Name]; ok {
+		val, ok := body[field.Name]
+		if !ok {
+			val = nil
+		}
+		if err := validateFieldConstraints(field, val, false); err != nil {
+			return err
+		}
+		if ok {
 			if field.Type == "json" || field.Type == "file" {
 				// Serialize JSON values to string
 				bytes, err := json.Marshal(val)
@@ -826,6 +891,9 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	// Fields validation
 	for _, field := range moul.Fields {
 		if val, ok := body[field.Name]; ok {
+			if err := validateFieldConstraints(field, val, true); err != nil {
+				return err
+			}
 			if field.Type == "json" || field.Type == "file" {
 				bytes, err := json.Marshal(val)
 				if err != nil {

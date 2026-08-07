@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"text/template"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 )
 
@@ -153,7 +155,7 @@ func (h *AuthHandler) SendTestEmail(c *echo.Context) error {
 
 	// Substitute template parameters
 	templateData := map[string]interface{}{
-		"Link":     "http://localhost:8090/dummy-link-test",
+		"Link":     fmt.Sprintf("%s/dummy-link-test", util.GetPublicURL()),
 		"OTP":      "123456",
 		"Username": "TestUser",
 		"Email":    payload.Email,

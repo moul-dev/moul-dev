@@ -825,3 +825,19 @@ func IsTokenRevoked(dbConn *dbx.DB, tokenString string) bool {
 	return count > 0
 }
 
+// CleanupExpiredRevokedTokens deletes expired tokens from the _revoked_tokens table.
+func CleanupExpiredRevokedTokens(dbConn *dbx.DB) (int64, error) {
+	if dbConn == nil {
+		return 0, nil
+	}
+	nowStr := time.Now().UTC().Format(time.RFC3339)
+	res, err := dbConn.NewQuery("DELETE FROM _revoked_tokens WHERE expires_at <= {:now}").
+		Bind(dbx.Params{"now": nowStr}).
+		Execute()
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+

@@ -54,10 +54,17 @@ type JobRow struct {
 // JobHandler is the function signature for worker jobs.
 type JobHandler func(ctx context.Context, job *Job) error
 
+type periodicTask struct {
+	interval time.Duration
+	worker   string
+	handler  JobHandler
+}
+
 // Engine manages the background execution of jobs.
 type Engine struct {
 	db             *dbx.DB
 	handlers       map[string]JobHandler
+	periodicTasks  []periodicTask
 	handlersMu     sync.RWMutex
 	nodeID         string
 	wakeupChan     chan struct{}
@@ -93,11 +100,51 @@ func (e *Engine) Register(workerName string, handler JobHandler) {
 	e.logger.Info("Registered background worker handler", "worker", workerName)
 }
 
+// RegisterPeriodicTask registers a handler and runs it periodically at the specified interval in the background.
+func (e *Engine) RegisterPeriodicTask(interval time.Duration, workerName string, handler JobHandler) {
+	e.Register(workerName, handler)
+	e.handlersMu.Lock()
+	defer e.handlersMu.Unlock()
+	e.periodicTasks = append(e.periodicTasks, periodicTask{
+		interval: interval,
+		worker:   workerName,
+		handler:  handler,
+	})
+}
+
 // Start spawns the polling loop in the background.
 func (e *Engine) Start(ctx context.Context) {
 	e.ctx, e.cancel = context.WithCancel(ctx)
 	e.wg.Add(1)
 	go e.loop()
+
+	e.handlersMu.RLock()
+	for _, pTask := range e.periodicTasks {
+		pTaskCopy := pTask
+		e.wg.Add(1)
+		go func(task periodicTask) {
+			defer e.wg.Done()
+			ticker := time.NewTicker(task.interval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-e.ctx.Done():
+					return
+				case <-ticker.C:
+					dummyJob := &Job{
+						ID:         "periodic-" + task.worker,
+						Worker:     task.worker,
+						InsertedAt: time.Now().UTC().Format(time.RFC3339),
+					}
+					if err := task.handler(e.ctx, dummyJob); err != nil {
+						e.logger.Error("Periodic background task failed", "worker", task.worker, "err", err)
+					}
+				}
+			}
+		}(pTaskCopy)
+	}
+	e.handlersMu.RUnlock()
+
 	e.logger.Info("Background worker engine started", "nodeID", e.nodeID, "maxConcurrency", e.maxConcurrency)
 }
 

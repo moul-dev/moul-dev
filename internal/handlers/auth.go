@@ -179,7 +179,7 @@ func (h *AuthHandler) RequestPasswordReset(c *echo.Context) error {
 
 	tmpl := moul.EmailTemplates.PasswordReset
 	templateData := map[string]interface{}{
-		"Link":     fmt.Sprintf("http://localhost:8090/reset-password?token=%s", resetToken),
+		"Link":     fmt.Sprintf("%s/reset-password?token=%s", util.GetPublicURL(), resetToken),
 		"Token":    resetToken,
 		"Username": username,
 		"Email":    email,

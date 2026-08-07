@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/storage"
@@ -16,6 +19,36 @@ type UploadHandler struct {
 
 func NewUploadHandler(dbConn *dbx.DB) *UploadHandler {
 	return &UploadHandler{DB: dbConn}
+}
+
+// ServeStorage serves static files from local storage or redirects to S3 if S3 storage is enabled.
+func (h *UploadHandler) ServeStorage(c *echo.Context) error {
+	path := c.Param("*")
+	path = filepath.Clean(path)
+	if path == "." || strings.HasPrefix(path, "..") {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid path")
+	}
+
+	settings, err := storage.GetSettings(h.DB)
+	if err == nil && settings["file_s3_enabled"] == "true" {
+		bucket := settings["file_s3_bucket"]
+		endpoint := settings["file_s3_endpoint"]
+		region := settings["file_s3_region"]
+
+		var s3URL string
+		if endpoint != "" {
+			s3URL = fmt.Sprintf("%s/%s/%s", strings.TrimSuffix(endpoint, "/"), bucket, path)
+		} else {
+			s3URL = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucket, region, path)
+		}
+		return c.Redirect(http.StatusFound, s3URL)
+	}
+
+	localPath := filepath.Join("storage", path)
+	if _, err := os.Stat(localPath); os.IsNotExist(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
+	return c.File(localPath)
 }
 
 // UploadFile handles receiving a file via multipart form and storing it.

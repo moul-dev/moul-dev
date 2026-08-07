@@ -1,8 +1,30 @@
 package util
 
 import (
+	"os"
 	"testing"
 )
+
+func TestGetPublicURL(t *testing.T) {
+	os.Unsetenv("MOUL_PUBLIC_URL")
+	os.Unsetenv("MOUL_PORT")
+	if url := GetPublicURL(); url != "http://localhost:8090" {
+		t.Errorf("expected default http://localhost:8090, got %q", url)
+	}
+
+	os.Setenv("MOUL_PORT", "9090")
+	if url := GetPublicURL(); url != "http://localhost:9090" {
+		t.Errorf("expected http://localhost:9090, got %q", url)
+	}
+
+	os.Setenv("MOUL_PUBLIC_URL", "https://api.example.com/")
+	if url := GetPublicURL(); url != "https://api.example.com" {
+		t.Errorf("expected trimmed https://api.example.com, got %q", url)
+	}
+
+	os.Unsetenv("MOUL_PUBLIC_URL")
+	os.Unsetenv("MOUL_PORT")
+}
 
 func TestRandomID(t *testing.T) {
 	id1 := RandomID()

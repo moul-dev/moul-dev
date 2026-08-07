@@ -240,6 +240,19 @@ func runStart() {
 		return nil
 	})
 
+	// Register periodic revoked token garbage collection worker
+	workerEngine.RegisterPeriodicTask(1*time.Hour, "CleanupRevokedTokens", func(ctx context.Context, job *worker.Job) error {
+		count, err := db.CleanupExpiredRevokedTokens(dbConn)
+		if err != nil {
+			logger.Error("Failed to cleanup expired revoked tokens", "err", err)
+			return err
+		}
+		if count > 0 {
+			logger.Info("Cleaned up expired revoked tokens", "count", count)
+		}
+		return nil
+	})
+
 	// Start Worker Engine with OS signal context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

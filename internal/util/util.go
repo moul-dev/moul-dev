@@ -2,12 +2,33 @@ package util
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
+	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/gobuffalo/envy"
 )
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// GetPublicURL returns the configured public base URL via MOUL_PUBLIC_URL environment variable,
+// defaulting to http://localhost:<MOUL_PORT> (or http://localhost:8090).
+func GetPublicURL() string {
+	publicURL := os.Getenv("MOUL_PUBLIC_URL")
+	if publicURL == "" {
+		publicURL = envy.Get("MOUL_PUBLIC_URL", "")
+	}
+	if publicURL != "" {
+		return strings.TrimSuffix(publicURL, "/")
+	}
+	port := os.Getenv("MOUL_PORT")
+	if port == "" {
+		port = envy.Get("MOUL_PORT", "8090")
+	}
+	return fmt.Sprintf("http://localhost:%s", port)
+}
 
 // RandomID generates a secure random alphanumeric ID of length 15 (matching PocketBase ID format).
 func RandomID() string {

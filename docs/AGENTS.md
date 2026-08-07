@@ -80,6 +80,7 @@ The engine reads environment variables from a `.env` file in the current working
 |---|---|---|
 | `MOUL_ENV` | `development` | Environment mode (`development` or `production`). |
 | `MOUL_PORT` | `8090` | HTTP server listening port. |
+| `MOUL_PUBLIC_URL` | `http://localhost:8090` | Base public URL for email links. |
 | `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
 | `MOUL_ADMIN_KEY` | Required | Master admin key for administrative endpoints and MCP access. |
 | `MOUL_DB_PATH` | `moul-local.db` | Path to the SQLite database file. |

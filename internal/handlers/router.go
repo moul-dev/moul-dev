@@ -166,8 +166,8 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.DELETE("/api/files/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
 
 
-	// Static local storage directory serving
-	e.Static("/storage", "storage")
+	// Storage directory serving (local or S3 redirect)
+	e.GET("/storage/*", uploadHandler.ServeStorage)
 
 	// Public moul listing (read-only, no admin key needed)
 	e.GET("/api/moul", moulHandler.ListMoul)

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
@@ -120,3 +121,36 @@ func TestCreateMoulTableAndMetadata(t *testing.T) {
 		t.Error("Expected error on invalid table name, got nil")
 	}
 }
+
+func TestRevokedTokenGC(t *testing.T) {
+	dbConn, err := InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("InitDB failed: %v", err)
+	}
+	defer dbConn.Close()
+
+	expiredToken := "expired.token.jwt"
+	expiredTime := time.Now().Add(-1 * time.Hour)
+	if err := RevokeToken(dbConn, expiredToken, expiredTime); err != nil {
+		t.Fatalf("RevokeToken failed: %v", err)
+	}
+
+	validToken := "valid.token.jwt"
+	validTime := time.Now().Add(1 * time.Hour)
+	if err := RevokeToken(dbConn, validToken, validTime); err != nil {
+		t.Fatalf("RevokeToken failed: %v", err)
+	}
+
+	count, err := CleanupExpiredRevokedTokens(dbConn)
+	if err != nil {
+		t.Fatalf("CleanupExpiredRevokedTokens failed: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 expired token cleaned up, got %d", count)
+	}
+
+	if !IsTokenRevoked(dbConn, validToken) {
+		t.Errorf("Expected validToken to remain revoked")
+	}
+}
+
