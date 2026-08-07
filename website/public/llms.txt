@@ -4,11 +4,11 @@
 
 ## Overview
 
-Moul (`moul-dev`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
+Moul (`mould`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
 
 ## Core Resources & Documentation
 
-- [AGENTS.md](/AGENTS.md): Complete guide for AI Coding Agents and LLMs interacting with moul-dev.
+- [AGENTS.md](/AGENTS.md): Complete guide for AI Coding Agents and LLMs interacting with mould.
 - [llms-full.txt](/llms-full.txt): Comprehensive API reference, schema specifications, and complete technical guide for LLMs.
 - [README.md](https://github.com/moul-dev/moul-dev/blob/main/README.md): Main repository README with quickstart and local development instructions.
 - [OpenAPI Spec](/openapi.json): Dynamic live OpenAPI 3.0 specification generated at runtime.
@@ -22,7 +22,7 @@ Moul (`moul-dev`) provides an all-in-one backend platform combining dynamic sche
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via Telegraf Unix Domain Socket listener.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
-- **Built-in MCP Server**: Native MCP protocol server accessible via `moul-dev mcp` (stdio) and `/api/mcp` (HTTP SSE).
+- **Built-in MCP Server**: Native MCP protocol server accessible via `mould mcp` (stdio) and `/api/mcp` (HTTP SSE).
 
 ## Built-in MCP Server Tools Summary
 
@@ -48,10 +48,10 @@ Moul (`moul-dev`) provides an all-in-one backend platform combining dynamic sche
 
 ```bash
 # Start HTTP engine server (default port 8090)
-moul-dev start
+mould start
 
 # Start built-in MCP server over stdio
-moul-dev mcp
+mould mcp
 
 # Launch Bubble Tea TUI Admin Console
 moul -server http://localhost:8090 -admin-key test-admin-key-1234

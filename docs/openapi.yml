@@ -3,7 +3,7 @@ info:
   title: Moul API Reference
   version: dev
   description: |
-    `moul-dev` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
+    `mould` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 
     ### Authentication and Authorization
     - **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.

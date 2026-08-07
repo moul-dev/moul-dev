@@ -32,17 +32,17 @@ import (
 var Version = "dev"
 
 func printUsage() {
-	fmt.Println("Usage: moul-dev [command] [options]")
+	fmt.Println("Usage: mould [command] [options]")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  start    Start the moul-dev engine server (default)")
+	fmt.Println("  start    Start the mould engine server (default)")
 	fmt.Println("  mcp      Start built-in MCP server in stdio transport mode")
 	fmt.Println("  restore  Restore database from Litestream S3 backup")
-	fmt.Println("  update   Update moul-dev binary to the latest release")
+	fmt.Println("  update   Update mould binary to the latest release")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -f, --force                    Force update even if already at latest version")
-	fmt.Println("  -s, --service, --systemd [name] Restart systemd service after update (default: moul)")
+	fmt.Println("  -s, --service, --systemd [name] Restart systemd service after update (default: mould)")
 	fmt.Println("  -v, --version, version         Print version information and exit")
 	fmt.Println("  -h, --help, help               Show help and usage instructions")
 }
@@ -63,7 +63,7 @@ func main() {
 	case "update", "-u", "-update", "--update":
 		runUpdate()
 	case "-v", "-version", "--version", "version":
-		fmt.Printf("moul-dev version %s\n", Version)
+		fmt.Printf("mould version %s\n", Version)
 	case "-h", "-help", "--help", "help":
 		printUsage()
 	default:
@@ -103,14 +103,14 @@ func parseUpdateArgs(args []string) (force bool, systemdService string) {
 				systemdService = args[i+1]
 				i++
 			} else {
-				systemdService = "moul"
+				systemdService = "mould"
 			}
 		case strings.HasPrefix(arg, "--service=") || strings.HasPrefix(arg, "--systemd=") || strings.HasPrefix(arg, "--systemd-service=") || strings.HasPrefix(arg, "-s="):
 			parts := strings.SplitN(arg, "=", 2)
 			if len(parts) == 2 && parts[1] != "" {
 				systemdService = parts[1]
 			} else {
-				systemdService = "moul"
+				systemdService = "mould"
 			}
 		}
 	}
@@ -125,14 +125,14 @@ func runUpdate() {
 	force, systemdService := parseUpdateArgs(args)
 
 	opts := updater.Options{
-		AppName:        "moul-dev",
+		AppName:        "mould",
 		CurrentVer:     Version,
 		Force:          force,
 		SystemdService: systemdService,
 	}
 
 	if err := updater.Update(opts); err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating moul-dev: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error updating mould: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -279,7 +279,7 @@ func runStart() {
 			logger.Fatal("Failed to configure TLS for Echo server", "err", err)
 		}
 		addr := ":" + tlsManager.HTTPSPort()
-		logger.Info("Starting moul-dev engine server (HTTPS)", "version", Version, "addr", "https://localhost"+addr, "env", moulEnv)
+		logger.Info("Starting mould engine server (HTTPS)", "version", Version, "addr", "https://localhost"+addr, "env", moulEnv)
 		sc := echo.StartConfig{
 			Address:         addr,
 			TLSConfig:       tlsCfg,
@@ -289,7 +289,7 @@ func runStart() {
 			logger.Fatal("Server failed to start TLS", "err", err)
 		}
 	} else {
-		logger.Info("Starting moul-dev engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
+		logger.Info("Starting mould engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
 		sc := echo.StartConfig{
 			Address:         ":8090",
 			GracefulTimeout: 10 * time.Second,

@@ -1,12 +1,12 @@
-# Moul Technical Specification & Complete Reference (llms-full.txt)
+# Mould Technical Specification & Complete Reference (llms-full.txt)
 
-> Full system reference and documentation for LLMs and AI Agents interacting with `moul-dev`.
+> Full system reference and documentation for LLMs and AI Agents interacting with `mould`.
 
 ---
 
 ## 1. System Overview & Technical Stack
 
-`moul-dev` is a self-contained dynamic database, multi-factor authentication, background worker processing, feature flag, and observability engine written in Go.
+`mould` is a self-contained dynamic database, multi-factor authentication, background worker processing, feature flag, and observability engine written in Go.
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
@@ -38,7 +38,7 @@ The engine reads environment variables from `.env` in the current working direct
 
 ## 3. Database Architecture & Meta-Tables
 
-`moul-dev` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
+`mould` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
 
 1. **`_moul`**: Stores schema metadata for all dynamic collections.
    - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `created_at` (TEXT), `updated_at` (TEXT).
@@ -133,7 +133,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 
 ## 7. Built-in MCP Server Tool Specifications
 
-The built-in MCP server provides 17 tools accessible over stdio (`moul-dev mcp`) or HTTP SSE (`/api/mcp`):
+The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or HTTP SSE (`/api/mcp`):
 
 1. `moul_list_collections`: List all dynamic collection schemas and tables.
 2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.

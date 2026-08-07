@@ -57,9 +57,9 @@ func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return http.DefaultTransport.RoundTrip(req)
 }
 
-func TestMoulDevUpdate_Success(t *testing.T) {
-	newBinaryContent := []byte("updated-moul-dev-server-binary")
-	appName := "moul-dev"
+func TestMouldUpdate_Success(t *testing.T) {
+	newBinaryContent := []byte("updated-mould-server-binary")
+	appName := "mould"
 	targetAssetName := fmt.Sprintf("%s_v2026.07_%s_%s.tar.gz", appName, runtime.GOOS, runtime.GOARCH)
 
 	tarGzBytes, err := createMockTarGz(appName, newBinaryContent)
@@ -91,7 +91,7 @@ func TestMoulDevUpdate_Success(t *testing.T) {
 
 	tempDir := t.TempDir()
 	dummyExecPath := filepath.Join(tempDir, appName)
-	if err := os.WriteFile(dummyExecPath, []byte("old-moul-dev-binary"), 0755); err != nil {
+	if err := os.WriteFile(dummyExecPath, []byte("old-mould-binary"), 0755); err != nil {
 		t.Fatalf("Failed to write dummy binary: %v", err)
 	}
 
@@ -105,7 +105,7 @@ func TestMoulDevUpdate_Success(t *testing.T) {
 	}
 
 	if err := updater.Update(opts); err != nil {
-		t.Fatalf("moul-dev update failed: %v", err)
+		t.Fatalf("mould update failed: %v", err)
 	}
 
 	content, err := os.ReadFile(dummyExecPath)
@@ -140,25 +140,25 @@ func TestParseUpdateArgs(t *testing.T) {
 			name:            "service flag default name",
 			args:            []string{"--service"},
 			expectedForce:   false,
-			expectedService: "moul",
+			expectedService: "mould",
 		},
 		{
 			name:            "service flag explicit name",
-			args:            []string{"--service", "moul.service"},
+			args:            []string{"--service", "mould.service"},
 			expectedForce:   false,
-			expectedService: "moul.service",
+			expectedService: "mould.service",
 		},
 		{
 			name:            "systemd flag equals",
-			args:            []string{"--systemd=custom-moul"},
+			args:            []string{"--systemd=custom-mould"},
 			expectedForce:   false,
-			expectedService: "custom-moul",
+			expectedService: "custom-mould",
 		},
 		{
 			name:            "combined force and service",
-			args:            []string{"-f", "-s", "moul-server"},
+			args:            []string{"-f", "-s", "mould-server"},
 			expectedForce:   true,
-			expectedService: "moul-server",
+			expectedService: "mould-server",
 		},
 	}
 

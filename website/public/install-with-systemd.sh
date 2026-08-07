@@ -126,20 +126,20 @@ if [ ! -f "$TMP_DIR/moul" ]; then
     exit 1
 fi
 
-# Download 'moul-dev' (Server)
-MOUL_DEV_ASSET="moul-dev_${TAG}_linux_${ARCH}.tar.gz"
-MOUL_DEV_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOUL_DEV_ASSET}"
+# Download 'mould' (Server)
+MOULD_ASSET="mould_${TAG}_linux_${ARCH}.tar.gz"
+MOULD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOULD_ASSET}"
 
-HAS_MOUL_DEV=false
-if curl -sSL --fail "$MOUL_DEV_URL" -o "$TMP_DIR/$MOUL_DEV_ASSET" 2>/dev/null; then
-    tar -xzf "$TMP_DIR/$MOUL_DEV_ASSET" -C "$TMP_DIR"
-    if [ -f "$TMP_DIR/moul-dev" ]; then
-        HAS_MOUL_DEV=true
+HAS_MOULD=false
+if curl -sSL --fail "$MOULD_URL" -o "$TMP_DIR/$MOULD_ASSET" 2>/dev/null; then
+    tar -xzf "$TMP_DIR/$MOULD_ASSET" -C "$TMP_DIR"
+    if [ -f "$TMP_DIR/mould" ]; then
+        HAS_MOULD=true
     fi
 fi
 
-if [ "$HAS_MOUL_DEV" != "true" ]; then
-    log_error "Server binary 'moul-dev' was not found in release ${TAG} for Linux/${ARCH}."
+if [ "$HAS_MOULD" != "true" ]; then
+    log_error "Server binary 'mould' was not found in release ${TAG} for Linux/${ARCH}."
     exit 1
 fi
 
@@ -155,9 +155,9 @@ cp "$TMP_DIR/moul" "$INSTALL_DIR/moul-tui"
 chmod 0755 "$INSTALL_DIR/moul-tui"
 log_success "Installed moul-tui -> ${INSTALL_DIR}/moul-tui"
 
-cp "$TMP_DIR/moul-dev" "$INSTALL_DIR/moul-dev"
-chmod 0755 "$INSTALL_DIR/moul-dev"
-log_success "Installed moul-dev -> ${INSTALL_DIR}/moul-dev"
+cp "$TMP_DIR/mould" "$INSTALL_DIR/mould"
+chmod 0755 "$INSTALL_DIR/mould"
+log_success "Installed mould -> ${INSTALL_DIR}/mould"
 
 # 7. Create System User and Group
 log_info "Setting up system user and group 'moul'..."
@@ -242,7 +242,7 @@ Type=simple
 User=moul
 Group=moul
 WorkingDirectory=${DATA_DIR}
-ExecStart=${INSTALL_DIR}/moul-dev start
+ExecStart=${INSTALL_DIR}/mould start
 Restart=always
 RestartSec=5
 EnvironmentFile=-/etc/moul/moul.env
@@ -278,7 +278,7 @@ log_success "  Moul Server Systemd Installation Complete!      "
 log_success "=================================================="
 echo ""
 log_info "Service Summary:"
-echo "  - Binary:         ${INSTALL_DIR}/moul-dev"
+echo "  - Binary:         ${INSTALL_DIR}/mould"
 echo "  - Service Name:   moul.service"
 echo "  - Data Directory: ${DATA_DIR}"
 echo "  - Environment:    /etc/moul/moul.env"

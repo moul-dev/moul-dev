@@ -22,11 +22,11 @@ func printUsage() {
 	fmt.Println("  update                          Update moul binary to the latest release")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -server <url>                   moul-dev server URL")
-	fmt.Println("  -admin-key <key>                moul-dev admin key")
+	fmt.Println("  -server <url>                   mould server URL")
+	fmt.Println("  -admin-key <key>                mould admin key")
 	fmt.Println("  -u, --update                    Update moul binary to the latest release")
 	fmt.Println("  -f, --force                     Force update even if already at latest version")
-	fmt.Println("  -s, --service, --systemd [name] Restart systemd service after update (default: moul)")
+	fmt.Println("  -s, --service, --systemd [name] Restart systemd service after update (default: mould)")
 	fmt.Println("  -v, --version, version          Print version and exit")
 	fmt.Println("  -h, --help, help                Show help and usage instructions")
 }
@@ -47,8 +47,8 @@ func main() {
 		}
 	}
 
-	serverFlag := flag.String("server", "", "moul-dev server URL")
-	adminKeyFlag := flag.String("admin-key", "", "moul-dev admin key")
+	serverFlag := flag.String("server", "", "mould server URL")
+	adminKeyFlag := flag.String("admin-key", "", "mould admin key")
 	versionFlag := flag.Bool("version", false, "Print version and exit")
 	versionShortFlag := flag.Bool("v", false, "Print version and exit")
 	updateFlag := flag.Bool("update", false, "Update moul binary to the latest release")

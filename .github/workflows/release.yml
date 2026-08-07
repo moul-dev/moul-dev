@@ -39,7 +39,7 @@ jobs:
           for PLATFORM in "${PLATFORMS[@]}"; do
             IFS="/" read -r GOOS GOARCH <<< "$PLATFORM"
             
-            echo "Building moul and moul-dev for $GOOS/$GOARCH..."
+            echo "Building moul and mould for $GOOS/$GOARCH..."
             
             # Compile moul (TUI)
             CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
@@ -47,18 +47,18 @@ jobs:
               -o dist/moul \
               cmd/moul/main.go
               
-            # Compile moul-dev (server)
+            # Compile mould (server)
             CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
               -ldflags="-s -w -X main.Version=$VERSION" \
-              -o dist/moul-dev \
-              cmd/moul-dev/main.go
+              -o dist/mould \
+              cmd/mould/main.go
               
             # Archive binaries to preserve execution bits
             tar -czf dist/moul_${VERSION}_${GOOS}_${GOARCH}.tar.gz -C dist moul
-            tar -czf dist/moul-dev_${VERSION}_${GOOS}_${GOARCH}.tar.gz -C dist moul-dev
+            tar -czf dist/mould_${VERSION}_${GOOS}_${GOARCH}.tar.gz -C dist mould
             
             # Clean temporary uncompressed binaries in dist
-            rm dist/moul dist/moul-dev
+            rm dist/moul dist/mould
           done
 
       - name: Create GitHub Release

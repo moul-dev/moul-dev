@@ -132,15 +132,15 @@ if [ ! -f "$TMP_DIR/moul" ]; then
     exit 1
 fi
 
-# 2. Download & Extract 'moul-dev' (Server) if available
-MOUL_DEV_ASSET="moul-dev_${TAG}_${OS}_${ARCH}.tar.gz"
-MOUL_DEV_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOUL_DEV_ASSET}"
+# 2. Download & Extract 'mould' (Server) if available
+MOULD_ASSET="mould_${TAG}_${OS}_${ARCH}.tar.gz"
+MOULD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOULD_ASSET}"
 
-HAS_MOUL_DEV=false
-if curl -sSL --fail "$MOUL_DEV_URL" -o "$TMP_DIR/$MOUL_DEV_ASSET" 2>/dev/null; then
-    tar -xzf "$TMP_DIR/$MOUL_DEV_ASSET" -C "$TMP_DIR"
-    if [ -f "$TMP_DIR/moul-dev" ]; then
-        HAS_MOUL_DEV=true
+HAS_MOULD=false
+if curl -sSL --fail "$MOULD_URL" -o "$TMP_DIR/$MOULD_ASSET" 2>/dev/null; then
+    tar -xzf "$TMP_DIR/$MOULD_ASSET" -C "$TMP_DIR"
+    if [ -f "$TMP_DIR/mould" ]; then
+        HAS_MOULD=true
     fi
 fi
 
@@ -162,11 +162,11 @@ $USE_SUDO cp "$TMP_DIR/moul" "$INSTALL_DIR/moul-tui"
 $USE_SUDO chmod 0755 "$INSTALL_DIR/moul-tui"
 log_success "Installed moul-tui -> ${INSTALL_DIR}/moul-tui"
 
-# Install 'moul-dev' if available
-if [ "$HAS_MOUL_DEV" = "true" ]; then
-    $USE_SUDO cp "$TMP_DIR/moul-dev" "$INSTALL_DIR/moul-dev"
-    $USE_SUDO chmod 0755 "$INSTALL_DIR/moul-dev"
-    log_success "Installed moul-dev -> ${INSTALL_DIR}/moul-dev"
+# Install 'mould' if available
+if [ "$HAS_MOULD" = "true" ]; then
+    $USE_SUDO cp "$TMP_DIR/mould" "$INSTALL_DIR/mould"
+    $USE_SUDO chmod 0755 "$INSTALL_DIR/mould"
+    log_success "Installed mould -> ${INSTALL_DIR}/mould"
 fi
 
 # PATH Check and Instructions

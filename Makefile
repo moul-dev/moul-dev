@@ -7,7 +7,7 @@ VERSION ?= dev
 
 # Start the Echo server locally
 run:
-	go run cmd/moul-dev/main.go start
+	go run cmd/mould/main.go start
 
 # Run Telegraf agent locally streaming metrics to /tmp/moul-telegraf.sock
 telegraf:
@@ -15,7 +15,7 @@ telegraf:
 
 # Restore database from Litestream S3 backup
 restore:
-	go run cmd/moul-dev/main.go restore
+	go run cmd/mould/main.go restore
 
 # Start the watcher for live-reload development
 dev:
@@ -30,7 +30,7 @@ sync-docs:
 # Build for production with stripped debug symbols and metadata
 build: sync-docs
 	mkdir -p bin
-	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul-dev cmd/moul-dev/main.go
+	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/mould cmd/mould/main.go
 
 # Run the Go unit and integration tests
 test-go:

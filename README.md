@@ -2,7 +2,7 @@
 
 ![Device OAuth Demo](assets/device-oauth-demo.png)
 
-`moul-dev` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
+`mould` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 
 ---
 
@@ -55,7 +55,7 @@
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Telegraf Host System Monitoring**: High-performance Unix Domain Socket listener (`/tmp/moul-telegraf.sock`) receiving metric streams (CPU, memory, disk space, network, system load) from Telegraf for real-time observability in the TUI console and REST API.
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
-13. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`moul-dev mcp`) and HTTP SSE (`/api/mcp`).
+13. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`mould mcp`) and HTTP SSE (`/api/mcp`).
 
 ---
 
@@ -101,7 +101,7 @@ Start the Echo HTTP server and background worker engine on port `:8090` (this au
 ```bash
 make run
 # Or directly via Go:
-go run cmd/moul-dev/main.go start
+go run cmd/mould/main.go start
 ```
 
 ### Live Reloading (Hot Reload)
@@ -115,7 +115,7 @@ make dev
 
 ### Local Telegraf Host System Monitoring
 
-To stream live host metrics (CPU %, Memory %, Disk space, System load, Network I/O) into `moul-dev` and view them in the `moul` TUI console:
+To stream live host metrics (CPU %, Memory %, Disk space, System load, Network I/O) into `mould` and view them in the `moul` TUI console:
 
 1. **Install Telegraf** *(macOS via Homebrew)*:
    ```bash
@@ -155,7 +155,7 @@ For testing file uploads and Litestream database backups locally against an S3 A
 
 ### Testing & Verification Flows
 
-`moul-dev` includes unit tests, integration tests, and automated cURL verification flows.
+`mould` includes unit tests, integration tests, and automated cURL verification flows.
 
 #### 1. Unit & Integration Tests
 ```bash
@@ -189,7 +189,7 @@ Ensure the server is running (`make run`) in a separate terminal before executin
 
 ## Documentation & API Specification (`/docs`)
 
-`moul-dev` maintains an accurate OpenAPI 3.0 specification serving interactive API documentation directly from the running engine.
+`mould` maintains an accurate OpenAPI 3.0 specification serving interactive API documentation directly from the running engine.
 
 ### Interactive Runtime `/docs` Endpoint
 
@@ -356,12 +356,12 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 
 ## Built-in Model Context Protocol (MCP) Server
 
-`moul-dev` includes a built-in MCP server powered by `github.com/mark3labs/mcp-go`. This allows AI assistants (Claude Desktop, Cursor, AI agents) to inspect, query, and manage your dynamic database, background jobs, feature flags, and host metrics.
+`mould` includes a built-in MCP server powered by `github.com/mark3labs/mcp-go`. This allows AI assistants (Claude Desktop, Cursor, AI agents) to inspect, query, and manage your dynamic database, background jobs, feature flags, and host metrics.
 
 ### Transport Modes
 
-1. **Stdio Transport Mode (`moul-dev mcp`)**: Runs directly as a CLI subcommand over standard input/output.
-2. **HTTP SSE Mode (`/api/mcp`)**: Enabled automatically on `moul-dev start`. Requires `X-Admin-Key` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+1. **Stdio Transport Mode (`mould mcp`)**: Runs directly as a CLI subcommand over standard input/output.
+2. **HTTP SSE Mode (`/api/mcp`)**: Enabled automatically on `mould start`. Requires `X-Admin-Key` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
 
 ### Integration Examples
 
@@ -370,8 +370,8 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "moul-dev": {
-      "command": "/path/to/moul-dev",
+    "mould": {
+      "command": "/path/to/mould",
       "args": ["mcp"],
       "env": {
         "MOUL_DB_PATH": "/path/to/moul-local.db"
@@ -479,13 +479,13 @@ Each Moul (table) supports five HCL-like expression rules evaluated on client AP
 
 ### Single-Binary Production Build
 
-`moul-dev` compiles into a single, self-contained binary containing the HTTP engine, worker processor, embedded web docs, and CGO-free SQLite database driver.
+`mould` compiles into a single, self-contained binary containing the HTTP engine, worker processor, embedded web docs, and CGO-free SQLite database driver.
 
 To build the production binary with stripped debug symbols and version metadata:
 
 ```bash
 make build
-# Creates executable at bin/moul-dev
+# Creates executable at bin/mould
 ```
 
 ### Production Environment Variables
@@ -504,11 +504,11 @@ Set the following environment variables on your production server or container:
 
 ### Litestream Automated S3 Backup & Disaster Recovery
 
-`moul-dev` includes built-in [Litestream](https://litestream.io/) replication directly in the binary for real-time, point-in-time SQLite replication to S3-compatible cloud storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces).
+`mould` includes built-in [Litestream](https://litestream.io/) replication directly in the binary for real-time, point-in-time SQLite replication to S3-compatible cloud storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces).
 
 #### Enabling Replication in Production
 
-To enable background replication, set the following environment variables before running `moul-dev start`:
+To enable background replication, set the following environment variables before running `mould start`:
 
 ```env
 LITESTREAM_ENABLED=true
@@ -521,7 +521,7 @@ LITESTREAM_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
 LITESTREAM_S3_FORCE_PATH_STYLE=false
 ```
 
-When enabled, `moul-dev` automatically streams SQLite Write-Ahead Log (WAL) changes to S3 asynchronously with zero downtime.
+When enabled, `mould` automatically streams SQLite Write-Ahead Log (WAL) changes to S3 asynchronously with zero downtime.
 
 #### Database Disaster Recovery / Restore
 
@@ -529,7 +529,7 @@ To restore a database state from S3 backup onto a new server:
 
 ```bash
 # Run restore command using the same Litestream S3 env configuration
-./bin/moul-dev restore
+./bin/mould restore
 # Or via Makefile:
 make restore
 ```
@@ -548,7 +548,7 @@ Type=simple
 User=moul
 Group=moul
 WorkingDirectory=/var/lib/moul
-ExecStart=/usr/local/bin/moul-dev start
+ExecStart=/usr/local/bin/mould start
 Restart=always
 RestartSec=5
 Environment=MOUL_ENV=production

@@ -1,35 +1,35 @@
-# AGENTS.md - AI Agent & LLM Guide for `moul-dev`
+# AGENTS.md - AI Agent & LLM Guide for `mould`
 
-Welcome to `moul-dev`. This document provides essential instructions, operating rules, API reference concepts, and tool definitions for AI coding agents and LLMs interacting with or managing a `moul-dev` server instance.
+Welcome to `mould`. This document provides essential instructions, operating rules, API reference concepts, and tool definitions for AI coding agents and LLMs interacting with or managing a `mould` server instance.
 
 ---
 
 ## 1. Overview & Architecture
 
-`moul-dev` is a single-binary dynamic database, multi-factor authentication engine, background job processor (inspired by Elixir's Oban), feature flag targeting provider, host system observability server, and AI-native MCP server.
+`mould` is a single-binary dynamic database, multi-factor authentication engine, background job processor (inspired by Elixir's Oban), feature flag targeting provider, host system observability server, and AI-native MCP server.
 
 Key Capabilities:
-- **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`moul-dev`) backed by SQLite.
+- **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`mould`) backed by SQLite.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
-- **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`moul-dev mcp`) and HTTP SSE transport (`/api/mcp`).
+- **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`mould mcp`) and HTTP SSE transport (`/api/mcp`).
 
 ---
 
-## 2. Connecting AI Agents to `moul-dev`
+## 2. Connecting AI Agents to `mould`
 
-AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connect to `moul-dev` using two primary interfaces:
+AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connect to `mould` using two primary interfaces:
 
 ### Option A: Built-in MCP Server (Recommended)
-`moul-dev` exposes 17 native MCP tools spanning database management, record CRUD, worker jobs, feature flags, and system telemetry.
+`mould` exposes 17 native MCP tools spanning database management, record CRUD, worker jobs, feature flags, and system telemetry.
 
 1. **Stdio Transport**:
-   - Command: `moul-dev mcp`
+   - Command: `mould mcp`
    - Configuration in `claude_desktop_config.json`:
      ```json
      {
        "mcpServers": {
-         "moul-dev": {
-           "command": "/path/to/moul-dev",
+         "mould": {
+           "command": "/path/to/mould",
            "args": ["mcp"],
            "env": {
              "MOUL_DB_PATH": "/path/to/moul-local.db"
@@ -51,20 +51,20 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 
 ## 3. Server Management & CLI Commands
 
-`moul-dev` is distributed as a single executable binary.
+`mould` is distributed as a single executable binary.
 
 ```bash
 # Start the HTTP server engine and MCP SSE endpoint (default port 8090)
-moul-dev start
+mould start
 
 # Run built-in MCP server in stdio transport mode
-moul-dev mcp
+mould mcp
 
 # Restore SQLite database from Litestream S3 backup
-moul-dev restore
+mould restore
 
-# Update moul-dev binary to the latest release
-moul-dev update
+# Update mould binary to the latest release
+mould update
 
 # Launch Bubble Tea TUI Admin Console (via moul binary)
 moul -server http://localhost:8090 -admin-key test-admin-key-1234
