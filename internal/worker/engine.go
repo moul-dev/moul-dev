@@ -100,6 +100,14 @@ func (e *Engine) Register(workerName string, handler JobHandler) {
 	e.logger.Info("Registered background worker handler", "worker", workerName)
 }
 
+// GetHandler returns the registered job handler for a worker name.
+func (e *Engine) GetHandler(workerName string) (JobHandler, bool) {
+	e.handlersMu.RLock()
+	defer e.handlersMu.RUnlock()
+	h, ok := e.handlers[workerName]
+	return h, ok
+}
+
 // RegisterPeriodicTask registers a handler and runs it periodically at the specified interval in the background.
 func (e *Engine) RegisterPeriodicTask(interval time.Duration, workerName string, handler JobHandler) {
 	e.Register(workerName, handler)

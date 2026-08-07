@@ -3,28 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/gobuffalo/envy"
-	"github.com/labstack/echo/v5"
 
-	"github.com/moul-dev/moul-dev/internal/analytics"
-	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/backup"
 	"github.com/moul-dev/moul-dev/internal/db"
-	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
-	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
-	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/internal/updater"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/app"
 )
 
 // Version is set at build time using:
@@ -147,172 +137,11 @@ func runRestore() {
 }
 
 func runStart() {
-	// Load environment variables (envy automatically loads .env files)
-	moulEnv := envy.Get("MOUL_ENV", "development")
-	isDev := moulEnv == "development"
-
-	// ── Required secrets ────────────────────────────────────────────
-	jwtSecret, err := envy.MustGet("MOUL_JWT_SECRET")
-	if err != nil {
-		logger.Fatal("MOUL_JWT_SECRET environment variable is required", "err", err)
-	}
-	auth.InitJWT(jwtSecret)
-
-	adminKey, err := envy.MustGet("MOUL_ADMIN_KEY")
-	if err != nil {
-		logger.Fatal("MOUL_ADMIN_KEY environment variable is required", "err", err)
-	}
-
-	dbPath := envy.Get("MOUL_DB_PATH", "moul-local.db")
-
-	// 1. Defer Litestream store shutdown (must run AFTER dbConn.Close())
-	var litestreamStore *backup.LitestreamStore
-	defer func() {
-		if litestreamStore != nil {
-			logger.Info("Stopping Litestream replication...")
-			if err := litestreamStore.Close(context.Background()); err != nil {
-				logger.Error("Error stopping Litestream replication", "err", err)
-			}
-		}
-	}()
-
-	// ── Database ────────────────────────────────────────────────────
-	dbConn, err := db.InitDB(dbPath)
-	if err != nil {
-		logger.Fatal("Database initialization failed", "err", err)
-	}
-	defer dbConn.Close()
-
-	// 2. Start Litestream replication
-	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)
-	if err != nil {
-		logger.Error("Failed to start Litestream replication", "err", err)
-	} else {
-		litestreamStore = store
-	}
-
-	// ── Analytics Engine ────────────────────────────────────────────
-	geoIPPath := envy.Get("GEOIP_DB_PATH", "")
-	analyticsEngine, err := analytics.NewEngine(dbConn, geoIPPath)
-	if err != nil {
-		logger.Fatal("Analytics engine initialization failed", "err", err)
-	}
-	defer analyticsEngine.Close()
-
-	// ── Mailer Service ───────────────────────────────────────────────
-	mailService, err := mailer.NewMailer(dbConn)
-	if err != nil {
-		logger.Error("Failed to initialize mailer service", "err", err)
-	}
-
-	// ── Worker Engine ───────────────────────────────────────────────
-	workerEngine := worker.NewEngine(dbConn)
-
-	// Register SendEmail worker handler
-	workerEngine.Register("SendEmail", func(ctx context.Context, job *worker.Job) error {
-		toStr, _ := job.Args["to"].(string)
-		subjectStr, _ := job.Args["subject"].(string)
-		bodyStr, _ := job.Args["body"].(string)
-		fromStr, _ := job.Args["from"].(string)
-		fromNameStr, _ := job.Args["from_name"].(string)
-
-		var recipients []string
-		if toStr != "" {
-			for _, r := range strings.Split(toStr, ",") {
-				if trimmed := strings.TrimSpace(r); trimmed != "" {
-					recipients = append(recipients, trimmed)
-				}
-			}
-		}
-
-		emailMsg := &mailer.Email{
-			From:     fromStr,
-			FromName: fromNameStr,
-			To:       recipients,
-			Subject:  subjectStr,
-			HTMLBody: bodyStr,
-			TextBody: bodyStr,
-		}
-
-		if mailService != nil {
-			return mailService.Send(ctx, emailMsg)
-		}
-		return nil
+	mouldApp := app.New(app.Config{
+		Version: Version,
 	})
 
-	// Register periodic revoked token garbage collection worker
-	workerEngine.RegisterPeriodicTask(1*time.Hour, "CleanupRevokedTokens", func(ctx context.Context, job *worker.Job) error {
-		count, err := db.CleanupExpiredRevokedTokens(dbConn)
-		if err != nil {
-			logger.Error("Failed to cleanup expired revoked tokens", "err", err)
-			return err
-		}
-		if count > 0 {
-			logger.Info("Cleaned up expired revoked tokens", "count", count)
-		}
-		return nil
-	})
-
-	// Start Worker Engine with OS signal context for graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	// ── System Monitoring (Telegraf UDS) ────────────────────────────
-	socketPath := envy.Get("MOUL_TELEGRAF_SOCKET_PATH", "/tmp/moul-telegraf.sock")
-	sysmonCollector := sysmon.NewCollector(socketPath)
-	if err := sysmonCollector.Start(ctx); err != nil {
-		logger.Error("Failed to start system monitoring collector", "err", err)
-	} else {
-		defer sysmonCollector.Close()
+	if err := mouldApp.Start(context.Background()); err != nil {
+		logger.Fatal("Server failed to run", "err", err)
 	}
-
-	workerEngine.Start(ctx)
-	defer workerEngine.Stop()
-
-	// Start Analytics Request Flusher
-	analyticsEngine.StartFlusher(ctx)
-
-	// ── TLS / CertMagic Manager ──────────────────────────────────────
-	tlsManager, err := tls.NewManager(dbConn)
-	if err != nil {
-		logger.Error("Failed to initialize TLS Manager", "err", err)
-	} else if tlsManager.IsEnabled() {
-		if err := tlsManager.StartHTTPListener(ctx); err != nil {
-			logger.Error("Failed to start TLS HTTP listener", "err", err)
-		}
-	}
-
-	// ── Echo server ─────────────────────────────────────────────────
-	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, mailService, sysmonCollector, tlsManager, adminKey, isDev, Version)
-
-	// ── Start server with StartConfig for graceful shutdown ──────────
-	if tlsManager != nil && tlsManager.IsEnabled() {
-		tlsCfg, err := tlsManager.GetTLSConfig()
-		if err != nil {
-			logger.Fatal("Failed to configure TLS for Echo server", "err", err)
-		}
-		addr := ":" + tlsManager.HTTPSPort()
-		logger.Info("Starting mould engine server (HTTPS)", "version", Version, "addr", "https://localhost"+addr, "env", moulEnv)
-		sc := echo.StartConfig{
-			Address:         addr,
-			TLSConfig:       tlsCfg,
-			GracefulTimeout: 10 * time.Second,
-		}
-		if err := sc.StartTLS(ctx, e, "", ""); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server failed to start TLS", "err", err)
-		}
-	} else {
-		port := envy.Get("MOUL_PORT", "8090")
-		addr := ":" + port
-		logger.Info("Starting mould engine server", "version", Version, "addr", "http://localhost"+addr, "env", moulEnv)
-		sc := echo.StartConfig{
-			Address:         addr,
-			GracefulTimeout: 10 * time.Second,
-		}
-		if err := sc.Start(ctx, e); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server failed to start", "err", err)
-		}
-	}
-
-	logger.Info("Server stopped gracefully")
 }

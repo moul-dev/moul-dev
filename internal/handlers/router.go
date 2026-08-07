@@ -48,6 +48,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	} else if isDev {
 		allowOrigins = []string{"*"}
 	}
+	if len(allowOrigins) == 0 {
+		allowOrigins = []string{"*"}
+	}
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: allowOrigins,
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},

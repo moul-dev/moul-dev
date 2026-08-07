@@ -210,6 +210,11 @@ The OpenAPI spec is available in both YAML and JSON formats for exporting to Pos
 
 The specification file is embedded into the compiled binary via Go's `//go:embed openapi.yml` directive in [`docs/docs.go`](docs/docs.go). This ensures single-binary deployments serve live API docs without requiring external static asset files.
 
+### Extensibility & Custom Workers
+
+- **Worker Extensibility Guide**: [`docs/worker-extensibility.md`](docs/worker-extensibility.md) - Learn how to build custom `mould` binaries with custom background job handlers and periodic tasks using `pkg/app`.
+- **Example Binary**: [`examples/custom-worker/main.go`](examples/custom-worker/main.go) - A runnable code example of an embedded Mould application.
+
 ---
 
 ## Moul TUI Admin Console (`moul`)
