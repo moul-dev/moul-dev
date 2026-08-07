@@ -75,14 +75,20 @@ func main() {
 
 	if *updateFlag || *updateShortFlag || (len(flag.Args()) > 0 && flag.Args()[0] == "update") {
 		allArgs := os.Args[1:]
-		runUpdate(allArgs)
+		force, systemdService := parseUpdateArgs(allArgs)
+		if *forceFlag || *forceShortFlag {
+			force = true
+		}
+		if systemdService == "" {
+			if *serviceFlag != "" {
+				systemdService = *serviceFlag
+			} else if *systemdFlag != "" {
+				systemdService = *systemdFlag
+			}
+		}
+		runUpdateWithOpts(force, systemdService)
 		return
 	}
-
-	_ = serviceFlag
-	_ = systemdFlag
-	_ = forceFlag
-	_ = forceShortFlag
 
 	tui.Version = Version
 
@@ -125,7 +131,10 @@ func runUpdate(args []string) {
 		args = args[1:]
 	}
 	force, systemdService := parseUpdateArgs(args)
+	runUpdateWithOpts(force, systemdService)
+}
 
+func runUpdateWithOpts(force bool, systemdService string) {
 	opts := updater.Options{
 		AppName:        "moul",
 		CurrentVer:     Version,

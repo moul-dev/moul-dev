@@ -169,15 +169,11 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 		body = otpTemplate.Body
 	}
 
-	// Log OTP to terminal for local debugging / mock delivery
-	logger.Info("========================================")
-	logger.Info("EMAIL OTP REQUEST RECEIVED", "moul", moulName)
-	logger.Info("To:", "email", email)
-	logger.Info("Subject:", "subject", subject)
-	logger.Info("Body:", "body", body)
-	logger.Info("Code:", "otp", otpCode)
-	logger.Info("Expires At:", "time", otpExpiresAt)
-	logger.Info("========================================")
+	// Log OTP for local debugging / mock delivery context
+	logger.Info("Email OTP generated", "moul", moulName, "email", email, "otp", otpCode, "expires_at", otpExpiresAt)
+	if h.Mailer == nil && h.Engine == nil {
+		logger.Warn("No mailer or worker engine configured for OTP delivery. OTP logged to console above.", "email", email)
+	}
 
 	// If worker Engine is available, enqueue a SendEmail job
 	sent := false

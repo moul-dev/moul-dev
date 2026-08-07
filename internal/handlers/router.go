@@ -137,6 +137,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	// 1. Moul schema management (Admin-protected)
 	adminGroup := e.Group("/api/moul", middleware.RequireAuthOrAdmin(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
+	adminGroup.GET("/:name", moulHandler.GetMoul)
 	adminGroup.PATCH("/:name", moulHandler.UpdateMoul)
 	adminGroup.PUT("/:name", moulHandler.UpdateMoul)
 	adminGroup.DELETE("/:name", moulHandler.DeleteMoul)

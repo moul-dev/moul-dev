@@ -99,6 +99,25 @@ func (h *MoulHandler) ListMoul(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mouls)
 }
 
+// GetMoul returns metadata for a single registered moul by name.
+func (h *MoulHandler) GetMoul(c *echo.Context) error {
+	name := c.Param("name")
+	if name == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Moul name is required")
+	}
+
+	moul, err := db.LoadMoulByName(h.DB, name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
+		}
+		logger.Error("Failed to load moul", "moul", name, "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")
+	}
+
+	return c.JSON(http.StatusOK, moul)
+}
+
 // DeleteMoul drops the physical table and deletes its meta record.
 func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	name := c.Param("name")

@@ -107,6 +107,9 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 			updated_at TEXT NOT NULL
 		);
 	`).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create _rootUsers table: %w", err)
+	}
 	// Create meta-table _feature_flags
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _feature_flags (

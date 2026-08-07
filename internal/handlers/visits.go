@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
 
@@ -19,15 +20,77 @@ func NewVisitsHandler(dbConn *dbx.DB) *VisitsHandler {
 	return &VisitsHandler{DB: dbConn}
 }
 
-// ListVisits lists all visits recorded, requiring authentication.
+// ListVisits lists visits recorded with pagination support, requiring authentication.
 func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	if authUser == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access visits log")
 	}
 
+	pageParam := c.QueryParam("page")
+	perPageParam := c.QueryParam("perPage")
+
+	page := 1
+	if pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 50
+	if perPageParam != "" {
+		if pp, err := strconv.Atoi(perPageParam); err == nil && pp > 0 {
+			perPage = pp
+		}
+	}
+	if perPage > 200 {
+		perPage = 200
+	}
+
 	var rows []dbx.NullStringMap
-	err := h.DB.Select("*").From("_visits").OrderBy("started_at DESC").All(&rows)
+	var err error
+
+	// If page parameter is explicitly requested, return paginated envelope
+	if pageParam != "" || perPageParam != "" {
+		offset := (page - 1) * perPage
+
+		var totalItems int
+		if err := h.DB.Select("COUNT(*)").From("_visits").Row(&totalItems); err != nil {
+			logger.Error("Failed to count visits", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to count visits")
+		}
+
+		err = h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(int64(perPage)).Offset(int64(offset)).All(&rows)
+		if err != nil && err != sql.ErrNoRows {
+			logger.Error("Failed to retrieve visits", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")
+		}
+
+		visits := make([]map[string]interface{}, 0, len(rows))
+		for _, row := range rows {
+			visitMap := make(map[string]interface{})
+			for k, v := range row {
+				if v.Valid {
+					visitMap[k] = v.String
+				} else {
+					visitMap[k] = nil
+				}
+			}
+			visits = append(visits, visitMap)
+		}
+
+		totalPages := (totalItems + perPage - 1) / perPage
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"page":       page,
+			"perPage":    perPage,
+			"totalItems": totalItems,
+			"totalPages": totalPages,
+			"items":      visits,
+		})
+	}
+
+	// Legacy / default array response capped at 200 records
+	err = h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(200).All(&rows)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Error("Failed to retrieve visits", "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")

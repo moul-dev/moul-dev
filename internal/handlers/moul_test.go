@@ -1254,6 +1254,54 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 	}
 }
 
+func TestGetMoulHandler(t *testing.T) {
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	e := echo.New()
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.GET("/api/moul/:name", moulHandler.GetMoul)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create a moul
+	createPayload := schema.Moul{
+		Name: "products",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", createPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for moul creation, got %d", resp.StatusCode)
+	}
+
+	// 2. GET /api/moul/products
+	resp = getJSON(t, client, server.URL+"/api/moul/products", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for GetMoul, got %d", resp.StatusCode)
+	}
+
+	var fetched schema.Moul
+	parseJSON(t, resp, &fetched)
+	if fetched.Name != "products" || fetched.Type != "base" {
+		t.Errorf("Unexpected moul retrieved: %+v", fetched)
+	}
+
+	// 3. GET non-existent moul
+	resp = getJSON(t, client, server.URL+"/api/moul/non_existent", "")
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 404 Not Found for missing moul, got %d", resp.StatusCode)
+	}
+}
+
 func TestMain(m *testing.M) {
 	// Initialize JWT for all handler tests
 	auth.InitJWT("test-secret-key-for-unit-tests-1234")

@@ -289,9 +289,11 @@ func runStart() {
 			logger.Fatal("Server failed to start TLS", "err", err)
 		}
 	} else {
-		logger.Info("Starting mould engine server", "version", Version, "addr", "http://localhost:8090", "env", moulEnv)
+		port := envy.Get("MOUL_PORT", "8090")
+		addr := ":" + port
+		logger.Info("Starting mould engine server", "version", Version, "addr", "http://localhost"+addr, "env", moulEnv)
 		sc := echo.StartConfig{
-			Address:         ":8090",
+			Address:         addr,
 			GracefulTimeout: 10 * time.Second,
 		}
 		if err := sc.Start(ctx, e); err != nil && err != http.ErrServerClosed {

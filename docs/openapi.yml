@@ -216,6 +216,34 @@ paths:
           $ref: '#/components/responses/500InternalError'
 
   /api/moul/{name}:
+    get:
+      summary: Get Moul by Name
+      description: Retrieves the schema metadata definition for a single registered collection.
+      tags:
+        - Moul Schema Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name of the collection schema to retrieve.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Collection schema metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moul'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Collection schema not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
     patch:
       summary: Update Moul
       description: |
@@ -1880,6 +1908,215 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
+  /api/feature-flags:
+    get:
+      summary: List Feature Flags
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: List of feature flags.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeatureFlag'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    post:
+      summary: Create Feature Flag
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureFlag'
+      responses:
+        '201':
+          description: Feature flag created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlag'
+        '400':
+          description: Invalid parameters.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/feature-flags/{key}:
+    get:
+      summary: Get Feature Flag by Key
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Feature flag detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlag'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Flag not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    patch:
+      summary: Update Feature Flag by Key
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureFlag'
+      responses:
+        '200':
+          description: Feature flag updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlag'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    delete:
+      summary: Delete Feature Flag by Key
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Feature flag deleted.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/feature-flags/{key}/eval:
+    post:
+      summary: Evaluate Feature Flag
+      tags:
+        - Feature Flags Management
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlagEvaluation'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/system/metrics:
+    get:
+      summary: Get System Telemetry Metrics
+      tags:
+        - System Metrics & Monitoring
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: Host telemetry metrics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatusResponse'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    post:
+      summary: Push Telegraf Metrics
+      tags:
+        - System Metrics & Monitoring
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: Metrics ingested.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/mcp/sse:
+    get:
+      summary: MCP Server-Sent Events Endpoint
+      tags:
+        - Model Context Protocol (MCP)
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      responses:
+        '200':
+          description: SSE event stream connection established.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
 components:
   securitySchemes:
     AdminKeyAuth:
@@ -1921,7 +2158,7 @@ components:
           type: string
         type:
           type: string
-          enum: [text, number, bool, json, file, relation]
+          enum: [text, number, bool, json, file, select, relation]
         relationConfig:
           type: object
           properties:
@@ -2167,3 +2404,50 @@ components:
         created_at:
           type: string
           format: date-time
+    FeatureFlag:
+      type: object
+      required:
+        - key
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        default_value:
+          type: string
+        gates:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    FeatureFlagEvaluation:
+      type: object
+      properties:
+        value:
+          type: object
+        reason:
+          type: string
+    SystemStatusResponse:
+      type: object
+      properties:
+        hostname:
+          type: string
+        uptime_seconds:
+          type: integer
+        cpu_usage_pct:
+          type: number
+        memory_used_bytes:
+          type: integer
+        memory_total_bytes:
+          type: integer
+        disk_used_bytes:
+          type: integer
+        disk_total_bytes:
+          type: integer

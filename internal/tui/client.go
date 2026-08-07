@@ -103,6 +103,14 @@ func (c *Client) ListMoul() ([]schema.Moul, error) {
 	return mouls, err
 }
 
+// GetMoul fetches a single collection metadata by name.
+func (c *Client) GetMoul(name string) (*schema.Moul, error) {
+	var moul schema.Moul
+	path := fmt.Sprintf("/api/moul/%s", name)
+	err := c.request("GET", path, nil, &moul)
+	return &moul, err
+}
+
 // CreateMoul creates a new database table and schema.
 func (c *Client) CreateMoul(m *schema.Moul) error {
 	return c.request("POST", "/api/moul", m, nil)
