@@ -41,9 +41,10 @@ func printUsage() {
 	fmt.Println("  update   Update moul-dev binary to the latest release")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -f, --force             Force update even if already at latest version")
-	fmt.Println("  -v, --version, version  Print version information and exit")
-	fmt.Println("  -h, --help, help        Show help and usage instructions")
+	fmt.Println("  -f, --force                    Force update even if already at latest version")
+	fmt.Println("  -s, --service, --systemd [name] Restart systemd service after update (default: moul)")
+	fmt.Println("  -v, --version, version         Print version information and exit")
+	fmt.Println("  -h, --help, help               Show help and usage instructions")
 }
 
 func main() {
@@ -91,18 +92,43 @@ func runMCP() {
 	}
 }
 
-func runUpdate() {
-	force := false
-	for _, arg := range os.Args[2:] {
-		if arg == "-f" || arg == "--force" {
+func parseUpdateArgs(args []string) (force bool, systemdService string) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "-f" || arg == "--force":
 			force = true
+		case arg == "-s" || arg == "--service" || arg == "--systemd" || arg == "--systemd-service":
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				systemdService = args[i+1]
+				i++
+			} else {
+				systemdService = "moul"
+			}
+		case strings.HasPrefix(arg, "--service=") || strings.HasPrefix(arg, "--systemd=") || strings.HasPrefix(arg, "--systemd-service=") || strings.HasPrefix(arg, "-s="):
+			parts := strings.SplitN(arg, "=", 2)
+			if len(parts) == 2 && parts[1] != "" {
+				systemdService = parts[1]
+			} else {
+				systemdService = "moul"
+			}
 		}
 	}
+	return
+}
+
+func runUpdate() {
+	args := os.Args[1:]
+	if len(args) > 0 && (args[0] == "update" || args[0] == "-u" || args[0] == "-update" || args[0] == "--update") {
+		args = args[1:]
+	}
+	force, systemdService := parseUpdateArgs(args)
 
 	opts := updater.Options{
-		AppName:    "moul-dev",
-		CurrentVer: Version,
-		Force:      force,
+		AppName:        "moul-dev",
+		CurrentVer:     Version,
+		Force:          force,
+		SystemdService: systemdService,
 	}
 
 	if err := updater.Update(opts); err != nil {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -16,13 +17,15 @@ import (
 
 // Options defines configuration parameters for the self-updater.
 type Options struct {
-	RepoOwner   string       // GitHub owner/org, defaults to "moul-dev"
-	RepoName    string       // GitHub repo name, defaults to "moul-dev"
-	AppName     string       // Executable name: "moul-dev" or "moul"
-	CurrentVer  string       // Current version string (e.g. "v2026.07" or "dev")
-	Force       bool         // Force update even if version matches
-	ExecPath    string       // Optional override for target executable path (used in tests)
-	HTTPClient  *http.Client // Optional custom HTTP client
+	RepoOwner      string                           // GitHub owner/org, defaults to "moul-dev"
+	RepoName       string                           // GitHub repo name, defaults to "moul-dev"
+	AppName        string                           // Executable name: "moul-dev" or "moul"
+	CurrentVer     string                           // Current version string (e.g. "v2026.07" or "dev")
+	Force          bool                             // Force update even if version matches
+	SystemdService string                           // Optional systemd service name to restart after binary update
+	ExecPath       string                           // Optional override for target executable path (used in tests)
+	HTTPClient     *http.Client                     // Optional custom HTTP client
+	SystemctlExec  func(serviceName string) error   // Optional custom systemctl executor (used in tests)
 }
 
 // ReleaseInfo models the GitHub release API payload.
@@ -209,5 +212,42 @@ func Update(opts Options) error {
 	}
 
 	fmt.Printf("Successfully updated %s to %s!\n", opts.AppName, latestTag)
+
+	if opts.SystemdService != "" {
+		serviceName := opts.SystemdService
+		if serviceName == "true" {
+			serviceName = "moul"
+		}
+		fmt.Printf("Restarting systemd service '%s'...\n", serviceName)
+		var err error
+		if opts.SystemctlExec != nil {
+			err = opts.SystemctlExec(serviceName)
+		} else {
+			err = restartSystemdService(serviceName)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to restart systemd service '%s': %w", serviceName, err)
+		}
+		fmt.Printf("Successfully restarted systemd service '%s'.\n", serviceName)
+	}
+
 	return nil
 }
+
+func restartSystemdService(serviceName string) error {
+	path, err := exec.LookPath("systemctl")
+	if err != nil {
+		return fmt.Errorf("systemctl command not found: %w", err)
+	}
+	cmd := exec.Command(path, "restart", serviceName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		outStr := strings.TrimSpace(string(output))
+		if outStr != "" {
+			return fmt.Errorf("systemctl restart %s failed: %s (%w)", serviceName, outStr, err)
+		}
+		return fmt.Errorf("systemctl restart %s failed: %w", serviceName, err)
+	}
+	return nil
+}
+

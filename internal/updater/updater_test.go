@@ -285,3 +285,66 @@ func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	req.URL.Host = target.Host
 	return http.DefaultTransport.RoundTrip(req)
 }
+
+func TestUpdate_SystemdService_RestartsService(t *testing.T) {
+	newBinaryContent := []byte("systemd-restarted-binary")
+	appName := "moul-dev"
+	targetAssetName := fmt.Sprintf("%s_v2026.07_%s_%s.tar.gz", appName, runtime.GOOS, runtime.GOARCH)
+
+	tarGzBytes, err := createMockTarGz(appName, newBinaryContent)
+	if err != nil {
+		t.Fatalf("Failed to create mock tar.gz: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/moul-dev/moul-dev/releases/latest":
+			info := ReleaseInfo{
+				TagName: "v2026.07",
+				Assets: []Asset{
+					{
+						Name:               targetAssetName,
+						BrowserDownloadURL: "http://example.com/download/" + targetAssetName,
+					},
+				},
+			}
+			json.NewEncoder(w).Encode(info)
+		case "/download/" + targetAssetName:
+			w.Header().Set("Content-Type", "application/gzip")
+			w.Write(tarGzBytes)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	tempDir := t.TempDir()
+	dummyExecPath := filepath.Join(tempDir, appName)
+	if err := os.WriteFile(dummyExecPath, []byte("old-binary-content"), 0755); err != nil {
+		t.Fatalf("Failed to create dummy exec: %v", err)
+	}
+
+	restartedService := ""
+	opts := Options{
+		AppName:        appName,
+		CurrentVer:     "dev",
+		SystemdService: "moul.service",
+		ExecPath:       dummyExecPath,
+		HTTPClient: &http.Client{
+			Transport: &rewriteTransport{targetHost: server.URL},
+		},
+		SystemctlExec: func(serviceName string) error {
+			restartedService = serviceName
+			return nil
+		},
+	}
+
+	if err := Update(opts); err != nil {
+		t.Fatalf("Update with systemd service failed: %v", err)
+	}
+
+	if restartedService != "moul.service" {
+		t.Errorf("Expected systemd service 'moul.service' to be restarted, got %q", restartedService)
+	}
+}
+

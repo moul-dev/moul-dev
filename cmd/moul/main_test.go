@@ -118,25 +118,60 @@ func TestMoulUpdate_Success(t *testing.T) {
 }
 
 func TestMoulUpdate_RunUpdateArgs(t *testing.T) {
-	argsWithForce := []string{"--force"}
-	force := false
-	for _, arg := range argsWithForce {
-		if arg == "-f" || arg == "--force" {
-			force = true
-		}
-	}
-	if !force {
-		t.Errorf("Expected force to be true for --force arg")
+	tests := []struct {
+		name            string
+		args            []string
+		expectedForce   bool
+		expectedService string
+	}{
+		{
+			name:            "default flags",
+			args:            []string{},
+			expectedForce:   false,
+			expectedService: "",
+		},
+		{
+			name:            "force flag",
+			args:            []string{"-f"},
+			expectedForce:   true,
+			expectedService: "",
+		},
+		{
+			name:            "service flag default name",
+			args:            []string{"--service"},
+			expectedForce:   false,
+			expectedService: "moul",
+		},
+		{
+			name:            "service flag explicit name",
+			args:            []string{"--service", "moul.service"},
+			expectedForce:   false,
+			expectedService: "moul.service",
+		},
+		{
+			name:            "systemd flag equals",
+			args:            []string{"--systemd=custom-moul"},
+			expectedForce:   false,
+			expectedService: "custom-moul",
+		},
+		{
+			name:            "combined force and service",
+			args:            []string{"-f", "-s", "moul-server"},
+			expectedForce:   true,
+			expectedService: "moul-server",
+		},
 	}
 
-	argsWithShortForce := []string{"-f"}
-	forceShort := false
-	for _, arg := range argsWithShortForce {
-		if arg == "-f" || arg == "--force" {
-			forceShort = true
-		}
-	}
-	if !forceShort {
-		t.Errorf("Expected force to be true for -f arg")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			force, service := parseUpdateArgs(tt.args)
+			if force != tt.expectedForce {
+				t.Errorf("Expected force %v, got %v", tt.expectedForce, force)
+			}
+			if service != tt.expectedService {
+				t.Errorf("Expected service %q, got %q", tt.expectedService, service)
+			}
+		})
 	}
 }
+
