@@ -57,7 +57,7 @@ export default function Home() {
                   aria-hidden="true"
                 />
                 <span className="font-mono text-xs tracking-wide">
-                  Active Development Preview
+                  Active Development
                 </span>
               </div>
             </div>

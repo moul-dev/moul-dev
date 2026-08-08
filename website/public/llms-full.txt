@@ -155,3 +155,51 @@ The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or
 15. `moul_get_system_metrics`: Retrieve host system CPU, RAM, Disk, Load telemetry snapshot.
 16. `moul_get_analytics_summary`: Retrieve visitor and request totals.
 17. `moul_list_requests`: `{"limit": int}` - Query recent HTTP request logs.
+
+---
+
+## 8. Programmatic Go Extensibility & HTTP Route Hooks (`pkg/app`)
+
+`mould` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes or background workers without forking code.
+
+### Core API Methods & Hooks
+- `app.New(cfg app.Config) *app.App`: Creates a new Mould app instance.
+- `app.RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc)`: Expressive shorthand method to register routes directly on the embedded Echo server.
+- `app.OnRouterInit(fn func(router *echo.Echo) error)`: Hook invoked during `Bootstrap()` right after the Echo router is constructed. Allows creating router groups, custom Echo middlewares, and specialized handlers.
+- `app.OnBeforeStart(fn func(app *app.App) error)`: Hook invoked at the end of `Bootstrap()` before listeners start. Gives full access to `app.DB()`, `app.Router()`, `app.WorkerEngine()`, `app.Mailer()`, and `app.AnalyticsEngine()`.
+- `app.RegisterWorker(name string, handler worker.JobHandler)`: Registers a custom background job worker.
+- `app.RegisterPeriodicWorker(interval time.Duration, name string, handler worker.JobHandler)`: Registers a periodic background task.
+- `app.OnWorkerInit(fn func(engine *worker.Engine) error)`: Hook executed when worker engine initializes.
+
+### Code Example
+```go
+package main
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/pkg/app"
+)
+
+func main() {
+	mouldApp := app.New(app.Config{Version: "1.0.0-custom"})
+
+	// Register custom HTTP route
+	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "pong"})
+	})
+
+	// Access raw Echo router via hook
+	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+		router.GET("/api/custom/health", func(c *echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		})
+		return nil
+	})
+
+	mouldApp.Start(context.Background())
+}
+```
+

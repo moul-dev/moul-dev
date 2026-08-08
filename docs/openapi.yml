@@ -32,6 +32,12 @@ info:
     - **SendGrid**: Transactional Mail Send API v3.
     - **Cloudflare Email Sending**: Cloudflare Email REST API and Worker HTTP endpoints.
     - **Console**: Local development fallback logging emails directly to the server console.
+
+    ### Programmatic Go API & Extensibility
+    - **Server Embedding**: Embed the full server engine in Go apps via `pkg/app`.
+    - **Custom HTTP Route Hooks**: Add custom endpoints using `RegisterRoute` or attach to the raw Echo router via `OnRouterInit`.
+    - **Lifecycle Callbacks**: Run custom initialization logic after database setup using `OnBeforeStart`.
+    - **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker`.
 servers:
   - url: http://localhost:8090
     description: Local development server

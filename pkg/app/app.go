@@ -38,6 +38,12 @@ type Config struct {
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
 type WorkerInitFunc func(engine *worker.Engine) error
 
+// RouterInitFunc is a hook callback invoked when the Echo router is initialized.
+type RouterInitFunc func(router *echo.Echo) error
+
+// BeforeStartFunc is a hook callback invoked after Bootstrap completes, prior to server startup.
+type BeforeStartFunc func(app *App) error
+
 // App represents the core Mould server application instance.
 type App struct {
 	config          Config
@@ -49,6 +55,8 @@ type App struct {
 	tlsManager      *tls.Manager
 	router          *echo.Echo
 	onWorkerInit    []WorkerInitFunc
+	onRouterInit    []RouterInitFunc
+	onBeforeStart   []BeforeStartFunc
 	isDev           bool
 	litestreamStore *backup.LitestreamStore
 }
@@ -68,6 +76,28 @@ func (a *App) OnWorkerInit(fn WorkerInitFunc) {
 	if fn != nil {
 		a.onWorkerInit = append(a.onWorkerInit, fn)
 	}
+}
+
+// OnRouterInit registers a hook callback that executes when the Echo router is initialized.
+func (a *App) OnRouterInit(fn RouterInitFunc) {
+	if fn != nil {
+		a.onRouterInit = append(a.onRouterInit, fn)
+	}
+}
+
+// OnBeforeStart registers a hook callback that executes at the end of Bootstrap before the server starts.
+func (a *App) OnBeforeStart(fn BeforeStartFunc) {
+	if fn != nil {
+		a.onBeforeStart = append(a.onBeforeStart, fn)
+	}
+}
+
+// RegisterRoute registers a custom HTTP route handler with the embedded Echo router.
+func (a *App) RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc) {
+	a.OnRouterInit(func(router *echo.Echo) error {
+		router.Add(method, path, handler, middleware...)
+		return nil
+	})
 }
 
 // RegisterWorker registers a custom job handler with the worker engine.
@@ -99,6 +129,11 @@ func (a *App) DB() *dbx.DB {
 // Mailer returns the mailer service instance.
 func (a *App) Mailer() *mailer.Mailer {
 	return a.mailService
+}
+
+// AnalyticsEngine returns the analytics engine instance.
+func (a *App) AnalyticsEngine() *analytics.Engine {
+	return a.analyticsEngine
 }
 
 // Router returns the Echo router instance.
@@ -209,6 +244,20 @@ func (a *App) Bootstrap() error {
 		a.isDev,
 		a.config.Version,
 	)
+
+	// Execute custom router init hooks
+	for _, hook := range a.onRouterInit {
+		if err := hook(a.router); err != nil {
+			return fmt.Errorf("router init hook failed: %w", err)
+		}
+	}
+
+	// Execute before start hooks
+	for _, hook := range a.onBeforeStart {
+		if err := hook(a); err != nil {
+			return fmt.Errorf("before start hook failed: %w", err)
+		}
+	}
 
 	return nil
 }

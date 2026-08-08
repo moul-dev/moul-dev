@@ -337,7 +337,51 @@ jobOpts := map[string]interface{}{
 job, err := workerEngine.Enqueue(context.Background(), "background_tasks", jobOpts)
 ```
 
-### 3. Programmatic Analytics API
+### 3. Embedding `pkg/app` with Custom HTTP Routes and Workers
+
+`pkg/app` allows embedding the complete `mould` server into custom Go binaries with tailored HTTP endpoints and background workers:
+
+```go
+package main
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/pkg/app"
+)
+
+func main() {
+	mouldApp := app.New(app.Config{Version: "1.0.0-custom"})
+
+	// Register custom HTTP route
+	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "pong"})
+	})
+
+	// Access raw Echo router via hook
+	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+		router.GET("/api/custom/health", func(c *echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		})
+		return nil
+	})
+
+	// Register custom background worker
+	mouldApp.RegisterWorker("CustomTask", func(ctx context.Context, job *worker.Job) error {
+		return nil
+	})
+
+	mouldApp.Start(context.Background())
+}
+```
+
+Detailed guides:
+- [Custom HTTP Route Extensibility Guide](file:///Users/phearak/github/orgs/moul-dev/moul-dev/docs/route-extensibility.md)
+- [Worker Handler Extensibility Guide](file:///Users/phearak/github/orgs/moul-dev/moul-dev/docs/worker-extensibility.md)
+
+### 4. Programmatic Analytics API
 
 ```go
 import (
