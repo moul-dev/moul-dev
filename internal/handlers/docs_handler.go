@@ -390,6 +390,72 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 					},
 				},
 			}
+
+			methodsPath := fmt.Sprintf("/api/moul/%s/auth-methods", moul.Name)
+			paths[methodsPath] = map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     fmt.Sprintf("List Auth Methods (%s)", moul.Name),
+					"description": fmt.Sprintf("Lists active authentication methods and configured OAuth2 providers for `%s` collection.", moul.Name),
+					"tags":        []string{tagName},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{"description": "Auth methods list"},
+					},
+				},
+			}
+
+			oauth2AuthPath := fmt.Sprintf("/api/moul/%s/oauth2/{provider}", moul.Name)
+			paths[oauth2AuthPath] = map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     fmt.Sprintf("OAuth2 Authorize (%s)", moul.Name),
+					"description": fmt.Sprintf("Initiates OAuth2 authorization flow for provider (github, google, apple) on `%s` collection.", moul.Name),
+					"tags":        []string{tagName},
+					"parameters": []map[string]interface{}{
+						{"name": "provider", "in": "path", "required": true, "schema": map[string]interface{}{"type": "string"}},
+						{"name": "redirectUrl", "in": "query", "required": false, "schema": map[string]interface{}{"type": "string"}},
+						{"name": "state", "in": "query", "required": false, "schema": map[string]interface{}{"type": "string"}},
+					},
+					"responses": map[string]interface{}{
+						"302": map[string]interface{}{"description": "Redirects to provider login page"},
+						"200": map[string]interface{}{"description": "Returns JSON authorization URL"},
+					},
+				},
+			}
+
+			oauth2WithCodePath := fmt.Sprintf("/api/moul/%s/auth-with-oauth2", moul.Name)
+			paths[oauth2WithCodePath] = map[string]interface{}{
+				"post": map[string]interface{}{
+					"summary":     fmt.Sprintf("OAuth2 Code Authentication (%s)", moul.Name),
+					"description": fmt.Sprintf("Exchanges OAuth2 authorization code from provider for JWT token on `%s` collection.", moul.Name),
+					"tags":        []string{tagName},
+					"requestBody": map[string]interface{}{
+						"required": true,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": map[string]interface{}{
+									"type":     "object",
+									"required": []string{"provider", "code"},
+									"properties": map[string]interface{}{
+										"provider":     map[string]interface{}{"type": "string", "example": "github"},
+										"code":         map[string]interface{}{"type": "string", "example": "oauth_code_123"},
+										"codeVerifier": map[string]interface{}{"type": "string"},
+										"redirectUrl":  map[string]interface{}{"type": "string"},
+									},
+								},
+							},
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "OAuth2 authentication successful",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]interface{}{"$ref": "#/components/schemas/AuthResponse"},
+								},
+							},
+						},
+					},
+				},
+			}
 		}
 	}
 

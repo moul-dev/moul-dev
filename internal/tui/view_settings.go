@@ -99,6 +99,45 @@ func (m *Model) getSettingsFields() []settingField {
 				settingField{label: "Custom Endpoint / Worker URL", strVal: &m.settingEmailEndpoint, inputIdx: 7},
 			)
 		}
+	} else if m.settingsActiveTab == 5 {
+		fields = append(fields, settingField{
+			label:    "Global OAuth Redirect URL",
+			strVal:   &m.settingOAuthRedirectURL,
+			inputIdx: 0,
+		})
+		fields = append(fields, settingField{
+			label:   "GitHub OAuth Enabled",
+			isBool:  true,
+			boolVal: &m.settingOAuthGitHubEnabled,
+		})
+		if m.settingOAuthGitHubEnabled == "true" {
+			fields = append(fields,
+				settingField{label: "GitHub Client ID", strVal: &m.settingOAuthGitHubClientID, inputIdx: 1},
+				settingField{label: "GitHub Client Secret", strVal: &m.settingOAuthGitHubClientSecret, inputIdx: 2},
+			)
+		}
+		fields = append(fields, settingField{
+			label:   "Google OAuth Enabled",
+			isBool:  true,
+			boolVal: &m.settingOAuthGoogleEnabled,
+		})
+		if m.settingOAuthGoogleEnabled == "true" {
+			fields = append(fields,
+				settingField{label: "Google Client ID", strVal: &m.settingOAuthGoogleClientID, inputIdx: 3},
+				settingField{label: "Google Client Secret", strVal: &m.settingOAuthGoogleClientSecret, inputIdx: 4},
+			)
+		}
+		fields = append(fields, settingField{
+			label:   "Apple OAuth Enabled",
+			isBool:  true,
+			boolVal: &m.settingOAuthAppleEnabled,
+		})
+		if m.settingOAuthAppleEnabled == "true" {
+			fields = append(fields,
+				settingField{label: "Apple Client ID", strVal: &m.settingOAuthAppleClientID, inputIdx: 5},
+				settingField{label: "Apple Client Secret", strVal: &m.settingOAuthAppleClientSecret, inputIdx: 6},
+			)
+		}
 	}
 	return fields
 }
@@ -188,6 +227,34 @@ func (m *Model) initSettingsInputs() {
 		m.emailInputs[7].Placeholder = "Optional custom endpoint or Cloudflare worker URL"
 	}
 
+	if len(m.oauthInputs) == 0 {
+		m.oauthInputs = make([]textinput.Model, 7)
+		for i := range m.oauthInputs {
+			t := textinput.New()
+			t.CharLimit = 256
+
+			s := t.Styles()
+			s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+			s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+			t.SetStyles(s)
+
+			m.oauthInputs[i] = t
+		}
+		m.oauthInputs[0].Placeholder = "e.g. http://localhost:8090/api/oauth2/callback"
+		m.oauthInputs[1].Placeholder = "GitHub App Client ID"
+		m.oauthInputs[2].Placeholder = "••••••••"
+		m.oauthInputs[2].EchoMode = textinput.EchoPassword
+		m.oauthInputs[2].EchoCharacter = '•'
+		m.oauthInputs[3].Placeholder = "Google OAuth Client ID"
+		m.oauthInputs[4].Placeholder = "••••••••"
+		m.oauthInputs[4].EchoMode = textinput.EchoPassword
+		m.oauthInputs[4].EchoCharacter = '•'
+		m.oauthInputs[5].Placeholder = "Apple Service ID / Client ID"
+		m.oauthInputs[6].Placeholder = "••••••••"
+		m.oauthInputs[6].EchoMode = textinput.EchoPassword
+		m.oauthInputs[6].EchoCharacter = '•'
+	}
+
 	// Load values from model state
 	m.storageInputs[0].SetValue(m.settingFileS3Bucket)
 	m.storageInputs[1].SetValue(m.settingFileS3Endpoint)
@@ -212,6 +279,14 @@ func (m *Model) initSettingsInputs() {
 	m.emailInputs[5].SetValue(m.settingEmailDomain)
 	m.emailInputs[6].SetValue(m.settingEmailRegion)
 	m.emailInputs[7].SetValue(m.settingEmailEndpoint)
+
+	m.oauthInputs[0].SetValue(m.settingOAuthRedirectURL)
+	m.oauthInputs[1].SetValue(m.settingOAuthGitHubClientID)
+	m.oauthInputs[2].SetValue(m.settingOAuthGitHubClientSecret)
+	m.oauthInputs[3].SetValue(m.settingOAuthGoogleClientID)
+	m.oauthInputs[4].SetValue(m.settingOAuthGoogleClientSecret)
+	m.oauthInputs[5].SetValue(m.settingOAuthAppleClientID)
+	m.oauthInputs[6].SetValue(m.settingOAuthAppleClientSecret)
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -229,6 +304,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.rootIPsInputs[f.inputIdx].Blur()
 			} else if m.settingsActiveTab == 4 {
 				m.emailInputs[f.inputIdx].Blur()
+			} else if m.settingsActiveTab == 5 {
+				m.oauthInputs[f.inputIdx].Blur()
 			}
 		}
 	}
@@ -245,6 +322,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.rootIPsInputs[f.inputIdx].Focus()
 			} else if m.settingsActiveTab == 4 {
 				m.emailInputs[f.inputIdx].Focus()
+			} else if m.settingsActiveTab == 5 {
+				m.oauthInputs[f.inputIdx].Focus()
 			}
 		}
 	}
@@ -264,6 +343,9 @@ func (m *Model) blurAllSettingsInputs() {
 	}
 	for i := range m.emailInputs {
 		m.emailInputs[i].Blur()
+	}
+	for i := range m.oauthInputs {
+		m.oauthInputs[i].Blur()
 	}
 }
 
@@ -304,6 +386,16 @@ func (m *Model) saveSettingsForm() {
 		"email_domain":                   m.settingEmailDomain,
 		"email_region":                   m.settingEmailRegion,
 		"email_endpoint":                 m.settingEmailEndpoint,
+		"oauth_redirect_url":             m.settingOAuthRedirectURL,
+		"oauth_github_enabled":           m.settingOAuthGitHubEnabled,
+		"oauth_github_client_id":         m.settingOAuthGitHubClientID,
+		"oauth_github_client_secret":     m.settingOAuthGitHubClientSecret,
+		"oauth_google_enabled":           m.settingOAuthGoogleEnabled,
+		"oauth_google_client_id":         m.settingOAuthGoogleClientID,
+		"oauth_google_client_secret":     m.settingOAuthGoogleClientSecret,
+		"oauth_apple_enabled":            m.settingOAuthAppleEnabled,
+		"oauth_apple_client_id":          m.settingOAuthAppleClientID,
+		"oauth_apple_client_secret":      m.settingOAuthAppleClientSecret,
 	}
 
 	_, err = m.Client.UpdateSettings(payload)
@@ -419,6 +511,17 @@ func (m *Model) viewSettings() string {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL DELIVERY  "))
 	}
 
+	// OAuth2 Providers Tab
+	if m.settingsActiveTab == 5 {
+		if m.settingsFocusIndex == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ OAUTH2 PROVIDERS ◀"))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  OAUTH2 PROVIDERS  "))
+		}
+	} else {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  OAUTH2 PROVIDERS  "))
+	}
+
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
 
 	// Render form state if adding or editing a rate limit rule
@@ -494,6 +597,10 @@ func (m *Model) viewSettings() string {
 				input = m.liteInputs[f.inputIdx]
 			} else if m.settingsActiveTab == 3 {
 				input = m.rootIPsInputs[f.inputIdx]
+			} else if m.settingsActiveTab == 4 {
+				input = m.emailInputs[f.inputIdx]
+			} else if m.settingsActiveTab == 5 {
+				input = m.oauthInputs[f.inputIdx]
 			}
 			line = renderTextField(f.label, input, focused)
 			s.WriteString(line + "\n\n")

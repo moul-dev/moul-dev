@@ -4,7 +4,7 @@
 
 ## Overview
 
-Moul (`mould`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
+Moul (`mould`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, Social OAuth2, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
 
 ## Core Resources & Documentation
 
@@ -17,7 +17,7 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 
 - **Dynamic Collections**: Schema management at runtime via HTTP REST API, TUI, or MCP Server.
 - **Dynamic Record CRUD**: Instant CRUD on dynamic SQLite tables governed by expression-based access rules.
-- **Multi-Factor Auth**: Native support for Passwords, Email OTP, WebAuthn Passkeys, and OAuth2 Device Authorization.
+- **Multi-Factor Auth**: Native support for Passwords, Email OTP, WebAuthn Passkeys, Social OAuth2 (GitHub, Google, Apple), and OAuth2 Device Authorization.
 - **Background Worker Engine**: SQLite-backed persistent queue processor with priority queues, retries, exponential backoffs, and immediate triggers.
 - **Programmatic Go Embedding & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.

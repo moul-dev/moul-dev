@@ -190,8 +190,20 @@ type Model struct {
 	settingEmailEndpoint         string
 	emailInputs                  []textinput.Model
 
+	settingOAuthRedirectURL         string
+	settingOAuthGitHubEnabled       string
+	settingOAuthGitHubClientID      string
+	settingOAuthGitHubClientSecret  string
+	settingOAuthGoogleEnabled       string
+	settingOAuthGoogleClientID      string
+	settingOAuthGoogleClientSecret  string
+	settingOAuthAppleEnabled        string
+	settingOAuthAppleClientID       string
+	settingOAuthAppleClientSecret   string
+	oauthInputs                     []textinput.Model
+
 	// Settings Tabs & Custom Inputs
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -308,6 +320,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingEmailDomain = msg.Settings["email_domain"]
 		m.settingEmailRegion = msg.Settings["email_region"]
 		m.settingEmailEndpoint = msg.Settings["email_endpoint"]
+
+		m.settingOAuthRedirectURL = msg.Settings["oauth_redirect_url"]
+		m.settingOAuthGitHubEnabled = msg.Settings["oauth_github_enabled"]
+		m.settingOAuthGitHubClientID = msg.Settings["oauth_github_client_id"]
+		m.settingOAuthGitHubClientSecret = msg.Settings["oauth_github_client_secret"]
+		m.settingOAuthGoogleEnabled = msg.Settings["oauth_google_enabled"]
+		m.settingOAuthGoogleClientID = msg.Settings["oauth_google_client_id"]
+		m.settingOAuthGoogleClientSecret = msg.Settings["oauth_google_client_secret"]
+		m.settingOAuthAppleEnabled = msg.Settings["oauth_apple_enabled"]
+		m.settingOAuthAppleClientID = msg.Settings["oauth_apple_client_id"]
+		m.settingOAuthAppleClientSecret = msg.Settings["oauth_apple_client_secret"]
 		
 		m.settingRateLimitingRules = nil
 		rulesJSON := msg.Settings["rate_limiting_rules"]
@@ -877,7 +900,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 5) % 5
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 6) % 6
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -886,7 +909,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 5
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 6
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -1004,6 +1027,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if m.settingsActiveTab == 4 {
 					m.emailInputs[f.inputIdx], cmd = m.emailInputs[f.inputIdx].Update(msg)
 					*f.strVal = m.emailInputs[f.inputIdx].Value()
+				} else if m.settingsActiveTab == 5 {
+					m.oauthInputs[f.inputIdx], cmd = m.oauthInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.oauthInputs[f.inputIdx].Value()
 				}
 				if cmd != nil {
 					cmds = append(cmds, cmd)

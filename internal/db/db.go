@@ -191,6 +191,16 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		"tls_use_staging":                "false",
 		"tls_http_port":                  "80",
 		"tls_https_port":                 "443",
+		"oauth_github_enabled":           "false",
+		"oauth_github_client_id":         "",
+		"oauth_github_client_secret":     "",
+		"oauth_google_enabled":           "false",
+		"oauth_google_client_id":         "",
+		"oauth_google_client_secret":     "",
+		"oauth_apple_enabled":            "false",
+		"oauth_apple_client_id":          "",
+		"oauth_apple_client_secret":      "",
+		"oauth_redirect_url":             "",
 	}
 	for k, v := range defaultSettings {
 		var exists int
@@ -296,7 +306,8 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 				otpExpiresAt TEXT,
 				passkeys TEXT,
 				resetToken TEXT,
-				resetTokenExpiresAt TEXT
+				resetTokenExpiresAt TEXT,
+				oauthProviders TEXT
 				%s
 			);
 		`, quotedName, columnsSQL)
@@ -809,7 +820,7 @@ func systemColumnsForType(moulType string) map[string]bool {
 		for _, c := range []string{
 			"username", "email", "passwordhash",
 			"otpcode", "otpexpiresat", "passkeys",
-			"resettoken", "resettokenexpiresat",
+			"resettoken", "resettokenexpiresat", "oauthproviders",
 		} {
 			cols[c] = true
 		}
@@ -890,6 +901,7 @@ func EnsureAuthColumns(dbConn *dbx.DB, moulName string) error {
 	quotedName := QuoteIdentifier(moulName)
 	_, _ = dbConn.NewQuery(fmt.Sprintf("ALTER TABLE %s ADD COLUMN resetToken TEXT;", quotedName)).Execute()
 	_, _ = dbConn.NewQuery(fmt.Sprintf("ALTER TABLE %s ADD COLUMN resetTokenExpiresAt TEXT;", quotedName)).Execute()
+	_, _ = dbConn.NewQuery(fmt.Sprintf("ALTER TABLE %s ADD COLUMN oauthProviders TEXT;", quotedName)).Execute()
 	return nil
 }
 

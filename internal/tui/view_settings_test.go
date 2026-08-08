@@ -2,6 +2,8 @@ package tui
 
 import (
 	"testing"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestInitSettingsInputs(t *testing.T) {
@@ -73,5 +75,51 @@ func TestGetSettingsFieldsRootIPs(t *testing.T) {
 	}
 	if fields[0].label != "Root User IP Check Enabled" {
 		t.Errorf("Expected field to be 'Root User IP Check Enabled', got %q", fields[0].label)
+	}
+}
+
+func TestGetSettingsFieldsOAuth(t *testing.T) {
+	m := &Model{
+		settingsActiveTab:          5,
+		settingOAuthRedirectURL:    "http://localhost:8090/callback",
+		settingOAuthGitHubEnabled:  "true",
+		settingOAuthGitHubClientID: "gh_id",
+		settingOAuthGoogleEnabled:  "false",
+		settingOAuthAppleEnabled:   "false",
+	}
+
+	m.initSettingsInputs()
+
+	fields := m.getSettingsFields()
+	if len(fields) != 6 {
+		t.Fatalf("Expected 6 fields for active tab 5 with GitHub enabled and Google/Apple disabled, got %d", len(fields))
+	}
+
+	if len(m.oauthInputs) != 7 {
+		t.Fatalf("Expected 7 oauth inputs initialized, got %d", len(m.oauthInputs))
+	}
+	if m.oauthInputs[0].Value() != "http://localhost:8090/callback" {
+		t.Errorf("Expected oauth redirect URL input 'http://localhost:8090/callback', got %q", m.oauthInputs[0].Value())
+	}
+}
+
+func TestSettingsTabNavigation(t *testing.T) {
+	m := &Model{
+		State:             StateSettings,
+		settingsActiveTab: 4, // Email Delivery
+	}
+
+	// Press right arrow on header tab
+	newM, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	updatedModel := newM.(*Model)
+	if updatedModel.settingsActiveTab != 5 {
+		t.Fatalf("Expected active tab to advance to 5 (OAuth2 Providers), got %d", updatedModel.settingsActiveTab)
+	}
+
+	// Press right arrow again (wraps back to 0 S3 Storage)
+	newM2, _ := updatedModel.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	updatedModel2 := newM2.(*Model)
+	if updatedModel2.settingsActiveTab != 0 {
+		t.Fatalf("Expected active tab to wrap to 0 (S3 Storage), got %d", updatedModel2.settingsActiveTab)
 	}
 }

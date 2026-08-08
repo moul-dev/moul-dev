@@ -54,7 +54,7 @@ The engine reads environment variables from `.env` in the current working direct
 
 Collections can be of four primary types:
 - `base`: Standard custom table for user-defined records.
-- `auth`: Authentication collection (includes password, OTP, passkeys, JWT handling).
+- `auth`: Authentication collection (includes password, OTP, passkeys, OAuth2 social login, JWT handling).
 - `worker`: Background worker job queue table (stores Oban-style job states).
 - `analytic`: Event tracking collection.
 
@@ -121,6 +121,10 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `POST /api/moul/:name/auth-with-otp`: Verify OTP code.
 - `POST /api/moul/:name/passkey/login/options`: Get WebAuthn assertion options.
 - `POST /api/moul/:name/passkey/login/verify`: Verify WebAuthn assertion.
+- `GET /api/moul/:name/auth-methods`: List active authentication methods & configured OAuth2 providers.
+- `GET /api/moul/:name/oauth2/:provider`: Initiate OAuth2 login/signup (github, google, apple).
+- `GET /api/moul/:name/oauth2/:provider/callback`: Handle OAuth2 provider code callback.
+- `POST /api/moul/:name/auth-with-oauth2`: Authenticate with OAuth2 code (for SPAs and mobile apps).
 - `POST /api/oauth2/device/authorize`: Init OAuth2 device flow code.
 - `POST /api/oauth2/device/token`: Poll for OAuth2 device access token.
 

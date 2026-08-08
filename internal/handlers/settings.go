@@ -82,6 +82,16 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"tls_use_staging":                true,
 		"tls_http_port":                  true,
 		"tls_https_port":                 true,
+		"oauth_github_enabled":           true,
+		"oauth_github_client_id":         true,
+		"oauth_github_client_secret":     true,
+		"oauth_google_enabled":           true,
+		"oauth_google_client_id":         true,
+		"oauth_google_client_secret":     true,
+		"oauth_apple_enabled":            true,
+		"oauth_apple_client_id":          true,
+		"oauth_apple_client_secret":      true,
+		"oauth_redirect_url":             true,
 	}
 
 	tx, err := h.DB.Begin()
