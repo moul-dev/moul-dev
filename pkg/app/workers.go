@@ -61,4 +61,44 @@ func (a *App) RegisterBuiltinWorkers() {
 		}
 		return nil
 	})
+
+	// Register periodic old requests garbage collection worker (keep 30 days)
+	a.workerEngine.RegisterPeriodicTask(24*time.Hour, "CleanupOldRequests", func(ctx context.Context, job *worker.Job) error {
+		count, err := db.CleanupOldRequests(a.dbConn, 30*24*time.Hour)
+		if err != nil {
+			logger.Error("Failed to cleanup old requests", "err", err)
+			return err
+		}
+		if count > 0 {
+			logger.Info("Cleaned up old requests", "count", count)
+		}
+		return nil
+	})
+
+	// Register periodic old visits garbage collection worker (keep 30 days)
+	a.workerEngine.RegisterPeriodicTask(24*time.Hour, "CleanupOldVisits", func(ctx context.Context, job *worker.Job) error {
+		count, err := db.CleanupOldVisits(a.dbConn, 30*24*time.Hour)
+		if err != nil {
+			logger.Error("Failed to cleanup old visits", "err", err)
+			return err
+		}
+		if count > 0 {
+			logger.Info("Cleaned up old visits", "count", count)
+		}
+		return nil
+	})
+
+	// Register periodic completed & discarded worker jobs garbage collection worker (keep completed 7 days, discard failed jobs immediately)
+	a.workerEngine.RegisterPeriodicTask(1*time.Hour, "CleanupCompletedJobs", func(ctx context.Context, job *worker.Job) error {
+		count, err := db.CleanupCompletedJobs(a.dbConn, 7*24*time.Hour, 0)
+		if err != nil {
+			logger.Error("Failed to cleanup completed worker jobs", "err", err)
+			return err
+		}
+		if count > 0 {
+			logger.Info("Cleaned up completed worker jobs", "count", count)
+		}
+		return nil
+	})
 }
+

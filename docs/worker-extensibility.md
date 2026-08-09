@@ -89,7 +89,8 @@ job, err := workerEngine.Enqueue("background_jobs", map[string]interface{}{
 
 ## Executing Built-in & Custom Workers Side-by-Side
 
-`pkg/app` automatically registers built-in background tasks (such as `SendEmail` and `CleanupRevokedTokens`) during `app.Bootstrap()`. Your custom handlers run seamlessly alongside core system workers within the same concurrent worker engine.
+`pkg/app` automatically registers built-in background tasks (such as `SendEmail`, `CleanupRevokedTokens`, `CleanupOldRequests`, `CleanupOldVisits`, and `CleanupCompletedJobs`) during `app.Bootstrap()`. Your custom handlers run seamlessly alongside core system workers within the same concurrent worker engine.
+
 
 ---
 

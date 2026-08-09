@@ -231,6 +231,10 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create idx_visits_user index: %w", err)
 	}
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_started_at ON _visits (started_at);").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create idx_visits_started_at index: %w", err)
+	}
 
 	// Create meta-table _requests
 	_, err = db.NewQuery(`
@@ -960,5 +964,99 @@ func CleanupExpiredRevokedTokens(dbConn *dbx.DB) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+// CleanupOldRequests deletes requests from _requests table older than maxAge.
+func CleanupOldRequests(dbConn *dbx.DB, maxAge time.Duration) (int64, error) {
+	if dbConn == nil {
+		return 0, nil
+	}
+	cutoffStr := time.Now().UTC().Add(-maxAge).Format(time.RFC3339)
+	res, err := dbConn.NewQuery("DELETE FROM _requests WHERE created_at <= {:cutoff}").
+		Bind(dbx.Params{"cutoff": cutoffStr}).
+		Execute()
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// CleanupOldVisits deletes visits from _visits table older than maxAge.
+func CleanupOldVisits(dbConn *dbx.DB, maxAge time.Duration) (int64, error) {
+	if dbConn == nil {
+		return 0, nil
+	}
+	cutoffStr := time.Now().UTC().Add(-maxAge).Format(time.RFC3339)
+	res, err := dbConn.NewQuery("DELETE FROM _visits WHERE started_at <= {:cutoff}").
+		Bind(dbx.Params{"cutoff": cutoffStr}).
+		Execute()
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// CleanupCompletedJobs deletes completed and discarded background jobs across all worker tables.
+// completedMaxAge specifies maximum retention for completed jobs.
+// discardedMaxAge specifies maximum retention for discarded jobs (if <= 0, discarded jobs are removed immediately).
+func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discardedMaxAge time.Duration) (int64, error) {
+	if dbConn == nil {
+		return 0, nil
+	}
+	mouls, err := LoadAllMoul(dbConn)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalDeleted int64
+	completedCutoffStr := time.Now().UTC().Add(-completedMaxAge).Format(time.RFC3339)
+
+	for _, moul := range mouls {
+		if moul.Type != "worker" {
+			continue
+		}
+		quotedName := QuoteIdentifier(moul.Name)
+
+		// Delete completed jobs older than completedMaxAge
+		resCompleted, err := dbConn.NewQuery(fmt.Sprintf(
+			"DELETE FROM %s WHERE state = 'completed' AND (completed_at <= {:completed_cutoff} OR (completed_at IS NULL AND updated_at <= {:completed_cutoff}))",
+			quotedName,
+		)).Bind(dbx.Params{"completed_cutoff": completedCutoffStr}).Execute()
+		if err != nil {
+			return totalDeleted, fmt.Errorf("failed to cleanup completed jobs in %s: %w", moul.Name, err)
+		}
+		if rows, err := resCompleted.RowsAffected(); err == nil {
+			totalDeleted += rows
+		}
+
+		// Delete discarded jobs
+		if discardedMaxAge <= 0 {
+			resDiscarded, err := dbConn.NewQuery(fmt.Sprintf(
+				"DELETE FROM %s WHERE state = 'discarded'",
+				quotedName,
+			)).Execute()
+			if err != nil {
+				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", moul.Name, err)
+			}
+			if rows, err := resDiscarded.RowsAffected(); err == nil {
+				totalDeleted += rows
+			}
+		} else {
+			discardedCutoffStr := time.Now().UTC().Add(-discardedMaxAge).Format(time.RFC3339)
+			resDiscarded, err := dbConn.NewQuery(fmt.Sprintf(
+				"DELETE FROM %s WHERE state = 'discarded' AND (discarded_at <= {:discarded_cutoff} OR (discarded_at IS NULL AND updated_at <= {:discarded_cutoff}))",
+				quotedName,
+			)).Bind(dbx.Params{"discarded_cutoff": discardedCutoffStr}).Execute()
+			if err != nil {
+				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", moul.Name, err)
+			}
+			if rows, err := resDiscarded.RowsAffected(); err == nil {
+				totalDeleted += rows
+			}
+		}
+	}
+
+	return totalDeleted, nil
+}
+
 
 

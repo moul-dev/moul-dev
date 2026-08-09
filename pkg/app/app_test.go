@@ -98,7 +98,23 @@ func TestAppWorkerExtensibility(t *testing.T) {
 	if !cleanupRegistered {
 		t.Errorf("Expected built-in CleanupRevokedTokens worker handler to be registered")
 	}
+
+	_, cleanupOldReqsRegistered := engine.GetHandler("CleanupOldRequests")
+	if !cleanupOldReqsRegistered {
+		t.Errorf("Expected built-in CleanupOldRequests worker handler to be registered")
+	}
+
+	_, cleanupOldVisitsRegistered := engine.GetHandler("CleanupOldVisits")
+	if !cleanupOldVisitsRegistered {
+		t.Errorf("Expected built-in CleanupOldVisits worker handler to be registered")
+	}
+
+	_, cleanupCompletedJobsRegistered := engine.GetHandler("CleanupCompletedJobs")
+	if !cleanupCompletedJobsRegistered {
+		t.Errorf("Expected built-in CleanupCompletedJobs worker handler to be registered")
+	}
 }
+
 
 func TestAppRouteExtensibility(t *testing.T) {
 	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
