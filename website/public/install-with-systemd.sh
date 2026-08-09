@@ -1,12 +1,30 @@
 #!/bin/sh
 # Moul Server Systemd Installer Script
-# Usage: curl -fsSL https://moul.dev/install-with-systemd.sh | sh
+#
+# Quick Install (default service name 'moul'):
+#   curl -fsSL https://moul.dev/install-with-systemd.sh | sh
+#
+# Custom service name via environment variable:
+#   curl -fsSL https://moul.dev/install-with-systemd.sh | SERVICE_NAME=my-moul sh
+#
+# Custom service name via positional argument:
+#   curl -fsSL https://moul.dev/install-with-systemd.sh | sh -s -- my-moul
+#
+# Custom version and service name:
+#   curl -fsSL https://moul.dev/install-with-systemd.sh | VERSION=v0.1.0 SERVICE_NAME=moul-prod sh
 
 set -e
 
 # Repository configuration
 REPO_OWNER="moul-dev"
 REPO_NAME="moul-dev"
+
+# Service configuration
+SERVICE_NAME="${1:-${SERVICE_NAME:-${MOUL_SERVICE_NAME:-moul}}}"
+SERVICE_NAME="${SERVICE_NAME%.service}"
+if [ -z "$SERVICE_NAME" ]; then
+    SERVICE_NAME="moul"
+fi
 
 # Color definitions (if stdout is a terminal)
 if [ -t 1 ]; then
@@ -100,7 +118,7 @@ fi
 
 log_info "Target Version: ${TAG}"
 
-# 6. Installation Directories
+# 6. Installation Directories & Server Binary Download
 INSTALL_DIR="${MOUL_INSTALL_DIR:-/usr/local/bin}"
 DATA_DIR="${MOUL_DATA_DIR:-/var/lib/moul}"
 
@@ -108,52 +126,27 @@ DATA_DIR="${MOUL_DATA_DIR:-/var/lib/moul}"
 TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'moul-install')
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
-log_info "Downloading binaries for Linux/${ARCH}..."
-
-# Download 'moul' (TUI Client)
-MOUL_ASSET="moul_${TAG}_linux_${ARCH}.tar.gz"
-MOUL_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOUL_ASSET}"
-
-if ! curl -sSL --fail "$MOUL_URL" -o "$TMP_DIR/$MOUL_ASSET"; then
-    log_error "Failed to download $MOUL_URL"
-    exit 1
-fi
-
-tar -xzf "$TMP_DIR/$MOUL_ASSET" -C "$TMP_DIR"
-
-if [ ! -f "$TMP_DIR/moul" ]; then
-    log_error "Binary 'moul' not found inside downloaded archive $MOUL_ASSET"
-    exit 1
-fi
+log_info "Downloading mould server binary for Linux/${ARCH}..."
 
 # Download 'mould' (Server)
 MOULD_ASSET="mould_${TAG}_linux_${ARCH}.tar.gz"
 MOULD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOULD_ASSET}"
 
-HAS_MOULD=false
-if curl -sSL --fail "$MOULD_URL" -o "$TMP_DIR/$MOULD_ASSET" 2>/dev/null; then
-    tar -xzf "$TMP_DIR/$MOULD_ASSET" -C "$TMP_DIR"
-    if [ -f "$TMP_DIR/mould" ]; then
-        HAS_MOULD=true
-    fi
-fi
-
-if [ "$HAS_MOULD" != "true" ]; then
-    log_error "Server binary 'mould' was not found in release ${TAG} for Linux/${ARCH}."
+if ! curl -sSL --fail "$MOULD_URL" -o "$TMP_DIR/$MOULD_ASSET"; then
+    log_error "Failed to download $MOULD_URL"
     exit 1
 fi
 
-# Install Binaries
+tar -xzf "$TMP_DIR/$MOULD_ASSET" -C "$TMP_DIR"
+
+if [ ! -f "$TMP_DIR/mould" ]; then
+    log_error "Server binary 'mould' was not found inside downloaded archive $MOULD_ASSET"
+    exit 1
+fi
+
+# Install Server Binary
 mkdir -p "$INSTALL_DIR"
-log_info "Installing binaries into ${INSTALL_DIR}..."
-
-cp "$TMP_DIR/moul" "$INSTALL_DIR/moul"
-chmod 0755 "$INSTALL_DIR/moul"
-log_success "Installed moul -> ${INSTALL_DIR}/moul"
-
-cp "$TMP_DIR/moul" "$INSTALL_DIR/moul-tui"
-chmod 0755 "$INSTALL_DIR/moul-tui"
-log_success "Installed moul-tui -> ${INSTALL_DIR}/moul-tui"
+log_info "Installing mould binary into ${INSTALL_DIR}..."
 
 cp "$TMP_DIR/mould" "$INSTALL_DIR/mould"
 chmod 0755 "$INSTALL_DIR/mould"
@@ -197,9 +190,11 @@ get_env_val() {
     fi
 }
 
+ENV_FILE="/etc/moul/${SERVICE_NAME}.env"
+
 ADMIN_KEY="${MOUL_ADMIN_KEY:-}"
 if [ -z "$ADMIN_KEY" ]; then
-    ADMIN_KEY=$(get_env_val /etc/moul/moul.env MOUL_ADMIN_KEY)
+    ADMIN_KEY=$(get_env_val "$ENV_FILE" MOUL_ADMIN_KEY)
 fi
 if [ -z "$ADMIN_KEY" ]; then
     ADMIN_KEY=$(generate_secret)
@@ -207,16 +202,16 @@ fi
 
 JWT_SECRET="${MOUL_JWT_SECRET:-}"
 if [ -z "$JWT_SECRET" ]; then
-    JWT_SECRET=$(get_env_val /etc/moul/moul.env MOUL_JWT_SECRET)
+    JWT_SECRET=$(get_env_val "$ENV_FILE" MOUL_JWT_SECRET)
 fi
 if [ -z "$JWT_SECRET" ]; then
     JWT_SECRET=$(generate_secret)
 fi
 
-log_info "Configuring environment file /etc/moul/moul.env..."
+log_info "Configuring environment file ${ENV_FILE}..."
 mkdir -p /etc/moul
 
-cat <<EOF > /etc/moul/moul.env
+cat <<EOF > "$ENV_FILE"
 MOUL_ENV=production
 MOUL_ADMIN_KEY=${ADMIN_KEY}
 MOUL_JWT_SECRET=${JWT_SECRET}
@@ -225,16 +220,16 @@ EOF
 
 chown -R root:moul /etc/moul
 chmod 0750 /etc/moul
-chmod 0640 /etc/moul/moul.env
-log_success "Saved configuration to /etc/moul/moul.env"
+chmod 0640 "$ENV_FILE"
+log_success "Saved configuration to ${ENV_FILE}"
 
 # 10. Create Systemd Service File
-SERVICE_FILE="/etc/systemd/system/moul.service"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 log_info "Creating systemd service ${SERVICE_FILE}..."
 
 cat <<EOF > "$SERVICE_FILE"
 [Unit]
-Description=Moul Dynamic Database & Engine
+Description=Moul Dynamic Database & Engine (${SERVICE_NAME})
 After=network.target
 
 [Service]
@@ -245,7 +240,7 @@ WorkingDirectory=${DATA_DIR}
 ExecStart=${INSTALL_DIR}/mould start
 Restart=always
 RestartSec=5
-EnvironmentFile=-/etc/moul/moul.env
+EnvironmentFile=-${ENV_FILE}
 Environment=MOUL_ENV=production
 Environment=MOUL_DB_PATH=${DATA_DIR}/moul.db
 LimitNOFILE=65536
@@ -258,17 +253,17 @@ chmod 0644 "$SERVICE_FILE"
 log_success "Systemd unit file created"
 
 # 11. Reload, Enable and Start Systemd Service
-log_info "Reloading systemd daemon and enabling moul service..."
+log_info "Reloading systemd daemon and enabling ${SERVICE_NAME}.service..."
 systemctl daemon-reload
-systemctl enable moul.service
-systemctl restart moul.service
+systemctl enable "${SERVICE_NAME}.service"
+systemctl restart "${SERVICE_NAME}.service"
 
 echo ""
-if systemctl is-active --quiet moul.service; then
-    log_success "Moul server service (moul.service) is active and running!"
+if systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+    log_success "Moul server service (${SERVICE_NAME}.service) is active and running!"
 else
-    log_error "Moul server service failed to start automatically."
-    log_info "Run 'sudo systemctl status moul.service' or 'sudo journalctl -u moul -f' to inspect errors."
+    log_error "Moul server service (${SERVICE_NAME}.service) failed to start automatically."
+    log_info "Run 'sudo systemctl status ${SERVICE_NAME}.service' or 'sudo journalctl -u ${SERVICE_NAME} -f' to inspect errors."
 fi
 
 # 12. Output Summary
@@ -279,17 +274,17 @@ log_success "=================================================="
 echo ""
 log_info "Service Summary:"
 echo "  - Binary:         ${INSTALL_DIR}/mould"
-echo "  - Service Name:   moul.service"
+echo "  - Service Name:   ${SERVICE_NAME}.service"
 echo "  - Data Directory: ${DATA_DIR}"
-echo "  - Environment:    /etc/moul/moul.env"
+echo "  - Environment:    ${ENV_FILE}"
 echo ""
 log_info "Server Credentials:"
 echo "  - Admin Key:      ${ADMIN_KEY}"
 echo "  - JWT Secret:     ${JWT_SECRET}"
 echo ""
 log_info "Management Commands:"
-echo "  - Check status:   sudo systemctl status moul"
-echo "  - View live logs: sudo journalctl -u moul -f"
-echo "  - Restart server: sudo systemctl restart moul"
-echo "  - Stop server:    sudo systemctl stop moul"
+echo "  - Check status:   sudo systemctl status ${SERVICE_NAME}"
+echo "  - View live logs: sudo journalctl -u ${SERVICE_NAME} -f"
+echo "  - Restart server: sudo systemctl restart ${SERVICE_NAME}"
+echo "  - Stop server:    sudo systemctl stop ${SERVICE_NAME}"
 echo ""
