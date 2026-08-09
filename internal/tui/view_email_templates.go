@@ -110,7 +110,8 @@ func (m *Model) initEmailTemplateForm() {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Subject").
-				Value(&m.tempSubject),
+				Value(&m.tempSubject).
+				Validate(ValidateRequired("Subject")),
 			huh.NewText().
 				Title("Body").
 				Value(&m.tempBody).
@@ -125,7 +126,8 @@ func (m *Model) initTestEmailForm() {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Recipient Email Address").
-				Value(&m.testEmailRecipient),
+				Value(&m.testEmailRecipient).
+				Validate(ValidateEmail),
 		),
 	).WithTheme(ThemeCustom)
 }

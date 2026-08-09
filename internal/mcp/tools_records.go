@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 )
 
@@ -184,7 +184,7 @@ func (s *Server) handleCreateRecord(ctx context.Context, req mcp.CallToolRequest
 
 	id, ok := body["id"].(string)
 	if !ok || strings.TrimSpace(id) == "" {
-		id = uuid.New().String()
+		id = fmt.Sprintf("%s-%s", util.Singularize(moul.Name), util.RandomID())
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)

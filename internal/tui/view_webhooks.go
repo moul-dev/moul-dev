@@ -207,12 +207,14 @@ func (m *Model) initWebhookForm(isEdit bool) tea.Cmd {
 				Title("Webhook Target URL").
 				Placeholder("https://example.com/webhook").
 				Description("Target HTTP POST endpoint URL").
-				Value(&m.webhookFormURL),
+				Value(&m.webhookFormURL).
+				Validate(ValidateURL),
 
 			huh.NewInput().
 				Title("Events (comma-separated)").
 				Description("e.g. create:before, create:after, update:before, update:after, delete:before, delete:after or *").
-				Value(&m.webhookFormEvents),
+				Value(&m.webhookFormEvents).
+				Validate(ValidateRequired("Events")),
 
 			huh.NewInput().
 				Title("Secret Key (Optional)").

@@ -357,7 +357,8 @@ func (m *Model) initFeatureFlagForm(isEdit bool) tea.Cmd {
 			huh.NewInput().
 				Title("Percentage Rollout Gate (0 - 100)").
 				Placeholder("0").
-				Value(&m.flagFormPercentage),
+				Value(&m.flagFormPercentage).
+				Validate(ValidateNumberRange(0, 100)),
 			huh.NewInput().
 				Title("Targeted Actors (comma-separated IDs/emails)").
 				Placeholder("user_123, admin@moul.dev").
@@ -459,7 +460,8 @@ func (m *Model) initFeatureFlagEvalForm() tea.Cmd {
 		huh.NewGroup(
 			huh.NewText().
 				Title(fmt.Sprintf("Evaluation Context (JSON) for flag: %s", m.flagEvalKey)).
-				Value(&m.flagEvalContextJSON),
+				Value(&m.flagEvalContextJSON).
+				Validate(ValidateJSON),
 		),
 	).WithTheme(ThemeCustom)
 

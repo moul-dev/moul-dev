@@ -251,6 +251,7 @@ Credentials and connection state are securely saved to `~/.config/moul.json` (wi
 ### TUI Features & Capabilities
 
 - **Dashboard**: High-level system overview displaying collection counters, active workers, visit statistics, and quick system links.
+- **Real-Time Inline Form Validation**: Built-in validation for email format, password requirements (minimum 8 characters with confirmation matching during root setup and Auth collection record creation), URLs, numeric inputs, and JSON syntax.
 - **Collection Schema Management**: Create new collections (`base`, `auth`, `worker`, `analytic`), add/remove fields, choose field types, and write HCL access control rules.
 - **Dynamic Record CRUD Console**: Browse collection records with pagination, inspect JSON payloads, add new records, edit existing records, and delete records.
 - **Background Workers Monitor**: Real-time view of background job queues (`executing`, `available`, `completed`, `discarded`). Inspect job parameters, view error stack traces, force-retry failed jobs (`r`), or discard jobs (`c`).

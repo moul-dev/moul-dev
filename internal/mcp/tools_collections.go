@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 )
 
@@ -105,7 +105,7 @@ func (s *Server) handleCreateCollection(ctx context.Context, req mcp.CallToolReq
 	}
 
 	m := &schema.Moul{
-		ID:     uuid.New().String(),
+		ID:     util.RandomID(),
 		Name:   name,
 		Type:   colType,
 		Fields: fields,

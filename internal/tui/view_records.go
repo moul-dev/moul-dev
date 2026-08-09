@@ -356,8 +356,8 @@ func (m *Model) initRecordForm(isEdit bool) {
 		m.recordFormData["email"] = &emailVal
 
 		fields = append(fields,
-			huh.NewInput().Title("Username").Value(&usernameVal),
-			huh.NewInput().Title("Email").Value(&emailVal),
+			huh.NewInput().Title("Username").Value(&usernameVal).Validate(ValidateUsername),
+			huh.NewInput().Title("Email").Value(&emailVal).Validate(ValidateEmail),
 		)
 
 		if !isEdit {
@@ -366,8 +366,8 @@ func (m *Model) initRecordForm(isEdit bool) {
 			m.recordFormData["password"] = &pwdVal
 			m.recordFormData["passwordConfirm"] = &pwdConfirmVal
 			fields = append(fields,
-				huh.NewInput().Title("Password").Value(&pwdVal).EchoMode(huh.EchoModePassword),
-				huh.NewInput().Title("Confirm Password").Value(&pwdConfirmVal).EchoMode(huh.EchoModePassword),
+				huh.NewInput().Title("Password").Value(&pwdVal).EchoMode(huh.EchoModePassword).Validate(ValidatePassword),
+				huh.NewInput().Title("Confirm Password").Value(&pwdConfirmVal).EchoMode(huh.EchoModePassword).Validate(ValidateConfirmPassword(&pwdVal)),
 			)
 		}
 	}
@@ -495,7 +495,13 @@ func (m *Model) initRecordForm(isEdit bool) {
 		}
 
 		m.recordFormData[f.Name] = &valStr
-		fields = append(fields, huh.NewInput().Title(fmt.Sprintf("%s (%s)", f.Name, f.Type)).Value(&valStr))
+		inputField := huh.NewInput().Title(fmt.Sprintf("%s (%s)", f.Name, f.Type)).Value(&valStr)
+		if f.Type == "number" {
+			inputField = inputField.Validate(ValidateNumber)
+		} else if f.Type == "json" {
+			inputField = inputField.Validate(ValidateJSON)
+		}
+		fields = append(fields, inputField)
 	}
 
 	m.RecordForm = huh.NewForm(

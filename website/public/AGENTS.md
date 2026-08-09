@@ -134,7 +134,7 @@ AI Agents connected via MCP can invoke the following 17 built-in tools:
 ### Record CRUD Tools
 - `moul_list_records`: `{"collection": "string", "page": int, "per_page": int}` - List paginated records.
 - `moul_get_record`: `{"collection": "string", "id": "string"}` - Get single record by ID.
-- `moul_create_record`: `{"collection": "string", "data_json": "string"}` - Insert record.
+- `moul_create_record`: `{"collection": "string", "data_json": "string"}` - Insert record (auto-generates ID formatted as `<singular_collection>-<randomID>` if unspecified).
 - `moul_update_record`: `{"collection": "string", "id": "string", "data_json": "string"}` - Update record by ID.
 - `moul_delete_record`: `{"collection": "string", "id": "string"}` - Delete record by ID.
 

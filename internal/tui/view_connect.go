@@ -15,27 +15,14 @@ func (m *Model) initConnectionForm() {
 				Title("Server URL").
 				Placeholder("http://localhost:8090").
 				Value(&m.serverURL).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return fmt.Errorf("server URL is required")
-					}
-					if !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
-						return fmt.Errorf("URL must start with http:// or https://")
-					}
-					return nil
-				}),
+				Validate(ValidateURL),
 
 			huh.NewInput().
 				Title("Admin Key (X-Admin-Key)").
 				Placeholder("Required to verify setup/configure system...").
 				Value(&m.adminKey).
 				EchoMode(huh.EchoModePassword).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return fmt.Errorf("admin key is required")
-					}
-					return nil
-				}),
+				Validate(ValidateRequired("Admin Key")),
 		),
 	).WithTheme(ThemeCustom)
 }
@@ -47,47 +34,27 @@ func (m *Model) initRootSetupForm() {
 				Title("Root Username").
 				Placeholder("e.g. admin").
 				Value(&m.rootUsername).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return fmt.Errorf("username is required")
-					}
-					return nil
-				}),
+				Validate(ValidateUsername),
 
 			huh.NewInput().
 				Title("Root Email").
 				Placeholder("e.g. admin@moul.dev").
 				Value(&m.rootEmail).
-				Validate(func(str string) error {
-					if !strings.Contains(str, "@") {
-						return fmt.Errorf("invalid email address")
-					}
-					return nil
-				}),
+				Validate(ValidateEmail),
 
 			huh.NewInput().
 				Title("Password").
 				Placeholder("••••••••").
 				Value(&m.rootPassword).
 				EchoMode(huh.EchoModePassword).
-				Validate(func(str string) error {
-					if len(str) < 8 {
-						return fmt.Errorf("password must be at least 8 characters")
-					}
-					return nil
-				}),
+				Validate(ValidatePassword),
 
 			huh.NewInput().
 				Title("Confirm Password").
 				Placeholder("••••••••").
 				Value(&m.rootConfirmPass).
 				EchoMode(huh.EchoModePassword).
-				Validate(func(str string) error {
-					if str != m.rootPassword {
-						return fmt.Errorf("passwords do not match")
-					}
-					return nil
-				}),
+				Validate(ValidateConfirmPassword(&m.rootPassword)),
 		),
 	).WithTheme(ThemeCustom)
 }
