@@ -32,19 +32,29 @@ func TestValidateEmail(t *testing.T) {
 }
 
 func TestValidatePassword(t *testing.T) {
-	if err := ValidatePassword("12345678"); err != nil {
-		t.Errorf("expected password to be valid, got: %v", err)
+	if err := ValidatePassword("Password123"); err != nil {
+		t.Errorf("expected valid password, got: %v", err)
 	}
-	if err := ValidatePassword("short"); err == nil {
-		t.Errorf("expected short password to fail validation")
+
+	invalidPasswords := map[string]string{
+		"short":            "too short",
+		"password123":      "no uppercase",
+		"PASSWORD123":      "no lowercase",
+		"PasswordPassword": "no digit",
+	}
+
+	for pass, reason := range invalidPasswords {
+		if err := ValidatePassword(pass); err == nil {
+			t.Errorf("expected password %q (%s) to fail validation", pass, reason)
+		}
 	}
 }
 
 func TestValidateConfirmPassword(t *testing.T) {
-	pass := "secret123"
+	pass := "Password123"
 	fn := ValidateConfirmPassword(&pass)
 
-	if err := fn("secret123"); err != nil {
+	if err := fn("Password123"); err != nil {
 		t.Errorf("expected passwords to match, got: %v", err)
 	}
 	if err := fn("different"); err == nil {

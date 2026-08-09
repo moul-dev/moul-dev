@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/moul-dev/moul-dev/internal/auth"
 )
 
 var (
@@ -25,12 +27,9 @@ func ValidateEmail(str string) error {
 	return nil
 }
 
-// ValidatePassword validates password minimum length requirement.
+// ValidatePassword validates password length and complexity requirements (min 8 chars, 1 uppercase, 1 lowercase, 1 digit).
 func ValidatePassword(str string) error {
-	if len(str) < 8 {
-		return fmt.Errorf("password must be at least 8 characters long")
-	}
-	return nil
+	return auth.ValidatePassword(str)
 }
 
 // ValidateConfirmPassword returns a validator function that checks if password confirmation matches the target password.
