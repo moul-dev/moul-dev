@@ -23,7 +23,7 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via Telegraf Unix Domain Socket listener.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
-- **Built-in MCP Server**: Native MCP protocol server accessible via `mould mcp` (stdio) and `/api/mcp` (HTTP SSE).
+- **Built-in MCP Server**: Native MCP protocol server accessible via `mould mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
 ## Built-in MCP Server Tools Summary
 

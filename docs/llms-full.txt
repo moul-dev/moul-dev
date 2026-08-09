@@ -100,7 +100,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `GET /llms-full.txt`: Complete LLM technical specification.
 
 ### Built-in MCP Server (Admin Auth)
-- `ALL /api/mcp*`: Model Context Protocol SSE server endpoint.
+- `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint.
 
 ### Collection Management (Admin Auth)
 - `GET /api/moul`: List all collection schemas (Public read-only summary).
@@ -140,7 +140,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 
 ## 7. Built-in MCP Server Tool Specifications
 
-The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or HTTP SSE (`/api/mcp`):
+The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or Streamable HTTP & SSE (`/api/mcp`):
 
 1. `moul_list_collections`: List all dynamic collection schemas and tables.
 2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.

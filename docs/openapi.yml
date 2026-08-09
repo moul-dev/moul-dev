@@ -38,6 +38,91 @@ info:
     - **Custom HTTP Route Hooks**: Add custom endpoints using `RegisterRoute` or attach to the raw Echo router via `OnRouterInit`.
     - **Lifecycle Callbacks**: Run custom initialization logic after database setup using `OnBeforeStart`.
     - **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker`.
+
+    ### Built-in Model Context Protocol (MCP) Server
+    - **Overview**: `mould` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This allows AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity) to inspect schema definitions, execute record CRUD, track background jobs, manage feature flags, and monitor host system metrics.
+    - **Transport Modes**:
+      - **Stdio Transport Mode**: Executed via `mould mcp`. Communicates directly over standard input/output streams. Ideal for local IDE configuration without running a public HTTP daemon.
+      - **Streamable HTTP Transport Mode (MCP 2025 Spec)**: Served at `http://localhost:8090/api/mcp`. Natively accepts direct JSON-RPC POST requests, SSE stream GET requests, and DELETE session termination requests.
+      - **HTTP SSE Transport Mode (Legacy Spec)**: Served at `http://localhost:8090/api/mcp` (with client POST messages directed to `/api/mcp/message`).
+    - **Authentication Options**:
+      - Header: `X-Admin-Key: <MOUL_ADMIN_KEY>`
+      - Header: `Authorization: Bearer <MOUL_ADMIN_KEY>`
+      - URL Query Parameter: `http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>`
+    - **Client Setup & Configuration Examples**:
+      - **Claude Desktop Setup**:
+        - Config Path (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`
+        - Config Path (Windows): `%APPDATA%\Claude\claude_desktop_config.json`
+        - *Stdio Mode*:
+          ```json
+          {
+            "mcpServers": {
+              "mould": {
+                "command": "/usr/local/bin/mould",
+                "args": ["mcp"],
+                "env": {
+                  "MOUL_DB_PATH": "./moul-local.db"
+                }
+              }
+            }
+          }
+          ```
+        - *Streamable HTTP / SSE Mode (Header Auth)*:
+          ```json
+          {
+            "mcpServers": {
+              "mould-sse": {
+                "url": "http://localhost:8090/api/mcp",
+                "headers": {
+                  "X-Admin-Key": "<MOUL_ADMIN_KEY>"
+                }
+              }
+            }
+          }
+          ```
+        - *Streamable HTTP / SSE Mode (Query Param Auth)*:
+          ```json
+          {
+            "mcpServers": {
+              "mould-sse": {
+                "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
+              }
+            }
+          }
+          ```
+      - **Cursor / VS Code / Windsurf / Antigravity Setup**:
+        - Workspace Config: `.cursor/mcp.json` or `.vscode/mcp.json`
+        - *Configuration*:
+          ```json
+          {
+            "mcpServers": {
+              "mould": {
+                "command": "mould",
+                "args": ["mcp"]
+              }
+            }
+          }
+          ```
+      - **cURL Streamable HTTP Execution Example**:
+        - *1. Direct POST JSON-RPC Request*:
+          ```bash
+          curl -X POST "http://localhost:8090/api/mcp" \
+            -H "X-Admin-Key: <MOUL_ADMIN_KEY>" \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "curl", "version": "1.0"}}}'
+          ```
+        - *2. Query Param Auth Example*:
+          ```bash
+          curl -X POST "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>" \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "moul_list_collections", "arguments": {}}}'
+          ```
+    - **Built-in MCP Tools Summary (17 Native Tools)**:
+      - **Collections**: `moul_list_collections`, `moul_get_collection`, `moul_create_collection`, `moul_delete_collection`
+      - **Records CRUD**: `moul_list_records`, `moul_get_record`, `moul_create_record`, `moul_update_record`, `moul_delete_record`
+      - **Worker Queues**: `moul_list_worker_jobs`, `moul_enqueue_job`, `moul_cancel_job`
+      - **Feature Flags**: `moul_list_feature_flags`, `moul_set_feature_flag`
+      - **System & Observability**: `moul_get_system_metrics`, `moul_get_analytics_summary`, `moul_list_requests`
 servers:
   - url: http://localhost:8090
     description: Local development server
@@ -74,6 +159,62 @@ tags:
     description: File upload handler endpoint supporting multipart storage uploads.
   - name: Analytics & Request Observability
     description: Administrative and tracking endpoints for HTTP requests and site visit analytics.
+  - name: Model Context Protocol (MCP)
+    description: |
+      Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `mould`.
+
+      #### Connection Modes & Setup
+      1. **Stdio Transport (`mould mcp`)**: Standard I/O bridge mode for local AI clients.
+      2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.
+
+      #### Authentication
+      HTTP SSE requests require master key authentication:
+      - Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+
+      #### Configuration Examples
+      - **Claude Desktop** (`claude_desktop_config.json`):
+        ```json
+        {
+          "mcpServers": {
+            "mould": {
+              "command": "/usr/local/bin/mould",
+              "args": ["mcp"],
+              "env": { "MOUL_DB_PATH": "./moul-local.db" }
+            },
+            "mould-sse": {
+              "url": "http://localhost:8090/api/mcp",
+              "headers": { "X-Admin-Key": "<MOUL_ADMIN_KEY>" }
+            }
+          }
+        }
+        ```
+      - **Cursor IDE** (`.cursor/mcp.json`):
+        ```json
+        {
+          "mcpServers": {
+            "mould": { "command": "mould", "args": ["mcp"] }
+          }
+        }
+        ```
+
+      #### Available MCP Tools (17 Tools)
+      - `moul_list_collections`: List all dynamic database collections.
+      - `moul_get_collection`: View collection definition and rules.
+      - `moul_create_collection`: Register a new collection schema (base, auth, worker, analytic).
+      - `moul_delete_collection`: Drop collection table and remove schema.
+      - `moul_list_records`: List records with field filtering and limits.
+      - `moul_get_record`: Fetch single record by ID.
+      - `moul_create_record`: Create record in collection.
+      - `moul_update_record`: Update record by ID.
+      - `moul_delete_record`: Delete record by ID.
+      - `moul_list_worker_jobs`: List background jobs from worker table by state.
+      - `moul_enqueue_job`: Enqueue job with handler, args_json, and priority.
+      - `moul_cancel_job`: Cancel worker job.
+      - `moul_list_feature_flags`: List OpenFeature flags.
+      - `moul_set_feature_flag`: Create/update feature flag.
+      - `moul_get_system_metrics`: Query host CPU, RAM, Disk, Load metrics.
+      - `moul_get_analytics_summary`: Get visit count and request metrics.
+      - `moul_list_requests`: Query HTTP request telemetry log.
 
 paths:
   /api/setup:
@@ -2109,19 +2250,188 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
-  /api/mcp/sse:
+  /api/mcp:
     get:
-      summary: MCP Server-Sent Events Endpoint
+      summary: MCP SSE Stream Endpoint (Legacy & Streamable HTTP)
+      description: |
+        Establishes a persistent Server-Sent Events (SSE) stream for Model Context Protocol (MCP) communication.
+
+        AI tools connect to this endpoint to receive continuous JSON-RPC event updates and session message routing endpoints (`/api/mcp/message?sessionId=...`).
+        
+        Requires master key authentication via:
+        - Header `X-Admin-Key: <MOUL_ADMIN_KEY>`
+        - Header `Authorization: Bearer <MOUL_ADMIN_KEY>`
+        - Query parameter `?adminKey=<MOUL_ADMIN_KEY>` (or `?token=...`, `?api_key=...`)
       tags:
         - Model Context Protocol (MCP)
       security:
         - BearerAuth: []
         - AdminKeyAuth: []
+      parameters:
+        - in: query
+          name: adminKey
+          required: false
+          schema:
+            type: string
+          description: Master admin key passed in URL query parameter.
       responses:
         '200':
           description: SSE event stream connection established.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: "event: endpoint\ndata: /api/mcp/message?sessionId=12345\n\n"
         '401':
           $ref: '#/components/responses/401Unauthorized'
+        '503':
+          description: MCP server not initialized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+    post:
+      summary: MCP Streamable HTTP JSON-RPC Endpoint (MCP 2025 Spec)
+      description: |
+        Direct JSON-RPC 2.0 endpoint for client requests (e.g. `initialize`, `tools/list`, `tools/call`).
+
+        Supports both standard Streamable HTTP transport and message routing for active sessions.
+      tags:
+        - Model Context Protocol (MCP)
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - in: query
+          name: adminKey
+          required: false
+          schema:
+            type: string
+          description: Master admin key.
+        - in: query
+          name: sessionId
+          required: false
+          schema:
+            type: string
+          description: Optional active session ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jsonrpc
+                - method
+              properties:
+                jsonrpc:
+                  type: string
+                  example: "2.0"
+                id:
+                  type: integer
+                  example: 1
+                method:
+                  type: string
+                  example: "initialize"
+                params:
+                  type: object
+                  example:
+                    protocolVersion: "2024-11-05"
+                    capabilities: {}
+                    clientInfo:
+                      name: "antigravity"
+                      version: "1.0"
+      responses:
+        '200':
+          description: JSON-RPC response returned successfully.
+        '202':
+          description: Request accepted for asynchronous processing.
+        '400':
+          description: Invalid JSON-RPC payload or session ID.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '503':
+          description: MCP server not initialized.
+    delete:
+      summary: Terminate MCP Session Endpoint
+      description: |
+        Terminates an active Streamable HTTP or SSE session ID and cleans up associated resources.
+      tags:
+        - Model Context Protocol (MCP)
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - in: query
+          name: sessionId
+          required: true
+          schema:
+            type: string
+          description: Session ID to disconnect and terminate.
+      responses:
+        '200':
+          description: Session terminated successfully.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
+  /api/mcp/message:
+    post:
+      summary: MCP SSE Message Routing Endpoint (Legacy SSE Spec)
+      description: |
+        Endpoint for sending JSON-RPC 2.0 requests to an active MCP session created via `/api/mcp`.
+
+        Supports standard MCP methods including tool discovery (`tools/list`), tool invocation (`tools/call`), resource listing (`resources/list`), and prompt listing (`prompts/list`).
+      tags:
+        - Model Context Protocol (MCP)
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - in: query
+          name: sessionId
+          required: false
+          schema:
+            type: string
+          description: Active MCP SSE session ID returned during connection handshake.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jsonrpc
+                - method
+              properties:
+                jsonrpc:
+                  type: string
+                  example: "2.0"
+                id:
+                  type: integer
+                  example: 1
+                method:
+                  type: string
+                  example: "tools/call"
+                params:
+                  type: object
+                  example:
+                    name: "moul_list_collections"
+                    arguments: {}
+      responses:
+        '200':
+          description: Message processed successfully.
+        '202':
+          description: Message accepted by active SSE session.
+        '400':
+          description: Invalid JSON-RPC request syntax or missing session ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
 
 components:
   securitySchemes:

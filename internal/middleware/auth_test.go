@@ -221,3 +221,75 @@ func TestLoadAuthContextMiddlewareIPBlocking(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckAdminKey(t *testing.T) {
+	e := echo.New()
+	adminKey := "test-admin-key-1234"
+
+	tests := []struct {
+		name          string
+		headerName    string
+		headerVal     string
+		queryParams   string
+		shouldSucceed bool
+	}{
+		{
+			name:          "X-Admin-Key Header Match",
+			headerName:    "X-Admin-Key",
+			headerVal:     adminKey,
+			shouldSucceed: true,
+		},
+		{
+			name:          "Authorization Bearer Admin Key Match",
+			headerName:    "Authorization",
+			headerVal:     "Bearer " + adminKey,
+			shouldSucceed: true,
+		},
+		{
+			name:          "Authorization Raw Admin Key Match",
+			headerName:    "Authorization",
+			headerVal:     adminKey,
+			shouldSucceed: true,
+		},
+		{
+			name:          "Query Param adminKey Match",
+			queryParams:   "?adminKey=" + adminKey,
+			shouldSucceed: true,
+		},
+		{
+			name:          "Query Param token Match",
+			queryParams:   "?token=" + adminKey,
+			shouldSucceed: true,
+		},
+		{
+			name:          "Invalid Key",
+			headerName:    "X-Admin-Key",
+			headerVal:     "wrong-key",
+			shouldSucceed: false,
+		},
+		{
+			name:          "No Key Provided",
+			shouldSucceed: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			url := "/"
+			if tt.queryParams != "" {
+				url += tt.queryParams
+			}
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			if tt.headerName != "" {
+				req.Header.Set(tt.headerName, tt.headerVal)
+			}
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			result := CheckAdminKey(c, adminKey)
+			if result != tt.shouldSucceed {
+				t.Errorf("Expected CheckAdminKey to return %v, got %v", tt.shouldSucceed, result)
+			}
+		})
+	}
+}

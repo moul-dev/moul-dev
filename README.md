@@ -410,12 +410,14 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ### Transport Modes
 
 1. **Stdio Transport Mode (`mould mcp`)**: Runs directly as a CLI subcommand over standard input/output.
-2. **HTTP SSE Mode (`/api/mcp`)**: Enabled automatically on `mould start`. Requires `X-Admin-Key` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `mould start`. Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
+3. **Flexible Authentication**: Pass key via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query parameter `?adminKey=<MOUL_ADMIN_KEY>`.
 
 ### Integration Examples
 
-#### Claude Desktop Configuration (`claude_desktop_config.json`)
+#### Stdio Mode (Claude Desktop, Cursor, Antigravity)
 
+**Claude Desktop Configuration (`claude_desktop_config.json`)**:
 ```json
 {
   "mcpServers": {
@@ -425,6 +427,45 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
       "env": {
         "MOUL_DB_PATH": "/path/to/moul-local.db"
       }
+    }
+  }
+}
+```
+
+**Cursor IDE (`.cursor/mcp.json`)**:
+```json
+{
+  "mcpServers": {
+    "mould": {
+      "command": "mould",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+#### Streamable HTTP / SSE Mode (`http://localhost:8090/api/mcp`)
+
+**Header Authentication**:
+```json
+{
+  "mcpServers": {
+    "mould-http": {
+      "url": "http://localhost:8090/api/mcp",
+      "headers": {
+        "X-Admin-Key": "test-admin-key-1234"
+      }
+    }
+  }
+}
+```
+
+**URL Query Parameter Authentication**:
+```json
+{
+  "mcpServers": {
+    "mould-http": {
+      "url": "http://localhost:8090/api/mcp?adminKey=test-admin-key-1234"
     }
   }
 }

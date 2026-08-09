@@ -25,7 +25,7 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 
 1. **Stdio Transport**:
    - Command: `mould mcp`
-   - Configuration in `claude_desktop_config.json`:
+   - Configuration in `claude_desktop_config.json` or `.cursor/mcp.json`:
      ```json
      {
        "mcpServers": {
@@ -40,9 +40,39 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
      }
      ```
 
-2. **HTTP SSE Transport**:
+2. **Streamable HTTP & SSE Transport (MCP 2025 Specification)**:
    - URL: `http://localhost:8090/api/mcp`
-   - Header: `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`
+   - Flexible Authentication: Pass via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query param `?adminKey=<MOUL_ADMIN_KEY>`.
+   - Header Auth Configuration:
+     ```json
+     {
+       "mcpServers": {
+         "mould-http": {
+           "url": "http://localhost:8090/api/mcp",
+           "headers": {
+             "X-Admin-Key": "<MOUL_ADMIN_KEY>"
+           }
+         }
+       }
+     }
+     ```
+   - URL Query Parameter Auth Configuration:
+     ```json
+     {
+       "mcpServers": {
+         "mould-http": {
+           "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
+         }
+       }
+     }
+     ```
+   - cURL Streamable HTTP example:
+     ```bash
+     curl -X POST "http://localhost:8090/api/mcp" \
+       -H "X-Admin-Key: <MOUL_ADMIN_KEY>" \
+       -H "Content-Type: application/json" \
+       -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "curl", "version": "1.0"}}}'
+     ```
 
 ### Option B: REST API & OpenAPI Specification
 - Live OpenAPI Spec: `http://localhost:8090/openapi.json` or `http://localhost:8090/openapi.yml`

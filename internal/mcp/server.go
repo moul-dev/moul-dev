@@ -9,12 +9,13 @@ import (
 )
 
 type Server struct {
-	mcpServer       *server.MCPServer
-	sseServer       *server.SSEServer
-	dbConn          *dbx.DB
-	workerEngine    *worker.Engine
-	analyticsEngine *analytics.Engine
-	sysmonCollector *sysmon.Collector
+	mcpServer        *server.MCPServer
+	sseServer        *server.SSEServer
+	streamableServer *server.StreamableHTTPServer
+	dbConn           *dbx.DB
+	workerEngine     *worker.Engine
+	analyticsEngine  *analytics.Engine
+	sysmonCollector  *sysmon.Collector
 }
 
 func NewServer(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, sysmonCollector *sysmon.Collector, version string) *Server {
@@ -42,11 +43,17 @@ func NewServer(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	srv.registerFlagTools()
 	srv.registerSysmonTools()
 
-	// Initialize SSE Server endpoint configuration
+	// Initialize SSE Server endpoint configuration (Legacy SSE specification)
 	srv.sseServer = server.NewSSEServer(
 		s,
 		server.WithSSEEndpoint("/api/mcp"),
 		server.WithMessageEndpoint("/api/mcp/message"),
+	)
+
+	// Initialize Streamable HTTP Server endpoint configuration (MCP 2025 specification)
+	srv.streamableServer = server.NewStreamableHTTPServer(
+		s,
+		server.WithEndpointPath("/api/mcp"),
 	)
 
 	return srv
@@ -58,6 +65,10 @@ func (s *Server) MCPServer() *server.MCPServer {
 
 func (s *Server) SSEServer() *server.SSEServer {
 	return s.sseServer
+}
+
+func (s *Server) StreamableServer() *server.StreamableHTTPServer {
+	return s.streamableServer
 }
 
 func (s *Server) ServeStdio() error {
