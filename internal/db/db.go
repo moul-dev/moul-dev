@@ -200,6 +200,9 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		"oauth_apple_enabled":            "false",
 		"oauth_apple_client_id":          "",
 		"oauth_apple_client_secret":      "",
+		"oauth_apple_team_id":            "",
+		"oauth_apple_key_id":             "",
+		"oauth_apple_private_key":        "",
 		"oauth_redirect_url":             "",
 	}
 	for k, v := range defaultSettings {

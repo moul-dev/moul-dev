@@ -23,6 +23,7 @@ type AuthWithOAuth2Payload struct {
 	Code         string `json:"code"`
 	CodeVerifier string `json:"codeVerifier"`
 	RedirectURL  string `json:"redirectUrl"`
+	User         string `json:"user,omitempty"`
 }
 
 type OAuthProviderInfo struct {
@@ -217,6 +218,14 @@ func (h *AuthHandler) OAuth2Callback(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	userPayload := c.FormValue("user")
+	if userPayload == "" {
+		userPayload = c.QueryParam("user")
+	}
+	if appleProv, ok := prov.(*auth.AppleProvider); ok && userPayload != "" {
+		appleProv.UserPayload = userPayload
+	}
+
 	oauthUser, err := prov.FetchUserProfile(c.Request().Context(), code, codeVerifier, redirectURL)
 	if err != nil {
 		logger.Error("Failed to fetch OAuth user profile", "provider", providerName, "err", err)
@@ -275,6 +284,10 @@ func (h *AuthHandler) AuthWithOAuth2(c *echo.Context) error {
 	prov, err := auth.GetOAuthProvider(providerName, settings)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if appleProv, ok := prov.(*auth.AppleProvider); ok && payload.User != "" {
+		appleProv.UserPayload = payload.User
 	}
 
 	oauthUser, err := prov.FetchUserProfile(c.Request().Context(), code, strings.TrimSpace(payload.CodeVerifier), redirectURL)

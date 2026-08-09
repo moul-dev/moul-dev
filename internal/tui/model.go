@@ -200,6 +200,9 @@ type Model struct {
 	settingOAuthAppleEnabled        string
 	settingOAuthAppleClientID       string
 	settingOAuthAppleClientSecret   string
+	settingOAuthAppleTeamID         string
+	settingOAuthAppleKeyID          string
+	settingOAuthApplePrivateKey     string
 	oauthInputs                     []textinput.Model
 
 	// Settings Tabs & Custom Inputs
@@ -331,6 +334,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingOAuthAppleEnabled = msg.Settings["oauth_apple_enabled"]
 		m.settingOAuthAppleClientID = msg.Settings["oauth_apple_client_id"]
 		m.settingOAuthAppleClientSecret = msg.Settings["oauth_apple_client_secret"]
+		m.settingOAuthAppleTeamID = msg.Settings["oauth_apple_team_id"]
+		m.settingOAuthAppleKeyID = msg.Settings["oauth_apple_key_id"]
+		m.settingOAuthApplePrivateKey = msg.Settings["oauth_apple_private_key"]
 		
 		m.settingRateLimitingRules = nil
 		rulesJSON := msg.Settings["rate_limiting_rules"]

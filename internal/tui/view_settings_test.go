@@ -95,8 +95,8 @@ func TestGetSettingsFieldsOAuth(t *testing.T) {
 		t.Fatalf("Expected 6 fields for active tab 5 with GitHub enabled and Google/Apple disabled, got %d", len(fields))
 	}
 
-	if len(m.oauthInputs) != 7 {
-		t.Fatalf("Expected 7 oauth inputs initialized, got %d", len(m.oauthInputs))
+	if len(m.oauthInputs) != 10 {
+		t.Fatalf("Expected 10 oauth inputs initialized, got %d", len(m.oauthInputs))
 	}
 	if m.oauthInputs[0].Value() != "http://localhost:8090/callback" {
 		t.Errorf("Expected oauth redirect URL input 'http://localhost:8090/callback', got %q", m.oauthInputs[0].Value())

@@ -2,11 +2,14 @@ package auth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -112,9 +115,17 @@ func GetOAuthProvider(providerName string, settings map[string]string) (OAuthPro
 		}
 		clientID := settings["oauth_apple_client_id"]
 		clientSecret := settings["oauth_apple_client_secret"]
-		if clientID == "" || clientSecret == "" {
-			return nil, fmt.Errorf("apple oauth client_id and client_secret must be configured")
+		teamID := settings["oauth_apple_team_id"]
+		keyID := settings["oauth_apple_key_id"]
+		privateKey := settings["oauth_apple_private_key"]
+
+		if clientID == "" {
+			return nil, fmt.Errorf("apple oauth client_id must be configured")
 		}
+		if clientSecret == "" && (privateKey == "" || teamID == "" || keyID == "") {
+			return nil, fmt.Errorf("apple oauth requires client_secret or (team_id, key_id, private_key)")
+		}
+
 		return &AppleProvider{
 			Config: ProviderConfig{
 				ClientID:     clientID,
@@ -123,6 +134,9 @@ func GetOAuthProvider(providerName string, settings map[string]string) (OAuthPro
 				TokenURL:     "https://appleid.apple.com/auth/token",
 				Scopes:       []string{"name", "email"},
 			},
+			TeamID:     teamID,
+			KeyID:      keyID,
+			PrivateKey: privateKey,
 		}, nil
 
 	default:
@@ -411,8 +425,100 @@ func (p *GoogleProvider) FetchUserProfile(ctx context.Context, code, codeVerifie
 // ── Apple Provider ──────────────────────────────────────────────────────────
 
 type AppleProvider struct {
-	Config     ProviderConfig
-	HTTPClient *http.Client
+	Config      ProviderConfig
+	TeamID      string
+	KeyID       string
+	PrivateKey  string
+	UserPayload string
+	HTTPClient  *http.Client
+}
+
+// GenerateAppleClientSecret generates a signed ES256 JWT for Apple OAuth client authentication.
+func GenerateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM string, validFor time.Duration) (string, error) {
+	block, _ := pem.Decode([]byte(privateKeyPEM))
+	if block == nil {
+		return "", fmt.Errorf("failed to parse PEM block from private key")
+	}
+
+	var parsedKey interface{}
+	var err error
+	if parsedKey, err = x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
+		if parsedKey, err = x509.ParseECPrivateKey(block.Bytes); err != nil {
+			return "", fmt.Errorf("failed to parse ECDSA private key: %w", err)
+		}
+	}
+
+	ecKey, ok := parsedKey.(*ecdsa.PrivateKey)
+	if !ok {
+		return "", fmt.Errorf("private key is not an ECDSA key")
+	}
+
+	now := time.Now().UTC()
+	if validFor <= 0 {
+		validFor = 5 * time.Minute
+	}
+	exp := now.Add(validFor)
+
+	header := map[string]string{
+		"alg": "ES256",
+		"kid": keyID,
+	}
+	headerBytes, _ := json.Marshal(header)
+	headerB64 := base64.RawURLEncoding.EncodeToString(headerBytes)
+
+	claims := map[string]interface{}{
+		"iss": teamID,
+		"iat": now.Unix(),
+		"exp": exp.Unix(),
+		"aud": "https://appleid.apple.com",
+		"sub": clientID,
+	}
+	claimsBytes, _ := json.Marshal(claims)
+	claimsB64 := base64.RawURLEncoding.EncodeToString(claimsBytes)
+
+	signingInput := headerB64 + "." + claimsB64
+	hash := sha256.Sum256([]byte(signingInput))
+
+	r, s, err := ecdsa.Sign(rand.Reader, ecKey, hash[:])
+	if err != nil {
+		return "", fmt.Errorf("failed to sign apple client secret JWT: %w", err)
+	}
+
+	curveBits := ecKey.Params().BitSize
+	keyBytes := (curveBits + 7) / 8
+
+	rBytes := r.Bytes()
+	sBytes := s.Bytes()
+
+	sig := make([]byte, 2*keyBytes)
+	copy(sig[keyBytes-len(rBytes):keyBytes], rBytes)
+	copy(sig[2*keyBytes-len(sBytes):], sBytes)
+
+	sigB64 := base64.RawURLEncoding.EncodeToString(sig)
+
+	return signingInput + "." + sigB64, nil
+}
+
+func (p *AppleProvider) getClientSecret() (string, error) {
+	// If static clientSecret is set and is a valid 3-part JWT, use it directly
+	if p.Config.ClientSecret != "" && len(strings.Split(p.Config.ClientSecret, ".")) == 3 {
+		return p.Config.ClientSecret, nil
+	}
+
+	pemData := p.PrivateKey
+	if pemData == "" && strings.Contains(p.Config.ClientSecret, "PRIVATE KEY") {
+		pemData = p.Config.ClientSecret
+	}
+
+	if pemData != "" && p.TeamID != "" && p.KeyID != "" {
+		return GenerateAppleClientSecret(p.TeamID, p.KeyID, p.Config.ClientID, pemData, 5*time.Minute)
+	}
+
+	if p.Config.ClientSecret != "" {
+		return p.Config.ClientSecret, nil
+	}
+
+	return "", fmt.Errorf("apple oauth client secret configuration incomplete")
 }
 
 func (p *AppleProvider) client() *http.Client {
@@ -442,9 +548,14 @@ func (p *AppleProvider) GetAuthURL(state, redirectURL, codeChallenge string) str
 }
 
 func (p *AppleProvider) FetchUserProfile(ctx context.Context, code, codeVerifier, redirectURL string) (*OAuthUser, error) {
+	secret, err := p.getClientSecret()
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain apple client secret: %w", err)
+	}
+
 	form := url.Values{}
 	form.Set("client_id", p.Config.ClientID)
-	form.Set("client_secret", p.Config.ClientSecret)
+	form.Set("client_secret", secret)
 	form.Set("code", code)
 	form.Set("grant_type", "authorization_code")
 	form.Set("redirect_uri", redirectURL)
@@ -511,17 +622,50 @@ func (p *AppleProvider) FetchUserProfile(ctx context.Context, code, codeVerifier
 	_ = json.Unmarshal(claimsBytes, &rawMap)
 
 	email := claims.Email
+	name := ""
+
+	if p.UserPayload != "" {
+		var userObj struct {
+			Name struct {
+				FirstName string `json:"firstName"`
+				LastName  string `json:"lastName"`
+			} `json:"name"`
+			Email string `json:"email"`
+		}
+		if json.Unmarshal([]byte(p.UserPayload), &userObj) == nil {
+			first := strings.TrimSpace(userObj.Name.FirstName)
+			last := strings.TrimSpace(userObj.Name.LastName)
+			if first != "" || last != "" {
+				name = strings.TrimSpace(first + " " + last)
+			}
+			if email == "" && userObj.Email != "" {
+				email = userObj.Email
+			}
+			rawMap["user"] = userObj
+		}
+	}
+
 	username := ""
-	if email != "" {
+	if name != "" {
+		username = name
+	} else if email != "" {
 		username = strings.Split(email, "@")[0]
 	}
 	if username == "" {
-		username = claims.Sub
+		if len(claims.Sub) > 8 {
+			username = "apple_" + claims.Sub[:8]
+		} else {
+			username = "apple_" + claims.Sub
+		}
+	}
+
+	if name == "" {
+		name = username
 	}
 
 	return &OAuthUser{
 		ID:       claims.Sub,
-		Name:     username,
+		Name:     name,
 		Username: username,
 		Email:    email,
 		RawUser:  rawMap,

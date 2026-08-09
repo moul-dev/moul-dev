@@ -136,6 +136,9 @@ func (m *Model) getSettingsFields() []settingField {
 			fields = append(fields,
 				settingField{label: "Apple Client ID", strVal: &m.settingOAuthAppleClientID, inputIdx: 5},
 				settingField{label: "Apple Client Secret", strVal: &m.settingOAuthAppleClientSecret, inputIdx: 6},
+				settingField{label: "Apple Team ID", strVal: &m.settingOAuthAppleTeamID, inputIdx: 7},
+				settingField{label: "Apple Key ID", strVal: &m.settingOAuthAppleKeyID, inputIdx: 8},
+				settingField{label: "Apple Private Key (.p8)", strVal: &m.settingOAuthApplePrivateKey, inputIdx: 9},
 			)
 		}
 	}
@@ -228,7 +231,7 @@ func (m *Model) initSettingsInputs() {
 	}
 
 	if len(m.oauthInputs) == 0 {
-		m.oauthInputs = make([]textinput.Model, 7)
+		m.oauthInputs = make([]textinput.Model, 10)
 		for i := range m.oauthInputs {
 			t := textinput.New()
 			t.CharLimit = 256
@@ -250,9 +253,14 @@ func (m *Model) initSettingsInputs() {
 		m.oauthInputs[4].EchoMode = textinput.EchoPassword
 		m.oauthInputs[4].EchoCharacter = '•'
 		m.oauthInputs[5].Placeholder = "Apple Service ID / Client ID"
-		m.oauthInputs[6].Placeholder = "••••••••"
+		m.oauthInputs[6].Placeholder = "•••••••• (or Pre-signed JWT)"
 		m.oauthInputs[6].EchoMode = textinput.EchoPassword
 		m.oauthInputs[6].EchoCharacter = '•'
+		m.oauthInputs[7].Placeholder = "Apple Team ID (e.g. DEF456GHIJ)"
+		m.oauthInputs[8].Placeholder = "Apple Key ID (e.g. ABC123DEFG)"
+		m.oauthInputs[9].Placeholder = "BEGIN PRIVATE KEY..."
+		m.oauthInputs[9].EchoMode = textinput.EchoPassword
+		m.oauthInputs[9].EchoCharacter = '•'
 	}
 
 	// Load values from model state
@@ -287,6 +295,9 @@ func (m *Model) initSettingsInputs() {
 	m.oauthInputs[4].SetValue(m.settingOAuthGoogleClientSecret)
 	m.oauthInputs[5].SetValue(m.settingOAuthAppleClientID)
 	m.oauthInputs[6].SetValue(m.settingOAuthAppleClientSecret)
+	m.oauthInputs[7].SetValue(m.settingOAuthAppleTeamID)
+	m.oauthInputs[8].SetValue(m.settingOAuthAppleKeyID)
+	m.oauthInputs[9].SetValue(m.settingOAuthApplePrivateKey)
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -396,6 +407,9 @@ func (m *Model) saveSettingsForm() {
 		"oauth_apple_enabled":            m.settingOAuthAppleEnabled,
 		"oauth_apple_client_id":          m.settingOAuthAppleClientID,
 		"oauth_apple_client_secret":      m.settingOAuthAppleClientSecret,
+		"oauth_apple_team_id":            m.settingOAuthAppleTeamID,
+		"oauth_apple_key_id":             m.settingOAuthAppleKeyID,
+		"oauth_apple_private_key":        m.settingOAuthApplePrivateKey,
 	}
 
 	_, err = m.Client.UpdateSettings(payload)

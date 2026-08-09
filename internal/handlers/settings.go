@@ -91,6 +91,9 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"oauth_apple_enabled":            true,
 		"oauth_apple_client_id":          true,
 		"oauth_apple_client_secret":      true,
+		"oauth_apple_team_id":            true,
+		"oauth_apple_key_id":             true,
+		"oauth_apple_private_key":        true,
 		"oauth_redirect_url":             true,
 	}
 

@@ -2,11 +2,18 @@ package auth_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moul-dev/moul-dev/internal/auth"
 )
@@ -117,5 +124,112 @@ func TestGitHubProviderFetchUserProfileMock(t *testing.T) {
 
 	if user.ID != "12345" || user.Username != "octocat" || user.Email != "octocat@github.com" {
 		t.Fatalf("Unexpected user profile returned: %+v", user)
+	}
+}
+
+func TestAppleClientSecretGeneration(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate ECDSA test key: %v", err)
+	}
+
+	derBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		t.Fatalf("Failed to marshal private key to PKCS8: %v", err)
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: derBytes,
+	}
+	pemStr := string(pem.EncodeToMemory(pemBlock))
+
+	jwtSecret, err := auth.GenerateAppleClientSecret("TEAM123456", "KEY1234567", "com.example.service", pemStr, 10*time.Minute)
+	if err != nil {
+		t.Fatalf("GenerateAppleClientSecret failed: %v", err)
+	}
+
+	parts := strings.Split(jwtSecret, ".")
+	if len(parts) != 3 {
+		t.Fatalf("Expected JWT to have 3 parts, got %d (secret: %s)", len(parts), jwtSecret)
+	}
+
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil || !strings.Contains(string(headerBytes), "KEY1234567") {
+		t.Fatalf("Header does not contain key ID: %s", string(headerBytes))
+	}
+
+	claimsBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil || !strings.Contains(string(claimsBytes), "com.example.service") || !strings.Contains(string(claimsBytes), "TEAM123456") {
+		t.Fatalf("Claims do not contain team or client ID: %s", string(claimsBytes))
+	}
+}
+
+func TestAppleProviderFetchUserProfile(t *testing.T) {
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	derBytes, _ := x509.MarshalPKCS8PrivateKey(privateKey)
+	pemStr := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: derBytes}))
+
+	// Create mock id_token
+	headerB64 := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","kid":"apple_kid"}`))
+	claimsB64 := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"apple_sub_12345","email":"john.appleseed@example.com"}`))
+	mockIDToken := headerB64 + "." + claimsB64 + ".mock_sig"
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock_apple_access_token",
+				"id_token":     mockIDToken,
+			})
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer mockServer.Close()
+
+	// Test 1: First-time auth with UserPayload
+	appleProvider := &auth.AppleProvider{
+		Config: auth.ProviderConfig{
+			ClientID: "com.example.service",
+			AuthURL:  mockServer.URL + "/auth/authorize",
+			TokenURL: mockServer.URL + "/auth/token",
+		},
+		TeamID:      "TEAM123",
+		KeyID:       "KEY456",
+		PrivateKey:  pemStr,
+		UserPayload: `{"name":{"firstName":"John","lastName":"Appleseed"},"email":"john.appleseed@example.com"}`,
+		HTTPClient:  mockServer.Client(),
+	}
+
+	user1, err := appleProvider.FetchUserProfile(context.Background(), "code123", "", "http://localhost/callback")
+	if err != nil {
+		t.Fatalf("FetchUserProfile with UserPayload failed: %v", err)
+	}
+
+	if user1.ID != "apple_sub_12345" || user1.Name != "John Appleseed" || user1.Email != "john.appleseed@example.com" {
+		t.Fatalf("Unexpected user1 returned: %+v", user1)
+	}
+
+	// Test 2: Re-auth / missing UserPayload (subsequent login after revocation)
+	appleProviderNoPayload := &auth.AppleProvider{
+		Config: auth.ProviderConfig{
+			ClientID: "com.example.service",
+			AuthURL:  mockServer.URL + "/auth/authorize",
+			TokenURL: mockServer.URL + "/auth/token",
+		},
+		TeamID:     "TEAM123",
+		KeyID:      "KEY456",
+		PrivateKey: pemStr,
+		HTTPClient: mockServer.Client(),
+	}
+
+	user2, err := appleProviderNoPayload.FetchUserProfile(context.Background(), "code123", "", "http://localhost/callback")
+	if err != nil {
+		t.Fatalf("FetchUserProfile without UserPayload failed: %v", err)
+	}
+
+	if user2.ID != "apple_sub_12345" || user2.Email != "john.appleseed@example.com" || user2.Name != "john.appleseed" {
+		t.Fatalf("Unexpected user2 returned: %+v", user2)
 	}
 }
