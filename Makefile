@@ -3,15 +3,11 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui telegraf web-dev web-build web-install
+.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install
 
 # Start the Echo server locally
 run:
 	go run cmd/mould/main.go start
-
-# Run Telegraf agent locally streaming metrics to /tmp/moul-telegraf.sock
-telegraf:
-	telegraf --config assets/telegraf.conf
 
 # Restore database from Litestream S3 backup
 restore:

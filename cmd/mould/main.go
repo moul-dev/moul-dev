@@ -72,8 +72,7 @@ func runMCP() {
 	}
 	defer dbConn.Close()
 
-	socketPath := envy.Get("MOUL_TELEGRAF_SOCKET_PATH", "/tmp/moul-telegraf.sock")
-	sysmonCollector := sysmon.NewCollector(socketPath)
+	sysmonCollector := sysmon.NewCollector()
 
 	srv := moulmcp.NewServer(dbConn, nil, nil, sysmonCollector, Version)
 	if err := srv.ServeStdio(); err != nil {

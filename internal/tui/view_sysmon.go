@@ -28,7 +28,7 @@ func (m *Model) fetchSystemMetrics() tea.Cmd {
 func (m *Model) viewDashboardSysmonInfo(width int) string {
 	if m.SystemStatus == nil {
 		return ContentStyle.Width(width).Render(
-			TitleStyle.Render("🖥️ SYSTEM MONITORING (TELEGRAF UDS)") + "\n\n" +
+			TitleStyle.Render("🖥️ HOST SYSTEM MONITORING") + "\n\n" +
 				"Fetching host system metrics from server...",
 		)
 	}
@@ -41,30 +41,10 @@ func (m *Model) viewDashboardSysmonInfo(width int) string {
 	sb.WriteString(TitleStyle.Render("🖥️ HOST SYSTEM MONITORING"))
 	sb.WriteString("\n\n")
 
-	// Status Badge & Metadata
-	var statusBadgeStr string
-
-	if snap.TelegrafActive {
-		statusBadgeStr = lipgloss.NewStyle().
-			Bold(true).
-			Padding(0, 1).
-			Background(lipgloss.Color("#10B981")).
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Render("🟢 TELEGRAF SOCKET ACTIVE")
-	} else {
-		statusBadgeStr = lipgloss.NewStyle().
-			Bold(true).
-			Padding(0, 1).
-			Background(lipgloss.Color("#F59E0B")).
-			Foreground(lipgloss.Color("#000000")).
-			Render("🟡 STANDBY / FALLBACK METRICS")
-	}
-
-	metaInfo := fmt.Sprintf("%s | Host OS: %s/%s | Socket: %s | Updated: %s",
-		statusBadgeStr,
+	// Metadata Info
+	metaInfo := fmt.Sprintf("Host OS: %s/%s | Updated: %s",
 		strings.ToUpper(snap.OS),
 		strings.ToUpper(snap.Arch),
-		snap.SocketPath,
 		snap.Timestamp.Format("15:04:05"),
 	)
 	sb.WriteString(metaInfo)

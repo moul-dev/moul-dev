@@ -14,11 +14,9 @@ func TestViewDashboardSysmonInfo_Rendering(t *testing.T) {
 		Height: 30,
 		SystemStatus: &sysmon.SystemStatusResponse{
 			Current: sysmon.MetricsSnapshot{
-				Timestamp:      time.Now(),
-				OS:             "darwin",
-				Arch:           "arm64",
-				TelegrafActive: true,
-				SocketPath:     "/tmp/moul-telegraf.sock",
+				Timestamp: time.Now(),
+				OS:        "darwin",
+				Arch:      "arm64",
 				CPU: sysmon.CPUStats{
 					UsageActive: 42.5,
 					UsageUser:   25.0,
@@ -55,8 +53,8 @@ func TestViewDashboardSysmonInfo_Rendering(t *testing.T) {
 		t.Errorf("Expected output to contain header 'HOST SYSTEM MONITORING'")
 	}
 
-	if !strings.Contains(output, "TELEGRAF SOCKET ACTIVE") {
-		t.Errorf("Expected output to show 'TELEGRAF SOCKET ACTIVE'")
+	if !strings.Contains(output, "Host OS: DARWIN/ARM64") {
+		t.Errorf("Expected output to show 'Host OS: DARWIN/ARM64'")
 	}
 
 	if !strings.Contains(output, "42.5%") {

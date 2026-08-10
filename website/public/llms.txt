@@ -21,7 +21,7 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 - **Background Worker Engine**: SQLite-backed persistent queue processor with priority queues, retries, exponential backoffs, and immediate triggers.
 - **Programmatic Go Embedding & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
-- **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via Telegraf Unix Domain Socket listener.
+- **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
 - **Built-in MCP Server**: Native MCP protocol server accessible via `mould mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 

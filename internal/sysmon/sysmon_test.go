@@ -3,19 +3,12 @@ package sysmon
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
 
-func TestCollector_UDS_PayloadIngestion(t *testing.T) {
-	// On macOS, unix socket paths cannot exceed 104 characters
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("test_tg_%d.sock", time.Now().UnixNano()%100000))
-
-	collector := NewCollector(socketPath)
+func TestCollector_ProcessPayload(t *testing.T) {
+	collector := NewCollector()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -24,15 +17,6 @@ func TestCollector_UDS_PayloadIngestion(t *testing.T) {
 		t.Fatalf("Failed to start collector: %v", err)
 	}
 	defer collector.Close()
-
-	// Wait briefly for listener to be active
-	time.Sleep(50 * time.Millisecond)
-
-	// Dial the Unix domain socket
-	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		t.Fatalf("Failed to dial Unix domain socket %s: %v", socketPath, err)
-	}
 
 	// Payload 1: cpu metric
 	cpuPayload := MetricPoint{
@@ -49,8 +33,7 @@ func TestCollector_UDS_PayloadIngestion(t *testing.T) {
 		Timestamp: time.Now().Unix(),
 	}
 	cpuData, _ := json.Marshal(cpuPayload)
-	cpuData = append(cpuData, '\n')
-	_, _ = conn.Write(cpuData)
+	collector.ProcessPayload(cpuData)
 
 	// Payload 2: mem & system batch
 	memPayload := MetricPoint{
@@ -74,22 +57,13 @@ func TestCollector_UDS_PayloadIngestion(t *testing.T) {
 		},
 		Timestamp: time.Now().Unix(),
 	}
-	batch := TelegrafJSONBatch{
+	batch := MetricsJSONBatch{
 		Metrics: []MetricPoint{memPayload, sysPayload},
 	}
 	batchData, _ := json.Marshal(batch)
-	batchData = append(batchData, '\n')
-	_, _ = conn.Write(batchData)
-
-	_ = conn.Close()
-
-	// Wait for async socket reader to process
-	time.Sleep(100 * time.Millisecond)
+	collector.ProcessPayload(batchData)
 
 	snapshot := collector.GetSnapshot()
-	if !snapshot.Current.TelegrafActive {
-		t.Errorf("Expected TelegrafActive to be true after sending UDS metrics")
-	}
 
 	if snapshot.Current.CPU.UsageActive != 25.5 {
 		t.Errorf("Expected CPU UsageActive = 25.5, got %f", snapshot.Current.CPU.UsageActive)
@@ -108,21 +82,30 @@ func TestCollector_UDS_PayloadIngestion(t *testing.T) {
 	}
 }
 
-func TestCollector_FallbackStats(t *testing.T) {
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("test_tg_fb_%d.sock", time.Now().UnixNano()%100000))
-
-	collector := NewCollector(socketPath)
+func TestCollector_NativeStats(t *testing.T) {
+	collector := NewCollector()
 	snapshot := collector.GetSnapshot()
 
-	if snapshot.Current.TelegrafActive {
-		t.Errorf("Expected TelegrafActive to be false initially")
-	}
-
 	if snapshot.Current.CPU.Cores <= 0 {
-		t.Errorf("Expected fallback CPU Cores > 0, got %d", snapshot.Current.CPU.Cores)
+		t.Errorf("Expected native CPU Cores > 0, got %d", snapshot.Current.CPU.Cores)
 	}
 
 	if snapshot.Current.OS == "" {
 		t.Errorf("Expected non-empty OS name")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := collector.Start(ctx); err != nil {
+		t.Fatalf("Failed to start collector: %v", err)
+	}
+	defer collector.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	snapAfter := collector.GetSnapshot()
+	if snapAfter.Current.System.NumGoroutines <= 0 {
+		t.Errorf("Expected NumGoroutines > 0, got %d", snapAfter.Current.System.NumGoroutines)
 	}
 }

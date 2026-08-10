@@ -43,7 +43,7 @@ Offset-based pagination degrades as tables grow larger. Skimming past thousands 
 To run independently on a bare server, the binary must manage its own network perimeter and health tracking.
 
 - **Zero-Config TLS:** Integrated CertMagic for automatic ACME TLS certificate acquisition and renewal. Point a domain to your server IP, and `moul-dev` serves HTTPS out of the box.
-- **System Telemetry:** Integrated Telegraf metrics collection directly into the server, exposing CPU, memory, and disk telemetry without running third-party monitoring daemons.
+- **System Telemetry:** Integrated native metrics collection directly into the server, exposing CPU, memory, and disk telemetry without running third-party monitoring daemons.
 - **Feature Flags:** Added a light feature flag store managed directly from the `moul` TUI, allowing you to toggle application behavior on the fly.
 
 ---

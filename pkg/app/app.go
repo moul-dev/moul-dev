@@ -220,9 +220,8 @@ func (a *App) Bootstrap() error {
 		}
 	}
 
-	// System Monitoring (Telegraf UDS)
-	socketPath := envy.Get("MOUL_TELEGRAF_SOCKET_PATH", "/tmp/moul-telegraf.sock")
-	a.sysmonCollector = sysmon.NewCollector(socketPath)
+	// System Monitoring (Native Metrics)
+	a.sysmonCollector = sysmon.NewCollector()
 
 	// TLS / CertMagic Manager
 	tlsManager, err := tls.NewManager(dbConn)

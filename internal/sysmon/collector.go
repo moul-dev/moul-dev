@@ -1,15 +1,9 @@
 package sysmon
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
-	"net"
-	"os"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -17,7 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 )
 
-// MetricPoint represents a parsed measurement metric from Telegraf.
+// MetricPoint represents a parsed measurement metric.
 type MetricPoint struct {
 	Name      string                 `json:"name"`
 	Fields    map[string]interface{} `json:"fields"`
@@ -25,8 +19,8 @@ type MetricPoint struct {
 	Timestamp int64                  `json:"timestamp"`
 }
 
-// TelegrafJSONBatch represents a batch payload sent by Telegraf socket_writer.
-type TelegrafJSONBatch struct {
+// MetricsJSONBatch represents a batch payload sent to sysmon.
+type MetricsJSONBatch struct {
 	Metrics []MetricPoint `json:"metrics"`
 }
 
@@ -76,16 +70,14 @@ type SystemStats struct {
 
 // MetricsSnapshot represents a point-in-time state of system metrics.
 type MetricsSnapshot struct {
-	Timestamp      time.Time   `json:"timestamp"`
-	OS             string      `json:"os"`
-	Arch           string      `json:"arch"`
-	TelegrafActive bool        `json:"telegraf_active"`
-	SocketPath     string      `json:"socket_path"`
-	CPU            CPUStats    `json:"cpu"`
-	Memory         MemoryStats `json:"memory"`
-	Disk           DiskStats   `json:"disk"`
-	Network        NetStats    `json:"network"`
-	System         SystemStats `json:"system"`
+	Timestamp time.Time   `json:"timestamp"`
+	OS        string      `json:"os"`
+	Arch      string      `json:"arch"`
+	CPU       CPUStats    `json:"cpu"`
+	Memory    MemoryStats `json:"memory"`
+	Disk      DiskStats   `json:"disk"`
+	Network   NetStats    `json:"network"`
+	System    SystemStats `json:"system"`
 }
 
 // SystemStatusResponse is the public API response format.
@@ -94,97 +86,39 @@ type SystemStatusResponse struct {
 	History []MetricsSnapshot `json:"history"`
 }
 
-// Collector listens on a Unix Domain Socket for Telegraf metrics and maintains current state.
+// Collector maintains system metrics and history state.
 type Collector struct {
-	mu             sync.RWMutex
-	socketPath     string
-	listener       net.Listener
-	closed         bool
-	lastTelegrafAt time.Time
-	current        MetricsSnapshot
-	history        []MetricsSnapshot
-	maxHistory     int
-	startTime      time.Time
+	mu         sync.RWMutex
+	current    MetricsSnapshot
+	history    []MetricsSnapshot
+	maxHistory int
+	startTime  time.Time
 }
 
-// NewCollector constructs a new Unix Domain Socket collector.
-func NewCollector(socketPath string) *Collector {
-	if socketPath == "" {
-		socketPath = "/tmp/moul-telegraf.sock"
-	}
+// NewCollector constructs a new system metrics collector.
+func NewCollector() *Collector {
 	return &Collector{
-		socketPath: socketPath,
 		maxHistory: 30,
 		startTime:  time.Now(),
 		current: MetricsSnapshot{
-			Timestamp:      time.Now(),
-			OS:             runtime.GOOS,
-			Arch:           runtime.GOARCH,
-			TelegrafActive: false,
-			SocketPath:     socketPath,
-			CPU:            CPUStats{Cores: runtime.NumCPU()},
+			Timestamp: time.Now(),
+			OS:        runtime.GOOS,
+			Arch:      runtime.GOARCH,
+			CPU:       CPUStats{Cores: runtime.NumCPU()},
 		},
 		history: make([]MetricsSnapshot, 0, 30),
 	}
 }
 
-// Start initializes the Unix Domain Socket listener and listens in background.
+// Start initializes the native metrics collection ticker in background.
 func (c *Collector) Start(ctx context.Context) error {
-	c.mu.Lock()
-	socketPath := c.socketPath
-	c.mu.Unlock()
+	logger.Info("System monitoring collector initialized")
 
-	// Ensure parent directory exists
-	dir := filepath.Dir(socketPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create socket directory: %w", err)
-	}
-
-	// Remove stale socket file if present
-	_ = os.Remove(socketPath)
-
-	l, err := net.Listen("unix", socketPath)
-	if err != nil {
-		return fmt.Errorf("failed to listen on unix socket %s: %w", socketPath, err)
-	}
-
-	// Set socket permissions so Telegraf runner can connect
-	_ = os.Chmod(socketPath, 0777)
-
-	c.mu.Lock()
-	c.listener = l
-	c.mu.Unlock()
-
-	logger.Info("Telegraf Unix Domain Socket collector initialized", "socket", socketPath)
-
-	// Goroutine to accept UDS connections
-	go func() {
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				c.mu.RLock()
-				isClosed := c.closed
-				c.mu.RUnlock()
-				if isClosed {
-					return
-				}
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					time.Sleep(100 * time.Millisecond)
-					continue
-				}
-			}
-
-			go c.handleConnection(conn)
-		}
-	}()
-
-	// Periodic task to roll snapshots into history and update fallback stats
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
+
+		c.tick()
 
 		for {
 			select {
@@ -199,43 +133,13 @@ func (c *Collector) Start(ctx context.Context) error {
 	return nil
 }
 
-// Close stops the socket listener and removes the socket file.
+// Close stops the collector.
 func (c *Collector) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.closed = true
-	var err error
-	if c.listener != nil {
-		err = c.listener.Close()
-		c.listener = nil
-	}
-
-	_ = os.Remove(c.socketPath)
-	logger.Info("Telegraf Unix Domain Socket collector stopped", "socket", c.socketPath)
-	return err
+	logger.Info("System monitoring collector stopped")
+	return nil
 }
 
-// handleConnection reads incoming data streams from Telegraf socket_writer.
-func (c *Collector) handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	reader := bufio.NewReader(conn)
-	for {
-		line, err := reader.ReadBytes('\n')
-		if len(line) > 0 {
-			c.ProcessPayload(line)
-		}
-		if err != nil {
-			if err != io.EOF {
-				// Connection finished or error
-			}
-			break
-		}
-	}
-}
-
-// ProcessPayload decodes metric JSON payloads from Telegraf or API pushes.
+// ProcessPayload decodes metric JSON payloads from API pushes.
 func (c *Collector) ProcessPayload(data []byte) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
@@ -254,8 +158,8 @@ func (c *Collector) ProcessPayload(data []byte) {
 		if err := json.Unmarshal(data, &ptArray); err == nil && len(ptArray) > 0 {
 			points = ptArray
 		} else {
-			// 3. Try TelegrafJSONBatch struct {"metrics": [...]}
-			var batch TelegrafJSONBatch
+			// 3. Try MetricsJSONBatch struct {"metrics": [...]}
+			var batch MetricsJSONBatch
 			if err := json.Unmarshal(data, &batch); err == nil && len(batch.Metrics) > 0 {
 				points = batch.Metrics
 			}
@@ -269,10 +173,7 @@ func (c *Collector) ProcessPayload(data []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	now := time.Now()
-	c.lastTelegrafAt = now
-	c.current.TelegrafActive = true
-	c.current.Timestamp = now
+	c.current.Timestamp = time.Now()
 
 	for _, p := range points {
 		c.applyMetricPointLocked(p)
@@ -327,22 +228,18 @@ func (c *Collector) applyMetricPointLocked(p MetricPoint) {
 	}
 }
 
-// tick updates history and fallback metrics if Telegraf is disconnected.
+// tick updates history and native metrics.
 func (c *Collector) tick() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	now := time.Now()
-	telegrafActive := time.Since(c.lastTelegrafAt) < 15*time.Second
-	c.current.TelegrafActive = telegrafActive
 	c.current.Timestamp = now
 	c.current.OS = runtime.GOOS
 	c.current.Arch = runtime.GOARCH
 	c.current.System.NumGoroutines = runtime.NumGoroutine()
 
-	if !telegrafActive {
-		c.populateFallbackStatsLocked(now)
-	}
+	c.populateNativeStatsLocked(now)
 
 	// Append to history
 	c.history = append(c.history, c.current)
@@ -351,8 +248,8 @@ func (c *Collector) tick() {
 	}
 }
 
-// populateFallbackStatsLocked generates standard Go runtime stats when Telegraf isn't active.
-func (c *Collector) populateFallbackStatsLocked(now time.Time) {
+// populateNativeStatsLocked generates standard Go runtime stats.
+func (c *Collector) populateNativeStatsLocked(now time.Time) {
 	c.current.System.Uptime = uint64(now.Sub(c.startTime).Seconds())
 	if c.current.CPU.Cores == 0 {
 		c.current.CPU.Cores = runtime.NumCPU()
@@ -363,7 +260,7 @@ func (c *Collector) populateFallbackStatsLocked(now time.Time) {
 	c.current.Memory.AllocatedBytes(m.Alloc, m.Sys)
 }
 
-// AllocatedBytes sets memory stats based on Go memstats fallback.
+// AllocatedBytes sets memory stats based on Go memstats.
 func (m *MemoryStats) AllocatedBytes(alloc, sys uint64) {
 	m.Used = alloc
 	m.Total = sys

@@ -117,7 +117,6 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_DB_PATH` | `moul-local.db` | Path to the SQLite database file. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
-| `MOUL_TELEGRAF_SOCKET_PATH` | `/tmp/moul-telegraf.sock` | Path to Telegraf Unix Domain Socket for sysmon metrics stream. |
 
 ---
 
