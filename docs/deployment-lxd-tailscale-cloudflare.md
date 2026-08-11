@@ -90,6 +90,14 @@ sudo ufw default allow outgoing
 # Allow SSH strictly over the Tailscale network interface
 sudo ufw allow in on tailscale0 to any port 22 proto tcp
 
+# Allow Tailscale p2p traffic (Recommended for optimal performance)
+sudo ufw allow 41641/udp
+
+# Allow LXD bridge interface (Essential for container DNS/DHCP and internet access)
+sudo ufw allow in on lxdbr0
+sudo ufw route allow in on lxdbr0
+sudo ufw route allow out on lxdbr0
+
 # Enable UFW firewall
 sudo ufw enable
 
@@ -112,17 +120,17 @@ Initialize LXD on the Ubuntu 26.04 LTS host with default storage pool (ZFS/dir/b
 sudo lxd init --auto
 ```
 
-### 2. Launch Unprivileged LXD Container
+### 2. Initialize Unprivileged LXD Container
 
-Launch a clean Ubuntu 26.04 LTS system container named `moul-prod`:
+Initialize a clean Ubuntu 26.04 LTS system container named `moul-prod` (without starting it yet):
 
 ```bash
-sudo lxc launch ubuntu:26.04 moul-prod
+sudo lxc init ubuntu:26.04 moul-prod
 ```
 
-### 3. Apply Resource Limits & Container Settings
+### 3. Apply Resource Limits & Static IP
 
-Configure container autostart on host boot, along with CPU and Memory resource limits:
+Configure container autostart, resource limits, and a static IP so the Cloudflare Tunnel target remains stable even after container reboots:
 
 ```bash
 # Enable autostart on system boot
@@ -131,6 +139,12 @@ sudo lxc config set moul-prod boot.autostart true
 # Set resource limits (adjust according to your workload)
 sudo lxc config set moul-prod limits.cpu 2
 sudo lxc config set moul-prod limits.memory 2GiB
+
+# Find the lxdbr0 subnet gateway (e.g., 10.12.34.1/24)
+sudo lxc network get lxdbr0 ipv4.address
+
+# Assign a static IP within that subnet (e.g., 10.12.34.56)
+sudo lxc config device override moul-prod eth0 ipv4.address=10.12.34.56
 ```
 
 ### 4. Create Host Persistent Storage for SQLite Data
@@ -148,6 +162,9 @@ sudo chown -R 100000:100000 /var/lib/moul-host-data
 sudo lxc config device add moul-prod moul-data disk \
   source=/var/lib/moul-host-data \
   path=/var/lib/moul
+
+# Start the container now that configuration is complete
+sudo lxc start moul-prod
 ```
 
 ---
@@ -231,7 +248,7 @@ Restart=always
 RestartSec=5s
 
 # Security Hardening Directives
-ProtectSystem=full
+ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
 NoNewPrivileges=true
@@ -266,7 +283,7 @@ On Ubuntu 26.04 LTS:
 # Add Cloudflare gpg key and package repository
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /etc/apt/keyrings/cloudflare-main.gpg >/dev/null
-echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared noble main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
 
 # Update package list and install cloudflared
 sudo apt update && sudo apt install -y cloudflared
