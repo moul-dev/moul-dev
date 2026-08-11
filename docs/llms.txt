@@ -12,6 +12,7 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 - [llms-full.txt](/llms-full.txt): Comprehensive API reference, schema specifications, and complete technical guide for LLMs.
 - [README.md](https://github.com/moul-dev/moul-dev/blob/main/README.md): Main repository README with quickstart and local development instructions.
 - [OpenAPI Spec](/openapi.json): Dynamic live OpenAPI 3.0 specification generated at runtime.
+- [LXD Production Deployment Guide](/docs/deployment-lxd-tailscale-cloudflare.md): Guide for production deployment with LXD (Ubuntu 26.04 LTS), Tailscale, and Cloudflare Tunnel.
 
 ## Core Capabilities
 

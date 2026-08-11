@@ -96,4 +96,4 @@ job, err := workerEngine.Enqueue("background_jobs", map[string]interface{}{
 
 ## Runnable Example
 
-A complete runnable example is available at [examples/custom-worker/main.go](file:///Users/phearak/github/orgs/moul-dev/moul-dev/examples/custom-worker/main.go).
+A complete runnable example is available at [examples/custom-worker/main.go](../examples/custom-worker/main.go).

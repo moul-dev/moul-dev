@@ -111,4 +111,4 @@ mouldApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.
 
 ## Runnable Example
 
-A complete runnable example is available at [examples/custom-routes/main.go](file:///Users/phearak/github/orgs/moul-dev/moul-dev/examples/custom-routes/main.go).
+A complete runnable example is available at [examples/custom-routes/main.go](../examples/custom-routes/main.go).

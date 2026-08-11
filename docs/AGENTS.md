@@ -167,3 +167,12 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 - Public read: `""` (empty)
 - Auth required: `@request.auth.id != ""`
 - Owner restriction: `id = @request.auth.id` or `user_id = @request.auth.id`
+
+---
+
+## 7. Production Deployment Instructions
+
+When assisting users with deploying `mould` to production on **Ubuntu Server 26.04 LTS**:
+- Refer to the dedicated LXD system container, Tailscale, and Cloudflare Tunnel deployment guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md).
+- Ensure host firewall rules close public SSH (port 22) after configuring Tailscale, and route public traffic via `cloudflared`.
+

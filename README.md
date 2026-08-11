@@ -38,6 +38,7 @@
   - [Production Environment Variables](#production-environment-variables)
   - [Litestream Automated S3 Backup & Disaster Recovery](#litestream-automated-s3-backup--disaster-recovery)
   - [Systemd Service Deployment Example](#systemd-service-deployment-example)
+  - [Production Deployment with LXD, Tailscale & Cloudflare Tunnel](#production-deployment-with-lxd-tailscale--cloudflare-tunnel)
 
 ---
 
@@ -361,8 +362,8 @@ func main() {
 ```
 
 Detailed guides:
-- [Custom HTTP Route Extensibility Guide](file:///Users/phearak/github/orgs/moul-dev/moul-dev/docs/route-extensibility.md)
-- [Worker Handler Extensibility Guide](file:///Users/phearak/github/orgs/moul-dev/moul-dev/docs/worker-extensibility.md)
+- [Custom HTTP Route Extensibility Guide](docs/route-extensibility.md)
+- [Worker Handler Extensibility Guide](docs/worker-extensibility.md)
 
 ### 4. Programmatic Analytics API
 
@@ -640,3 +641,16 @@ Enable and start the service:
 sudo systemctl daemon-reload
 sudo systemctl enable --now moul
 ```
+
+### Production Deployment with LXD, Tailscale & Cloudflare Tunnel
+
+For hardened enterprise production deployments on **Ubuntu Server 26.04 LTS**, `mould` can be deployed in an **unprivileged LXD system container** combined with **Tailscale** for private host management and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public HTTPS ingress.
+
+Key features of this deployment architecture:
+- **Zero Open Public Inbound Ports**: Firewall drops public SSH (22) and HTTP/HTTPS (80/443).
+- **Tailscale Host Operations**: SSH and LXD container administration (`lxc exec`) are isolated to the `tailscale0` network interface.
+- **Cloudflare Ingress**: Public API clients and Admin TUI connect securely via Cloudflare Tunnel over HTTPS.
+- **Litestream Replication**: Built-in point-in-time SQLite replication to S3/R2 storage.
+
+📖 **Complete Guide**: [docs/deployment-lxd-tailscale-cloudflare.md](docs/deployment-lxd-tailscale-cloudflare.md)
+

@@ -206,3 +206,15 @@ func main() {
 }
 ```
 
+---
+
+## 10. Production Deployment (LXD + Tailscale + Cloudflare Tunnel)
+
+For hardened enterprise production environments on **Ubuntu Server 26.04 LTS**:
+- **Host Containerization**: Run `mould` inside unprivileged LXD system containers (`lxc launch ubuntu:26.04 moul-prod`).
+- **Host Administration**: Install Tailscale on the host FIRST. Restrict SSH access (port 22) exclusively to the `tailscale0` interface (`ufw allow in on tailscale0 to any port 22`) and close all public inbound host ports (`ufw default deny incoming`).
+- **Zero-Trust Public Ingress**: Route public HTTPS traffic to the LXD container port 8090 using Cloudflare Tunnel (`cloudflared`).
+- **Database Backups**: Configure Litestream S3 replication for point-in-time SQLite disaster recovery.
+- Full Step-by-Step Guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md)
+
+
