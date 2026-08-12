@@ -112,3 +112,39 @@ mouldApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.
 ## Runnable Example
 
 A complete runnable example is available at [examples/custom-routes/main.go](../examples/custom-routes/main.go).
+
+---
+
+## Integration Testing Hooks
+
+When embedding `mould`, integration-test custom hooks (`OnWorkerInit`, `OnRouterInit`, `OnBeforeStart`) by calling `app.Bootstrap()` and leveraging standard Go test utilities (`httptest.NewServer(app.Router())` and `t.TempDir()`):
+
+```go
+func TestEmbeddedAppIntegration(t *testing.T) {
+	mouldApp := app.New(app.Config{
+		DBPath:    filepath.Join(t.TempDir(), "test.db"),
+		Env:       "test",
+		JWTSecret: "test-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	})
+
+	mouldApp.OnBeforeStart(func(a *app.App) error {
+		// Initialize database tables or seed data
+		return nil
+	})
+
+	mouldApp.OnRouterInit(func(r *echo.Echo) error {
+		// Attach custom routes and middleware
+		return nil
+	})
+
+	if err := mouldApp.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	server := httptest.NewServer(mouldApp.Router())
+	defer server.Close()
+
+	// Execute HTTP requests against server.URL
+}
+```
