@@ -529,6 +529,25 @@ Outbound webhook POST requests include the following headers and payload:
 
 ---
 
+## Data Modeling & Field Types
+
+Moul supports 10 dynamic field types for schema definitions with automatic SQLite storage mapping, OpenAPI 3.0 type hints, and runtime validation:
+
+| Field Type | Description | SQLite Storage | Validation & Constraints | OpenAPI Type / Format |
+| :--- | :--- | :--- | :--- | :--- |
+| `text` | Character string data | `TEXT` | Optional `min` and `max` character length | `type: string`, `minLength`, `maxLength` |
+| `number` | Floating point or integer numeric values | `NUMERIC` | Optional `min` and `max` numeric bounds | `type: number`, `minimum`, `maximum` |
+| `bool` | Boolean flag | `INTEGER` (`1`/`0`) | Validates boolean (`true`/`false`, `1`/`0`, `"true"`/`"false"`) | `type: boolean` |
+| `date` | Date string | `TEXT` | Enforces `YYYY-MM-DD` ISO format | `type: string`, `format: date` |
+| `datetime` | Date and time timestamp string | `TEXT` | Enforces ISO 8601 / RFC 3339 format | `type: string`, `format: date-time` |
+| `json` | Arbitrary JSON object or array structure | `TEXT` | Validates valid JSON syntax; unmarshals back to JSON | `type: object` |
+| `url` | Web address link string | `TEXT` | Enforces valid HTTP/HTTPS URL format | `type: string`, `format: uri` |
+| `file` | File path or upload metadata | `TEXT` | Validates file metadata structure | `type: string` |
+| `select` | Enum string with constrained allowed values | `TEXT` | Restricts value to one of predefined `options` | `type: string`, `enum: [...]` |
+| `relation` | Foreign key association to another collection | `TEXT` | Validates target record existence (`1:1`, `1:N`, or `M:N` array) | `type: string` or `type: array` |
+
+---
+
 ## Access Rules & Filters Syntax
 
 Each Moul (table) supports five HCL-like expression rules evaluated on client API requests:

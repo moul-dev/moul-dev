@@ -13,6 +13,7 @@ func TestValidateFieldsString(t *testing.T) {
 		{"   ", false},
 		{"title:text", false},
 		{"title:text,views:number,published:bool", false},
+		{"created_date:date,updated_at:datetime,link:url,extra:json", false},
 		{"  title:text , views:number , published:bool  ", false},
 		{"status:select:draft|published", false},
 		{"status:select:", true},

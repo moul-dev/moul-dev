@@ -470,6 +470,12 @@ func mapFieldToOpenAPISchema(field schema.MoulField) (map[string]interface{}, in
 	switch field.Type {
 	case "text", "editor":
 		s["type"] = "string"
+		if field.Min != nil {
+			s["minLength"] = int(*field.Min)
+		}
+		if field.Max != nil {
+			s["maxLength"] = int(*field.Max)
+		}
 		ex = "sample text"
 	case "email":
 		s["type"] = "string"
@@ -485,14 +491,24 @@ func mapFieldToOpenAPISchema(field schema.MoulField) (map[string]interface{}, in
 		ex = "/storage/uploads/file.png"
 	case "number":
 		s["type"] = "number"
+		if field.Min != nil {
+			s["minimum"] = *field.Min
+		}
+		if field.Max != nil {
+			s["maximum"] = *field.Max
+		}
 		ex = 42
 	case "bool":
 		s["type"] = "boolean"
 		ex = true
 	case "date":
 		s["type"] = "string"
+		s["format"] = "date"
+		ex = "2026-08-12"
+	case "datetime":
+		s["type"] = "string"
 		s["format"] = "date-time"
-		ex = "2026-01-01T00:00:00Z"
+		ex = "2026-08-12T10:15:44Z"
 	case "json":
 		s["type"] = "object"
 		ex = map[string]interface{}{"key": "value"}

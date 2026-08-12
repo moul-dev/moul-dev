@@ -127,7 +127,7 @@ AI Agents connected via MCP can invoke the following 17 built-in tools:
 ### Collection & Schema Tools
 - `moul_list_collections`: List all dynamic collection schemas and tables.
 - `moul_get_collection`: `{"name": "string"}` - Retrieve detailed schema fields and rules.
-- `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}` - Create table.
+- `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}` - Create table. `fields_json` accepts array of `MoulField` objects (`type`: `text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `file`, `select`, `relation`).
 - `moul_delete_collection`: `{"name": "string"}` - Drop table and metadata.
 
 ### Record CRUD Tools

@@ -242,7 +242,7 @@ func validateMoulFields(m *schema.Moul) error {
 	for i := range m.Fields {
 		f := &m.Fields[i]
 		switch f.Type {
-		case "text", "number", "bool", "json", "file":
+		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
 			// standard types
 		case "select":
 			var cleaned []string

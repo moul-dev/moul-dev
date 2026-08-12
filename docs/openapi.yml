@@ -2474,7 +2474,7 @@ components:
           type: string
         type:
           type: string
-          enum: [text, number, bool, json, file, select, relation]
+          enum: [text, number, bool, date, datetime, json, url, file, select, relation]
         relationConfig:
           type: object
           properties:

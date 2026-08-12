@@ -17,11 +17,11 @@ restore:
 dev:
 	air -c .air.toml
 
-# Sync docs from website/public before building binary
+# Sync docs from docs/ to website/public before building binary
 sync-docs:
-	cp -f website/public/AGENTS.md docs/AGENTS.md
-	cp -f website/public/llms.txt docs/llms.txt
-	cp -f website/public/llms-full.txt docs/llms-full.txt
+	cp -f docs/AGENTS.md website/public/AGENTS.md
+	cp -f docs/llms.txt website/public/llms.txt
+	cp -f docs/llms-full.txt website/public/llms-full.txt
 
 # Build for production with stripped debug symbols and metadata
 build: sync-docs

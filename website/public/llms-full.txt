@@ -143,7 +143,7 @@ The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or
 
 1. `moul_list_collections`: List all dynamic collection schemas and tables.
 2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.
-3. `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}`.
+3. `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}` (fields: `text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `file`, `select`, `relation`).
 4. `moul_delete_collection`: `{"name": "string"}`.
 5. `moul_list_records`: `{"collection": "string", "page": int, "per_page": int}`.
 6. `moul_get_record`: `{"collection": "string", "id": "string"}`.

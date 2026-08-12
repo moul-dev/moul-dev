@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -84,20 +85,27 @@ func validateFieldConstraints(field schema.MoulField, val interface{}, isUpdate 
 			if f, err := num.Float64(); err == nil {
 				return f, true
 			}
+		case string:
+			if f, err := strconv.ParseFloat(num, 64); err == nil {
+				return f, true
+			}
 		}
 		return 0, false
 	}
 
-	if field.Type == "number" {
-		if numVal, ok := asFloat(val); ok {
-			if field.Min != nil && numVal < *field.Min {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at least %v", field.Name, *field.Min))
-			}
-			if field.Max != nil && numVal > *field.Max {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at most %v", field.Name, *field.Max))
-			}
+	switch field.Type {
+	case "number":
+		numVal, ok := asFloat(val)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a number", field.Name))
 		}
-	} else if field.Type == "text" {
+		if field.Min != nil && numVal < *field.Min {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at least %v", field.Name, *field.Min))
+		}
+		if field.Max != nil && numVal > *field.Max {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be at most %v", field.Name, *field.Max))
+		}
+	case "text":
 		if strVal, ok := val.(string); ok {
 			runeLen := float64(len([]rune(strVal)))
 			if field.Min != nil && runeLen < *field.Min {
@@ -105,6 +113,71 @@ func validateFieldConstraints(field schema.MoulField, val interface{}, isUpdate 
 			}
 			if field.Max != nil && runeLen > *field.Max {
 				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q length must be at most %v characters", field.Name, *field.Max))
+			}
+		}
+	case "bool":
+		switch v := val.(type) {
+		case bool:
+			// valid
+		case int, int64, float64:
+			// valid numeric boolean
+		case string:
+			lower := strings.ToLower(strings.TrimSpace(v))
+			if lower != "true" && lower != "false" && lower != "1" && lower != "0" {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a boolean", field.Name))
+			}
+		default:
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a boolean", field.Name))
+		}
+	case "date":
+		strVal, ok := val.(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a date string (YYYY-MM-DD)", field.Name))
+		}
+		if strVal != "" {
+			if _, err := time.Parse("2006-01-02", strVal); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid date in YYYY-MM-DD format", field.Name))
+			}
+		}
+	case "datetime":
+		strVal, ok := val.(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be an ISO 8601 date-time string", field.Name))
+		}
+		if strVal != "" {
+			valid := false
+			formats := []string{
+				time.RFC3339,
+				time.RFC3339Nano,
+				"2006-01-02T15:04:05Z",
+				"2006-01-02T15:04:05",
+				"2006-01-02 15:04:05",
+			}
+			for _, fmtStr := range formats {
+				if _, err := time.Parse(fmtStr, strVal); err == nil {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid ISO 8601 date-time string (e.g. 2026-08-12T10:15:44Z)", field.Name))
+			}
+		}
+	case "json":
+		if strVal, ok := val.(string); ok && strVal != "" {
+			if !json.Valid([]byte(strVal)) {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be valid JSON", field.Name))
+			}
+		}
+	case "url":
+		strVal, ok := val.(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a URL string", field.Name))
+		}
+		if strVal != "" {
+			parsed, err := url.ParseRequestURI(strVal)
+			if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid HTTP/HTTPS URL", field.Name))
 			}
 		}
 	}
@@ -282,6 +355,19 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 				// Normalize boolean to 0 or 1
 				if boolVal, ok := val.(bool); ok {
 					if boolVal {
+						insertData[field.Name] = 1
+					} else {
+						insertData[field.Name] = 0
+					}
+				} else if strVal, ok := val.(string); ok {
+					lower := strings.ToLower(strings.TrimSpace(strVal))
+					if lower == "true" || lower == "1" {
+						insertData[field.Name] = 1
+					} else {
+						insertData[field.Name] = 0
+					}
+				} else if floatVal, ok := val.(float64); ok {
+					if floatVal != 0 {
 						insertData[field.Name] = 1
 					} else {
 						insertData[field.Name] = 0
@@ -907,6 +993,19 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 					} else {
 						updateParams[field.Name] = 0
 					}
+				} else if strVal, ok := val.(string); ok {
+					lower := strings.ToLower(strings.TrimSpace(strVal))
+					if lower == "true" || lower == "1" {
+						updateParams[field.Name] = 1
+					} else {
+						updateParams[field.Name] = 0
+					}
+				} else if floatVal, ok := val.(float64); ok {
+					if floatVal != 0 {
+						updateParams[field.Name] = 1
+					} else {
+						updateParams[field.Name] = 0
+					}
 				} else {
 					updateParams[field.Name] = val
 				}
@@ -1393,7 +1492,7 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[strin
 				record[field.Name] = floatVal
 			}
 		case "bool":
-			record[field.Name] = (strVal == "1" || strVal == "true")
+			record[field.Name] = (strVal == "1" || strings.EqualFold(strVal, "true"))
 		case "json", "file":
 			if strVal != "" {
 				var decoded interface{}

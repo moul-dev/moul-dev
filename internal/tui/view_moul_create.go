@@ -40,7 +40,7 @@ func validateFieldsString(str string) error {
 		}
 		// Validate type
 		switch fType {
-		case "text", "number", "bool", "json", "file":
+		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
 			if len(subParts) != 2 {
 				return fmt.Errorf("field %q of type %q cannot have extra parameters", fName, fType)
 			}
@@ -75,7 +75,7 @@ func validateFieldsString(str string) error {
 				return fmt.Errorf("invalid cardinality %q for relation field %q (allowed: 1:1, 1:N, M:N)", cardinality, fName)
 			}
 		default:
-			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, json, file, relation, select)", fType, fName)
+			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, date, datetime, json, url, file, relation, select)", fType, fName)
 		}
 	}
 	return nil
@@ -354,9 +354,12 @@ func (m *Model) initMoulFieldForm() {
 					huh.NewOption("Text (String)", "text"),
 					huh.NewOption("Number (Numeric/Float)", "number"),
 					huh.NewOption("Boolean (True/False)", "bool"),
-					huh.NewOption("Select (Enum / Constrained Options)", "select"),
+					huh.NewOption("Date (YYYY-MM-DD)", "date"),
+					huh.NewOption("DateTime (ISO 8601 / RFC3339)", "datetime"),
+					huh.NewOption("URL (Web Link)", "url"),
 					huh.NewOption("JSON (Structured Object/Array)", "json"),
 					huh.NewOption("File (File Metadata)", "file"),
+					huh.NewOption("Select (Enum / Constrained Options)", "select"),
 					huh.NewOption("Association (Relation to other collection)", "relation"),
 				).
 				Value(&m.newFieldType),
