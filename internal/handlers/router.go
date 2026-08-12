@@ -80,6 +80,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.Use(middleware.DynamicRateLimiter(adminKey))
 
 	// ── Handlers initialization ─────────────────────────────────────
+	if analyticsEngine == nil {
+		analyticsEngine, _ = analytics.NewEngine(dbConn, "")
+	}
 	if mailService == nil {
 		mailService, _ = mailer.NewMailer(dbConn)
 	}
@@ -102,6 +105,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)
 	webhookHandler := NewWebhookHandler(dbConn)
+	realtimeHandler := NewRealtimeHandler(dbConn)
 
 	// Built-in MCP Server
 	mcpServer := moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
@@ -210,6 +214,10 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
 	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
 	e.DELETE("/api/moul/:name/records/:id", recordHandler.DeleteRecord)
+
+	// Real-time SSE record subscriptions
+	e.GET("/api/moul/:name/subscribe", realtimeHandler.SubscribeCollection)
+	e.GET("/api/moul/subscribe", realtimeHandler.SubscribeGlobal)
 
 	// 4. Analytics visits log (JWT-protected)
 	e.GET("/api/visits", visitsHandler.ListVisits)

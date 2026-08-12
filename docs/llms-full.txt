@@ -113,6 +113,8 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `POST /api/moul/:name/records`: Create record.
 - `PATCH /api/moul/:name/records/:id`: Update record by ID.
 - `DELETE /api/moul/:name/records/:id`: Delete record by ID.
+- `GET /api/moul/:name/subscribe`: Real-time record subscription stream (SSE) for collection updates (`event`, `id`, `token` query params). Governed by `subscribeRule` / `listRule`.
+- `GET /api/moul/subscribe`: Global real-time record subscription stream (SSE) across collections (`?mouls=posts,comments`).
 
 ### Authentication Endpoints (For `auth` type collections)
 - `POST /api/moul/:name/auth-with-password`: Login with username/email & password.

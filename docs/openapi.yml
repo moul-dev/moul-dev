@@ -1930,6 +1930,50 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
+  /api/moul/{name}/subscribe:
+    get:
+      summary: Subscribe to Real-time Record Changes (SSE)
+      description: |
+        Establishes a Server-Sent Events (SSE) stream for real-time record creations, updates, and deletions on the target collection.
+        Governed by `subscribeRule` (or fallback to `listRule`).
+      tags:
+        - Dynamic Records CRUD
+        - Realtime Subscriptions
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: event
+          in: query
+          required: false
+          description: Comma-separated list of event actions to filter (create, update, delete, *)
+          schema:
+            type: string
+            default: "*"
+        - name: id
+          in: query
+          required: false
+          description: Filter events for a single record ID
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: false
+          description: JWT Auth Token for browser SSE clients
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Real-time SSE event stream opened.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '404':
+          description: Collection not found.
+
   /api/visits:
     get:
       summary: List Visitor Sessions

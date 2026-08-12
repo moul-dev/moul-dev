@@ -56,7 +56,8 @@
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Native Host System Monitoring**: Lightweight, zero-dependency host system metrics collector (CPU, memory, disk space, goroutines, system load) for real-time observability in the TUI console and REST API.
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
-13. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`mould mcp`) and HTTP SSE (`/api/mcp`).
+13. **Real-time SSE Record Subscriptions**: High-performance, lock-optimized Server-Sent Events (SSE) subscriptions via `GET /api/moul/:name/subscribe`. Frontend clients react instantly to record changes (`create`, `update`, `delete`) without polling, complete with event filtering, single-record targeting, and `subscribeRule` security checks.
+14. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`mould mcp`) and HTTP SSE (`/api/mcp`).
 
 ---
 
@@ -517,6 +518,46 @@ Outbound webhook POST requests include the following headers and payload:
 - `PATCH /api/moul/:name/webhooks/:id` - Update webhook configuration by ID.
 - `DELETE /api/moul/:name/webhooks/:id` - Remove a webhook by ID.
 - `POST /api/moul/:name/webhooks/:id/test` - Trigger a ping test payload (`event: "ping"`) to verify webhook receiver connectivity.
+
+---
+
+## Real-time SSE Subscriptions
+
+Moul provides high-performance real-time record subscriptions over Server-Sent Events (SSE). Frontend applications can open an SSE connection to react to record changes (`create`, `update`, `delete`) in real time without polling.
+
+### Subscribing to Collection Events
+
+- **Endpoint**: `GET /api/moul/:name/subscribe`
+- **Query Parameters**:
+  - `event`: Optional comma-separated list of event actions to filter (`create`, `update`, `delete`, or `*`). Default: `*`.
+  - `id`: Optional filter for a specific record ID.
+  - `token`: Optional JWT authorization token for browser `EventSource` clients.
+
+### JavaScript Client Example
+
+```javascript
+const evtSource = new EventSource('/api/moul/posts/subscribe?token=' + userToken);
+
+evtSource.addEventListener('create', (e) => {
+  const data = JSON.parse(e.data);
+  console.log('New post created:', data.record);
+});
+
+evtSource.addEventListener('update', (e) => {
+  const data = JSON.parse(e.data);
+  console.log('Post updated:', data.record);
+});
+
+evtSource.addEventListener('delete', (e) => {
+  const data = JSON.parse(e.data);
+  console.log('Post deleted:', data.record);
+});
+```
+
+### Global Subscriptions
+
+To subscribe across all collections or specific multi-collections, use `GET /api/moul/subscribe`:
+`GET /api/moul/subscribe?mouls=posts,comments`
 
 ---
 

@@ -26,11 +26,12 @@ type MoulField struct {
 
 
 type MoulRules struct {
-	ListRule   string `json:"listRule"`
-	ViewRule   string `json:"viewRule"`
-	CreateRule string `json:"createRule"`
-	UpdateRule string `json:"updateRule"`
-	DeleteRule string `json:"deleteRule"`
+	ListRule      string `json:"listRule"`
+	ViewRule      string `json:"viewRule"`
+	CreateRule    string `json:"createRule"`
+	UpdateRule    string `json:"updateRule"`
+	DeleteRule    string `json:"deleteRule"`
+	SubscribeRule string `json:"subscribeRule,omitempty"`
 }
 
 type EmailTemplate struct {

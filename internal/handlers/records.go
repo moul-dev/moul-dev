@@ -17,6 +17,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
@@ -654,6 +655,14 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	})
 
+	// Broadcast SSE realtime event
+	realtime.DefaultHub.Publish(realtime.Event{
+		Action:    "create",
+		Moul:      moulName,
+		Record:    recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}, h.DB)
+
 	return c.JSON(http.StatusCreated, recordMap)
 }
 
@@ -1218,6 +1227,15 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	})
 
+	// Broadcast SSE realtime event
+	realtime.DefaultHub.Publish(realtime.Event{
+		Action:    "update",
+		Moul:      moulName,
+		Record:    updatedRecordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}, h.DB)
+
 	return c.JSON(http.StatusOK, updatedRecordMap)
 }
 
@@ -1349,6 +1367,15 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 		OldRecord: recordMap,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	})
+
+	// Broadcast SSE realtime event
+	realtime.DefaultHub.Publish(realtime.Event{
+		Action:    "delete",
+		Moul:      moulName,
+		Record:    recordMap,
+		OldRecord: recordMap,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}, h.DB)
 
 	// 5. Handle CASCADE and SET_NULL for referencing collections
 	if allMouls != nil {

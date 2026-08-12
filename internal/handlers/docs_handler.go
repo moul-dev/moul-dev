@@ -352,6 +352,25 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 			},
 		}
 
+		subscribePath := fmt.Sprintf("/api/moul/%s/subscribe", moul.Name)
+		paths[subscribePath] = map[string]interface{}{
+			"get": map[string]interface{}{
+				"summary":     fmt.Sprintf("Real-time Record Subscriptions SSE (%s)", moul.Name),
+				"description": fmt.Sprintf("Opens a Server-Sent Events (SSE) connection for real-time record change events in `%s` collection.", moul.Name),
+				"tags":        []string{tagName},
+				"parameters": []map[string]interface{}{
+					{"name": "event", "in": "query", "description": "Comma-separated list of event actions to filter (create, update, delete, *)", "schema": map[string]interface{}{"type": "string", "default": "*"}},
+					{"name": "id", "in": "query", "description": "Filter events for a specific record ID", "schema": map[string]interface{}{"type": "string"}},
+					{"name": "token", "in": "query", "description": "JWT Auth Token for SSE authentication", "schema": map[string]interface{}{"type": "string"}},
+				},
+				"responses": map[string]interface{}{
+					"200": map[string]interface{}{
+						"description": "SSE Event Stream (text/event-stream)",
+					},
+				},
+			},
+		}
+
 		if moul.Type == "auth" {
 			pwdPath := fmt.Sprintf("/api/moul/%s/auth-with-password", moul.Name)
 			paths[pwdPath] = map[string]interface{}{

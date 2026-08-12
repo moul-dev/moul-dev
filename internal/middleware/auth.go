@@ -62,18 +62,20 @@ const AuthContextKey = "auth"
 func LoadAuthContextMiddleware(dbConn ...*dbx.DB) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
+			tokenString := ""
 			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
+			if authHeader != "" {
+				parts := strings.Split(authHeader, " ")
+				if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
+					tokenString = parts[1]
+				}
+			}
+			if tokenString == "" {
+				tokenString = c.QueryParam("token")
+			}
+			if tokenString == "" {
 				return next(c)
 			}
-
-			// Expect "Bearer <token>"
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				return next(c)
-			}
-
-			tokenString := parts[1]
 
 			if len(dbConn) > 0 && dbConn[0] != nil {
 				if db.IsTokenRevoked(dbConn[0], tokenString) {
