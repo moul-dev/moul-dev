@@ -38,6 +38,82 @@ type AuthRequest struct {
 // AuthWithPassword verifies credentials and returns a signed JWT token.
 func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 	moulName := c.Param("name")
+
+	req := new(AuthRequest)
+	if err := c.Bind(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	if req.Identity == "" || req.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "identity and password are required")
+	}
+
+	// Handle special root user authentication (_rootUsers)
+	if moulName == "_rootUsers" {
+		var record dbx.NullStringMap
+		err := h.DB.Select("*").From("_rootUsers").
+			Where(dbx.NewExp("username = {:identity} OR email = {:identity}", dbx.Params{"identity": req.Identity})).
+			One(&record)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return echo.NewHTTPError(http.StatusBadRequest, "Invalid credentials")
+			}
+			logger.Error("Failed to query auth record in _rootUsers", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		}
+
+		recordMap := nullStringMapToMap(record)
+		hashVal, ok := recordMap["passwordHash"]
+		if !ok || hashVal == nil {
+			logger.Error("Missing password hash in database record for _rootUsers")
+			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		}
+		passwordHash, ok := hashVal.(string)
+		if !ok {
+			logger.Error("Invalid password hash type in database record for _rootUsers")
+			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password))
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid credentials")
+		}
+
+		// Verify client IP restrictions for root user
+		var ipEnabledVal string
+		_ = h.DB.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_ip_enabled"}).Row(&ipEnabledVal)
+		if ipEnabledVal == "true" {
+			var allowedIPs string
+			_ = h.DB.Select("value").From("_settings").Where(dbx.HashExp{"key": "root_user_allowed_ips"}).Row(&allowedIPs)
+			if !util.IsIPAllowed(c.RealIP(), allowedIPs) {
+				return echo.NewHTTPError(http.StatusForbidden, "Your IP address is not authorized to log in as a root user")
+			}
+		}
+
+		id, _ := recordMap["id"].(string)
+		email, _ := recordMap["email"].(string)
+		username, _ := recordMap["username"].(string)
+
+		token, err := auth.GenerateToken(id, email, username, "_rootUsers")
+		if err != nil {
+			logger.Error("Failed to generate root auth token", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate auth token")
+		}
+
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"token": token,
+			"record": map[string]interface{}{
+				"id":         id,
+				"email":      email,
+				"username":   username,
+				"moul":       "_rootUsers",
+				"created_at": recordMap["created_at"],
+				"updated_at": recordMap["updated_at"],
+			},
+		})
+	}
+
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -49,15 +125,6 @@ func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 
 	if moul.Type != "auth" {
 		return echo.NewHTTPError(http.StatusBadRequest, "This moul is not an auth collection")
-	}
-
-	req := new(AuthRequest)
-	if err := c.Bind(req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
-	}
-
-	if req.Identity == "" || req.Password == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "identity and password are required")
 	}
 
 	// Fetch record by email or username using dbx.NullStringMap

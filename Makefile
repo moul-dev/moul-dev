@@ -3,7 +3,7 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install
+.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build
 
 # Start the Echo server locally
 run:
@@ -23,8 +23,20 @@ sync-docs:
 	cp -f docs/llms.txt website/public/llms.txt
 	cp -f docs/llms-full.txt website/public/llms-full.txt
 
-# Build for production with stripped debug symbols and metadata
-build: sync-docs
+# Install Admin UI dependencies
+ui-install:
+	bun install --cwd ui
+
+# Start Vite dev server for Admin UI with HMR
+ui-dev:
+	bun --cwd ui dev
+
+# Build Admin UI bundle with TanStack Router and StyleX into internal/ui/dist
+ui-build:
+	bun --cwd ui tsc && bun --cwd ui vite build
+
+# Build for production with stripped debug symbols, embedded docs, and embedded Web Admin Console
+build: sync-docs ui-build
 	mkdir -p bin
 	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/mould cmd/mould/main.go
 

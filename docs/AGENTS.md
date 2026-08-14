@@ -10,6 +10,7 @@ Welcome to `mould`. This document provides essential instructions, operating rul
 
 Key Capabilities:
 - **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`mould`) backed by SQLite.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin`), built with TanStack Router, Meta StyleX, and Phosphor Icons embedded via Go `embed.FS`.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
 - **Programmatic Go API & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
 - **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`mould mcp`) and HTTP SSE transport (`/api/mcp`).

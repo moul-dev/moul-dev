@@ -10,6 +10,7 @@
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
+- **Web Admin Console**: TanStack Router (file-based routing), Meta StyleX (`@stylexjs/stylex` with `@stylexjs/unplugin`), TanStack Table & Query, Phosphor Icons (`@phosphor-icons/react`), embedded via Go `//go:embed all:dist`.
 - **Database Abstraction**: `github.com/pocketbase/dbx`
 - **SQLite Engine**: `modernc.org/sqlite` (Pure Go, CGO-free)
 - **TUI Framework**: Charm Bubble Tea (`charm.land/bubbletea/v2`)
@@ -90,8 +91,11 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 
 ## 6. Complete REST API Route Reference
 
-### System & Docs
-- `GET /docs`: Interactive API Documentation UI.
+### Web Admin Console & Docs
+- `GET /_moul_/`: Embedded Web Admin Console (TanStack Router + StyleX SPA).
+- `GET /_moul_/*`: Static asset serving (`/assets/*`) with immutable cache header, and HTML5 SPA fallback to `index.html`.
+- `GET /admin` / `GET /_moul_`: Automatic 301 redirects to `/_moul_/`.
+- `GET /docs`: Interactive API Documentation UI (Scalar / Swagger).
 - `GET /openapi.json`: Dynamic OpenAPI 3.0 Spec (JSON).
 - `GET /openapi.yml`: Dynamic OpenAPI 3.0 Spec (YAML).
 - `GET /AGENTS.md`: Agent documentation guide.

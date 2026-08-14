@@ -153,19 +153,38 @@ func (h *DeviceFlowHandler) RenderDeviceForm(c *echo.Context) error {
 
 // VerifyDevice handles POST /device/verify
 func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
-	userCode := c.FormValue("user_code")
-	authMoul := c.FormValue("auth_moul")
-	if authMoul != "" && authMoul != "_rootUsers" {
-		return renderTemplate(c, http.StatusBadRequest, RenderData{
-			Error:    "Device authorization is only supported for the root account",
-			UserCode: userCode,
-		})
+	var req struct {
+		UserCode string `json:"user_code" form:"user_code"`
+		AuthMoul string `json:"auth_moul" form:"auth_moul"`
+		Identity string `json:"identity" form:"identity"`
+		Password string `json:"password" form:"password"`
 	}
-	authMoul = "_rootUsers"
-	identity := c.FormValue("identity")
-	password := c.FormValue("password")
+	_ = c.Bind(&req)
+
+	userCode := strings.TrimSpace(req.UserCode)
+	if userCode == "" {
+		userCode = strings.TrimSpace(c.FormValue("user_code"))
+	}
+	authMoul := strings.TrimSpace(req.AuthMoul)
+	if authMoul == "" {
+		authMoul = strings.TrimSpace(c.FormValue("auth_moul"))
+	}
+	identity := strings.TrimSpace(req.Identity)
+	if identity == "" {
+		identity = strings.TrimSpace(c.FormValue("identity"))
+	}
+	password := strings.TrimSpace(req.Password)
+	if password == "" {
+		password = strings.TrimSpace(c.FormValue("password"))
+	}
+
+	isJSON := strings.Contains(c.Request().Header.Get("Accept"), "application/json") ||
+		strings.Contains(c.Request().Header.Get("Content-Type"), "application/json")
 
 	renderErr := func(msg string) error {
+		if isJSON {
+			return echo.NewHTTPError(http.StatusBadRequest, msg)
+		}
 		return renderTemplate(c, http.StatusBadRequest, RenderData{
 			Error:    msg,
 			UserCode: userCode,
@@ -174,10 +193,15 @@ func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
 		})
 	}
 
-	if strings.TrimSpace(userCode) == "" {
+	if authMoul != "" && authMoul != "_rootUsers" {
+		return renderErr("Device authorization is only supported for the root account")
+	}
+	authMoul = "_rootUsers"
+
+	if userCode == "" {
 		return renderErr("User Code is required")
 	}
-	if strings.TrimSpace(identity) == "" || strings.TrimSpace(password) == "" {
+	if identity == "" || password == "" {
 		return renderErr("Email/Username and Password are required")
 	}
 
@@ -250,6 +274,13 @@ func (h *DeviceFlowHandler) VerifyDevice(c *echo.Context) error {
 	err = auth.DefaultDeviceFlowStore.ApproveDeviceRequest(userCode, authMoul, id, token)
 	if err != nil {
 		return renderErr(fmt.Sprintf("Approval failed: %v", err))
+	}
+
+	if isJSON {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"success": true,
+			"token":   token,
+		})
 	}
 
 	return renderTemplate(c, http.StatusOK, RenderData{

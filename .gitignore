@@ -50,3 +50,11 @@ website/.source/
 website/.wrangler/
 website/.env.local
 
+# Web Admin Console (ui)
+ui/node_modules/
+ui/dist/
+ui/.vite/
+internal/ui/dist/*
+!internal/ui/dist/.gitkeep
+
+

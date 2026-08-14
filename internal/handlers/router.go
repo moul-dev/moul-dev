@@ -62,7 +62,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt", "/_moul_", "/admin"}),
 	))
 
 	// HTTP Request logging
@@ -127,10 +127,13 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.GET("/llms.txt", docsHandler.ServeLLMSTxt)
 	e.GET("/llms-full.txt", docsHandler.ServeLLMSFullTxt)
 
-	// Setup management (Admin-protected)
+	// Setup & Admin Console authentication (AdminKey-protected)
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
 	setupGroup.GET("", setupHandler.CheckSetupStatus)
 	setupGroup.POST("", setupHandler.SetupRootUser)
+
+	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
+	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
 
 	// Feature flags management & evaluation (Admin-protected)
 	flagsGroup := e.Group("/api/feature-flags", middleware.RequireAuthOrAdmin(adminKey))
@@ -232,6 +235,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	sysmonGroup := e.Group("/api/system/metrics", middleware.RequireAuthOrAdmin(adminKey))
 	sysmonGroup.GET("", sysmonHandler.GetMetrics)
 	sysmonGroup.POST("", sysmonHandler.PushMetrics)
+
+	// 7. Embedded Web Admin Console
+	RegisterAdminUIRoutes(e, "/_moul_")
 
 	return e
 }

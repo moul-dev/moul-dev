@@ -21,6 +21,11 @@
   - [Interactive Runtime `/docs` Endpoint](#interactive-runtime-docs-endpoint)
   - [OpenAPI Specification Files](#openapi-specification-files)
   - [Embedded OpenAPI Spec in Go](#embedded-openapi-spec-in-go)
+- [Web Admin Console (`/_moul_/`)](#web-admin-console-_moul_)
+  - [Overview](#web-admin-overview)
+  - [Frontend Architecture & Stack](#frontend-architecture--stack)
+  - [Local UI Development & Live Reloading](#local-ui-development--live-reloading)
+  - [Single-Binary Embedding in Production](#single-binary-embedding-in-production)
 - [Moul TUI Admin Console (`moul`)](#moul-tui-admin-console-moul)
   - [Overview](#overview)
   - [Build and Run](#build-and-run)
@@ -198,6 +203,55 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 
 - **Worker Extensibility Guide**: [`docs/worker-extensibility.md`](docs/worker-extensibility.md) - Learn how to build custom `mould` binaries with custom background job handlers and periodic tasks using `pkg/app`.
 - **Example Binary**: [`examples/custom-worker/main.go`](examples/custom-worker/main.go) - A runnable code example of an embedded Mould application.
+
+---
+
+## Web Admin Console (`/_moul_/`)
+
+<a id="web-admin-overview"></a>
+### Overview
+
+`mould` features a high-performance, single-binary **Web Admin Console** mounted at `/_moul_/` (with automatic redirects from `/admin` and `/_moul_`). It provides a rich, responsive browser-based dashboard to manage collection schemas, dynamic records, real-time SSE subscriptions, analytics, background worker queues, feature flags, and server settings.
+
+### Frontend Architecture & Stack
+
+The console is built using a modern, type-safe stack:
+- **Routing**: **TanStack Router** with file-based routing (`ui/src/routes/`), generated type-safe route trees, typed Zod search schemas, route loaders, intent preloading (`preload: 'intent'`), and automatic code splitting.
+- **Styling**: **Meta StyleX (`@stylexjs/stylex`)** with `@stylexjs/unplugin` for zero-runtime / compile-time atomic CSS-in-JS and dedicated design tokens (`ui/src/theme/tokens.stylex.ts`).
+- **Data & Tables**: **TanStack Table (`@tanstack/react-table`)** for high-performance sortable/filterable data grids and **TanStack Query (`@tanstack/react-query`)** for asynchronous state caching.
+- **Iconography**: **Phosphor Icons (`@phosphor-icons/react`)**.
+- **Real-Time Updates**: Native Server-Sent Events (SSE) listener (`EventSource`) connected to `/api/moul/:name/subscribe` for instant record mutation logs.
+
+### Local UI Development & Live Reloading
+
+For frontend development with instant Hot Module Replacement (HMR) and API proxying:
+
+```bash
+# 1. Install frontend dependencies
+make ui-install
+
+# 2. Start the mould backend engine in one terminal
+make run
+
+# 3. Start the Vite dev server in another terminal (proxies /api to localhost:8090)
+make ui-dev
+```
+
+Open [http://localhost:5173/_moul_/](http://localhost:5173/_moul_/) in your browser.
+
+### Single-Binary Embedding in Production
+
+In production, the compiled SPA bundle is embedded directly into the Go binary at compile time via Go's `//go:embed all:dist` directive in [`internal/ui/ui.go`](internal/ui/ui.go).
+
+```bash
+# Build standalone mould binary with embedded docs and Web Admin Console
+make build
+
+# Start single-binary server
+./bin/mould start
+```
+
+Access the Web Admin Console at [http://localhost:8090/_moul_/](http://localhost:8090/_moul_/). All HTML5 SPA sub-routes (e.g. `/_moul_/collections/posts`, `/_moul_/settings`) are resolved seamlessly via Echo's embedded SPA fallback router.
 
 ---
 

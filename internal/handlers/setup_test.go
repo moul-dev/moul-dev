@@ -34,16 +34,21 @@ func TestSetupFlow(t *testing.T) {
 
 	setupHandler := handlers.NewSetupHandler(dbConn)
 	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
+	authHandler := handlers.NewAuthHandler(dbConn)
 
 	adminKey := "test-admin-key"
 	adminGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
 	adminGroup.GET("", setupHandler.CheckSetupStatus)
 	adminGroup.POST("", setupHandler.SetupRootUser)
 
+	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
+	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
+
 	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
 	e.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
 	e.GET("/device", deviceFlowHandler.RenderDeviceForm)
 	e.POST("/device/verify", deviceFlowHandler.VerifyDevice)
+	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -139,5 +144,95 @@ func TestSetupFlow(t *testing.T) {
 	body, _ = io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), "Device Authorized") {
 		t.Error("Expected page to show 'Device Authorized'")
+	}
+
+	// 7. Test direct root user login via /api/moul/_rootUsers/auth-with-password
+	rootLoginPayload := `{"identity":"root","password":"supersecretpassword"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/moul/_rootUsers/auth-with-password", bytes.NewBufferString(rootLoginPayload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Root login failed: status=%d, err=%v", resp.StatusCode, err)
+	}
+	var rootLoginRes struct {
+		Token  string                 `json:"token"`
+		Record map[string]interface{} `json:"record"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &rootLoginRes)
+	if rootLoginRes.Token == "" {
+		t.Error("Expected token in root login response")
+	}
+	if rootLoginRes.Record["username"] != "root" || rootLoginRes.Record["moul"] != "_rootUsers" {
+		t.Errorf("Unexpected record in root login response: %v", rootLoginRes.Record)
+	}
+
+	// 8. Test JSON verification for Device Flow
+	req, _ = http.NewRequest("POST", server.URL+"/api/oauth2/device/authorize", bytes.NewBufferString(authPayload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Second device auth request failed: status=%d, err=%v", resp.StatusCode, err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &authResp)
+
+	jsonVerifyPayload := `{"user_code":"` + authResp.UserCode + `","identity":"root","password":"supersecretpassword"}`
+	req, _ = http.NewRequest("POST", server.URL+"/device/verify", bytes.NewBufferString(jsonVerifyPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("JSON device verification failed: status=%d, err=%v", resp.StatusCode, err)
+	}
+	var jsonVerifyRes struct {
+		Success bool   `json:"success"`
+		Token   string `json:"token"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &jsonVerifyRes)
+	if !jsonVerifyRes.Success || jsonVerifyRes.Token == "" {
+		t.Errorf("Expected success and token in JSON verify response, got %v", jsonVerifyRes)
+	}
+
+	// 9. Test POST /api/admin/login
+	// 9a. Unauthorized without Admin Key
+	adminLoginPayload := `{"identity":"root","password":"supersecretpassword"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(adminLoginPayload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("Expected 401 Unauthorized for missing admin key on /api/admin/login, got %d", resp.StatusCode)
+	}
+
+	// 9b. Bad credentials with valid Admin Key
+	badCredsPayload := `{"identity":"root","password":"wrongpassword"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(badCredsPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for invalid password on /api/admin/login, got %d", resp.StatusCode)
+	}
+
+	// 9c. Successful Admin Login
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(adminLoginPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for valid credentials on /api/admin/login, got %d", resp.StatusCode)
+	}
+	var adminLoginRes struct {
+		Token  string                 `json:"token"`
+		Record map[string]interface{} `json:"record"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &adminLoginRes)
+	if adminLoginRes.Token == "" {
+		t.Error("Expected valid JWT token from /api/admin/login")
+	}
+	if adminLoginRes.Record["username"] != "root" || adminLoginRes.Record["moul"] != "_rootUsers" {
+		t.Errorf("Unexpected record payload from /api/admin/login: %v", adminLoginRes.Record)
 	}
 }
