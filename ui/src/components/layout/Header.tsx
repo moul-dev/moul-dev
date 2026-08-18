@@ -1,17 +1,17 @@
 import React from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { useRouterState } from '@tanstack/react-router';
+import { useRouterState, Link as RouterLink } from '@tanstack/react-router';
 import { ShieldCheck, Cpu } from '@phosphor-icons/react';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { Breadcrumbs, BreadcrumbItem, Badge, Link } from '@moul-dev/ui';
+import { colors, spacing } from '../../theme/tokens.stylex';
 
 const styles = stylex.create({
   header: {
-    height: '60px',
+    height: '64px',
     backgroundColor: colors.bgHeader,
-    backdropFilter: 'blur(8px)',
     borderBottomWidth: 1,
     borderBottomStyle: 'solid',
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderMuted,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -20,53 +20,15 @@ const styles = stylex.create({
     top: 0,
     zIndex: 100,
   },
-  breadcrumb: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
-    fontSize: '0.875rem',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
-  },
-  activePage: {
-    color: colors.textPrimary,
-    fontWeight: 600,
-    textTransform: 'capitalize',
-  },
   actions: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  badge: {
+  badgeContent: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingBlock: '3px',
-    paddingInline: spacing.sm,
-    borderRadius: radii.full,
-    fontSize: '0.75rem',
-    fontFamily: fonts.mono,
-    backgroundColor: colors.successBg,
-    color: colors.successText,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.success,
-  },
-  systemBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingBlock: '3px',
-    paddingInline: spacing.sm,
-    borderRadius: radii.full,
-    fontSize: '0.75rem',
-    fontFamily: fonts.mono,
-    backgroundColor: colors.primaryMuted,
-    color: colors.primaryText,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.primary,
   },
 });
 
@@ -74,26 +36,38 @@ export const Header: React.FC = () => {
   const routerState = useRouterState();
   const path = routerState.location.pathname;
   const segments = path.split('/').filter(Boolean);
-  const currentTitle = segments.length > 0 ? segments[segments.length - 1] : 'Dashboard';
+  const currentTitle =
+    segments.length > 0
+      ? segments[segments.length - 1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      : 'Dashboard';
 
   return (
     <header {...stylex.props(styles.header)}>
-      <div {...stylex.props(styles.breadcrumb)}>
-        <span>mould</span>
-        <span>/</span>
-        <span {...stylex.props(styles.activePage)}>{currentTitle}</span>
-      </div>
+      <Breadcrumbs aria-label="Breadcrumbs">
+        <BreadcrumbItem>
+          <RouterLink to="/" style={{ textDecoration: 'none' }}>
+            <Link variant="primary">mould</Link>
+          </RouterLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrent>{currentTitle}</BreadcrumbItem>
+      </Breadcrumbs>
 
       <div {...stylex.props(styles.actions)}>
-        <div {...stylex.props(styles.systemBadge)}>
-          <Cpu size={14} />
-          <span>Engine Online</span>
-        </div>
-        <div {...stylex.props(styles.badge)}>
-          <ShieldCheck size={14} weight="fill" />
-          <span>Root Auth</span>
-        </div>
+        <Badge variant="primary">
+          <span {...stylex.props(styles.badgeContent)}>
+            <Cpu size={14} />
+            <span>Engine Online</span>
+          </span>
+        </Badge>
+        <Badge variant="success">
+          <span {...stylex.props(styles.badgeContent)}>
+            <ShieldCheck size={14} weight="fill" />
+            <span>Root Auth</span>
+          </span>
+        </Badge>
       </div>
     </header>
   );
 };
+
+

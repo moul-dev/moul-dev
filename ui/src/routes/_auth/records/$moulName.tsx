@@ -3,21 +3,38 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { z } from 'zod';
-import { ColumnDef } from '@tanstack/react-table';
 import {
   Plus,
   Trash,
   PencilSimple,
-  MagnifyingGlass,
   Database,
+  CaretLeft,
+  CaretRight,
 } from '@phosphor-icons/react';
+import {
+  Table,
+  TableHeader,
+  Column,
+  TableBody,
+  Row,
+  Cell,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  SearchField,
+  TextField,
+  Checkbox,
+  ModalOverlay,
+  Modal,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  toastQueue,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../../theme/tokens.stylex';
 import { api } from '../../../api/client';
-import { DataGrid } from '../../../components/common/DataGrid';
-import { Button } from '../../../components/common/Button';
-import { Drawer } from '../../../components/common/Drawer';
-import { Input } from '../../../components/common/Input';
-import { Badge } from '../../../components/common/Badge';
 
 const recordsSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -56,24 +73,44 @@ const styles = stylex.create({
   toolbar: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgSurface,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   searchBox: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
+    width: '360px',
   },
-  drawerForm: {
+  modalForm: {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
+    maxHeight: '65vh',
+    overflowY: 'auto',
+    paddingInline: spacing.xxs,
+  },
+  emptyState: {
+    padding: spacing.xxl,
+    textAlign: 'center',
+    color: colors.textSecondary,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.border,
+    fontFamily: fonts.sans,
+  },
+  pagination: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBlock: spacing.sm,
+    fontSize: '0.875rem',
+    color: colors.textSecondary,
+    fontFamily: fonts.sans,
+  },
+  paginationButtons: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
 });
 
@@ -84,10 +121,10 @@ function RecordsPage() {
   const queryClient = useQueryClient();
 
   const [activeRecord, setActiveRecord] = useState<any | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [searchInput, setSearchInput] = useState(search.search || '');
+  const [searchVal, setSearchVal] = useState(search.search || '');
 
   // 1. Fetch collection schema to get field definitions
   const { data: moul } = useQuery({
@@ -114,12 +151,29 @@ function RecordsPage() {
     return [];
   }, [recordsData]);
 
+  const totalPages = (recordsData && !Array.isArray(recordsData) && typeof (recordsData as any).totalPages === 'number')
+    ? (recordsData as any).totalPages
+    : 1;
+  const currentPage = search.page || 1;
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: any) => api.createRecord(moulName, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
-      setIsDrawerOpen(false);
+      setIsModalOpen(false);
+      toastQueue.add({
+        title: 'Record Created',
+        description: 'New record created successfully.',
+        variant: 'success',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Creation Failed',
+        description: err.message || 'Failed to create record.',
+        variant: 'error',
+      });
     },
   });
 
@@ -127,7 +181,19 @@ function RecordsPage() {
     mutationFn: ({ id, data }: { id: string; data: any }) => api.updateRecord(moulName, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
-      setIsDrawerOpen(false);
+      setIsModalOpen(false);
+      toastQueue.add({
+        title: 'Record Updated',
+        description: 'Record updated successfully.',
+        variant: 'success',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Update Failed',
+        description: err.message || 'Failed to update record.',
+        variant: 'error',
+      });
     },
   });
 
@@ -135,6 +201,18 @@ function RecordsPage() {
     mutationFn: (id: string) => api.deleteRecord(moulName, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      toastQueue.add({
+        title: 'Record Deleted',
+        description: 'Record was deleted.',
+        variant: 'info',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Delete Failed',
+        description: err.message || 'Failed to delete record.',
+        variant: 'error',
+      });
     },
   });
 
@@ -142,14 +220,14 @@ function RecordsPage() {
     setFormData({});
     setIsCreating(true);
     setActiveRecord(null);
-    setIsDrawerOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleOpenEdit = (rec: any) => {
     setFormData({ ...rec });
     setIsCreating(false);
     setActiveRecord(rec);
-    setIsDrawerOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleSaveRecord = (e: React.FormEvent) => {
@@ -161,104 +239,18 @@ function RecordsPage() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (query: string) => {
     navigate({
       search: (prev: any) => ({
         ...prev,
         page: 1,
-        search: searchInput.trim() || undefined,
+        search: query.trim() || undefined,
       }),
     });
   };
 
-  // Build Dynamic Columns
-  const columns = useMemo<ColumnDef<any>[]>(() => {
-    const cols: ColumnDef<any>[] = [
-      {
-        accessorKey: 'id',
-        header: 'ID',
-        cell: (info) => (
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#38bdf8' }}>
-            {String(info.getValue())}
-          </span>
-        ),
-      },
-    ];
-
-    if (moul?.type === 'auth') {
-      cols.push(
-        {
-          accessorKey: 'username',
-          header: 'Username',
-        },
-        {
-          accessorKey: 'email',
-          header: 'Email',
-        }
-      );
-    }
-
-    if (moul?.fields) {
-      moul.fields.forEach((f: any) => {
-        cols.push({
-          accessorKey: f.name,
-          header: f.name,
-          cell: (info) => {
-            const val = info.getValue();
-            if (val === null || val === undefined) return <span style={{ color: '#64748b' }}>-</span>;
-            if (typeof val === 'boolean') return <Badge variant={val ? 'success' : 'danger'}>{val ? 'true' : 'false'}</Badge>;
-            if (typeof val === 'object') return <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{JSON.stringify(val)}</span>;
-            return String(val);
-          },
-        });
-      });
-    }
-
-    cols.push(
-      {
-        accessorKey: 'created_at',
-        header: 'Created At',
-        cell: (info) => (
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-            {info.getValue() ? new Date(String(info.getValue())).toLocaleString() : '-'}
-          </span>
-        ),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<PencilSimple size={14} />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenEdit(row.original);
-              }}
-              title="Edit Record"
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<Trash size={14} color="#ef4444" />}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Delete record ${row.original.id}?`)) {
-                  deleteMutation.mutate(row.original.id);
-                }
-              }}
-              title="Delete Record"
-            />
-          </div>
-        ),
-      }
-    );
-
-    return cols;
-  }, [moul]);
+  // Schema field keys
+  const schemaFields = moul?.fields || [];
 
   return (
     <div {...stylex.props(styles.container)}>
@@ -273,132 +265,254 @@ function RecordsPage() {
             Explore records data grid, execute search filters, and manage collection entries.
           </span>
         </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={handleOpenCreate}>
-          New Record
+        <Button variant="primary" onPress={handleOpenCreate}>
+          <Plus size={16} />
+          <span>New Record</span>
         </Button>
       </div>
 
       {/* Toolbar */}
-      <div {...stylex.props(styles.toolbar)}>
-        <form onSubmit={handleSearchSubmit} {...stylex.props(styles.searchBox)}>
-          <Input
-            placeholder="Search records or filter expression..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <Button type="submit" variant="secondary" icon={<MagnifyingGlass size={16} />}>
-            Search
+      <Card variant="default">
+        <CardBody>
+          <div {...stylex.props(styles.toolbar)}>
+            <div {...stylex.props(styles.searchBox)}>
+              <SearchField
+                placeholder="Search records..."
+                value={searchVal}
+                onChange={setSearchVal}
+                onSubmit={handleSearchSubmit}
+              />
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+              Showing {records.length} record{records.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Moul UI Table */}
+      {isLoading ? (
+        <div {...stylex.props(styles.emptyState)}>Loading records...</div>
+      ) : records.length === 0 ? (
+        <div {...stylex.props(styles.emptyState)}>
+          No records found. Click "New Record" to insert a record.
+        </div>
+      ) : (
+        <Table aria-label={`${moulName} records table`}>
+          <TableHeader>
+            <Column isRowHeader>ID</Column>
+            {moul?.type === 'auth' && (
+              <>
+                <Column>Username</Column>
+                <Column>Email</Column>
+              </>
+            )}
+            {schemaFields.map((f: any) => (
+              <Column key={f.name}>{f.name}</Column>
+            ))}
+            <Column>Created At</Column>
+            <Column>Actions</Column>
+          </TableHeader>
+          <TableBody>
+            {records.map((rec: any) => (
+              <Row key={rec.id} id={rec.id}>
+                <Cell>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#38bdf8' }}>
+                    {String(rec.id)}
+                  </span>
+                </Cell>
+                {moul?.type === 'auth' && (
+                  <>
+                    <Cell>{rec.username || '-'}</Cell>
+                    <Cell>{rec.email || '-'}</Cell>
+                  </>
+                )}
+                {schemaFields.map((f: any) => {
+                  const val = rec[f.name];
+                  return (
+                    <Cell key={f.name}>
+                      {val === null || val === undefined ? (
+                        <span style={{ color: '#64748b' }}>-</span>
+                      ) : typeof val === 'boolean' ? (
+                        <Badge variant={val ? 'success' : 'error'}>{val ? 'true' : 'false'}</Badge>
+                      ) : typeof val === 'object' ? (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                          {JSON.stringify(val)}
+                        </span>
+                      ) : (
+                        String(val)
+                      )}
+                    </Cell>
+                  );
+                })}
+                <Cell>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    {rec.created_at ? new Date(String(rec.created_at)).toLocaleString() : '-'}
+                  </span>
+                </Cell>
+                <Cell>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Edit record ${rec.id}`}
+                      onPress={() => handleOpenEdit(rec)}
+                    >
+                      <PencilSimple size={14} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Delete record ${rec.id}`}
+                      onPress={() => {
+                        if (confirm(`Delete record ${rec.id}?`)) {
+                          deleteMutation.mutate(rec.id);
+                        }
+                      }}
+                    >
+                      <Trash size={14} color="#ef4444" />
+                    </Button>
+                  </div>
+                </Cell>
+              </Row>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Pagination Controls */}
+      <div {...stylex.props(styles.pagination)}>
+        <span>
+          Page {currentPage} of {totalPages}
+        </span>
+        <div {...stylex.props(styles.paginationButtons)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            isDisabled={currentPage <= 1}
+            onPress={() =>
+              navigate({
+                search: (prev: any) => ({
+                  ...prev,
+                  page: Math.max(1, currentPage - 1),
+                }),
+              })
+            }
+          >
+            <CaretLeft size={14} />
+            <span>Previous</span>
           </Button>
-        </form>
+          <Button
+            size="sm"
+            variant="secondary"
+            isDisabled={currentPage >= totalPages}
+            onPress={() =>
+              navigate({
+                search: (prev: any) => ({
+                  ...prev,
+                  page: currentPage + 1,
+                }),
+              })
+            }
+          >
+            <span>Next</span>
+            <CaretRight size={14} />
+          </Button>
+        </div>
       </div>
 
-      {/* TanStack Table DataGrid */}
-      <DataGrid
-        data={records}
-        columns={columns}
-        isLoading={isLoading}
-        onRowClick={(row) => handleOpenEdit(row)}
-        pagination={{
-          pageIndex: (search.page || 1) - 1,
-          pageSize: search.perPage || 30,
-        }}
-        onPaginationChange={(updater: any) => {
-          const next = typeof updater === 'function' ? updater({ pageIndex: (search.page || 1) - 1, pageSize: search.perPage || 30 }) : updater;
-          navigate({
-            search: (prev: any) => ({
-              ...prev,
-              page: next.pageIndex + 1,
-              perPage: next.pageSize,
-            }),
-          });
-        }}
-      />
+      {/* Record Edit/Create Modal */}
+      <ModalOverlay isOpen={isModalOpen} onOpenChange={setIsModalOpen} isDismissable>
+        <Modal size="lg">
+          <ModalDialog>
+            <ModalHeader>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>
+                {isCreating ? `Create ${moulName} Record` : `Edit Record #${activeRecord?.id}`}
+              </h2>
+            </ModalHeader>
+            <form onSubmit={handleSaveRecord}>
+              <ModalBody>
+                <div {...stylex.props(styles.modalForm)}>
+                  {moul?.type === 'auth' && (
+                    <>
+                      <TextField
+                        label="Username"
+                        value={formData.username || ''}
+                        onChange={(val) => setFormData({ ...formData, username: val })}
+                        isRequired={isCreating}
+                      />
+                      <TextField
+                        label="Email"
+                        type="email"
+                        value={formData.email || ''}
+                        onChange={(val) => setFormData({ ...formData, email: val })}
+                        isRequired={isCreating}
+                      />
+                      {isCreating && (
+                        <>
+                          <TextField
+                            label="Password"
+                            type="password"
+                            value={formData.password || ''}
+                            onChange={(val) => setFormData({ ...formData, password: val })}
+                            isRequired
+                          />
+                          <TextField
+                            label="Confirm Password"
+                            type="password"
+                            value={formData.passwordConfirm || ''}
+                            onChange={(val) => setFormData({ ...formData, passwordConfirm: val })}
+                            isRequired
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
 
-      {/* Record Edit/Create Drawer */}
-      <Drawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        title={isCreating ? `Create ${moulName} Record` : `Edit Record #${activeRecord?.id}`}
-      >
-        <form onSubmit={handleSaveRecord} {...stylex.props(styles.drawerForm)}>
-          {moul?.type === 'auth' && (
-            <>
-              <Input
-                label="Username"
-                value={formData.username || ''}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                required={isCreating}
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required={isCreating}
-              />
-              {isCreating && (
-                <>
-                  <Input
-                    label="Password"
-                    type="password"
-                    value={formData.password || ''}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                  <Input
-                    label="Confirm Password"
-                    type="password"
-                    value={formData.passwordConfirm || ''}
-                    onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
-                    required
-                  />
-                </>
-              )}
-            </>
-          )}
-
-          {moul?.fields?.map((f: any) => (
-            <div key={f.name}>
-              {f.type === 'bool' ? (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f8fafc', fontSize: '0.875rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(formData[f.name])}
-                    onChange={(e) => setFormData({ ...formData, [f.name]: e.target.checked })}
-                  />
-                  {f.name}
-                </label>
-              ) : (
-                <Input
-                  label={f.name}
-                  type={f.type === 'number' ? 'number' : 'text'}
-                  value={formData[f.name] ?? ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      [f.name]: f.type === 'number' ? Number(e.target.value) : e.target.value,
-                    })
-                  }
-                  required={Boolean(f.required)}
-                />
-              )}
-            </div>
-          ))}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-            <Button type="button" variant="ghost" onClick={() => setIsDrawerOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Record'}
-            </Button>
-          </div>
-        </form>
-      </Drawer>
+                  {schemaFields.map((f: any) => (
+                    <div key={f.name}>
+                      {f.type === 'bool' ? (
+                        <Checkbox
+                          isSelected={Boolean(formData[f.name])}
+                          onChange={(checked) => setFormData({ ...formData, [f.name]: checked })}
+                        >
+                          {f.name}
+                        </Checkbox>
+                      ) : (
+                        <TextField
+                          label={f.name}
+                          type={f.type === 'number' ? 'number' : 'text'}
+                          value={String(formData[f.name] ?? '')}
+                          onChange={(val) =>
+                            setFormData({
+                              ...formData,
+                              [f.name]: f.type === 'number' ? Number(val) : val,
+                            })
+                          }
+                          isRequired={Boolean(f.required)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button type="button" variant="ghost" onPress={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isDisabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Record'}
+                </Button>
+              </ModalFooter>
+            </form>
+          </ModalDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }
+

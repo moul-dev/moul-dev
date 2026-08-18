@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
 import { ShieldPlus } from '@phosphor-icons/react';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  TextField,
+  Button,
+  Alert,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../theme/tokens.stylex';
 import { api, setStoredAdminKey } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Input } from '../components/common/Input';
-import { Button } from '../components/common/Button';
 
 const styles = stylex.create({
   container: {
@@ -18,19 +24,9 @@ const styles = stylex.create({
     backgroundColor: colors.bgApp,
     padding: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.xl,
-    padding: spacing.xxl,
+  cardWrapper: {
     width: '100%',
     maxWidth: '460px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.lg,
   },
   header: {
     display: 'flex',
@@ -38,6 +34,7 @@ const styles = stylex.create({
     alignItems: 'center',
     textAlign: 'center',
     gap: spacing.xs,
+    width: '100%',
   },
   icon: {
     width: '48px',
@@ -66,17 +63,7 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
-  },
-  error: {
-    padding: spacing.md,
-    backgroundColor: colors.dangerBg,
-    color: colors.dangerText,
-    borderRadius: radii.md,
-    fontSize: '0.875rem',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.danger,
-    fontFamily: fonts.sans,
+    width: '100%',
   },
 });
 
@@ -129,67 +116,85 @@ function SetupPage() {
 
   return (
     <div {...stylex.props(styles.container)}>
-      <div {...stylex.props(styles.card)}>
-        <div {...stylex.props(styles.header)}>
-          <div {...stylex.props(styles.icon)}>
-            <ShieldPlus size={28} />
-          </div>
-          <h1 {...stylex.props(styles.title)}>Welcome to mould</h1>
-          <p {...stylex.props(styles.subtitle)}>
-            Create the primary root administrator account to initialize your database engine.
-          </p>
-        </div>
+      <div {...stylex.props(styles.cardWrapper)}>
+        <Card variant="default">
+          <CardHeader>
+            <div {...stylex.props(styles.header)}>
+              <div {...stylex.props(styles.icon)}>
+                <ShieldPlus size={28} />
+              </div>
+              <h1 {...stylex.props(styles.title)}>Welcome to mould</h1>
+              <p {...stylex.props(styles.subtitle)}>
+                Create the primary root administrator account to initialize your database engine.
+              </p>
+            </div>
+          </CardHeader>
 
-        {error && <div {...stylex.props(styles.error)}>{error}</div>}
+          <CardBody>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              {error && <Alert variant="error" description={error} />}
 
-        <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
-          <Input
-            label="Master Admin Key (MOUL_ADMIN_KEY)"
-            type="password"
-            placeholder="Enter server admin key"
-            value={adminKey}
-            onChange={(e) => setAdminKey(e.target.value)}
-            required
-            helperText="Required to authorize root administrator creation"
-          />
-          <Input
-            label="Root Username"
-            placeholder="admin"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <Input
-            label="Root Email"
-            type="email"
-            placeholder="admin@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            helperText="Minimum 8 characters"
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            placeholder="••••••••"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            required
-          />
+              <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
+                <TextField
+                  label="Master Admin Key (MOUL_ADMIN_KEY)"
+                  type="password"
+                  placeholder="Enter server admin key"
+                  value={adminKey}
+                  onChange={setAdminKey}
+                  isRequired
+                  description="Required to authorize root administrator creation"
+                />
 
-          <Button type="submit" variant="primary" size="lg" disabled={loading}>
-            {loading ? 'Creating Administrator...' : 'Initialize Administrator'}
-          </Button>
-        </form>
+                <TextField
+                  label="Root Username"
+                  placeholder="admin"
+                  value={username}
+                  onChange={setUsername}
+                  isRequired
+                />
+
+                <TextField
+                  label="Root Email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChange={setEmail}
+                  isRequired
+                />
+
+                <TextField
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={setPassword}
+                  isRequired
+                  description="Minimum 8 characters"
+                />
+
+                <TextField
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={passwordConfirm}
+                  onChange={setPasswordConfirm}
+                  isRequired
+                />
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  isDisabled={loading}
+                >
+                  {loading ? 'Creating Administrator...' : 'Initialize Administrator'}
+                </Button>
+              </form>
+            </div>
+          </CardBody>
+        </Card>
       </div>
     </div>
   );
 }
+

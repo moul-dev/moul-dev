@@ -2,13 +2,24 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Flag, Plus, Trash, Play, CheckCircle } from '@phosphor-icons/react';
+import { Flag, Plus, Trash } from '@phosphor-icons/react';
+import {
+  Card,
+  CardBody,
+  Badge,
+  Button,
+  Switch,
+  ModalOverlay,
+  Modal,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  TextField,
+  Checkbox,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
 import { api } from '../../api/client';
-import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
-import { Modal } from '../../components/common/Modal';
-import { Badge } from '../../components/common/Badge';
 
 const styles = stylex.create({
   container: {
@@ -34,16 +45,11 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: spacing.md,
   },
-  flagCard: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
+  flagCardInner: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   flagInfo: {
     display: 'flex',
@@ -64,16 +70,23 @@ const styles = stylex.create({
   flagActions: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  evalSection: {
-    marginTop: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.bgCard,
+  emptyState: {
+    padding: spacing.xxl,
+    backgroundColor: colors.bgSurface,
     borderRadius: radii.md,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.borderMuted,
+    borderColor: colors.border,
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontFamily: fonts.sans,
+  },
+  modalForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: spacing.md,
   },
 });
 
@@ -151,8 +164,9 @@ function FeatureFlagsPage() {
             Toggle features dynamically, configure gradual rollouts, and evaluate targeting rules.
           </span>
         </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
-          New Feature Flag
+        <Button variant="primary" onPress={() => setIsCreateOpen(true)}>
+          <Plus size={16} />
+          <span>New Feature Flag</span>
         </Button>
       </div>
 
@@ -160,92 +174,98 @@ function FeatureFlagsPage() {
         {isLoading ? (
           <div style={{ color: '#64748b' }}>Loading feature flags...</div>
         ) : !flags || flags.length === 0 ? (
-          <div
-            style={{
-              padding: '3rem',
-              backgroundColor: '#111827',
-              borderRadius: '0.5rem',
-              border: '1px solid #334155',
-              textAlign: 'center',
-              color: '#94a3b8',
-            }}
-          >
+          <div {...stylex.props(styles.emptyState)}>
             No feature flags configured. Click "New Feature Flag" to create one.
           </div>
         ) : (
           flags.map((flag: any) => (
-            <div key={flag.key} {...stylex.props(styles.flagCard)}>
-              <div {...stylex.props(styles.flagInfo)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Flag size={18} color="#0ea5e9" />
-                  <span {...stylex.props(styles.flagKey)}>{flag.key}</span>
-                  <Badge variant={flag.enabled ? 'success' : 'neutral'}>
-                    {flag.enabled ? 'Enabled' : 'Disabled'}
-                  </Badge>
-                </div>
-                {flag.description && <span {...stylex.props(styles.flagDesc)}>{flag.description}</span>}
-              </div>
+            <Card key={flag.key} variant="default">
+              <CardBody>
+                <div {...stylex.props(styles.flagCardInner)}>
+                  <div {...stylex.props(styles.flagInfo)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Flag size={18} color="#0ea5e9" />
+                      <span {...stylex.props(styles.flagKey)}>{flag.key}</span>
+                      <Badge variant={flag.enabled ? 'success' : 'neutral'}>
+                        {flag.enabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    {flag.description && <span {...stylex.props(styles.flagDesc)}>{flag.description}</span>}
+                  </div>
 
-              <div {...stylex.props(styles.flagActions)}>
-                <Button
-                  size="sm"
-                  variant={flag.enabled ? 'secondary' : 'primary'}
-                  onClick={() => handleToggle(flag)}
-                >
-                  {flag.enabled ? 'Disable' : 'Enable'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={<Trash size={14} color="#ef4444" />}
-                  onClick={() => {
-                    if (confirm(`Delete flag "${flag.key}"?`)) {
-                      deleteMutation.mutate(flag.key);
-                    }
-                  }}
-                />
-              </div>
-            </div>
+                  <div {...stylex.props(styles.flagActions)}>
+                    <Switch
+                      isSelected={Boolean(flag.enabled)}
+                      onChange={() => handleToggle(flag)}
+                      aria-label={`Toggle flag ${flag.key}`}
+                    >
+                      {flag.enabled ? 'Enabled' : 'Disabled'}
+                    </Switch>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Delete flag ${flag.key}`}
+                      onPress={() => {
+                        if (confirm(`Delete flag "${flag.key}"?`)) {
+                          deleteMutation.mutate(flag.key);
+                        }
+                      }}
+                    >
+                      <Trash size={16} color="#ef4444" />
+                    </Button>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
           ))
         )}
       </div>
 
       {/* Create Flag Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Feature Flag">
-        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Input
-            label="Flag Key"
-            placeholder="e.g. enable_beta_dashboard"
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value)}
-            required
-            helperText="Unique snake_case identifier"
-          />
-          <Input
-            label="Description"
-            placeholder="What does this feature flag toggle?"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-          />
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f8fafc', fontSize: '0.875rem' }}>
-            <input
-              type="checkbox"
-              checked={newEnabled}
-              onChange={(e) => setNewEnabled(e.target.checked)}
-            />
-            Enable by default
-          </label>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-            <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create Flag'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <ModalOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
+        <Modal size="md">
+          <ModalDialog>
+            <ModalHeader>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Create Feature Flag</h2>
+            </ModalHeader>
+            <form onSubmit={handleCreate}>
+              <ModalBody>
+                <div {...stylex.props(styles.modalForm)}>
+                  <TextField
+                    label="Flag Key"
+                    placeholder="e.g. enable_beta_dashboard"
+                    value={newKey}
+                    onChange={setNewKey}
+                    isRequired
+                    description="Unique snake_case identifier"
+                  />
+                  <TextField
+                    label="Description"
+                    placeholder="What does this feature flag toggle?"
+                    value={newDesc}
+                    onChange={setNewDesc}
+                  />
+                  <Checkbox
+                    isSelected={newEnabled}
+                    onChange={setNewEnabled}
+                  >
+                    Enable by default
+                  </Checkbox>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button type="button" variant="ghost" onPress={() => setIsCreateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" isDisabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Creating...' : 'Create Flag'}
+                </Button>
+              </ModalFooter>
+            </form>
+          </ModalDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }
+

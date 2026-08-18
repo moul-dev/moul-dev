@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
@@ -8,9 +8,15 @@ import {
   Pulse,
   ArrowRight,
 } from '@phosphor-icons/react';
+import {
+  Stat,
+  Card,
+  CardBody,
+  Badge,
+  Button,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
 import { api } from '../../api/client';
-import { Badge } from '../../components/common/Badge';
 
 const styles = stylex.create({
   container: {
@@ -36,37 +42,6 @@ const styles = stylex.create({
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
     gap: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.sm,
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    color: colors.textSecondary,
-    fontSize: '0.8125rem',
-    fontWeight: 500,
-    fontFamily: fonts.sans,
-  },
-  cardValue: {
-    fontSize: '1.75rem',
-    fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.mono,
-  },
-  cardSub: {
-    fontSize: '0.75rem',
-    color: colors.textMuted,
-    fontFamily: fonts.sans,
-  },
   section: {
     display: 'flex',
     flexDirection: 'column',
@@ -83,26 +58,12 @@ const styles = stylex.create({
     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
     gap: spacing.md,
   },
-  collectionCard: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.md,
+  collectionCardInner: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
     textDecoration: 'none',
-    transition: 'all 0.15s ease',
-  },
-  collectionCardHover: {
-    borderColor: {
-      ':hover': colors.primary,
-    },
-    backgroundColor: {
-      ':hover': colors.bgCardHover,
-    },
   },
   collectionName: {
     fontWeight: 600,
@@ -113,6 +74,17 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  emptyBox: {
+    padding: spacing.xl,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.border,
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontFamily: fonts.sans,
+  },
 });
 
 export const Route = createFileRoute('/_auth/')({
@@ -120,6 +92,7 @@ export const Route = createFileRoute('/_auth/')({
 });
 
 function DashboardPage() {
+  const navigate = useNavigate();
   const { data: mouls, isLoading: moulsLoading } = useQuery({
     queryKey: ['mouls'],
     queryFn: api.listMouls,
@@ -145,65 +118,44 @@ function DashboardPage() {
             System overview and database collection metrics
           </span>
         </div>
-        <Link
-          to="/collections"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: '#0ea5e9',
-            color: '#fff',
-            borderRadius: '0.375rem',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-          }}
+        <Button
+          variant="primary"
+          onPress={() => navigate({ to: '/collections' })}
         >
           <span>Manage Collections</span>
           <ArrowRight size={16} />
-        </Link>
+        </Button>
       </div>
 
       {/* Top Metric Cards */}
       <div {...stylex.props(styles.grid)}>
-        <div {...stylex.props(styles.card)}>
-          <div {...stylex.props(styles.cardHeader)}>
-            <span>COLLECTIONS</span>
-            <Database size={20} color="#0ea5e9" />
-          </div>
-          <div {...stylex.props(styles.cardValue)}>{moulsLoading ? '...' : collectionCount}</div>
-          <div {...stylex.props(styles.cardSub)}>Dynamic schema tables defined</div>
-        </div>
+        <Stat
+          label="COLLECTIONS"
+          value={moulsLoading ? '...' : collectionCount}
+          icon={<Database size={20} color="#0ea5e9" />}
+          description="Dynamic schema tables defined"
+        />
 
-        <div {...stylex.props(styles.card)}>
-          <div {...stylex.props(styles.cardHeader)}>
-            <span>MEMORY ALLOCATED</span>
-            <Cpu size={20} color="#10b981" />
-          </div>
-          <div {...stylex.props(styles.cardValue)}>{memoryAlloc}</div>
-          <div {...stylex.props(styles.cardSub)}>Go runtime heap allocations</div>
-        </div>
+        <Stat
+          label="MEMORY ALLOCATED"
+          value={memoryAlloc}
+          icon={<Cpu size={20} color="#10b981" />}
+          description="Go runtime heap allocations"
+        />
 
-        <div {...stylex.props(styles.card)}>
-          <div {...stylex.props(styles.cardHeader)}>
-            <span>GOROUTINES</span>
-            <Pulse size={20} color="#f59e0b" />
-          </div>
-          <div {...stylex.props(styles.cardValue)}>{goroutines}</div>
-          <div {...stylex.props(styles.cardSub)}>Active concurrent worker routines</div>
-        </div>
+        <Stat
+          label="GOROUTINES"
+          value={goroutines}
+          icon={<Pulse size={20} color="#f59e0b" />}
+          description="Active concurrent worker routines"
+        />
 
-        <div {...stylex.props(styles.card)}>
-          <div {...stylex.props(styles.cardHeader)}>
-            <span>STORAGE ENGINE</span>
-            <HardDrives size={20} color="#6366f1" />
-          </div>
-          <div {...stylex.props(styles.cardValue)} style={{ fontSize: '1.25rem' }}>
-            {dbStatus}
-          </div>
-          <div {...stylex.props(styles.cardSub)}>Litestream Continuous Backup Ready</div>
-        </div>
+        <Stat
+          label="STORAGE ENGINE"
+          value={dbStatus}
+          icon={<HardDrives size={20} color="#6366f1" />}
+          description="Litestream Continuous Backup Ready"
+        />
       </div>
 
       {/* Collections Overview */}
@@ -212,39 +164,46 @@ function DashboardPage() {
         {moulsLoading ? (
           <div style={{ color: '#64748b' }}>Loading collections...</div>
         ) : !mouls || mouls.length === 0 ? (
-          <div
-            style={{
-              padding: '2rem',
-              backgroundColor: '#111827',
-              borderRadius: '0.5rem',
-              border: '1px solid #334155',
-              textAlign: 'center',
-              color: '#94a3b8',
-            }}
-          >
+          <div {...stylex.props(styles.emptyBox)}>
             No custom collections created yet. Click "Manage Collections" to design your first schema.
           </div>
         ) : (
           <div {...stylex.props(styles.collectionList)}>
             {mouls.map((moul: any) => (
-              <Link
+              <RouterLink
                 key={moul.name}
                 to="/records/$moulName"
                 params={{ moulName: moul.name }}
                 search={{ page: 1, perPage: 30 }}
-                {...stylex.props(styles.collectionCard, styles.collectionCardHover)}
+                style={{ textDecoration: 'none' }}
               >
-                <div {...stylex.props(styles.collectionName)}>
-                  <Database size={18} color="#0ea5e9" />
-                  <span>{moul.name}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Badge variant={moul.type === 'auth' ? 'info' : moul.type === 'worker' ? 'warning' : 'primary'}>
-                    {moul.type}
-                  </Badge>
-                  <ArrowRight size={14} color="#94a3b8" />
-                </div>
-              </Link>
+                <Card variant="default">
+                  <CardBody>
+                    <div {...stylex.props(styles.collectionCardInner)}>
+                      <div {...stylex.props(styles.collectionName)}>
+                        <Database size={18} color="#0ea5e9" />
+                        <span>{moul.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Badge
+                          variant={
+                            moul.type === 'auth'
+                              ? 'primary'
+                              : moul.type === 'worker'
+                              ? 'warning'
+                              : moul.type === 'analytic'
+                              ? 'success'
+                              : 'neutral'
+                          }
+                        >
+                          {moul.type}
+                        </Badge>
+                        <ArrowRight size={14} color="#94a3b8" />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              </RouterLink>
             ))}
           </div>
         )}
@@ -252,3 +211,4 @@ function DashboardPage() {
     </div>
   );
 }
+

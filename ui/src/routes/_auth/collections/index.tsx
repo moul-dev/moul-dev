@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
@@ -7,16 +7,28 @@ import {
   Database,
   Trash,
   Sliders,
-  Table,
-  Lock,
+  Table as TableIcon,
 } from '@phosphor-icons/react';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  Badge,
+  Button,
+  ModalOverlay,
+  Modal,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  TextField,
+  Select,
+  SelectItem,
+  Alert,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../../theme/tokens.stylex';
 import { api } from '../../../api/client';
-import { Button } from '../../../components/common/Button';
-import { Badge } from '../../../components/common/Badge';
-import { Modal } from '../../../components/common/Modal';
-import { Input } from '../../../components/common/Input';
-import { Select } from '../../../components/common/Select';
 
 const styles = stylex.create({
   container: {
@@ -42,22 +54,11 @@ const styles = stylex.create({
     gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
     gap: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.md,
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)',
-  },
   cardTop: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   cardTitle: {
     fontSize: '1.125rem',
@@ -89,19 +90,27 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopStyle: 'solid',
-    borderTopColor: colors.borderMuted,
+    width: '100%',
   },
   actionGroup: {
     display: 'flex',
     gap: spacing.xs,
   },
-  form: {
+  modalForm: {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
+  },
+  emptyState: {
+    padding: spacing.xxl,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.border,
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontFamily: fonts.sans,
   },
 });
 
@@ -110,6 +119,7 @@ export const Route = createFileRoute('/_auth/collections/')({
 });
 
 function CollectionsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newMoulName, setNewMoulName] = useState('');
@@ -169,156 +179,157 @@ function CollectionsPage() {
         </div>
         <Button
           variant="primary"
-          icon={<Plus size={16} weight="bold" />}
-          onClick={() => setIsCreateOpen(true)}
+          onPress={() => setIsCreateOpen(true)}
         >
-          New Collection
+          <Plus size={16} weight="bold" />
+          <span>New Collection</span>
         </Button>
       </div>
 
       {isLoading ? (
         <div style={{ color: '#64748b' }}>Loading collections...</div>
       ) : !mouls || mouls.length === 0 ? (
-        <div
-          style={{
-            padding: '3rem',
-            backgroundColor: '#111827',
-            borderRadius: '0.5rem',
-            border: '1px solid #334155',
-            textAlign: 'center',
-            color: '#94a3b8',
-          }}
-        >
+        <div {...stylex.props(styles.emptyState)}>
           No collections created yet. Click "New Collection" to get started.
         </div>
       ) : (
         <div {...stylex.props(styles.grid)}>
           {mouls.map((moul: any) => (
-            <div key={moul.name} {...stylex.props(styles.card)}>
-              <div {...stylex.props(styles.cardTop)}>
-                <div {...stylex.props(styles.cardTitle)}>
-                  <Database size={20} color="#0ea5e9" />
-                  <span>{moul.name}</span>
-                </div>
-                <Badge
-                  variant={
-                    moul.type === 'auth'
-                      ? 'info'
-                      : moul.type === 'worker'
-                      ? 'warning'
-                      : moul.type === 'analytic'
-                      ? 'success'
-                      : 'primary'
-                  }
-                >
-                  {moul.type}
-                </Badge>
-              </div>
-
-              <div {...stylex.props(styles.fieldsPreview)}>
-                <span style={{ color: '#64748b' }}>Fields:</span>
-                <span {...stylex.props(styles.fieldPill)}>id</span>
-                <span {...stylex.props(styles.fieldPill)}>created_at</span>
-                <span {...stylex.props(styles.fieldPill)}>updated_at</span>
-                {moul.fields?.map((f: any) => (
-                  <span key={f.name} {...stylex.props(styles.fieldPill)}>
-                    {f.name} ({f.type})
-                  </span>
-                ))}
-              </div>
-
-              <div {...stylex.props(styles.cardActions)}>
-                <div {...stylex.props(styles.actionGroup)}>
-                  <Link
-                    to="/records/$moulName"
-                    params={{ moulName: moul.name }}
-                    search={{ page: 1, perPage: 30 }}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Button size="sm" variant="secondary" icon={<Table size={14} />}>
-                      Records
-                    </Button>
-                  </Link>
-                  <Link
-                    to="/collections/$moulName"
-                    params={{ moulName: moul.name }}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Button size="sm" variant="ghost" icon={<Sliders size={14} />}>
-                      Schema
-                    </Button>
-                  </Link>
-                </div>
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={<Trash size={14} color="#ef4444" />}
-                  onClick={() => {
-                    if (confirm(`Are you sure you want to delete collection "${moul.name}"?`)) {
-                      deleteMutation.mutate(moul.name);
+            <Card key={moul.name} variant="default">
+              <CardHeader>
+                <div {...stylex.props(styles.cardTop)}>
+                  <div {...stylex.props(styles.cardTitle)}>
+                    <Database size={20} color="#0ea5e9" />
+                    <span>{moul.name}</span>
+                  </div>
+                  <Badge
+                    variant={
+                      moul.type === 'auth'
+                        ? 'primary'
+                        : moul.type === 'worker'
+                        ? 'warning'
+                        : moul.type === 'analytic'
+                        ? 'success'
+                        : 'neutral'
                     }
-                  }}
-                  title="Delete Collection"
-                />
-              </div>
-            </div>
+                  >
+                    {moul.type}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardBody>
+                <div {...stylex.props(styles.fieldsPreview)}>
+                  <span style={{ color: '#64748b' }}>Fields:</span>
+                  <span {...stylex.props(styles.fieldPill)}>id</span>
+                  <span {...stylex.props(styles.fieldPill)}>created_at</span>
+                  <span {...stylex.props(styles.fieldPill)}>updated_at</span>
+                  {moul.fields?.map((f: any) => (
+                    <span key={f.name} {...stylex.props(styles.fieldPill)}>
+                      {f.name} ({f.type})
+                    </span>
+                  ))}
+                </div>
+              </CardBody>
+
+              <CardFooter>
+                <div {...stylex.props(styles.cardActions)}>
+                  <div {...stylex.props(styles.actionGroup)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onPress={() =>
+                        navigate({
+                          to: '/records/$moulName',
+                          params: { moulName: moul.name },
+                          search: { page: 1, perPage: 30 },
+                        })
+                      }
+                    >
+                      <TableIcon size={14} />
+                      <span>Records</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onPress={() =>
+                        navigate({
+                          to: '/collections/$moulName',
+                          params: { moulName: moul.name },
+                        })
+                      }
+                    >
+                      <Sliders size={14} />
+                      <span>Schema</span>
+                    </Button>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Delete collection ${moul.name}`}
+                    onPress={() => {
+                      if (confirm(`Are you sure you want to delete collection "${moul.name}"?`)) {
+                        deleteMutation.mutate(moul.name);
+                      }
+                    }}
+                  >
+                    <Trash size={14} color="#ef4444" />
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       )}
 
       {/* Create Collection Modal */}
-      <Modal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Create New Collection"
-      >
-        <form onSubmit={handleCreate} {...stylex.props(styles.form)}>
-          {error && (
-            <div
-              style={{
-                padding: '0.75rem',
-                backgroundColor: '#7f1d1d33',
-                color: '#fca5a5',
-                borderRadius: '0.375rem',
-                fontSize: '0.875rem',
-              }}
-            >
-              {error}
-            </div>
-          )}
+      <ModalOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
+        <Modal size="md">
+          <ModalDialog>
+            <ModalHeader>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Create New Collection</h2>
+            </ModalHeader>
+            <form onSubmit={handleCreate}>
+              <ModalBody>
+                <div {...stylex.props(styles.modalForm)}>
+                  {error && <Alert variant="error" description={error} />}
 
-          <Input
-            label="Collection Name"
-            placeholder="e.g. posts, products, comments"
-            value={newMoulName}
-            onChange={(e) => setNewMoulName(e.target.value)}
-            required
-            helperText="Lower-case alphanumeric table identifier"
-          />
+                  <TextField
+                    label="Collection Name"
+                    placeholder="e.g. posts, products, comments"
+                    value={newMoulName}
+                    onChange={setNewMoulName}
+                    isRequired
+                    description="Lower-case alphanumeric table identifier"
+                  />
 
-          <Select
-            label="Collection Type"
-            value={newMoulType}
-            onChange={(e) => setNewMoulType(e.target.value)}
-            options={[
-              { value: 'base', label: 'Base (General data CRUD)' },
-              { value: 'auth', label: 'Auth (Users, password, passkey, OAuth2)' },
-              { value: 'worker', label: 'Worker (Background job queue)' },
-              { value: 'analytic', label: 'Analytic (Time-series & visitor tracking)' },
-            ]}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-            <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create Collection'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+                  <Select
+                    label="Collection Type"
+                    placeholder="Select Type"
+                    selectedKey={newMoulType}
+                    onSelectionChange={(key) => setNewMoulType(String(key))}
+                  >
+                    <SelectItem id="base">Base (General data CRUD)</SelectItem>
+                    <SelectItem id="auth">Auth (Users, password, passkey, OAuth2)</SelectItem>
+                    <SelectItem id="worker">Worker (Background job queue)</SelectItem>
+                    <SelectItem id="analytic">Analytic (Time-series & visitor tracking)</SelectItem>
+                  </Select>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button type="button" variant="ghost" onPress={() => setIsCreateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" isDisabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Creating...' : 'Create Collection'}
+                </Button>
+              </ModalFooter>
+            </form>
+          </ModalDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }
+

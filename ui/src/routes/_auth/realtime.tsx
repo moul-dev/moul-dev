@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Broadcast, Play, Stop, Trash, CheckCircle } from '@phosphor-icons/react';
+import { Play, Stop, Trash } from '@phosphor-icons/react';
+import {
+  Select,
+  SelectItem,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
 import { api, getAuthToken } from '../../api/client';
-import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
-import { Select } from '../../components/common/Select';
 
 const styles = stylex.create({
   container: {
@@ -32,12 +37,7 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.bgSurface,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
+    width: '100%',
   },
   controls: {
     display: 'flex',
@@ -86,6 +86,12 @@ const styles = stylex.create({
     padding: spacing.xs,
     borderRadius: radii.sm,
     overflowX: 'auto',
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: spacing.xxl,
+    color: colors.textSecondary,
+    fontFamily: fonts.sans,
   },
 });
 
@@ -143,11 +149,6 @@ function RealtimePage() {
     };
   }, [selectedMoul, isConnected]);
 
-  const moulOptions = [
-    { value: '*', label: 'All Collections (Global Stream)' },
-    ...(mouls?.map((m: any) => ({ value: m.name, label: m.name })) || []),
-  ];
-
   return (
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
@@ -157,43 +158,55 @@ function RealtimePage() {
             Live record mutations streamed over Server-Sent Events (SSE).
           </span>
         </div>
-        <Badge variant={isConnected ? 'success' : 'danger'}>
+        <Badge variant={isConnected ? 'success' : 'error'}>
           {isConnected ? 'Stream Connected' : 'Disconnected'}
         </Badge>
       </div>
 
-      <div {...stylex.props(styles.toolbar)}>
-        <div {...stylex.props(styles.controls)}>
-          <div style={{ width: '280px' }}>
-            <Select
-              value={selectedMoul}
-              onChange={(e) => setSelectedMoul(e.target.value)}
-              options={moulOptions}
-            />
-          </div>
-          <Button
-            size="sm"
-            variant={isConnected ? 'danger' : 'primary'}
-            icon={isConnected ? <Stop size={14} /> : <Play size={14} />}
-            onClick={() => setIsConnected(!isConnected)}
-          >
-            {isConnected ? 'Disconnect' : 'Connect'}
-          </Button>
-        </div>
+      <Card variant="default">
+        <CardBody>
+          <div {...stylex.props(styles.toolbar)}>
+            <div {...stylex.props(styles.controls)}>
+              <div style={{ width: '280px' }}>
+                <Select
+                  placeholder="Select Collection"
+                  selectedKey={selectedMoul}
+                  onSelectionChange={(key) => setSelectedMoul(String(key))}
+                >
+                  <SelectItem id="*">All Collections (Global Stream)</SelectItem>
+                  {mouls?.map((m: any) => (
+                    <SelectItem key={m.name} id={m.name}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                variant={isConnected ? 'danger' : 'primary'}
+                onPress={() => setIsConnected(!isConnected)}
+              >
+                {isConnected ? <Stop size={14} /> : <Play size={14} />}
+                <span>{isConnected ? 'Disconnect' : 'Connect'}</span>
+              </Button>
+            </div>
 
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<Trash size={14} />}
-          onClick={() => setEvents([])}
-        >
-          Clear Log
-        </Button>
-      </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onPress={() => setEvents([])}
+              aria-label="Clear Log"
+            >
+              <Trash size={14} />
+              <span>Clear Log</span>
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
 
       <div {...stylex.props(styles.logContainer)}>
         {events.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+          <div {...stylex.props(styles.emptyState)}>
             Listening for realtime record events... (Mutations in any collection will appear here)
           </div>
         ) : (
@@ -201,7 +214,7 @@ function RealtimePage() {
             <div key={ev.id} {...stylex.props(styles.logItem)}>
               <div {...stylex.props(styles.logTop)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Badge variant={ev.action === 'create' ? 'success' : ev.action === 'delete' ? 'danger' : 'primary'}>
+                  <Badge variant={ev.action === 'create' ? 'success' : ev.action === 'delete' ? 'error' : 'primary'}>
                     {ev.action}
                   </Badge>
                   <span style={{ fontWeight: 600, color: '#38bdf8' }}>{ev.moul}</span>
@@ -216,3 +229,4 @@ function RealtimePage() {
     </div>
   );
 }
+

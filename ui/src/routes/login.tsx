@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ShieldCheck, Key, LockSimple, User } from '@phosphor-icons/react';
+import { ShieldCheck } from '@phosphor-icons/react';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  TextField,
+  Button,
+  Alert,
+  Link,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../theme/tokens.stylex';
 import { useAuth } from '../context/AuthContext';
-import { Input } from '../components/common/Input';
-import { Button } from '../components/common/Button';
 
 const styles = stylex.create({
   container: {
@@ -17,19 +25,9 @@ const styles = stylex.create({
     backgroundColor: colors.bgApp,
     padding: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.xl,
-    padding: spacing.xxl,
+  cardWrapper: {
     width: '100%',
     maxWidth: '460px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.lg,
   },
   header: {
     display: 'flex',
@@ -37,6 +35,7 @@ const styles = stylex.create({
     alignItems: 'center',
     textAlign: 'center',
     gap: spacing.xs,
+    width: '100%',
   },
   icon: {
     width: '48px',
@@ -65,28 +64,14 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
-  },
-  error: {
-    padding: spacing.md,
-    backgroundColor: colors.dangerBg,
-    color: colors.dangerText,
-    borderRadius: radii.md,
-    fontSize: '0.875rem',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.danger,
-    fontFamily: fonts.sans,
+    width: '100%',
   },
   footer: {
     textAlign: 'center',
     fontSize: '0.8125rem',
     color: colors.textMuted,
     fontFamily: fonts.sans,
-  },
-  link: {
-    color: colors.primary,
-    textDecoration: 'none',
-    fontWeight: 500,
+    width: '100%',
   },
 });
 
@@ -129,59 +114,75 @@ function LoginPage() {
 
   return (
     <div {...stylex.props(styles.container)}>
-      <div {...stylex.props(styles.card)}>
-        <div {...stylex.props(styles.header)}>
-          <div {...stylex.props(styles.icon)}>
-            <ShieldCheck size={28} />
-          </div>
-          <h1 {...stylex.props(styles.title)}>mould console</h1>
-          <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>
-        </div>
+      <div {...stylex.props(styles.cardWrapper)}>
+        <Card variant="default">
+          <CardHeader>
+            <div {...stylex.props(styles.header)}>
+              <div {...stylex.props(styles.icon)}>
+                <ShieldCheck size={28} />
+              </div>
+              <h1 {...stylex.props(styles.title)}>mould console</h1>
+              <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>
+            </div>
+          </CardHeader>
 
-        {error && <div {...stylex.props(styles.error)}>{error}</div>}
+          <CardBody>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              {error && <Alert variant="error" description={error} />}
 
-        <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
-          <Input
-            label="Master Admin Key"
-            type="password"
-            placeholder="Enter MOUL_ADMIN_KEY"
-            value={adminKey}
-            onChange={(e) => setAdminKey(e.target.value)}
-            required
-            helperText="Server administrative key configured via MOUL_ADMIN_KEY"
-          />
+              <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
+                <TextField
+                  label="Master Admin Key"
+                  type="password"
+                  placeholder="Enter MOUL_ADMIN_KEY"
+                  value={adminKey}
+                  onChange={setAdminKey}
+                  isRequired
+                  description="Server administrative key configured via MOUL_ADMIN_KEY"
+                />
 
-          <Input
-            label="Root Username or Email"
-            placeholder="admin@example.com"
-            value={identity}
-            onChange={(e) => setIdentity(e.target.value)}
-            required
-          />
+                <TextField
+                  label="Root Username or Email"
+                  placeholder="admin@example.com"
+                  value={identity}
+                  onChange={setIdentity}
+                  isRequired
+                />
 
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+                <TextField
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={setPassword}
+                  isRequired
+                />
 
-          <Button type="submit" variant="primary" size="lg" disabled={loading}>
-            {loading ? 'Authenticating...' : 'Sign In to Admin Console'}
-          </Button>
-        </form>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  isDisabled={loading}
+                >
+                  {loading ? 'Authenticating...' : 'Sign In to Admin Console'}
+                </Button>
+              </form>
+            </div>
+          </CardBody>
 
-        {needsSetup && (
-          <div {...stylex.props(styles.footer)}>
-            First time running mould?{' '}
-            <Link to="/setup" {...stylex.props(styles.link)}>
-              Initialize Root Administrator
-            </Link>
-          </div>
-        )}
+          {needsSetup && (
+            <CardFooter>
+              <div {...stylex.props(styles.footer)}>
+                First time running mould?{' '}
+                <RouterLink to="/setup" style={{ textDecoration: 'none' }}>
+                  <Link variant="primary">Initialize Root Administrator</Link>
+                </RouterLink>
+              </div>
+            </CardFooter>
+          )}
+        </Card>
       </div>
     </div>
   );
 }
+

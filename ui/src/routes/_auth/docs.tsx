@@ -1,8 +1,9 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { BookOpen, ArrowSquareOut } from '@phosphor-icons/react';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { ArrowSquareOut } from '@phosphor-icons/react';
+import { Button, Card } from '@moul-dev/ui';
+import { colors, spacing, fonts } from '../../theme/tokens.stylex';
 
 const styles = stylex.create({
   container: {
@@ -25,12 +26,10 @@ const styles = stylex.create({
   },
   iframeCard: {
     flex: 1,
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
+    display: 'flex',
+    flexDirection: 'column',
     overflow: 'hidden',
+    height: '100%',
   },
   iframe: {
     width: '100%',
@@ -53,31 +52,19 @@ function DocsPage() {
             Live OpenAPI / Scalar reference reflecting all active collections and endpoints.
           </span>
         </div>
-        <a
-          href="/docs"
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: '#1e293b',
-            color: '#f8fafc',
-            border: '1px solid #334155',
-            borderRadius: '0.375rem',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-          }}
+        <Button
+          variant="outline"
+          onPress={() => window.open('/docs', '_blank')}
         >
           <span>Open Fullscreen</span>
           <ArrowSquareOut size={16} />
-        </a>
+        </Button>
       </div>
 
-      <div {...stylex.props(styles.iframeCard)}>
+      <Card variant="default" style={styles.iframeCard}>
         <iframe src="/docs" title="Moul API Docs" {...stylex.props(styles.iframe)} />
-      </div>
+      </Card>
     </div>
   );
 }
+

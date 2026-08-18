@@ -8,15 +8,21 @@ import {
   FloppyDisk,
   Database,
   LockKey,
-  EnvelopeSimple,
-  WebhooksLogo,
 } from '@phosphor-icons/react';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Button,
+  TextField,
+  Select,
+  SelectItem,
+  Checkbox,
+  Badge,
+  toastQueue,
+} from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../../theme/tokens.stylex';
 import { api } from '../../../api/client';
-import { Button } from '../../../components/common/Button';
-import { Input } from '../../../components/common/Input';
-import { Select } from '../../../components/common/Select';
-import { Badge } from '../../../components/common/Badge';
 
 const styles = stylex.create({
   container: {
@@ -39,25 +45,11 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  section: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.md,
-  },
   sectionHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomStyle: 'solid',
-    borderBottomColor: colors.borderMuted,
+    width: '100%',
   },
   sectionTitle: {
     fontSize: '1.125rem',
@@ -108,7 +100,6 @@ function CollectionDetailPage() {
     updateRule: '',
     deleteRule: '',
   });
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (moul) {
@@ -122,8 +113,18 @@ function CollectionDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moul', moulName] });
       queryClient.invalidateQueries({ queryKey: ['mouls'] });
-      setSuccessMsg('Collection schema saved successfully!');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      toastQueue.add({
+        title: 'Schema Saved',
+        description: 'Collection schema saved successfully.',
+        variant: 'success',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Save Failed',
+        description: err.message || 'Failed to save collection schema.',
+        variant: 'error',
+      });
     },
   });
 
@@ -174,130 +175,126 @@ function CollectionDetailPage() {
         </div>
         <Button
           variant="primary"
-          icon={<FloppyDisk size={16} />}
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
+          onPress={handleSave}
+          isDisabled={updateMutation.isPending}
         >
-          {updateMutation.isPending ? 'Saving...' : 'Save Schema'}
+          <FloppyDisk size={16} />
+          <span>{updateMutation.isPending ? 'Saving...' : 'Save Schema'}</span>
         </Button>
       </div>
 
-      {successMsg && (
-        <div
-          style={{
-            padding: '0.75rem',
-            backgroundColor: '#064e3b33',
-            color: '#6ee7b7',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            border: '1px solid #10b981',
-          }}
-        >
-          {successMsg}
-        </div>
-      )}
-
       {/* Fields Designer */}
-      <div {...stylex.props(styles.section)}>
-        <div {...stylex.props(styles.sectionHeader)}>
-          <h2 {...stylex.props(styles.sectionTitle)}>Fields Definition</h2>
-          <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={handleAddField}>
-            Add Field
-          </Button>
-        </div>
-
-        {fields.length === 0 ? (
-          <div style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>
-            No custom fields defined. Click "Add Field" to add columns.
+      <Card variant="default">
+        <CardHeader>
+          <div {...stylex.props(styles.sectionHeader)}>
+            <h2 {...stylex.props(styles.sectionTitle)}>Fields Definition</h2>
+            <Button size="sm" variant="secondary" onPress={handleAddField}>
+              <Plus size={14} />
+              <span>Add Field</span>
+            </Button>
           </div>
-        ) : (
-          fields.map((field, idx) => (
-            <div key={idx} {...stylex.props(styles.fieldRow)}>
-              <Input
-                placeholder="Field name"
-                value={field.name}
-                onChange={(e) => handleFieldChange(idx, 'name', e.target.value)}
-              />
-              <Select
-                value={field.type}
-                onChange={(e) => handleFieldChange(idx, 'type', e.target.value)}
-                options={[
-                  { value: 'text', label: 'Text' },
-                  { value: 'number', label: 'Number' },
-                  { value: 'bool', label: 'Boolean' },
-                  { value: 'email', label: 'Email' },
-                  { value: 'url', label: 'URL' },
-                  { value: 'file', label: 'File Attachment' },
-                  { value: 'json', label: 'JSON Object' },
-                  { value: 'editor', label: 'Rich Text / Editor' },
-                  { value: 'select', label: 'Single Select' },
-                  { value: 'relation', label: 'Relation (Foreign Key)' },
-                ]}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', color: '#94a3b8' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(field.required)}
-                  onChange={(e) => handleFieldChange(idx, 'required', e.target.checked)}
-                />
-                Required
-              </label>
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={<Trash size={16} color="#ef4444" />}
-                onClick={() => handleRemoveField(idx)}
-              />
+        </CardHeader>
+        <CardBody>
+          {fields.length === 0 ? (
+            <div style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>
+              No custom fields defined. Click "Add Field" to add columns.
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {fields.map((field, idx) => (
+                <div key={idx} {...stylex.props(styles.fieldRow)}>
+                  <TextField
+                    placeholder="Field name"
+                    value={field.name}
+                    onChange={(val) => handleFieldChange(idx, 'name', val)}
+                  />
+                  <Select
+                    placeholder="Select Type"
+                    selectedKey={field.type}
+                    onSelectionChange={(val) => handleFieldChange(idx, 'type', String(val))}
+                  >
+                    <SelectItem id="text">Text</SelectItem>
+                    <SelectItem id="number">Number</SelectItem>
+                    <SelectItem id="bool">Boolean</SelectItem>
+                    <SelectItem id="email">Email</SelectItem>
+                    <SelectItem id="url">URL</SelectItem>
+                    <SelectItem id="file">File Attachment</SelectItem>
+                    <SelectItem id="json">JSON Object</SelectItem>
+                    <SelectItem id="editor">Rich Text / Editor</SelectItem>
+                    <SelectItem id="select">Single Select</SelectItem>
+                    <SelectItem id="relation">Relation (Foreign Key)</SelectItem>
+                  </Select>
+                  <Checkbox
+                    isSelected={Boolean(field.required)}
+                    onChange={(checked) => handleFieldChange(idx, 'required', checked)}
+                  >
+                    Required
+                  </Checkbox>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Remove field ${field.name || idx}`}
+                    onPress={() => handleRemoveField(idx)}
+                  >
+                    <Trash size={16} color="#ef4444" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Access Rules (CEL) */}
-      <div {...stylex.props(styles.section)}>
-        <div {...stylex.props(styles.sectionHeader)}>
-          <h2 {...stylex.props(styles.sectionTitle)}>
-            <LockKey size={18} />
-            <span>API Access Rules (CEL Expressions)</span>
-          </h2>
-        </div>
-        <p style={{ color: '#94a3b8', fontSize: '0.8125rem', margin: 0 }}>
-          Leave blank for public access. Set to <code>@request.auth.id != ""</code> for authenticated users only.
-        </p>
+      <Card variant="default">
+        <CardHeader>
+          <div {...stylex.props(styles.sectionHeader)}>
+            <h2 {...stylex.props(styles.sectionTitle)}>
+              <LockKey size={18} />
+              <span>API Access Rules (CEL Expressions)</span>
+            </h2>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', marginBottom: '1rem' }}>
+            Leave blank for public access. Set to <code>@request.auth.id != ""</code> for authenticated users only.
+          </p>
 
-        <div {...stylex.props(styles.rulesGrid)}>
-          <Input
-            label="List Rule (GET /api/moul/:name/records)"
-            placeholder="e.g. status = 'published' || @request.auth.id != ''"
-            value={rules.listRule || ''}
-            onChange={(e) => setRules({ ...rules, listRule: e.target.value })}
-          />
-          <Input
-            label="View Rule (GET /api/moul/:name/records/:id)"
-            placeholder="e.g. id = @request.auth.id"
-            value={rules.viewRule || ''}
-            onChange={(e) => setRules({ ...rules, viewRule: e.target.value })}
-          />
-          <Input
-            label="Create Rule (POST /api/moul/:name/records)"
-            placeholder="e.g. @request.auth.id != ''"
-            value={rules.createRule || ''}
-            onChange={(e) => setRules({ ...rules, createRule: e.target.value })}
-          />
-          <Input
-            label="Update Rule (PATCH /api/moul/:name/records/:id)"
-            placeholder="e.g. user_id = @request.auth.id"
-            value={rules.updateRule || ''}
-            onChange={(e) => setRules({ ...rules, updateRule: e.target.value })}
-          />
-          <Input
-            label="Delete Rule (DELETE /api/moul/:name/records/:id)"
-            placeholder="e.g. user_id = @request.auth.id"
-            value={rules.deleteRule || ''}
-            onChange={(e) => setRules({ ...rules, deleteRule: e.target.value })}
-          />
-        </div>
-      </div>
+          <div {...stylex.props(styles.rulesGrid)}>
+            <TextField
+              label="List Rule (GET /api/moul/:name/records)"
+              placeholder="e.g. status = 'published' || @request.auth.id != ''"
+              value={rules.listRule || ''}
+              onChange={(val) => setRules({ ...rules, listRule: val })}
+            />
+            <TextField
+              label="View Rule (GET /api/moul/:name/records/:id)"
+              placeholder="e.g. id = @request.auth.id"
+              value={rules.viewRule || ''}
+              onChange={(val) => setRules({ ...rules, viewRule: val })}
+            />
+            <TextField
+              label="Create Rule (POST /api/moul/:name/records)"
+              placeholder="e.g. @request.auth.id != ''"
+              value={rules.createRule || ''}
+              onChange={(val) => setRules({ ...rules, createRule: val })}
+            />
+            <TextField
+              label="Update Rule (PATCH /api/moul/:name/records/:id)"
+              placeholder="e.g. user_id = @request.auth.id"
+              value={rules.updateRule || ''}
+              onChange={(val) => setRules({ ...rules, updateRule: val })}
+            />
+            <TextField
+              label="Delete Rule (DELETE /api/moul/:name/records/:id)"
+              placeholder="e.g. user_id = @request.auth.id"
+              value={rules.deleteRule || ''}
+              onChange={(val) => setRules({ ...rules, deleteRule: val })}
+            />
+          </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }
+

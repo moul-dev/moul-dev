@@ -1,9 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api, getAuthToken, setAuthToken, removeAuthToken, getStoredAdminKey, setStoredAdminKey, removeStoredAdminKey } from '../api/client';
 
+const USER_STORAGE_KEY = 'mould_admin_user';
+
+export interface UserInfo {
+  id?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+}
+
 interface AuthContextType {
   token: string | null;
   adminKey: string | null;
+  user: UserInfo | null;
   isAuthenticated: boolean;
   needsSetup: boolean;
   isLoading: boolean;
@@ -15,11 +25,32 @@ interface AuthContextType {
   checkSetup: (key?: string) => Promise<boolean>;
 }
 
+function getStoredUser(): UserInfo | null {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+    const token = getAuthToken();
+    if (token && token.includes('.')) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return {
+        id: payload.id || payload.sub,
+        username: payload.username || payload.identity || 'admin',
+        email: payload.email || '',
+        role: payload.role || 'Admin',
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(getAuthToken());
   const [adminKey, setAdminKey] = useState<string | null>(getStoredAdminKey());
+  const [user, setUser] = useState<UserInfo | null>(getStoredUser());
   const [needsSetup, setNeedsSetup] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -67,10 +98,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Authentication succeeded but no token was returned');
       }
 
+      const userData: UserInfo = res.record || {
+        username: trimmedIdentity.includes('@') ? trimmedIdentity.split('@')[0] : trimmedIdentity,
+        email: trimmedIdentity.includes('@') ? trimmedIdentity : '',
+        role: 'Admin',
+      };
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      setUser(userData);
       setAuthToken(res.token);
       setToken(res.token);
     } catch (err: any) {
       removeAuthToken();
+      localStorage.removeItem(USER_STORAGE_KEY);
+      setUser(null);
       setToken(null);
       throw new Error(err.message || 'Invalid Admin Key or root credentials');
     }
@@ -112,6 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     removeAuthToken();
     removeStoredAdminKey();
+    localStorage.removeItem(USER_STORAGE_KEY);
+    setUser(null);
     setToken(null);
     setAdminKey(null);
   };
@@ -123,6 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         token,
         adminKey,
+        user: user || (isAuthenticated ? { username: 'admin', role: 'Admin' } : null),
         isAuthenticated,
         needsSetup,
         isLoading,

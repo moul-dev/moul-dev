@@ -4,6 +4,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { QueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
+import { Button } from '@moul-dev/ui';
 import { AuthProvider } from '../context/AuthContext';
 import { colors, fonts, spacing } from '../theme/tokens.stylex';
 
@@ -49,19 +50,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       <p style={{ color: '#94a3b8', maxWidth: '600px', marginBottom: '1.5rem' }}>
         {error.message || 'An unexpected error occurred in the admin console.'}
       </p>
-      <button
-        onClick={() => window.location.reload()}
-        style={{
-          padding: '0.5rem 1rem',
-          backgroundColor: '#0ea5e9',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '0.375rem',
-          cursor: 'pointer',
-        }}
+      <Button
+        variant="primary"
+        onPress={() => window.location.reload()}
       >
         Reload Console
-      </button>
+      </Button>
     </div>
   ),
 });

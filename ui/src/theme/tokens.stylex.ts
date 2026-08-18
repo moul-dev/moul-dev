@@ -1,73 +1,75 @@
 import * as stylex from '@stylexjs/stylex';
 
 export const colors = stylex.defineVars({
-  // Backgrounds
-  bgApp: '#0b0f17',
-  bgSurface: '#111827',
-  bgCard: '#1e293b',
-  bgCardHover: '#243248',
-  bgCardActive: '#2d3f5a',
-  bgSidebar: '#0f172a',
-  bgHeader: '#0f172aee',
-  bgInput: '#0f172a',
-  bgInputFocus: '#1e293b',
+  // Backgrounds: var(--xg2wbmg) is the exact Moul UI colorBgSubtle token (pure neutral dark)
+  bgApp: 'var(--xg2wbmg)',
+  bgSurface: 'var(--xg2wbmg)',
+  bgCard: 'var(--x1qnu6yg)',
+  bgCardHover: 'var(--x14tkvwa)',
+  bgCardActive: 'var(--xle5duh)',
+  bgSidebar: 'var(--xg2wbmg)',
+  bgHeader: 'var(--xg2wbmg)',
+  bgInput: 'var(--xg2wbmg)',
+  bgInputFocus: 'var(--x1qnu6yg)',
 
-  // Accents (Cyan / Blue palette for mould)
-  primary: '#0ea5e9',
-  primaryHover: '#38bdf8',
-  primaryActive: '#0284c7',
-  primaryMuted: '#0284c726',
-  primaryText: '#e0f2fe',
+  // Accents
+  primary: 'var(--x11vz4nw)',
+  primaryHover: 'var(--x1smr4m2)',
+  primaryActive: 'var(--x19wncxt)',
+  primaryMuted: 'var(--x27tw8h)',
+  primaryText: '#ffffff',
 
   // Status & Feedback
-  success: '#10b981',
-  successBg: '#064e3b33',
-  successText: '#6ee7b7',
-  warning: '#f59e0b',
-  warningBg: '#78350f33',
-  warningText: '#fcd34d',
-  danger: '#ef4444',
-  dangerBg: '#7f1d1d33',
-  dangerText: '#fca5a5',
-  info: '#6366f1',
-  infoBg: '#312e8133',
-  infoText: '#a5b4fc',
+  success: 'var(--xo79180)',
+  successBg: 'var(--xvq252x)',
+  successText: 'var(--x1eg0uv7)',
+  warning: 'var(--x9boa8o)',
+  warningBg: 'var(--xg2n39v)',
+  warningText: 'var(--xxkj1oe)',
+  danger: 'var(--xgm7y0w)',
+  dangerBg: 'var(--x1u4wyvx)',
+  dangerText: 'var(--xywa26s)',
+  info: 'var(--x11vz4nw)',
+  infoBg: 'var(--xfh678y)',
+  infoText: 'var(--x189jvvz)',
 
   // Text
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  textInverse: '#0f172a',
+  textPrimary: 'var(--x1jfchzy)',
+  textSecondary: 'var(--x1ol9w3z)',
+  textMuted: 'var(--x7rwqrp)',
+  textInverse: 'var(--x21z8aa)',
 
   // Borders
-  border: '#334155',
-  borderMuted: '#1e293b',
-  borderHighlight: '#475569',
-  borderPrimary: '#0ea5e9',
+  border: 'var(--x4npmm6)',
+  borderMuted: 'var(--xekkakv)',
+  borderHighlight: 'var(--x6l5ye8)',
+  borderPrimary: 'var(--x79fgis)',
 });
 
 export const spacing = stylex.defineVars({
   none: '0px',
   xxs: '2px',
-  xs: '4px',
-  sm: '8px',
-  md: '12px',
-  lg: '16px',
-  xl: '24px',
-  xxl: '32px',
+  xs: 'var(--x1jforli)',
+  sm: 'var(--x9epbqz)',
+  md: 'var(--x1fim08e)',
+  lg: 'var(--x1djehx3)',
+  xl: 'var(--x1xsmz2k)',
+  xxl: 'var(--x3461u0)',
   xxxl: '48px',
 });
 
 export const radii = stylex.defineVars({
   none: '0px',
-  sm: '4px',
-  md: '8px',
-  lg: '12px',
-  xl: '16px',
+  sm: 'var(--xcxkm4p)',
+  md: 'var(--x11qts0k)',
+  lg: 'var(--x8ikvy7)',
+  xl: 'var(--x8ikvy7)',
   full: '9999px',
 });
 
 export const fonts = stylex.defineVars({
-  sans: 'var(--font-sans)',
-  mono: 'var(--font-mono)',
+  sans: 'var(--xb7uvbd)',
+  mono: 'var(--font-mono, ui-monospace, monospace)',
 });
+
+
