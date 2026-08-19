@@ -128,7 +128,7 @@ html>body[data-scroll-locked] {
 
 .dark .liquid-glass-glow {
   background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.82 0.15 calc(var(--brand-hue, 198) + 10) / 0.07),
+      oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) + 10) / 0.07),
       transparent 80%);
 }
 

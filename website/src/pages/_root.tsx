@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Provider } from '@/components/provider'
+import { themeInitScript } from '@/lib/theme'
 import '@/styles/globals.css'
 
 export default async function RootElement({
@@ -11,6 +12,7 @@ export default async function RootElement({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body data-version="1.0" className="flex flex-col min-h-screen">
         <Provider>{children}</Provider>

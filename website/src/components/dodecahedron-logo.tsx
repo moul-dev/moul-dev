@@ -741,7 +741,7 @@ export function DodecahedronLogo() {
           className="w-full h-full block touch-none"
           style={{
             filter:
-              'drop-shadow(0 0 35px oklch(0.70 0.16 var(--brand-hue, 198) / 0.2))',
+              'drop-shadow(0 0 35px oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.2))',
           }}
         />
       )}
