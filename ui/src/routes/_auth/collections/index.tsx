@@ -16,12 +16,14 @@ import {
   CardFooter,
   Badge,
   Button,
-  ModalOverlay,
-  Modal,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  DrawerOverlay,
+  Drawer,
+  DrawerDialog,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerCloseButton,
+  DrawerBody,
+  DrawerFooter,
   TextField,
   Select,
   SelectItem,
@@ -96,7 +98,7 @@ const styles = stylex.create({
     display: 'flex',
     gap: spacing.xs,
   },
-  modalForm: {
+  drawerForm: {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
@@ -283,16 +285,20 @@ function CollectionsPage() {
         </div>
       )}
 
-      {/* Create Collection Modal */}
-      <ModalOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
-        <Modal size="md">
-          <ModalDialog>
-            <ModalHeader>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Create New Collection</h2>
-            </ModalHeader>
-            <form onSubmit={handleCreate}>
-              <ModalBody>
-                <div {...stylex.props(styles.modalForm)}>
+      {/* Create Collection Drawer */}
+      <DrawerOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
+        <Drawer placement="right" size="md">
+          <DrawerDialog>
+            <form
+              onSubmit={handleCreate}
+              style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+            >
+              <DrawerHeader>
+                <DrawerTitle>Create New Collection</DrawerTitle>
+                <DrawerCloseButton />
+              </DrawerHeader>
+              <DrawerBody>
+                <div {...stylex.props(styles.drawerForm)}>
                   {error && <Alert variant="error" description={error} />}
 
                   <TextField
@@ -316,19 +322,19 @@ function CollectionsPage() {
                     <SelectItem id="analytic">Analytic (Time-series & visitor tracking)</SelectItem>
                   </Select>
                 </div>
-              </ModalBody>
-              <ModalFooter>
+              </DrawerBody>
+              <DrawerFooter>
                 <Button type="button" variant="ghost" onPress={() => setIsCreateOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" variant="primary" isDisabled={createMutation.isPending}>
                   {createMutation.isPending ? 'Creating...' : 'Create Collection'}
                 </Button>
-              </ModalFooter>
+              </DrawerFooter>
             </form>
-          </ModalDialog>
-        </Modal>
-      </ModalOverlay>
+          </DrawerDialog>
+        </Drawer>
+      </DrawerOverlay>
     </div>
   );
 }

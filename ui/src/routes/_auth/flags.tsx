@@ -9,12 +9,14 @@ import {
   Badge,
   Button,
   Switch,
-  ModalOverlay,
-  Modal,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  DrawerOverlay,
+  Drawer,
+  DrawerDialog,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerCloseButton,
+  DrawerBody,
+  DrawerFooter,
   TextField,
   Checkbox,
 } from '@moul-dev/ui';
@@ -83,7 +85,7 @@ const styles = stylex.create({
     color: colors.textSecondary,
     fontFamily: fonts.sans,
   },
-  modalForm: {
+  drawerForm: {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
@@ -221,16 +223,20 @@ function FeatureFlagsPage() {
         )}
       </div>
 
-      {/* Create Flag Modal */}
-      <ModalOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
-        <Modal size="md">
-          <ModalDialog>
-            <ModalHeader>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Create Feature Flag</h2>
-            </ModalHeader>
-            <form onSubmit={handleCreate}>
-              <ModalBody>
-                <div {...stylex.props(styles.modalForm)}>
+      {/* Create Flag Drawer */}
+      <DrawerOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
+        <Drawer placement="right" size="md">
+          <DrawerDialog>
+            <form
+              onSubmit={handleCreate}
+              style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+            >
+              <DrawerHeader>
+                <DrawerTitle>Create Feature Flag</DrawerTitle>
+                <DrawerCloseButton />
+              </DrawerHeader>
+              <DrawerBody>
+                <div {...stylex.props(styles.drawerForm)}>
                   <TextField
                     label="Flag Key"
                     placeholder="e.g. enable_beta_dashboard"
@@ -252,19 +258,19 @@ function FeatureFlagsPage() {
                     Enable by default
                   </Checkbox>
                 </div>
-              </ModalBody>
-              <ModalFooter>
+              </DrawerBody>
+              <DrawerFooter>
                 <Button type="button" variant="ghost" onPress={() => setIsCreateOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" variant="primary" isDisabled={createMutation.isPending}>
                   {createMutation.isPending ? 'Creating...' : 'Create Flag'}
                 </Button>
-              </ModalFooter>
+              </DrawerFooter>
             </form>
-          </ModalDialog>
-        </Modal>
-      </ModalOverlay>
+          </DrawerDialog>
+        </Drawer>
+      </DrawerOverlay>
     </div>
   );
 }

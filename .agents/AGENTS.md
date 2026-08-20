@@ -8,5 +8,5 @@
 - **Global Stylesheet**: Ensure `import '@moul-dev/ui/style.css';` is included at the application root.
 - **React Aria Events**: Always use `onPress` instead of `onClick` on buttons and interactive triggers.
 - **State & Accessibility**: Use standard React Aria props (`isSelected`, `selectedKey`, `onSelectionChange`, `isOpen`, `onOpenChange`) and ensure all icon-only buttons have an `aria-label`.
-- **Compound Structure**: Follow compound component conventions for `Card`, `Modal`, `AlertDialog`, `Tabs`, `Table`, and `Sidebar`.
+- **Compound Structure**: Follow compound component conventions for `Card`, `Modal`, `Drawer`, `AlertDialog`, `Tabs`, `Table`, and `Sidebar`.
 

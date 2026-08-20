@@ -25,12 +25,14 @@ import {
   SearchField,
   TextField,
   Checkbox,
-  ModalOverlay,
-  Modal,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  DrawerOverlay,
+  Drawer,
+  DrawerDialog,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerCloseButton,
+  DrawerBody,
+  DrawerFooter,
   toastQueue,
 } from '@moul-dev/ui';
 import { colors, spacing, radii, fonts } from '../../../theme/tokens.stylex';
@@ -79,12 +81,10 @@ const styles = stylex.create({
   searchBox: {
     width: '360px',
   },
-  modalForm: {
+  drawerForm: {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing.md,
-    maxHeight: '65vh',
-    overflowY: 'auto',
     paddingInline: spacing.xxs,
   },
   emptyState: {
@@ -121,7 +121,7 @@ function RecordsPage() {
   const queryClient = useQueryClient();
 
   const [activeRecord, setActiveRecord] = useState<any | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
@@ -161,7 +161,7 @@ function RecordsPage() {
     mutationFn: (data: any) => api.createRecord(moulName, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
-      setIsModalOpen(false);
+      setIsDrawerOpen(false);
       toastQueue.add({
         title: 'Record Created',
         description: 'New record created successfully.',
@@ -181,7 +181,7 @@ function RecordsPage() {
     mutationFn: ({ id, data }: { id: string; data: any }) => api.updateRecord(moulName, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
-      setIsModalOpen(false);
+      setIsDrawerOpen(false);
       toastQueue.add({
         title: 'Record Updated',
         description: 'Record updated successfully.',
@@ -220,14 +220,14 @@ function RecordsPage() {
     setFormData({});
     setIsCreating(true);
     setActiveRecord(null);
-    setIsModalOpen(true);
+    setIsDrawerOpen(true);
   };
 
   const handleOpenEdit = (rec: any) => {
     setFormData({ ...rec });
     setIsCreating(false);
     setActiveRecord(rec);
-    setIsModalOpen(true);
+    setIsDrawerOpen(true);
   };
 
   const handleSaveRecord = (e: React.FormEvent) => {
@@ -421,18 +421,22 @@ function RecordsPage() {
         </div>
       </div>
 
-      {/* Record Edit/Create Modal */}
-      <ModalOverlay isOpen={isModalOpen} onOpenChange={setIsModalOpen} isDismissable>
-        <Modal size="lg">
-          <ModalDialog>
-            <ModalHeader>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>
-                {isCreating ? `Create ${moulName} Record` : `Edit Record #${activeRecord?.id}`}
-              </h2>
-            </ModalHeader>
-            <form onSubmit={handleSaveRecord}>
-              <ModalBody>
-                <div {...stylex.props(styles.modalForm)}>
+      {/* Record Edit/Create Drawer */}
+      <DrawerOverlay isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} isDismissable>
+        <Drawer placement="right" size="lg">
+          <DrawerDialog>
+            <form
+              onSubmit={handleSaveRecord}
+              style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+            >
+              <DrawerHeader>
+                <DrawerTitle>
+                  {isCreating ? `Create ${moulName} Record` : `Edit Record #${activeRecord?.id}`}
+                </DrawerTitle>
+                <DrawerCloseButton />
+              </DrawerHeader>
+              <DrawerBody>
+                <div {...stylex.props(styles.drawerForm)}>
                   {moul?.type === 'auth' && (
                     <>
                       <TextField
@@ -495,9 +499,9 @@ function RecordsPage() {
                     </div>
                   ))}
                 </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button type="button" variant="ghost" onPress={() => setIsModalOpen(false)}>
+              </DrawerBody>
+              <DrawerFooter>
+                <Button type="button" variant="ghost" onPress={() => setIsDrawerOpen(false)}>
                   Cancel
                 </Button>
                 <Button
@@ -507,11 +511,11 @@ function RecordsPage() {
                 >
                   {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Record'}
                 </Button>
-              </ModalFooter>
+              </DrawerFooter>
             </form>
-          </ModalDialog>
-        </Modal>
-      </ModalOverlay>
+          </DrawerDialog>
+        </Drawer>
+      </DrawerOverlay>
     </div>
   );
 }

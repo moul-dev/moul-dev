@@ -87,9 +87,10 @@ Icon-only buttons or interactive elements without visible text **must** include 
 ```
 
 ### Rule 5: Use Compound Component Patterns
-Components such as `Modal`, `AlertDialog`, `Card`, `Tabs`, `Table`, `Select`, and `Sidebar` use declarative compound subcomponents:
+Components such as `Modal`, `Drawer`, `AlertDialog`, `Card`, `Tabs`, `Table`, `Select`, and `Sidebar` use declarative compound subcomponents:
 - `Card`: `<Card>`, `<CardHeader>`, `<CardBody>`, `<CardFooter>`
 - `Modal`: `<ModalOverlay>`, `<Modal>`, `<ModalDialog>`, `<ModalHeader>`, `<ModalBody>`, `<ModalFooter>`
+- `Drawer`: `<DrawerOverlay>`, `<Drawer>`, `<DrawerDialog>`, `<DrawerHeader>`, `<DrawerTitle>`, `<DrawerCloseButton>`, `<DrawerBody>`, `<DrawerFooter>`
 - `AlertDialog`: `<AlertDialog>`, `<AlertDialogHeader>`, `<AlertDialogBody>`, `<AlertDialogFooter>`
 - `Popover`: `<PopoverTrigger>`, `<Popover>`, `<PopoverDialog>`
 - `Tooltip`: `<TooltipTrigger>`, `<Tooltip>`
@@ -277,6 +278,43 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator, REGEXP_ONLY_D
 ---
 
 ### Overlays & Dialogs
+
+#### `Drawer`
+```tsx
+import {
+  DrawerOverlay,
+  Drawer,
+  DrawerDialog,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerCloseButton,
+  DrawerBody,
+  DrawerFooter,
+  Button
+} from '@moul-dev/ui';
+
+// Placements: 'right' | 'left' | 'top' | 'bottom'
+// Sizes: 'sm' | 'md' | 'lg' | 'full'
+<DrawerOverlay isOpen={isOpen} onOpenChange={setIsOpen} isDismissable>
+  <Drawer placement="right" size="md">
+    <DrawerDialog>
+      <DrawerHeader>
+        <DrawerTitle>Create API Key</DrawerTitle>
+        <DrawerCloseButton />
+      </DrawerHeader>
+      <DrawerBody>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          API keys allow external systems to securely interact with your data.
+        </p>
+      </DrawerBody>
+      <DrawerFooter>
+        <Button variant="outline" onPress={() => setIsOpen(false)}>Cancel</Button>
+        <Button variant="primary" onPress={() => { handleCreate(); setIsOpen(false); }}>Generate</Button>
+      </DrawerFooter>
+    </DrawerDialog>
+  </Drawer>
+</DrawerOverlay>
+```
 
 #### `Modal`
 ```tsx
