@@ -36,10 +36,13 @@ const styles = stylex.create({
     gap: spacing.sm,
     textDecoration: 'none',
     width: '100%',
+    minWidth: 0,
+    overflow: 'hidden',
   },
   brandIcon: {
     width: '32px',
     height: '32px',
+    minWidth: '32px',
     borderRadius: radii.md,
     backgroundColor: colors.primaryMuted,
     color: colors.primary,
@@ -49,6 +52,15 @@ const styles = stylex.create({
     fontWeight: 700,
     fontSize: '1rem',
     fontFamily: fonts.mono,
+    flexShrink: 0,
+  },
+  brandTextWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 0,
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
   },
   brandName: {
     fontSize: '1.125rem',
@@ -63,6 +75,8 @@ const styles = stylex.create({
     justifyContent: 'space-between',
     width: '100%',
     gap: spacing.xs,
+    minWidth: 0,
+    overflow: 'hidden',
   },
   userInfo: {
     display: 'flex',
@@ -96,6 +110,10 @@ const styles = stylex.create({
   },
   main: {
     backgroundColor: colors.bgApp,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
@@ -111,16 +129,21 @@ interface NavLinkConfig {
   icon: React.ReactNode;
 }
 
-const mainNavLinks: NavLinkConfig[] = [
+const platformNavLinks: NavLinkConfig[] = [
   { to: '/', label: 'Overview', icon: <SquaresFour size={18} /> },
   { to: '/collections', label: 'Collections', icon: <Database size={18} /> },
   { to: '/realtime', label: 'Realtime SSE', icon: <Broadcast size={18} /> },
   { to: '/analytics', label: 'Analytics & Logs', icon: <ChartLineUp size={18} /> },
+];
+
+const systemNavLinks: NavLinkConfig[] = [
   { to: '/workers', label: 'Worker Queue', icon: <Queue size={18} /> },
   { to: '/flags', label: 'Feature Flags', icon: <Flag size={18} /> },
   { to: '/settings', label: 'Settings', icon: <Gear size={18} /> },
   { to: '/docs', label: 'API Reference', icon: <BookOpen size={18} /> },
 ];
+
+const allNavLinks = [...platformNavLinks, ...systemNavLinks];
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -133,7 +156,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const currentPath = routerState.location.pathname;
 
   const currentSelectedKey =
-    mainNavLinks.find(
+    allNavLinks.find(
       (link) => link.to !== '/' && currentPath.startsWith(link.to)
     )?.to || '/';
 
@@ -146,23 +169,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       selectedKey={currentSelectedKey}
       onSelectionChange={(key) => navigate({ to: key })}
       variant="solid"
+      style={{ height: '100vh', width: '100vw' }}
     >
       <SidebarAside showCollapseToggle>
         <SidebarHeader>
           <Link to="/" {...stylex.props(styles.brand)}>
             <div {...stylex.props(styles.brandIcon)}>M</div>
-            <span {...stylex.props(styles.brandName)}>mould</span>
-            <Badge variant="primary">ADMIN</Badge>
+            <div {...stylex.props(styles.brandTextWrapper)}>
+              <span {...stylex.props(styles.brandName)}>mould</span>
+              <Badge variant="primary">ADMIN</Badge>
+            </div>
           </Link>
         </SidebarHeader>
 
-        <SidebarGroup collapsible={false}>
-          {mainNavLinks.map((link) => (
+        <SidebarGroup title="Platform" collapsible defaultExpanded>
+          {platformNavLinks.map((link) => (
             <SidebarItem
               key={link.to}
               id={link.to}
               icon={link.icon}
-              isSelected={currentSelectedKey === link.to}
             >
               {link.label}
             </SidebarItem>
@@ -170,6 +195,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </SidebarGroup>
 
         <SidebarDivider />
+
+        <SidebarGroup title="System" collapsible defaultExpanded>
+          {systemNavLinks.map((link) => (
+            <SidebarItem
+              key={link.to}
+              id={link.to}
+              icon={link.icon}
+            >
+              {link.label}
+            </SidebarItem>
+          ))}
+        </SidebarGroup>
 
         <SidebarFooter showBorder>
           <div {...stylex.props(styles.footerContent)}>
@@ -191,7 +228,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               aria-label="Sign Out"
             >
               <SignOut size={16} />
-              <span>Sign Out</span>
             </Button>
           </div>
         </SidebarFooter>

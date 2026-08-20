@@ -42,7 +42,7 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider colorScheme="dark">
+        <ThemeProvider colorScheme="dark" style={{ height: '100%', width: '100%' }}>
           <ToastContainer />
           <RouterProvider router={router} />
         </ThemeProvider>

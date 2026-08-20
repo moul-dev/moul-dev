@@ -531,7 +531,7 @@ import {
     </SidebarGroup>
     <SidebarFooter showBorder>
       <div className="flex items-center gap-2">
-        <Avatar initials="AD" size="sm" />
+        <Avatar initials="AD" />
         <span className="text-sm font-medium">Alex Dev</span>
       </div>
     </SidebarFooter>
