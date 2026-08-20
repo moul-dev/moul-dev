@@ -1,11 +1,10 @@
 import React from 'react';
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { QueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { Button } from '@moul-dev/ui';
 import { AuthProvider } from '../context/AuthContext';
+import { AppDevtools } from '../devtools';
 import { colors, fonts, spacing } from '../theme/tokens.stylex';
 
 const styles = stylex.create({
@@ -64,12 +63,8 @@ function RootComponent() {
   return (
     <AuthProvider>
       <Outlet />
-      {process.env.NODE_ENV === 'development' && (
-        <>
-          <TanStackRouterDevtools position="bottom-right" />
-          <ReactQueryDevtools buttonPosition="bottom-left" />
-        </>
-      )}
+      <AppDevtools />
     </AuthProvider>
   );
 }
+

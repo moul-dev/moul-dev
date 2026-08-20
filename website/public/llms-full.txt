@@ -10,7 +10,7 @@
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
-- **Web Admin Console**: TanStack Router (file-based routing), Meta StyleX (`@stylexjs/stylex` with `@stylexjs/unplugin`), TanStack Table & Query, Phosphor Icons (`@phosphor-icons/react`), embedded via Go `//go:embed all:dist`.
+- **Web Admin Console**: TanStack Router (file-based routing), Meta StyleX (`@stylexjs/stylex` with `@stylexjs/unplugin`), TanStack Table & Query, Phosphor Icons (`@phosphor-icons/react`), and unified TanStack DevTools suite (`@tanstack/react-devtools`, `@tanstack/devtools-vite`, `@tanstack/devtools-event-client`) with typed runtime inspection, embedded via Go `//go:embed all:dist`.
 - **Database Abstraction**: `github.com/pocketbase/dbx`
 - **SQLite Engine**: `modernc.org/sqlite` (Pure Go, CGO-free)
 - **TUI Framework**: Charm Bubble Tea (`charm.land/bubbletea/v2`)

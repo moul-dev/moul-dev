@@ -1,4 +1,5 @@
 // API Client for mould Admin Console
+import { emitApiRequest } from '../devtools/events';
 
 const TOKEN_KEY = 'mould_admin_token';
 const ADMIN_KEY_STORAGE = 'mould_admin_key';
@@ -41,6 +42,8 @@ export class ApiError extends Error {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
+  const method = options.method || 'GET';
+  const startTime = performance.now();
 
   // Add Auth Token if available
   const token = getAuthToken();
@@ -58,9 +61,30 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(endpoint, {
-    ...options,
-    headers,
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      ...options,
+      headers,
+    });
+  } catch (err: any) {
+    const durationMs = Math.round(performance.now() - startTime);
+    emitApiRequest({
+      method,
+      url: endpoint,
+      status: 0,
+      durationMs,
+      error: err.message,
+    });
+    throw err;
+  }
+
+  const durationMs = Math.round(performance.now() - startTime);
+  emitApiRequest({
+    method,
+    url: endpoint,
+    status: res.status,
+    durationMs,
   });
 
   if (!res.ok) {

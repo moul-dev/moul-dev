@@ -171,9 +171,25 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 
 ---
 
-## 7. Production Deployment Instructions
+## 7. Web Admin Console & TanStack DevTools Architecture
+
+The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
+
+### DevTools Architecture & Capabilities
+- **Unified Framework Adapter**: `<AppDevtools />` wraps `<TanStackDevtools />` from `@tanstack/react-devtools` mounted once at the root route (`__root.tsx`).
+- **Tabbed Plugin System**: Consolidates first-party library panels (`TanStackRouterDevtoolsPanel`, `ReactQueryDevtoolsPanel`) and product-specific panels (`MoulDevtoolsPanel`) into a single docked container.
+- **Typed Event Inspection (`@tanstack/devtools-event-client`)**: Uses namespaced, type-safe events (`auth:state-change`, `api:request`, `app:action`, `system:ping`) to monitor runtime state transitions, active authentication, and API latency.
+- **Vite Integration (`@tanstack/devtools-vite`)**:
+  - **Source Inspection**: Hold `Shift` + `Alt` + `Ctrl/Meta` and hover any DOM element to inspect and jump directly to its source file in the IDE.
+  - **Client/Server Console Piping**: Pipes browser console logs to the Vite dev terminal and vice versa.
+  - **Zero Production Overhead**: DevTools code, imports, and JSX are automatically stripped in production builds (`removeDevtoolsOnBuild: true`).
+
+---
+
+## 8. Production Deployment Instructions
 
 When assisting users with deploying `mould` to production on **Ubuntu Server 26.04 LTS**:
 - Refer to the dedicated LXD system container, Tailscale, and Cloudflare Tunnel deployment guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md).
 - Ensure host firewall rules close public SSH (port 22) after configuring Tailscale, and route public traffic via `cloudflared`.
+
 

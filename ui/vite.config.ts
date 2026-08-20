@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { devtools } from '@tanstack/devtools-vite';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import stylex from '@stylexjs/unplugin';
 import path from 'path';
@@ -7,6 +8,15 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    devtools({
+      removeDevtoolsOnBuild: true,
+      injectSource: {
+        enabled: true,
+      },
+      consolePiping: {
+        enabled: true,
+      },
+    }),
     TanStackRouterVite({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
