@@ -3,32 +3,32 @@ import * as stylex from '@stylexjs/stylex';
 import { useRouterState, Link as RouterLink } from '@tanstack/react-router';
 import { ShieldCheck, Cpu } from '@phosphor-icons/react';
 import { Breadcrumbs, BreadcrumbItem, Badge, Link } from '@moul-dev/ui';
-import { colors, spacing } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 
 const styles = stylex.create({
   header: {
     height: '64px',
-    backgroundColor: colors.bgHeader,
+    backgroundColor: tokens.colorBgSubtle,
     borderBottomWidth: 1,
     borderBottomStyle: 'solid',
-    borderBottomColor: colors.borderMuted,
+    borderBottomColor: tokens.colorBorderSubtle,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingInline: spacing.xl,
+    paddingInline: tokens.spacing6,
     position: 'sticky',
     top: 0,
-    zIndex: 100,
+    zIndex: tokens.zIndexBase,
   },
   actions: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: tokens.spacing2,
   },
   badgeContent: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
   },
 });
 

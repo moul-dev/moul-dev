@@ -218,7 +218,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 The console is built using a modern, type-safe stack:
 - **UI Component System**: **Moul UI (`@moul-dev/ui`)** built on **React Aria Components** and **StyleX** for accessible, zero-runtime atomic UI components.
 - **Routing**: **TanStack Router** with file-based routing (`ui/src/routes/`), generated type-safe route trees, typed Zod search schemas, route loaders, intent preloading (`preload: 'intent'`), and automatic code splitting.
-- **Styling**: **Meta StyleX (`@stylexjs/stylex`)** with `@stylexjs/unplugin` for zero-runtime / compile-time atomic CSS-in-JS and dedicated design tokens (`ui/src/theme/tokens.stylex.ts`).
+- **Styling**: **Meta StyleX (`@stylexjs/stylex`)** with `@stylexjs/unplugin` for zero-runtime / compile-time atomic CSS-in-JS and dedicated design tokens (`@moul-dev/ui/tokens.stylex`).
 - **Data & Tables**: **TanStack Query (`@tanstack/react-query`)** for asynchronous state caching and server synchronization.
 - **Iconography**: **Phosphor Icons (`@phosphor-icons/react`)**.
 - **Real-Time Updates**: Native Server-Sent Events (SSE) listener (`EventSource`) connected to `/api/moul/:name/subscribe` for instant record mutation logs.

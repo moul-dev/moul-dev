@@ -3,13 +3,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
 import { ArrowSquareOut } from '@phosphor-icons/react';
 import { Button, Card } from '@moul-dev/ui';
-import { colors, spacing, fonts } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
     height: 'calc(100vh - 120px)',
   },
   header: {
@@ -20,8 +20,8 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   iframeCard: {

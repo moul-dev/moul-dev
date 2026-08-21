@@ -3,9 +3,9 @@ import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import { QueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { Button } from '@moul-dev/ui';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { AuthProvider } from '../context/AuthContext';
 import { AppDevtools } from '../devtools';
-import { colors, fonts, spacing } from '../theme/tokens.stylex';
 
 const styles = stylex.create({
   loading: {
@@ -14,9 +14,9 @@ const styles = stylex.create({
     justifyContent: 'center',
     height: '100vh',
     width: '100vw',
-    backgroundColor: colors.bgApp,
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    backgroundColor: tokens.colorBgSubtle,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
   errorContainer: {
     display: 'flex',
@@ -24,10 +24,10 @@ const styles = stylex.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
-    padding: spacing.xl,
-    backgroundColor: colors.bgApp,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    padding: tokens.spacing6,
+    backgroundColor: tokens.colorBgSubtle,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     textAlign: 'center',
   },
 });

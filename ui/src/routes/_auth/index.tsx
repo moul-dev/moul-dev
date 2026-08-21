@@ -15,14 +15,14 @@ import {
   Badge,
   Button,
 } from '@moul-dev/ui';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xl,
+    gap: tokens.spacing6,
     maxWidth: '1200px',
   },
   header: {
@@ -33,30 +33,30 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
   },
   section: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: tokens.spacing4,
   },
   sectionTitle: {
     fontSize: '1.125rem',
     fontWeight: 600,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
   },
   collectionList: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: spacing.md,
+    gap: tokens.spacing4,
   },
   collectionCardInner: {
     display: 'flex',
@@ -67,23 +67,23 @@ const styles = stylex.create({
   },
   collectionName: {
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: tokens.colorFg,
     fontSize: '0.9375rem',
-    fontFamily: fonts.sans,
+    fontFamily: tokens.fontFamilyBase,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: tokens.spacing2,
   },
   emptyBox: {
-    padding: spacing.xl,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.md,
+    padding: tokens.spacing6,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.border,
+    borderColor: tokens.colorBorder,
     textAlign: 'center',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
 });
 
@@ -190,10 +190,10 @@ function DashboardPage() {
                             moul.type === 'auth'
                               ? 'primary'
                               : moul.type === 'worker'
-                              ? 'warning'
-                              : moul.type === 'analytic'
-                              ? 'success'
-                              : 'neutral'
+                                ? 'warning'
+                                : moul.type === 'analytic'
+                                  ? 'success'
+                                  : 'neutral'
                           }
                         >
                           {moul.type}

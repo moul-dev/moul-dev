@@ -23,6 +23,10 @@ export default defineConfig({
     }),
     stylex.vite({
       useCSSLayers: true,
+      unstable_moduleResolution: {
+        type: 'commonJS',
+        rootDir: __dirname,
+      },
     }),
     react(),
   ],

@@ -10,7 +10,7 @@ import {
   Button,
   Alert,
 } from '@moul-dev/ui';
-import { colors, spacing, radii, fonts } from '../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api, setStoredAdminKey } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,8 +21,8 @@ const styles = stylex.create({
     justifyContent: 'center',
     minHeight: '100vh',
     width: '100vw',
-    backgroundColor: colors.bgApp,
-    padding: spacing.lg,
+    backgroundColor: tokens.colorBgSubtle,
+    padding: tokens.spacing4,
   },
   cardWrapper: {
     width: '100%',
@@ -33,36 +33,36 @@ const styles = stylex.create({
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
     width: '100%',
   },
   icon: {
     width: '48px',
     height: '48px',
-    borderRadius: radii.lg,
-    backgroundColor: colors.primaryMuted,
-    color: colors.primary,
+    borderRadius: tokens.radiusLg,
+    backgroundColor: tokens.colorAlertBgAccent,
+    color: tokens.colorPrimary500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: tokens.spacing1,
   },
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   subtitle: {
     fontSize: '0.875rem',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: tokens.spacing3,
     width: '100%',
   },
 });

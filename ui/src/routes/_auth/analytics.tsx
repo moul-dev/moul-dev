@@ -18,14 +18,14 @@ import {
   Badge,
   Button,
 } from '@moul-dev/ui';
-import { colors, spacing, fonts, radii } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
     maxWidth: '1200px',
   },
   header: {
@@ -36,20 +36,20 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   emptyState: {
     textAlign: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.md,
+    padding: tokens.spacing6,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.border,
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    borderColor: tokens.colorBorder,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
 });
 

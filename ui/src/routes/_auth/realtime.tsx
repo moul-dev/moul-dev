@@ -11,14 +11,14 @@ import {
   Card,
   CardBody,
 } from '@moul-dev/ui';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api, getAuthToken } from '../../api/client';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
     maxWidth: '1200px',
   },
   header: {
@@ -29,8 +29,8 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   toolbar: {
@@ -42,33 +42,33 @@ const styles = stylex.create({
   controls: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: tokens.spacing3,
   },
   logContainer: {
-    backgroundColor: colors.bgSurface,
+    backgroundColor: tokens.colorBgSubtle,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
+    borderColor: tokens.colorBorder,
+    borderRadius: tokens.radiusLg,
+    padding: tokens.spacing3,
     minHeight: '480px',
     maxHeight: '680px',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
-    fontFamily: fonts.mono,
+    gap: tokens.spacing1,
+    fontFamily: 'var(--font-mono, monospace)',
   },
   logItem: {
-    backgroundColor: colors.bgCard,
-    padding: spacing.sm,
-    borderRadius: radii.md,
+    backgroundColor: tokens.colorBgElevated,
+    padding: tokens.spacing2,
+    borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.borderMuted,
+    borderColor: tokens.colorBorderSubtle,
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xxs,
+    gap: tokens.spacing1,
     fontSize: '0.8125rem',
   },
   logTop: {
@@ -77,21 +77,21 @@ const styles = stylex.create({
     justifyContent: 'space-between',
   },
   logTime: {
-    color: colors.textMuted,
+    color: tokens.colorFgSubtle,
     fontSize: '0.75rem',
   },
   logPayload: {
-    color: colors.textPrimary,
-    backgroundColor: colors.bgApp,
-    padding: spacing.xs,
-    borderRadius: radii.sm,
+    color: tokens.colorFg,
+    backgroundColor: tokens.colorBgSubtle,
+    padding: tokens.spacing1,
+    borderRadius: tokens.radiusSm,
     overflowX: 'auto',
   },
   emptyState: {
     textAlign: 'center',
-    padding: spacing.xxl,
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    padding: tokens.spacing8,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
 });
 

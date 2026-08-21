@@ -29,14 +29,14 @@ import {
   SelectItem,
   Alert,
 } from '@moul-dev/ui';
-import { colors, spacing, radii, fonts } from '../../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
     maxWidth: '1200px',
   },
   header: {
@@ -47,14 +47,14 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
   },
   cardTop: {
     display: 'flex',
@@ -65,28 +65,28 @@ const styles = stylex.create({
   cardTitle: {
     fontSize: '1.125rem',
     fontWeight: 600,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: tokens.spacing2,
   },
   fieldsPreview: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
     fontSize: '0.75rem',
-    color: colors.textSecondary,
-    fontFamily: fonts.mono,
+    color: tokens.colorFgSubtle,
+    fontFamily: 'var(--font-mono, monospace)',
   },
   fieldPill: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: tokens.colorBgElevated,
     paddingBlock: '2px',
-    paddingInline: spacing.xs,
-    borderRadius: radii.sm,
+    paddingInline: tokens.spacing1,
+    borderRadius: tokens.radiusSm,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.borderMuted,
+    borderColor: tokens.colorBorderSubtle,
   },
   cardActions: {
     display: 'flex',
@@ -96,23 +96,23 @@ const styles = stylex.create({
   },
   actionGroup: {
     display: 'flex',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
   },
   drawerForm: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: tokens.spacing3,
   },
   emptyState: {
-    padding: spacing.xxl,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.md,
+    padding: tokens.spacing8,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.border,
+    borderColor: tokens.colorBorder,
     textAlign: 'center',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
 });
 

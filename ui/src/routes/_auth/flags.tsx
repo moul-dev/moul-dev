@@ -20,14 +20,14 @@ import {
   TextField,
   Checkbox,
 } from '@moul-dev/ui';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
 
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: tokens.spacing4,
     maxWidth: '1000px',
   },
   header: {
@@ -38,14 +38,14 @@ const styles = stylex.create({
   title: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   flagList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: tokens.spacing3,
   },
   flagCardInner: {
     display: 'flex',
@@ -56,39 +56,39 @@ const styles = stylex.create({
   flagInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
   },
   flagKey: {
     fontSize: '1rem',
     fontWeight: 600,
-    color: colors.textPrimary,
-    fontFamily: fonts.mono,
+    color: tokens.colorFg,
+    fontFamily: 'var(--font-mono, monospace)',
   },
   flagDesc: {
     fontSize: '0.8125rem',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
   flagActions: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: tokens.spacing3,
   },
   emptyState: {
-    padding: spacing.xxl,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.md,
+    padding: tokens.spacing8,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: colors.border,
+    borderColor: tokens.colorBorder,
     textAlign: 'center',
-    color: colors.textSecondary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
   },
   drawerForm: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: tokens.spacing3,
   },
 });
 

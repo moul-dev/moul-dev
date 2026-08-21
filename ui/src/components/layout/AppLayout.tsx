@@ -26,14 +26,14 @@ import {
   Avatar,
 } from '@moul-dev/ui';
 import { Header } from './Header';
-import { colors, spacing, radii, fonts } from '../../theme/tokens.stylex';
+import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useAuth } from '../../context/AuthContext';
 
 const styles = stylex.create({
   brand: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: tokens.spacing2,
     textDecoration: 'none',
     width: '100%',
     minWidth: 0,
@@ -43,21 +43,21 @@ const styles = stylex.create({
     width: '32px',
     height: '32px',
     minWidth: '32px',
-    borderRadius: radii.md,
-    backgroundColor: colors.primaryMuted,
-    color: colors.primary,
+    borderRadius: tokens.radiusMd,
+    backgroundColor: tokens.colorAlertBgAccent,
+    color: tokens.colorPrimary500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 700,
     fontSize: '1rem',
-    fontFamily: fonts.mono,
+    fontFamily: 'var(--font-mono, monospace)',
     flexShrink: 0,
   },
   brandTextWrapper: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
     minWidth: 0,
     overflow: 'hidden',
     whiteSpace: 'nowrap',
@@ -65,8 +65,8 @@ const styles = stylex.create({
   brandName: {
     fontSize: '1.125rem',
     fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
   footerContent: {
@@ -74,14 +74,14 @@ const styles = stylex.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    gap: spacing.xs,
+    gap: tokens.spacing1,
     minWidth: 0,
     overflow: 'hidden',
   },
   userInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: tokens.spacing2,
     minWidth: 0,
     overflow: 'hidden',
   },
@@ -94,22 +94,22 @@ const styles = stylex.create({
   userName: {
     fontSize: '0.8125rem',
     fontWeight: 600,
-    color: colors.textPrimary,
-    fontFamily: fonts.sans,
+    color: tokens.colorFg,
+    fontFamily: tokens.fontFamilyBase,
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
     overflow: 'hidden',
   },
   userRole: {
     fontSize: '0.6875rem',
-    color: colors.textMuted,
-    fontFamily: fonts.sans,
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
     overflow: 'hidden',
   },
   main: {
-    backgroundColor: colors.bgApp,
+    backgroundColor: tokens.colorBgSubtle,
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -118,8 +118,8 @@ const styles = stylex.create({
   content: {
     flex: 1,
     overflowY: 'auto',
-    padding: spacing.xl,
-    backgroundColor: colors.bgApp,
+    padding: tokens.spacing6,
+    backgroundColor: tokens.colorBgSubtle,
   },
 });
 
