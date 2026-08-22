@@ -5,15 +5,15 @@ import {
   Badge,
 } from '@moul-dev/ui';
 import {
-  Terminal,
-  ShieldCheck,
-  Globe,
-  Lightning,
-  Trash,
-  Play,
-  Broadcast,
-  CheckCircle,
-  XCircle,
+  TerminalIcon,
+  ShieldCheckIcon,
+  GlobeIcon,
+  LightningIcon,
+  TrashIcon,
+  PlayIcon,
+  BroadcastIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from '@phosphor-icons/react';
 import {
   moulDevtoolsClient,
@@ -312,15 +312,15 @@ export function MoulDevtoolsPanel() {
   const renderIcon = (type: string) => {
     switch (type) {
       case 'auth:state-change':
-        return <ShieldCheck size={14} color={tokens.colorSuccess500} weight="bold" />;
+        return <ShieldCheckIcon size={14} color={tokens.colorSuccess500} weight="bold" />;
       case 'api:request':
-        return <Globe size={14} color={tokens.colorPrimary400} weight="bold" />;
+        return <GlobeIcon size={14} color={tokens.colorPrimary400} weight="bold" />;
       case 'app:action':
-        return <Lightning size={14} color={tokens.colorWarning500} weight="bold" />;
+        return <LightningIcon size={14} color={tokens.colorWarning500} weight="bold" />;
       case 'system:ping':
-        return <Broadcast size={14} color={tokens.colorChart4} weight="bold" />;
+        return <BroadcastIcon size={14} color={tokens.colorChart4} weight="bold" />;
       default:
-        return <Terminal size={14} color={tokens.colorFgSubtle} weight="bold" />;
+        return <TerminalIcon size={14} color={tokens.colorFgSubtle} weight="bold" />;
     }
   };
 
@@ -347,7 +347,7 @@ export function MoulDevtoolsPanel() {
       <div {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerLeft)}>
           <div {...stylex.props(styles.title)}>
-            <Terminal size={16} color={tokens.colorPrimary400} weight="bold" />
+            <TerminalIcon size={16} color={tokens.colorPrimary400} weight="bold" />
             <span>Mould Inspector</span>
           </div>
           <Badge variant="success">
@@ -362,7 +362,7 @@ export function MoulDevtoolsPanel() {
             onPress={handleEmitTestAction}
             aria-label="Emit test action"
           >
-            <Play size={12} weight="bold" />
+            <PlayIcon size={12} weight="bold" />
             <span>Emit Action</span>
           </Button>
 
@@ -372,7 +372,7 @@ export function MoulDevtoolsPanel() {
             onPress={handleEmitPing}
             aria-label="Send ping event"
           >
-            <Broadcast size={12} weight="bold" />
+            <BroadcastIcon size={12} weight="bold" />
             <span>Ping</span>
           </Button>
 
@@ -382,7 +382,7 @@ export function MoulDevtoolsPanel() {
             onPress={handleClear}
             aria-label="Clear event log"
           >
-            <Trash size={12} weight="bold" />
+            <TrashIcon size={12} weight="bold" />
             <span>Clear</span>
           </Button>
         </div>

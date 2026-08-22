@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ShieldCheck } from '@phosphor-icons/react';
+import { ShieldCheckIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -119,7 +119,7 @@ function LoginPage() {
           <CardHeader>
             <div {...stylex.props(styles.header)}>
               <div {...stylex.props(styles.icon)}>
-                <ShieldCheck size={28} />
+                <ShieldCheckIcon size={28} />
               </div>
               <h1 {...stylex.props(styles.title)}>mould console</h1>
               <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>

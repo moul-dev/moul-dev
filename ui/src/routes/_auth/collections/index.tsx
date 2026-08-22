@@ -3,11 +3,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
-  Plus,
-  Database,
-  Trash,
-  Sliders,
-  Table as TableIcon,
+  PlusIcon,
+  DatabaseIcon,
+  TrashIcon,
+  SlidersIcon,
+  TableIcon,
 } from '@phosphor-icons/react';
 import {
   Card,
@@ -183,7 +183,7 @@ function CollectionsPage() {
           variant="primary"
           onPress={() => setIsCreateOpen(true)}
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
           <span>New Collection</span>
         </Button>
       </div>
@@ -201,7 +201,7 @@ function CollectionsPage() {
               <CardHeader>
                 <div {...stylex.props(styles.cardTop)}>
                   <div {...stylex.props(styles.cardTitle)}>
-                    <Database size={20} color={tokens.colorPrimary500} />
+                    <DatabaseIcon size={20} color={tokens.colorPrimary500} />
                     <span>{moul.name}</span>
                   </div>
                   <Badge
@@ -261,7 +261,7 @@ function CollectionsPage() {
                         })
                       }
                     >
-                      <Sliders size={14} />
+                      <SlidersIcon size={14} />
                       <span>Schema</span>
                     </Button>
                   </div>
@@ -276,7 +276,7 @@ function CollectionsPage() {
                       }
                     }}
                   >
-                    <Trash size={14} color={tokens.colorError500} />
+                    <TrashIcon size={14} color={tokens.colorError500} />
                   </Button>
                 </div>
               </CardFooter>

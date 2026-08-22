@@ -2,15 +2,15 @@ import React from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { useRouterState, useNavigate, Link } from '@tanstack/react-router';
 import {
-  SquaresFour,
-  Database,
-  Broadcast,
-  ChartLineUp,
-  Queue,
-  Flag,
-  Gear,
-  BookOpen,
-  SignOut,
+  SquaresFourIcon,
+  DatabaseIcon,
+  BroadcastIcon,
+  ChartLineUpIcon,
+  QueueIcon,
+  FlagIcon,
+  GearIcon,
+  BookOpenIcon,
+  SignOutIcon,
 } from '@phosphor-icons/react';
 import {
   Sidebar,
@@ -130,17 +130,17 @@ interface NavLinkConfig {
 }
 
 const platformNavLinks: NavLinkConfig[] = [
-  { to: '/', label: 'Overview', icon: <SquaresFour size={18} /> },
-  { to: '/collections', label: 'Collections', icon: <Database size={18} /> },
-  { to: '/realtime', label: 'Realtime SSE', icon: <Broadcast size={18} /> },
-  { to: '/analytics', label: 'Analytics & Logs', icon: <ChartLineUp size={18} /> },
+  { to: '/', label: 'Overview', icon: <SquaresFourIcon size={18} /> },
+  { to: '/collections', label: 'Collections', icon: <DatabaseIcon size={18} /> },
+  { to: '/realtime', label: 'Realtime SSE', icon: <BroadcastIcon size={18} /> },
+  { to: '/analytics', label: 'Analytics & Logs', icon: <ChartLineUpIcon size={18} /> },
 ];
 
 const systemNavLinks: NavLinkConfig[] = [
-  { to: '/workers', label: 'Worker Queue', icon: <Queue size={18} /> },
-  { to: '/flags', label: 'Feature Flags', icon: <Flag size={18} /> },
-  { to: '/settings', label: 'Settings', icon: <Gear size={18} /> },
-  { to: '/docs', label: 'API Reference', icon: <BookOpen size={18} /> },
+  { to: '/workers', label: 'Worker Queue', icon: <QueueIcon size={18} /> },
+  { to: '/flags', label: 'Feature Flags', icon: <FlagIcon size={18} /> },
+  { to: '/settings', label: 'Settings', icon: <GearIcon size={18} /> },
+  { to: '/docs', label: 'API Reference', icon: <BookOpenIcon size={18} /> },
 ];
 
 const allNavLinks = [...platformNavLinks, ...systemNavLinks];
@@ -225,7 +225,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               onPress={logout}
               aria-label="Sign Out"
             >
-              <SignOut size={16} />
+              <SignOutIcon size={16} />
             </Button>
           </div>
         </SidebarFooter>

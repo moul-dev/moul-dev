@@ -3,11 +3,11 @@ import { createFileRoute, useParams } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
-  Plus,
-  Trash,
-  FloppyDisk,
-  Database,
-  LockKey,
+  PlusIcon,
+  TrashIcon,
+  FloppyDiskIcon,
+  DatabaseIcon,
+  LockKeyIcon,
 } from '@phosphor-icons/react';
 import {
   Card,
@@ -165,7 +165,7 @@ function CollectionDetailPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>
-            <Database size={24} color={tokens.colorPrimary500} />
+            <DatabaseIcon size={24} color={tokens.colorPrimary500} />
             <span>{moulName}</span>
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
@@ -178,7 +178,7 @@ function CollectionDetailPage() {
           onPress={handleSave}
           isDisabled={updateMutation.isPending}
         >
-          <FloppyDisk size={16} />
+          <FloppyDiskIcon size={16} />
           <span>{updateMutation.isPending ? 'Saving...' : 'Save Schema'}</span>
         </Button>
       </div>
@@ -189,7 +189,7 @@ function CollectionDetailPage() {
           <div {...stylex.props(styles.sectionHeader)}>
             <h2 {...stylex.props(styles.sectionTitle)}>Fields Definition</h2>
             <Button size="sm" variant="secondary" onPress={handleAddField}>
-              <Plus size={14} />
+              <PlusIcon size={14} />
               <span>Add Field</span>
             </Button>
           </div>
@@ -236,7 +236,7 @@ function CollectionDetailPage() {
                     aria-label={`Remove field ${field.name || idx}`}
                     onPress={() => handleRemoveField(idx)}
                   >
-                    <Trash size={16} color={tokens.colorError500} />
+                    <TrashIcon size={16} color={tokens.colorError500} />
                   </Button>
                 </div>
               ))}
@@ -250,7 +250,7 @@ function CollectionDetailPage() {
         <CardHeader>
           <div {...stylex.props(styles.sectionHeader)}>
             <h2 {...stylex.props(styles.sectionTitle)}>
-              <LockKey size={18} />
+              <LockKeyIcon size={18} />
               <span>API Access Rules (CEL Expressions)</span>
             </h2>
           </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Globe, ListBullets, ArrowsClockwise } from '@phosphor-icons/react';
+import { GlobeIcon, ListBulletsIcon, ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import {
   Tabs,
   TabList,
@@ -89,7 +89,7 @@ function AnalyticsPage() {
           variant="secondary"
           onPress={() => (activeTab === 'requests' ? refetchReq() : refetchVisits())}
         >
-          <ArrowsClockwise size={14} />
+          <ArrowsClockwiseIcon size={14} />
           <span>Refresh</span>
         </Button>
       </div>
@@ -98,13 +98,13 @@ function AnalyticsPage() {
         <TabList aria-label="Analytics Tabs">
           <Tab id="requests">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ListBullets size={16} />
+              <ListBulletsIcon size={16} />
               <span>HTTP Request Logs ({requests.length})</span>
             </span>
           </Tab>
           <Tab id="visits">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Globe size={16} />
+              <GlobeIcon size={16} />
               <span>Visitor Sessions ({visits.length})</span>
             </span>
           </Tab>

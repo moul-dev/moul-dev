@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Play, Stop, Trash } from '@phosphor-icons/react';
+import { PlayIcon, StopIcon, TrashIcon } from '@phosphor-icons/react';
 import {
   Select,
   SelectItem,
@@ -186,7 +186,7 @@ function RealtimePage() {
                 variant={isConnected ? 'danger' : 'primary'}
                 onPress={() => setIsConnected(!isConnected)}
               >
-                {isConnected ? <Stop size={14} /> : <Play size={14} />}
+                {isConnected ? <StopIcon size={14} /> : <PlayIcon size={14} />}
                 <span>{isConnected ? 'Disconnect' : 'Connect'}</span>
               </Button>
             </div>
@@ -197,7 +197,7 @@ function RealtimePage() {
               onPress={() => setEvents([])}
               aria-label="Clear Log"
             >
-              <Trash size={14} />
+              <TrashIcon size={14} />
               <span>Clear Log</span>
             </Button>
           </div>

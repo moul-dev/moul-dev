@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ShieldPlus } from '@phosphor-icons/react';
+import { ShieldPlusIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -121,7 +121,7 @@ function SetupPage() {
           <CardHeader>
             <div {...stylex.props(styles.header)}>
               <div {...stylex.props(styles.icon)}>
-                <ShieldPlus size={28} />
+                <ShieldPlusIcon size={28} />
               </div>
               <h1 {...stylex.props(styles.title)}>Welcome to mould</h1>
               <p {...stylex.props(styles.subtitle)}>

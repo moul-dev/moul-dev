@@ -2,11 +2,11 @@ import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/reac
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
-  Database,
-  Cpu,
-  HardDrives,
-  Pulse,
-  ArrowRight,
+  DatabaseIcon,
+  CpuIcon,
+  HardDrivesIcon,
+  PulseIcon,
+  ArrowRightIcon,
 } from '@phosphor-icons/react';
 import {
   Stat,
@@ -123,7 +123,7 @@ function DashboardPage() {
           onPress={() => navigate({ to: '/collections' })}
         >
           <span>Manage Collections</span>
-          <ArrowRight size={16} />
+          <ArrowRightIcon size={16} />
         </Button>
       </div>
 
@@ -133,7 +133,7 @@ function DashboardPage() {
           variant="glass"
           label="COLLECTIONS"
           value={moulsLoading ? '...' : collectionCount}
-          icon={<Database size={20} color={tokens.colorPrimary500} />}
+          icon={<DatabaseIcon size={20} color={tokens.colorPrimary500} />}
           description="Dynamic schema tables defined"
         />
 
@@ -141,7 +141,7 @@ function DashboardPage() {
           variant="glass"
           label="MEMORY ALLOCATED"
           value={memoryAlloc}
-          icon={<Cpu size={20} color={tokens.colorSuccess500} />}
+          icon={<CpuIcon size={20} color={tokens.colorSuccess500} />}
           description="Go runtime heap allocations"
         />
 
@@ -149,7 +149,7 @@ function DashboardPage() {
           variant="glass"
           label="GOROUTINES"
           value={goroutines}
-          icon={<Pulse size={20} color={tokens.colorWarning500} />}
+          icon={<PulseIcon size={20} color={tokens.colorWarning500} />}
           description="Active concurrent worker routines"
         />
 
@@ -157,7 +157,7 @@ function DashboardPage() {
           variant="glass"
           label="STORAGE ENGINE"
           value={dbStatus}
-          icon={<HardDrives size={20} color={tokens.colorPrimary500} />}
+          icon={<HardDrivesIcon size={20} color={tokens.colorPrimary500} />}
           description="Litestream Continuous Backup Ready"
         />
       </div>
@@ -185,7 +185,7 @@ function DashboardPage() {
                   <CardBody>
                     <div {...stylex.props(styles.collectionCardInner)}>
                       <div {...stylex.props(styles.collectionName)}>
-                        <Database size={18} color={tokens.colorPrimary500} />
+                        <DatabaseIcon size={18} color={tokens.colorPrimary500} />
                         <span>{moul.name}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -202,7 +202,7 @@ function DashboardPage() {
                         >
                           {moul.type}
                         </Badge>
-                        <ArrowRight size={14} color={tokens.colorFgSubtle} />
+                        <ArrowRightIcon size={14} color={tokens.colorFgSubtle} />
                       </div>
                     </div>
                   </CardBody>

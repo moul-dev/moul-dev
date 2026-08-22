@@ -1,7 +1,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ArrowSquareOut } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Button, Card } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 
@@ -57,7 +57,7 @@ function DocsPage() {
           onPress={() => window.open('/docs', '_blank')}
         >
           <span>Open Fullscreen</span>
-          <ArrowSquareOut size={16} />
+          <ArrowSquareOutIcon size={16} />
         </Button>
       </div>
 

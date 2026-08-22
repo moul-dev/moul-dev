@@ -2,7 +2,7 @@ import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Queue, Clock, CheckCircle } from '@phosphor-icons/react';
+import { QueueIcon, ClockIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -92,7 +92,7 @@ function WorkersPage() {
         </div>
         <Badge variant="success">
           <span {...stylex.props(styles.badgeContent)}>
-            <CheckCircle size={14} weight="fill" />
+            <CheckCircleIcon size={14} weight="fill" />
             <span>Engine Running</span>
           </span>
         </Badge>
@@ -101,7 +101,7 @@ function WorkersPage() {
       <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <Queue size={20} color={tokens.colorPrimary500} />
+            <QueueIcon size={20} color={tokens.colorPrimary500} />
             <span>Worker Collections</span>
           </div>
         </CardHeader>
@@ -126,7 +126,7 @@ function WorkersPage() {
       <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <Clock size={20} color={tokens.colorWarning500} />
+            <ClockIcon size={20} color={tokens.colorWarning500} />
             <span>Built-in Registered Workers</span>
           </div>
         </CardHeader>

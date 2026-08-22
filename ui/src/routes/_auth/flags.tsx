@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { Flag, Plus, Trash } from '@phosphor-icons/react';
+import { FlagIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardBody,
@@ -167,7 +167,7 @@ function FeatureFlagsPage() {
           </span>
         </div>
         <Button variant="primary" onPress={() => setIsCreateOpen(true)}>
-          <Plus size={16} />
+          <PlusIcon size={16} />
           <span>New Feature Flag</span>
         </Button>
       </div>
@@ -186,7 +186,7 @@ function FeatureFlagsPage() {
                 <div {...stylex.props(styles.flagCardInner)}>
                   <div {...stylex.props(styles.flagInfo)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Flag size={18} color={tokens.colorPrimary500} />
+                      <FlagIcon size={18} color={tokens.colorPrimary500} />
                       <span {...stylex.props(styles.flagKey)}>{flag.key}</span>
                       <Badge variant={flag.enabled ? 'success' : 'neutral'}>
                         {flag.enabled ? 'Enabled' : 'Disabled'}
@@ -213,7 +213,7 @@ function FeatureFlagsPage() {
                         }
                       }}
                     >
-                      <Trash size={16} color={tokens.colorError500} />
+                      <TrashIcon size={16} color={tokens.colorError500} />
                     </Button>
                   </div>
                 </div>

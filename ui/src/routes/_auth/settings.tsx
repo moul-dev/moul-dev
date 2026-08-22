@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { EnvelopeSimple, ShieldCheck, HardDrives, FloppyDisk } from '@phosphor-icons/react';
+import { EnvelopeSimpleIcon, ShieldCheckIcon, HardDrivesIcon, FloppyDiskIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -120,7 +120,7 @@ function SettingsPage() {
           onPress={handleSave}
           isDisabled={updateMutation.isPending}
         >
-          <FloppyDisk size={16} />
+          <FloppyDiskIcon size={16} />
           <span>{updateMutation.isPending ? 'Saving...' : 'Save Settings'}</span>
         </Button>
       </div>
@@ -129,7 +129,7 @@ function SettingsPage() {
       <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <EnvelopeSimple size={20} color={tokens.colorPrimary500} />
+            <EnvelopeSimpleIcon size={20} color={tokens.colorPrimary500} />
             <span>SMTP Transactional Mailer</span>
           </div>
         </CardHeader>
@@ -175,7 +175,7 @@ function SettingsPage() {
       <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <ShieldCheck size={20} color={tokens.colorSuccess500} />
+            <ShieldCheckIcon size={20} color={tokens.colorSuccess500} />
             <span>Automatic TLS / Let's Encrypt (CertMagic)</span>
           </div>
         </CardHeader>
@@ -203,7 +203,7 @@ function SettingsPage() {
       <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <HardDrives size={20} color={tokens.colorWarning500} />
+            <HardDrivesIcon size={20} color={tokens.colorWarning500} />
             <span>Continuous S3 Backup (Litestream)</span>
           </div>
         </CardHeader>

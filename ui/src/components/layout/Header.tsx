@@ -1,7 +1,7 @@
 import React from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { useRouterState, Link as RouterLink } from '@tanstack/react-router';
-import { ShieldCheck, Cpu } from '@phosphor-icons/react';
+import { ShieldCheckIcon, CpuIcon } from '@phosphor-icons/react';
 import { Breadcrumbs, BreadcrumbItem, Badge, Link } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 
@@ -61,13 +61,13 @@ export const Header: React.FC = () => {
       <div {...stylex.props(styles.actions)}>
         <Badge variant="primary">
           <span {...stylex.props(styles.badgeContent)}>
-            <Cpu size={13} />
+            <CpuIcon size={13} />
             <span>Engine Online</span>
           </span>
         </Badge>
         <Badge variant="success">
           <span {...stylex.props(styles.badgeContent)}>
-            <ShieldCheck size={13} weight="fill" />
+            <ShieldCheckIcon size={13} weight="fill" />
             <span>Root Auth</span>
           </span>
         </Badge>

@@ -4,12 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { z } from 'zod';
 import {
-  Plus,
-  Trash,
-  PencilSimple,
-  Database,
-  CaretLeft,
-  CaretRight,
+  PlusIcon,
+  TrashIcon,
+  PencilSimpleIcon,
+  DatabaseIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -258,7 +258,7 @@ function RecordsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>
-            <Database size={24} color={tokens.colorPrimary500} />
+            <DatabaseIcon size={24} color={tokens.colorPrimary500} />
             <span>{moulName} Records</span>
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
@@ -267,7 +267,7 @@ function RecordsPage() {
           </span>
         </div>
         <Button variant="primary" onPress={handleOpenCreate}>
-          <Plus size={16} />
+          <PlusIcon size={16} />
           <span>New Record</span>
         </Button>
       </div>
@@ -359,7 +359,7 @@ function RecordsPage() {
                       aria-label={`Edit record ${rec.id}`}
                       onPress={() => handleOpenEdit(rec)}
                     >
-                      <PencilSimple size={14} />
+                      <PencilSimpleIcon size={14} />
                     </Button>
                     <Button
                       size="sm"
@@ -371,7 +371,7 @@ function RecordsPage() {
                         }
                       }}
                     >
-                      <Trash size={14} color={tokens.colorError500} />
+                      <TrashIcon size={14} color={tokens.colorError500} />
                     </Button>
                   </div>
                 </Cell>
@@ -400,7 +400,7 @@ function RecordsPage() {
               })
             }
           >
-            <CaretLeft size={14} />
+            <CaretLeftIcon size={14} />
             <span>Previous</span>
           </Button>
           <Button
@@ -417,7 +417,7 @@ function RecordsPage() {
             }
           >
             <span>Next</span>
-            <CaretRight size={14} />
+            <CaretRightIcon size={14} />
           </Button>
         </div>
       </div>
