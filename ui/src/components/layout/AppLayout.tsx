@@ -118,7 +118,7 @@ const styles = stylex.create({
   content: {
     flex: 1,
     overflowY: 'auto',
-    padding: tokens.spacing6,
+    padding: tokens.spacing2,
     backgroundColor: tokens.colorBg,
   },
 });

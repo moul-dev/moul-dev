@@ -7,18 +7,21 @@ import { tokens } from '@moul-dev/ui/tokens.stylex';
 
 const styles = stylex.create({
   header: {
-    height: '64px',
+    height: '48px',
     backgroundColor: tokens.colorBgSubtle,
-    borderBottomWidth: 1,
-    borderBottomStyle: 'solid',
-    borderBottomColor: tokens.colorBorderSubtle,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    borderRadius: tokens.radiusMd,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingInline: tokens.spacing6,
-    position: 'sticky',
-    top: 0,
-    zIndex: tokens.zIndexBase,
+    paddingInline: tokens.spacing4,
+    marginInlineStart: tokens.spacing2,
+    marginInlineEnd: tokens.spacing4,
+    marginBlockEnd: 0,
+    boxSizing: 'border-box',
+    flexShrink: 0,
   },
   actions: {
     display: 'flex',
@@ -29,6 +32,9 @@ const styles = stylex.create({
     display: 'inline-flex',
     alignItems: 'center',
     gap: tokens.spacing1,
+  },
+  homeLink: {
+    textDecoration: 'none',
   },
 });
 
@@ -45,7 +51,7 @@ export const Header: React.FC = () => {
     <header {...stylex.props(styles.header)}>
       <Breadcrumbs aria-label="Breadcrumbs">
         <BreadcrumbItem>
-          <RouterLink to="/" style={{ textDecoration: 'none' }}>
+          <RouterLink to="/" {...stylex.props(styles.homeLink)}>
             <Link variant="primary">mould</Link>
           </RouterLink>
         </BreadcrumbItem>
@@ -55,13 +61,13 @@ export const Header: React.FC = () => {
       <div {...stylex.props(styles.actions)}>
         <Badge variant="primary">
           <span {...stylex.props(styles.badgeContent)}>
-            <Cpu size={14} />
+            <Cpu size={13} />
             <span>Engine Online</span>
           </span>
         </Badge>
         <Badge variant="success">
           <span {...stylex.props(styles.badgeContent)}>
-            <ShieldCheck size={14} weight="fill" />
+            <ShieldCheck size={13} weight="fill" />
             <span>Root Auth</span>
           </span>
         </Badge>
@@ -69,5 +75,6 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+
 
 
