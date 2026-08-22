@@ -45,8 +45,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   ),
   errorComponent: ({ error }) => (
     <div {...stylex.props(styles.errorContainer)}>
-      <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Console Application Error</h2>
-      <p style={{ color: '#94a3b8', maxWidth: '600px', marginBottom: '1.5rem' }}>
+      <h2 style={{ color: tokens.colorError500, marginBottom: '1rem' }}>Console Application Error</h2>
+      <p style={{ color: tokens.colorFgSubtle, maxWidth: '600px', marginBottom: '1.5rem' }}>
         {error.message || 'An unexpected error occurred in the admin console.'}
       </p>
       <Button

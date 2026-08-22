@@ -162,7 +162,7 @@ function FeatureFlagsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Feature Flags</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Toggle features dynamically, configure gradual rollouts, and evaluate targeting rules.
           </span>
         </div>
@@ -174,7 +174,7 @@ function FeatureFlagsPage() {
 
       <div {...stylex.props(styles.flagList)}>
         {isLoading ? (
-          <div style={{ color: '#64748b' }}>Loading feature flags...</div>
+          <div style={{ color: tokens.colorFgSubtle }}>Loading feature flags...</div>
         ) : !flags || flags.length === 0 ? (
           <div {...stylex.props(styles.emptyState)}>
             No feature flags configured. Click "New Feature Flag" to create one.
@@ -186,7 +186,7 @@ function FeatureFlagsPage() {
                 <div {...stylex.props(styles.flagCardInner)}>
                   <div {...stylex.props(styles.flagInfo)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Flag size={18} color="#0ea5e9" />
+                      <Flag size={18} color={tokens.colorPrimary500} />
                       <span {...stylex.props(styles.flagKey)}>{flag.key}</span>
                       <Badge variant={flag.enabled ? 'success' : 'neutral'}>
                         {flag.enabled ? 'Enabled' : 'Disabled'}
@@ -213,7 +213,7 @@ function FeatureFlagsPage() {
                         }
                       }}
                     >
-                      <Trash size={16} color="#ef4444" />
+                      <Trash size={16} color={tokens.colorError500} />
                     </Button>
                   </div>
                 </div>

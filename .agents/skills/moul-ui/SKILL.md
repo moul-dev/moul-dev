@@ -653,11 +653,47 @@ import { Stat, TopList, PercentageBar, PercentageCircle } from '@moul-dev/ui';
 
 ## 4. Theming & Design Tokens
 
-Moul UI tokens are driven by StyleX and OKLCH color spaces. You can customize the look and feel dynamically using CSS custom properties:
+Moul UI tokens are driven by StyleX and OKLCH color spaces. Design tokens are imported from `@moul-dev/ui/tokens.stylex`:
+
+```tsx
+import { tokens } from '@moul-dev/ui/tokens.stylex';
+
+const styles = stylex.create({
+  card: {
+    backgroundColor: tokens.colorBgSubtle,
+    color: tokens.colorFg,
+    borderColor: tokens.colorBorderSubtle,
+    borderRadius: tokens.radiusMd,
+    padding: tokens.spacing4,
+    fontFamily: tokens.fontFamilyBase,
+  },
+});
+```
+
+Because `tokens` contains the actual values (using `light-dark(...)` and OKLCH color spaces), tokens can also be passed directly to SVG icons, Recharts palettes, and inline styles:
+
+```tsx
+<Database size={20} color={tokens.colorPrimary500} />
+<Trash size={16} color={tokens.colorError500} />
+<span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+  Updated 2 minutes ago
+</span>
+```
+
+### Available Tokens
+- **Palette**: `colorNeutral50`–`colorNeutral900`, `colorPrimary50`–`colorPrimary900`, `colorError300`–`colorError700`, `colorWarning300`–`colorWarning700`, `colorSuccess300`–`colorSuccess700`
+- **Semantic Aliases**: `colorBg`, `colorBgSubtle`, `colorBgElevated`, `colorFg`, `colorFgSubtle`, `colorFgOnPrimary`, `colorBorder`, `colorBorderSubtle`, `colorBorderFocus`, `colorBgGlass`, `colorBorderGlass`, `colorShadow`, `colorOverlay`
+- **Status & Alerts**: `colorAlertBgInfo`, `colorAlertBorderInfo`, `colorAlertHoverInfo`, `colorAlertActiveInfo`, `colorAlertBgAccent`, `colorAlertBorderAccent`, `colorAlertHoverAccent`, `colorAlertActiveAccent`, `colorAlertBgSuccess`, `colorAlertBorderSuccess`, `colorAlertHoverSuccess`, `colorAlertActiveSuccess`, `colorAlertBgWarning`, `colorAlertBorderWarning`, `colorAlertHoverWarning`, `colorAlertActiveWarning`, `colorAlertBgError`, `colorAlertBorderError`, `colorAlertHoverError`, `colorAlertActiveError`
+- **Typography & Font**: `fontSizeXs`–`fontSize4xl`, `lineHeightXs`–`lineHeight4xl`, `fontWeightNormal`–`fontWeightBold`, `fontFamilyBase`
+- **Spacing & Radius**: `spacing1`–`spacing8`, `radiusNone`–`radiusFull`
+- **Shadows & Z-Index**: `shadowSm`, `shadowMd`, `shadowLg`, `zIndexBase`, `zIndexDropdown`, `zIndexModal`, `zIndexTooltip`, `zIndexToast`
+- **Charts**: `colorChart1`–`colorChart8`
+
+You can customize the look and feel dynamically using CSS custom properties:
 
 ```css
 :root {
-  /* Brand Color Hue (0 to 360) - e.g., 250 for Indigo, 290 for Violet, 145 for Emerald */
+  /* Brand Color Hue (0 to 360) - e.g., 250 for Indigo, 205 for Cyan/Slate, 145 for Emerald */
   --brand-hue: 250;
 
   /* Brand Chroma Multiplier (0.0 to 2.0) */

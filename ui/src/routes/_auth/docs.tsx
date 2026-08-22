@@ -48,7 +48,7 @@ function DocsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Interactive API Reference</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Live OpenAPI / Scalar reference reflecting all active collections and endpoints.
           </span>
         </div>

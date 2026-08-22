@@ -157,7 +157,7 @@ function CollectionDetailPage() {
   };
 
   if (isLoading) {
-    return <div style={{ color: '#64748b' }}>Loading collection schema...</div>;
+    return <div style={{ color: tokens.colorFgSubtle }}>Loading collection schema...</div>;
   }
 
   return (
@@ -165,11 +165,11 @@ function CollectionDetailPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>
-            <Database size={24} color="#0ea5e9" />
+            <Database size={24} color={tokens.colorPrimary500} />
             <span>{moulName}</span>
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Configure fields schema, validation constraints, and CEL security rules.
           </span>
         </div>
@@ -196,7 +196,7 @@ function CollectionDetailPage() {
         </CardHeader>
         <CardBody>
           {fields.length === 0 ? (
-            <div style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>
+            <div style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, textAlign: 'center', padding: tokens.spacing4 }}>
               No custom fields defined. Click "Add Field" to add columns.
             </div>
           ) : (
@@ -236,7 +236,7 @@ function CollectionDetailPage() {
                     aria-label={`Remove field ${field.name || idx}`}
                     onPress={() => handleRemoveField(idx)}
                   >
-                    <Trash size={16} color="#ef4444" />
+                    <Trash size={16} color={tokens.colorError500} />
                   </Button>
                 </div>
               ))}
@@ -256,7 +256,7 @@ function CollectionDetailPage() {
           </div>
         </CardHeader>
         <CardBody>
-          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', marginBottom: '1rem' }}>
+          <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeXs, marginBottom: tokens.spacing4 }}>
             Leave blank for public access. Set to <code>@request.auth.id != ""</code> for authenticated users only.
           </p>
 

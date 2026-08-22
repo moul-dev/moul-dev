@@ -80,7 +80,7 @@ function AnalyticsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Analytics & Request Logs</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Inspect client visits, Geo-IP locations, and HTTP telemetry logs.
           </span>
         </div>
@@ -142,13 +142,13 @@ function AnalyticsPage() {
                           <span style={{ fontFamily: 'var(--font-mono)' }}>{r.path || r.url || '/'}</span>
                         </Cell>
                         <Cell>
-                          <span style={{ color: '#94a3b8' }}>{r.ip || '127.0.0.1'}</span>
+                          <span style={{ color: tokens.colorFgSubtle }}>{r.ip || '127.0.0.1'}</span>
                         </Cell>
                         <Cell>
-                          <span style={{ color: '#94a3b8' }}>{r.duration ? `${r.duration}ms` : '<1ms'}</span>
+                          <span style={{ color: tokens.colorFgSubtle }}>{r.duration ? `${r.duration}ms` : '<1ms'}</span>
                         </Cell>
                         <Cell>
-                          <span style={{ color: '#64748b' }}>
+                          <span style={{ color: tokens.colorFgSubtle }}>
                             {r.created_at ? new Date(r.created_at).toLocaleTimeString() : '-'}
                           </span>
                         </Cell>
@@ -178,17 +178,17 @@ function AnalyticsPage() {
                   {visits.map((v: any) => (
                     <Row key={v.id} id={v.id}>
                       <Cell>
-                        <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>{v.id}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: tokens.colorPrimary400 }}>{v.id}</span>
                       </Cell>
                       <Cell>
                         {v.ip} {v.country ? `(${v.country})` : ''}
                       </Cell>
                       <Cell>{v.landing_page || '/'}</Cell>
                       <Cell>
-                        <span style={{ color: '#94a3b8' }}>{v.referrer || 'Direct'}</span>
+                        <span style={{ color: tokens.colorFgSubtle }}>{v.referrer || 'Direct'}</span>
                       </Cell>
                       <Cell>
-                        <span style={{ color: '#64748b' }}>
+                        <span style={{ color: tokens.colorFgSubtle }}>
                           {v.created_at ? new Date(v.created_at).toLocaleString() : '-'}
                         </span>
                       </Cell>

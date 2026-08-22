@@ -111,7 +111,7 @@ function SettingsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Engine Settings</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Configure transactional email (SMTP), automatic HTTPS certificates (CertMagic), and backups.
           </span>
         </div>
@@ -129,7 +129,7 @@ function SettingsPage() {
       <Card variant="default">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <EnvelopeSimple size={20} color="#0ea5e9" />
+            <EnvelopeSimple size={20} color={tokens.colorPrimary500} />
             <span>SMTP Transactional Mailer</span>
           </div>
         </CardHeader>
@@ -175,7 +175,7 @@ function SettingsPage() {
       <Card variant="default">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <ShieldCheck size={20} color="#10b981" />
+            <ShieldCheck size={20} color={tokens.colorSuccess500} />
             <span>Automatic TLS / Let's Encrypt (CertMagic)</span>
           </div>
         </CardHeader>
@@ -203,12 +203,12 @@ function SettingsPage() {
       <Card variant="default">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <HardDrives size={20} color="#f59e0b" />
+            <HardDrives size={20} color={tokens.colorWarning500} />
             <span>Continuous S3 Backup (Litestream)</span>
           </div>
         </CardHeader>
         <CardBody>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
             Litestream real-time SQLite replication streams database WAL frames continuously to S3. Restore is available via <code>mould restore</code>.
           </p>
         </CardBody>

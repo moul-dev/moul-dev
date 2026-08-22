@@ -114,7 +114,7 @@ function DashboardPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Engine Dashboard</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             System overview and database collection metrics
           </span>
         </div>
@@ -132,28 +132,28 @@ function DashboardPage() {
         <Stat
           label="COLLECTIONS"
           value={moulsLoading ? '...' : collectionCount}
-          icon={<Database size={20} color="#0ea5e9" />}
+          icon={<Database size={20} color={tokens.colorPrimary500} />}
           description="Dynamic schema tables defined"
         />
 
         <Stat
           label="MEMORY ALLOCATED"
           value={memoryAlloc}
-          icon={<Cpu size={20} color="#10b981" />}
+          icon={<Cpu size={20} color={tokens.colorSuccess500} />}
           description="Go runtime heap allocations"
         />
 
         <Stat
           label="GOROUTINES"
           value={goroutines}
-          icon={<Pulse size={20} color="#f59e0b" />}
+          icon={<Pulse size={20} color={tokens.colorWarning500} />}
           description="Active concurrent worker routines"
         />
 
         <Stat
           label="STORAGE ENGINE"
           value={dbStatus}
-          icon={<HardDrives size={20} color="#6366f1" />}
+          icon={<HardDrives size={20} color={tokens.colorPrimary400} />}
           description="Litestream Continuous Backup Ready"
         />
       </div>
@@ -162,7 +162,7 @@ function DashboardPage() {
       <div {...stylex.props(styles.section)}>
         <h2 {...stylex.props(styles.sectionTitle)}>Defined Collections</h2>
         {moulsLoading ? (
-          <div style={{ color: '#64748b' }}>Loading collections...</div>
+          <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
         ) : !mouls || mouls.length === 0 ? (
           <div {...stylex.props(styles.emptyBox)}>
             No custom collections created yet. Click "Manage Collections" to design your first schema.
@@ -181,7 +181,7 @@ function DashboardPage() {
                   <CardBody>
                     <div {...stylex.props(styles.collectionCardInner)}>
                       <div {...stylex.props(styles.collectionName)}>
-                        <Database size={18} color="#0ea5e9" />
+                        <Database size={18} color={tokens.colorPrimary500} />
                         <span>{moul.name}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -198,7 +198,7 @@ function DashboardPage() {
                         >
                           {moul.type}
                         </Badge>
-                        <ArrowRight size={14} color="#94a3b8" />
+                        <ArrowRight size={14} color={tokens.colorFgSubtle} />
                       </div>
                     </div>
                   </CardBody>

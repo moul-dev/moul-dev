@@ -86,7 +86,7 @@ function WorkersPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Background Worker Engine</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Inspect worker queues, registered job handlers, and scheduled tasks.
           </span>
         </div>
@@ -101,13 +101,13 @@ function WorkersPage() {
       <Card variant="default">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <Queue size={20} color="#0ea5e9" />
+            <Queue size={20} color={tokens.colorPrimary500} />
             <span>Worker Collections</span>
           </div>
         </CardHeader>
         <CardBody>
           {workerMouls.length === 0 ? (
-            <div style={{ color: '#64748b', fontSize: '0.875rem', padding: '1rem', textAlign: 'center' }}>
+            <div style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, padding: tokens.spacing4, textAlign: 'center' }}>
               No worker collections created. Create a collection with type "worker" (e.g. <code>background_tasks</code>) to enqueue asynchronous jobs.
             </div>
           ) : (
@@ -126,7 +126,7 @@ function WorkersPage() {
       <Card variant="default">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
-            <Clock size={20} color="#f59e0b" />
+            <Clock size={20} color={tokens.colorWarning500} />
             <span>Built-in Registered Workers</span>
           </div>
         </CardHeader>
@@ -135,7 +135,7 @@ function WorkersPage() {
             <div {...stylex.props(styles.workerItem)}>
               <div>
                 <span {...stylex.props(styles.workerName)}>SendEmail</span>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                <div style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, marginTop: '2px' }}>
                   Asynchronous transactional email dispatcher
                 </div>
               </div>
@@ -144,7 +144,7 @@ function WorkersPage() {
             <div {...stylex.props(styles.workerItem)}>
               <div>
                 <span {...stylex.props(styles.workerName)}>DeliverWebhook</span>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                <div style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, marginTop: '2px' }}>
                   HTTP webhook payload delivery with exponential backoff
                 </div>
               </div>

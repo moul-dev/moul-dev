@@ -258,11 +258,11 @@ function RecordsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>
-            <Database size={24} color="#0ea5e9" />
+            <Database size={24} color={tokens.colorPrimary500} />
             <span>{moulName} Records</span>
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Explore records data grid, execute search filters, and manage collection entries.
           </span>
         </div>
@@ -284,7 +284,7 @@ function RecordsPage() {
                 onSubmit={handleSearchSubmit}
               />
             </div>
-            <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
               Showing {records.length} record{records.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -318,7 +318,7 @@ function RecordsPage() {
             {records.map((rec: any) => (
               <Row key={rec.id} id={rec.id}>
                 <Cell>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#38bdf8' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs, color: tokens.colorPrimary400 }}>
                     {String(rec.id)}
                   </span>
                 </Cell>
@@ -333,11 +333,11 @@ function RecordsPage() {
                   return (
                     <Cell key={f.name}>
                       {val === null || val === undefined ? (
-                        <span style={{ color: '#64748b' }}>-</span>
+                        <span style={{ color: tokens.colorFgSubtle }}>-</span>
                       ) : typeof val === 'boolean' ? (
                         <Badge variant={val ? 'success' : 'error'}>{val ? 'true' : 'false'}</Badge>
                       ) : typeof val === 'object' ? (
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs }}>
                           {JSON.stringify(val)}
                         </span>
                       ) : (
@@ -347,7 +347,7 @@ function RecordsPage() {
                   );
                 })}
                 <Cell>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
                     {rec.created_at ? new Date(String(rec.created_at)).toLocaleString() : '-'}
                   </span>
                 </Cell>
@@ -371,7 +371,7 @@ function RecordsPage() {
                         }
                       }}
                     >
-                      <Trash size={14} color="#ef4444" />
+                      <Trash size={14} color={tokens.colorError500} />
                     </Button>
                   </div>
                 </Cell>

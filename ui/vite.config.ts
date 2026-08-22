@@ -24,8 +24,22 @@ export default defineConfig({
     stylex.vite({
       useCSSLayers: true,
       unstable_moduleResolution: {
-        type: 'commonJS',
-        rootDir: __dirname,
+        type: 'custom',
+        filePathResolver: (importPath, sourceFilePath) => {
+          if (importPath === '@moul-dev/ui/tokens.stylex' || importPath === '@moul-dev/ui/tokens') {
+            return path.resolve(__dirname, 'node_modules/@moul-dev/ui/dist/tokens.stylex.js');
+          }
+          if (importPath.startsWith('.')) {
+            return path.resolve(path.dirname(sourceFilePath), importPath);
+          }
+          return undefined;
+        },
+        getCanonicalFilePath: (filePath) => {
+          if (filePath.includes('@moul-dev/ui') && filePath.includes('tokens.stylex')) {
+            return '@moul-dev/ui:src/tokens/tokens.stylex.ts';
+          }
+          return path.relative(__dirname, filePath);
+        },
       },
     }),
     react(),

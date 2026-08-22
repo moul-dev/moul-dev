@@ -175,7 +175,7 @@ function CollectionsPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Collections Schema</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Design dynamic tables, configure field validations, and enforce access rules.
           </span>
         </div>
@@ -189,7 +189,7 @@ function CollectionsPage() {
       </div>
 
       {isLoading ? (
-        <div style={{ color: '#64748b' }}>Loading collections...</div>
+        <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
       ) : !mouls || mouls.length === 0 ? (
         <div {...stylex.props(styles.emptyState)}>
           No collections created yet. Click "New Collection" to get started.
@@ -201,7 +201,7 @@ function CollectionsPage() {
               <CardHeader>
                 <div {...stylex.props(styles.cardTop)}>
                   <div {...stylex.props(styles.cardTitle)}>
-                    <Database size={20} color="#0ea5e9" />
+                    <Database size={20} color={tokens.colorPrimary500} />
                     <span>{moul.name}</span>
                   </div>
                   <Badge
@@ -222,7 +222,7 @@ function CollectionsPage() {
 
               <CardBody>
                 <div {...stylex.props(styles.fieldsPreview)}>
-                  <span style={{ color: '#64748b' }}>Fields:</span>
+                  <span style={{ color: tokens.colorFgSubtle }}>Fields:</span>
                   <span {...stylex.props(styles.fieldPill)}>id</span>
                   <span {...stylex.props(styles.fieldPill)}>created_at</span>
                   <span {...stylex.props(styles.fieldPill)}>updated_at</span>
@@ -276,7 +276,7 @@ function CollectionsPage() {
                       }
                     }}
                   >
-                    <Trash size={14} color="#ef4444" />
+                    <Trash size={14} color={tokens.colorError500} />
                   </Button>
                 </div>
               </CardFooter>

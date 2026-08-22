@@ -154,7 +154,7 @@ function RealtimePage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Realtime SSE Event Stream</h1>
-          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
             Live record mutations streamed over Server-Sent Events (SSE).
           </span>
         </div>
@@ -217,7 +217,7 @@ function RealtimePage() {
                   <Badge variant={ev.action === 'create' ? 'success' : ev.action === 'delete' ? 'error' : 'primary'}>
                     {ev.action}
                   </Badge>
-                  <span style={{ fontWeight: 600, color: '#38bdf8' }}>{ev.moul}</span>
+                  <span style={{ fontWeight: 600, color: tokens.colorPrimary400 }}>{ev.moul}</span>
                 </div>
                 <span {...stylex.props(styles.logTime)}>{ev.timestamp}</span>
               </div>

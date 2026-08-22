@@ -39,7 +39,7 @@ const styles = stylex.create({
     height: '100%',
     minHeight: '380px',
     backgroundColor: '#0c0e14',
-    color: '#e2e8f0',
+    color: tokens.colorFg,
     fontFamily: tokens.fontFamilyBase,
     fontSize: '13px',
     overflow: 'hidden',
@@ -63,7 +63,7 @@ const styles = stylex.create({
   title: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#f8fafc',
+    color: tokens.colorFg,
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing1,
@@ -84,7 +84,7 @@ const styles = stylex.create({
     borderBottomStyle: 'solid',
     borderBottomColor: '#1e293b',
     fontSize: '12px',
-    color: '#94a3b8',
+    color: tokens.colorFgSubtle,
   },
   statItem: {
     display: 'flex',
@@ -93,7 +93,7 @@ const styles = stylex.create({
   },
   statValue: {
     fontWeight: 600,
-    color: '#38bdf8',
+    color: tokens.colorPrimary400,
     fontFamily: 'var(--font-mono, monospace)',
   },
   mainContent: {
@@ -130,12 +130,12 @@ const styles = stylex.create({
     borderStyle: 'none',
     cursor: 'pointer',
     backgroundColor: 'transparent',
-    color: '#94a3b8',
+    color: tokens.colorFgSubtle,
     transition: 'all 0.15s ease',
   },
   filterButtonActive: {
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
+    backgroundColor: tokens.colorPrimary600,
+    color: tokens.colorFgOnPrimary,
     fontWeight: 600,
   },
   list: {
@@ -147,7 +147,7 @@ const styles = stylex.create({
   emptyState: {
     padding: tokens.spacing6,
     textAlign: 'center',
-    color: '#64748b',
+    color: tokens.colorFgSubtle,
     fontSize: '12px',
   },
   eventRow: {
@@ -166,7 +166,7 @@ const styles = stylex.create({
     backgroundColor: '#1e293b',
     borderLeftWidth: 3,
     borderLeftStyle: 'solid',
-    borderLeftColor: '#38bdf8',
+    borderLeftColor: tokens.colorPrimary400,
   },
   eventHeaderRow: {
     display: 'flex',
@@ -177,7 +177,7 @@ const styles = stylex.create({
   eventTitle: {
     fontSize: '12px',
     fontWeight: 500,
-    color: '#f1f5f9',
+    color: tokens.colorFg,
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
@@ -187,12 +187,12 @@ const styles = stylex.create({
   },
   eventTimestamp: {
     fontSize: '11px',
-    color: '#64748b',
+    color: tokens.colorFgSubtle,
     fontFamily: 'var(--font-mono, monospace)',
   },
   eventDetail: {
     fontSize: '11px',
-    color: '#94a3b8',
+    color: tokens.colorFgSubtle,
     fontFamily: 'var(--font-mono, monospace)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -218,7 +218,7 @@ const styles = stylex.create({
   detailTitle: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#f8fafc',
+    color: tokens.colorFg,
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing1,
@@ -233,7 +233,7 @@ const styles = stylex.create({
     borderColor: '#1e293b',
     borderRadius: tokens.radiusMd,
     padding: tokens.spacing3,
-    color: '#38bdf8',
+    color: tokens.colorPrimary400,
     overflowX: 'auto',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-all',
@@ -312,15 +312,15 @@ export function MoulDevtoolsPanel() {
   const renderIcon = (type: string) => {
     switch (type) {
       case 'auth:state-change':
-        return <ShieldCheck size={14} color="#10b981" weight="bold" />;
+        return <ShieldCheck size={14} color={tokens.colorSuccess500} weight="bold" />;
       case 'api:request':
-        return <Globe size={14} color="#38bdf8" weight="bold" />;
+        return <Globe size={14} color={tokens.colorPrimary400} weight="bold" />;
       case 'app:action':
-        return <Lightning size={14} color="#f59e0b" weight="bold" />;
+        return <Lightning size={14} color={tokens.colorWarning500} weight="bold" />;
       case 'system:ping':
-        return <Broadcast size={14} color="#a855f7" weight="bold" />;
+        return <Broadcast size={14} color={tokens.colorChart4} weight="bold" />;
       default:
-        return <Terminal size={14} color="#94a3b8" weight="bold" />;
+        return <Terminal size={14} color={tokens.colorFgSubtle} weight="bold" />;
     }
   };
 
@@ -347,7 +347,7 @@ export function MoulDevtoolsPanel() {
       <div {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerLeft)}>
           <div {...stylex.props(styles.title)}>
-            <Terminal size={16} color="#38bdf8" weight="bold" />
+            <Terminal size={16} color={tokens.colorPrimary400} weight="bold" />
             <span>Mould Inspector</span>
           </div>
           <Badge variant="success">
@@ -482,8 +482,8 @@ export function MoulDevtoolsPanel() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
+              <div style={{ marginBottom: tokens.spacing3 }}>
+                <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontWeight: 600 }}>
                   Event Payload (JSON):
                 </span>
               </div>
