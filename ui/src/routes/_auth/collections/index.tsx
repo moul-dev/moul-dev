@@ -197,7 +197,7 @@ function CollectionsPage() {
       ) : (
         <div {...stylex.props(styles.grid)}>
           {mouls.map((moul: any) => (
-            <Card key={moul.name} variant="default">
+            <Card key={moul.name} variant="glass">
               <CardHeader>
                 <div {...stylex.props(styles.cardTop)}>
                   <div {...stylex.props(styles.cardTitle)}>

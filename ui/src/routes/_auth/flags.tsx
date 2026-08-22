@@ -181,7 +181,7 @@ function FeatureFlagsPage() {
           </div>
         ) : (
           flags.map((flag: any) => (
-            <Card key={flag.key} variant="default">
+            <Card key={flag.key} variant="glass">
               <CardBody>
                 <div {...stylex.props(styles.flagCardInner)}>
                   <div {...stylex.props(styles.flagInfo)}>

@@ -163,7 +163,7 @@ function RealtimePage() {
         </Badge>
       </div>
 
-      <Card variant="default">
+      <Card variant="glass">
         <CardBody>
           <div {...stylex.props(styles.toolbar)}>
             <div {...stylex.props(styles.controls)}>

@@ -98,7 +98,7 @@ function WorkersPage() {
         </Badge>
       </div>
 
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
             <Queue size={20} color={tokens.colorPrimary500} />
@@ -123,7 +123,7 @@ function WorkersPage() {
         </CardBody>
       </Card>
 
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
             <Clock size={20} color={tokens.colorWarning500} />

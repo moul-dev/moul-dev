@@ -184,7 +184,7 @@ function CollectionDetailPage() {
       </div>
 
       {/* Fields Designer */}
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.sectionHeader)}>
             <h2 {...stylex.props(styles.sectionTitle)}>Fields Definition</h2>
@@ -246,7 +246,7 @@ function CollectionDetailPage() {
       </Card>
 
       {/* Access Rules (CEL) */}
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.sectionHeader)}>
             <h2 {...stylex.props(styles.sectionTitle)}>

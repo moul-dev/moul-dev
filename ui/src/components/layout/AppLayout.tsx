@@ -109,7 +109,7 @@ const styles = stylex.create({
     overflow: 'hidden',
   },
   main: {
-    backgroundColor: tokens.colorBgSubtle,
+    backgroundColor: tokens.colorBg,
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -119,7 +119,7 @@ const styles = stylex.create({
     flex: 1,
     overflowY: 'auto',
     padding: tokens.spacing6,
-    backgroundColor: tokens.colorBgSubtle,
+    backgroundColor: tokens.colorBg,
   },
 });
 
@@ -193,8 +193,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </SidebarItem>
           ))}
         </SidebarGroup>
-
-        <SidebarDivider />
 
         <SidebarGroup title="System" collapsible defaultExpanded>
           {systemNavLinks.map((link) => (

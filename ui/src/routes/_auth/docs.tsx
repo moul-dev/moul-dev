@@ -61,7 +61,7 @@ function DocsPage() {
         </Button>
       </div>
 
-      <Card variant="default" style={styles.iframeCard}>
+      <Card variant="glass" style={styles.iframeCard}>
         <iframe src="/docs" title="Moul API Docs" {...stylex.props(styles.iframe)} />
       </Card>
     </div>

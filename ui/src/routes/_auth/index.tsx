@@ -130,6 +130,7 @@ function DashboardPage() {
       {/* Top Metric Cards */}
       <div {...stylex.props(styles.grid)}>
         <Stat
+          variant="glass"
           label="COLLECTIONS"
           value={moulsLoading ? '...' : collectionCount}
           icon={<Database size={20} color={tokens.colorPrimary500} />}
@@ -137,6 +138,7 @@ function DashboardPage() {
         />
 
         <Stat
+          variant="glass"
           label="MEMORY ALLOCATED"
           value={memoryAlloc}
           icon={<Cpu size={20} color={tokens.colorSuccess500} />}
@@ -144,6 +146,7 @@ function DashboardPage() {
         />
 
         <Stat
+          variant="glass"
           label="GOROUTINES"
           value={goroutines}
           icon={<Pulse size={20} color={tokens.colorWarning500} />}
@@ -151,9 +154,10 @@ function DashboardPage() {
         />
 
         <Stat
+          variant="glass"
           label="STORAGE ENGINE"
           value={dbStatus}
-          icon={<HardDrives size={20} color={tokens.colorPrimary400} />}
+          icon={<HardDrives size={20} color={tokens.colorPrimary500} />}
           description="Litestream Continuous Backup Ready"
         />
       </div>
@@ -177,7 +181,7 @@ function DashboardPage() {
                 search={{ page: 1, perPage: 30 }}
                 style={{ textDecoration: 'none' }}
               >
-                <Card variant="default">
+                <Card variant="glass">
                   <CardBody>
                     <div {...stylex.props(styles.collectionCardInner)}>
                       <div {...stylex.props(styles.collectionName)}>

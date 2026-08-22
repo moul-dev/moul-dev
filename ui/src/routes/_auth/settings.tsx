@@ -126,7 +126,7 @@ function SettingsPage() {
       </div>
 
       {/* SMTP Email Settings */}
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
             <EnvelopeSimple size={20} color={tokens.colorPrimary500} />
@@ -172,7 +172,7 @@ function SettingsPage() {
       </Card>
 
       {/* TLS & HTTPS Settings */}
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
             <ShieldCheck size={20} color={tokens.colorSuccess500} />
@@ -200,7 +200,7 @@ function SettingsPage() {
       </Card>
 
       {/* Continuous S3 Backup */}
-      <Card variant="default">
+      <Card variant="glass">
         <CardHeader>
           <div {...stylex.props(styles.cardTitle)}>
             <HardDrives size={20} color={tokens.colorWarning500} />
