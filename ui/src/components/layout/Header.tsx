@@ -4,6 +4,7 @@ import { useRouterState, Link as RouterLink } from '@tanstack/react-router';
 import { ShieldCheckIcon, CpuIcon } from '@phosphor-icons/react';
 import { Breadcrumbs, BreadcrumbItem, Badge, Link } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
+import { ThemeToggle } from './ThemeToggle';
 
 const styles = stylex.create({
   header: {
@@ -71,6 +72,7 @@ export const Header: React.FC = () => {
             <span>Root Auth</span>
           </span>
         </Badge>
+        <ThemeToggle />
       </div>
     </header>
   );

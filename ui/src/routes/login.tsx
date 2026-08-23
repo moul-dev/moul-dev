@@ -14,6 +14,7 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useAuth } from '../context/AuthContext';
+import { ThemeToggle } from '../components/layout/ThemeToggle';
 
 const styles = stylex.create({
   container: {
@@ -24,6 +25,12 @@ const styles = stylex.create({
     width: '100vw',
     backgroundColor: tokens.colorBgSubtle,
     padding: tokens.spacing4,
+    position: 'relative',
+  },
+  themeToggleWrapper: {
+    position: 'absolute',
+    top: tokens.spacing4,
+    right: tokens.spacing4,
   },
   cardWrapper: {
     width: '100%',
@@ -114,6 +121,9 @@ function LoginPage() {
 
   return (
     <div {...stylex.props(styles.container)}>
+      <div {...stylex.props(styles.themeToggleWrapper)}>
+        <ThemeToggle />
+      </div>
       <div {...stylex.props(styles.cardWrapper)}>
         <Card variant="default">
           <CardHeader>

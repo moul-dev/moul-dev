@@ -1,7 +1,7 @@
 @import '@moul-dev/ui/style.css';
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   --brand-hue: 205; /* Sleek Cyan / Slate Blue for Mould */
   --brand-chroma-multiplier: 1.0;
   --brand-density-factor: 1.0;
@@ -32,8 +32,8 @@ html, body, #root {
 
 body {
   font-family: var(--font-sans);
-  background-color: #0b0d13;
-  color: #f1f5f9;
+  background-color: light-dark(#f8fafc, #0b0d13);
+  color: light-dark(#0f172a, #f1f5f9);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -47,10 +47,10 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(30% 0.02 250);
+  background: light-dark(oklch(82% 0.01 250), oklch(30% 0.02 250));
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(42% 0.04 250);
+  background: light-dark(oklch(68% 0.02 250), oklch(42% 0.04 250));
 }
 

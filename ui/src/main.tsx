@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@moul-dev/ui/style.css';
-import { ThemeProvider, ToastContainer } from '@moul-dev/ui';
+import { ToastContainer } from '@moul-dev/ui';
+import { AppThemeProvider } from './context/ThemeContext';
 import './index.css';
 
 // Import the auto-generated route tree
@@ -42,10 +43,10 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider colorScheme="dark" style={{ height: '100%', width: '100%' }}>
+        <AppThemeProvider>
           <ToastContainer />
           <RouterProvider router={router} />
-        </ThemeProvider>
+        </AppThemeProvider>
       </QueryClientProvider>
     </React.StrictMode>
   );
