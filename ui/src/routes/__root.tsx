@@ -6,10 +6,12 @@ import { Button } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { AuthProvider } from '../context/AuthContext';
 import { AppDevtools } from '../devtools';
+import { LogoIcon } from '../components/layout/Logo';
 
 const styles = stylex.create({
   loading: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
@@ -17,6 +19,13 @@ const styles = stylex.create({
     backgroundColor: tokens.colorBgSubtle,
     color: tokens.colorFgSubtle,
     fontFamily: tokens.fontFamilyBase,
+    gap: tokens.spacing3,
+  },
+  loadingIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: tokens.colorFg,
   },
   errorContainer: {
     display: 'flex',
@@ -40,7 +49,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
   pendingComponent: () => (
     <div {...stylex.props(styles.loading)}>
-      <span>Loading mould console...</span>
+      <div {...stylex.props(styles.loadingIcon)}>
+        <LogoIcon size={32} />
+      </div>
+      <span style={{ fontSize: '0.875rem' }}>Loading mould console...</span>
     </div>
   ),
   errorComponent: ({ error }) => (

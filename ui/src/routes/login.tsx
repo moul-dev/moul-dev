@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ShieldCheckIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -15,6 +14,7 @@ import {
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/layout/ThemeToggle';
+import { LogoIcon } from '../components/layout/Logo';
 
 const styles = stylex.create({
   container: {
@@ -45,15 +45,11 @@ const styles = stylex.create({
     width: '100%',
   },
   icon: {
-    width: '48px',
-    height: '48px',
-    borderRadius: tokens.radiusLg,
-    backgroundColor: tokens.colorAlertBgAccent,
-    color: tokens.colorPrimary500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: tokens.spacing1,
+    color: tokens.colorFg,
+    marginBottom: tokens.spacing2,
   },
   title: {
     fontSize: '1.5rem',
@@ -129,7 +125,7 @@ function LoginPage() {
           <CardHeader>
             <div {...stylex.props(styles.header)}>
               <div {...stylex.props(styles.icon)}>
-                <ShieldCheckIcon size={28} />
+                <LogoIcon size={44} />
               </div>
               <h1 {...stylex.props(styles.title)}>mould console</h1>
               <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>

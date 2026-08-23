@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
-import { ShieldPlusIcon } from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
@@ -14,6 +13,7 @@ import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api, setStoredAdminKey } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/layout/ThemeToggle';
+import { LogoIcon } from '../components/layout/Logo';
 
 const styles = stylex.create({
   container: {
@@ -44,15 +44,11 @@ const styles = stylex.create({
     width: '100%',
   },
   icon: {
-    width: '48px',
-    height: '48px',
-    borderRadius: tokens.radiusLg,
-    backgroundColor: tokens.colorAlertBgAccent,
-    color: tokens.colorPrimary500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: tokens.spacing1,
+    color: tokens.colorFg,
+    marginBottom: tokens.spacing2,
   },
   title: {
     fontSize: '1.5rem',
@@ -131,7 +127,7 @@ function SetupPage() {
           <CardHeader>
             <div {...stylex.props(styles.header)}>
               <div {...stylex.props(styles.icon)}>
-                <ShieldPlusIcon size={28} />
+                <LogoIcon size={44} />
               </div>
               <h1 {...stylex.props(styles.title)}>Welcome to mould</h1>
               <p {...stylex.props(styles.subtitle)}>

@@ -28,6 +28,7 @@ import {
 import { Header } from './Header';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useAuth } from '../../context/AuthContext';
+import { LogoIcon } from './Logo';
 
 const styles = stylex.create({
   brand: {
@@ -38,21 +39,14 @@ const styles = stylex.create({
     width: '100%',
     minWidth: 0,
     overflow: 'hidden',
+    color: tokens.colorFg,
   },
   brandIcon: {
-    width: '32px',
-    height: '32px',
-    minWidth: '32px',
-    borderRadius: tokens.radiusMd,
-    backgroundColor: tokens.colorAlertBgAccent,
-    color: tokens.colorPrimary500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: '1rem',
-    fontFamily: 'var(--font-mono, monospace)',
     flexShrink: 0,
+    color: tokens.colorFg,
   },
   brandTextWrapper: {
     display: 'flex',
@@ -174,10 +168,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <SidebarAside showCollapseToggle>
         <SidebarHeader>
           <Link to="/" {...stylex.props(styles.brand)}>
-            <div {...stylex.props(styles.brandIcon)}>M</div>
+            <div {...stylex.props(styles.brandIcon)}>
+              <LogoIcon size={24} />
+            </div>
             <div {...stylex.props(styles.brandTextWrapper)}>
-              <span {...stylex.props(styles.brandName)}>mould</span>
-              <Badge variant="primary">ADMIN</Badge>
+              <span {...stylex.props(styles.brandName)}>Moul</span>
+              {/* <Badge variant="primary">ADMIN</Badge> */}
             </div>
           </Link>
         </SidebarHeader>

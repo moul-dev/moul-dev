@@ -100,7 +100,18 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 		t.Fatalf("expected 404 for missing asset in /assets/, got %d", rec.Code)
 	}
 
-	// 7. Test SPA sub-path fallback (e.g. /_moul_/records/users)
+	// 7. Test serving favicon.svg
+	req = httptest.NewRequest(http.MethodGet, "/_moul_/favicon.svg", nil)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusOK {
+		if !strings.Contains(rec.Body.String(), "<polygon") {
+			t.Fatalf("expected favicon svg content, got %s", rec.Body.String())
+		}
+	}
+
+	// 8. Test SPA sub-path fallback (e.g. /_moul_/records/users)
 	req = httptest.NewRequest(http.MethodGet, "/_moul_/records/users", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
