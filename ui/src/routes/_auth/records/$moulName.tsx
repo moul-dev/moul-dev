@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
@@ -10,6 +10,13 @@ import {
   DatabaseIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  FileIcon,
+  FileTextIcon,
+  FileImageIcon,
+  FileZipIcon,
+  ArrowSquareOutIcon,
+  CloudArrowUpIcon,
+  UploadSimpleIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -24,7 +31,11 @@ import {
   CardBody,
   SearchField,
   TextField,
+  TextArea,
+  Select,
+  SelectItem,
   Checkbox,
+  Spinner,
   DrawerOverlay,
   Drawer,
   DrawerDialog,
@@ -113,7 +124,321 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: tokens.spacing1,
   },
+  fileInputWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing1,
+    fontFamily: tokens.fontFamilyBase,
+  },
+  fileLabel: {
+    fontSize: tokens.fontSizeSm,
+    fontWeight: 500,
+    color: tokens.colorFg,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing1,
+  },
+  dropzone: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: tokens.spacing4,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: tokens.colorBorder,
+    borderRadius: tokens.radiusMd,
+    backgroundColor: tokens.colorBgSubtle,
+    cursor: 'pointer',
+    gap: tokens.spacing2,
+    textAlign: 'center',
+    transition: 'all 0.15s ease',
+  },
+  dropzoneDragging: {
+    borderColor: tokens.colorPrimary500,
+    backgroundColor: tokens.colorBgElevated,
+  },
+  dropzoneText: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+  },
+  attachedCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: tokens.spacing2,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    borderRadius: tokens.radiusMd,
+    backgroundColor: tokens.colorBgElevated,
+    gap: tokens.spacing3,
+  },
+  attachedLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing3,
+    minWidth: 0,
+    flex: 1,
+  },
+  attachedThumb: {
+    width: '44px',
+    height: '44px',
+    borderRadius: tokens.radiusSm,
+    objectFit: 'cover',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    flexShrink: 0,
+  },
+  attachedIconBox: {
+    width: '44px',
+    height: '44px',
+    borderRadius: tokens.radiusSm,
+    backgroundColor: tokens.colorBgSubtle,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  attachedInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    minWidth: 0,
+    flex: 1,
+  },
+  attachedName: {
+    fontSize: tokens.fontSizeSm,
+    fontWeight: 500,
+    color: tokens.colorFg,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  attachedMeta: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+  },
+  attachedActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.25rem',
+    flexShrink: 0,
+  },
 });
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function getFileUrl(fileData: any): string {
+  if (!fileData) return '';
+  if (typeof fileData === 'string') return fileData;
+  return fileData.url || '';
+}
+
+function getFileName(fileData: any): string {
+  if (!fileData) return '';
+  if (typeof fileData === 'string') {
+    const parts = fileData.split('/');
+    return parts[parts.length - 1] || fileData;
+  }
+  return fileData.filename || fileData.name || 'file';
+}
+
+function isImageFile(fileData: any): boolean {
+  if (!fileData) return false;
+  const url = typeof fileData === 'string' ? fileData : fileData.url || '';
+  const filename = typeof fileData === 'string' ? fileData : fileData.filename || fileData.name || '';
+  const isImgExt = /\.(jpg|jpeg|png|webp|gif|svg|avif|ico|bmp)$/i.test(url || filename);
+  const hasThumb = Boolean(fileData.thumbhash || (fileData.thumbs && Object.keys(fileData.thumbs).length > 0));
+  return isImgExt || hasThumb;
+}
+
+interface FileFieldInputProps {
+  label: string;
+  required?: boolean;
+  value: any;
+  onChange: (val: any) => void;
+}
+
+function FileFieldInput({ label, required, value, onChange }: FileFieldInputProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const result = await api.uploadFile(file);
+      if (Array.isArray(result) && result.length > 0) {
+        onChange(result[0]);
+      } else if (result && typeof result === 'object') {
+        onChange(result);
+      }
+      toastQueue.add({
+        title: 'File Uploaded',
+        description: `${file.name} uploaded successfully.`,
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toastQueue.add({
+        title: 'Upload Failed',
+        description: err.message || 'Failed to upload file.',
+        variant: 'error',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleUpload(file);
+    }
+    // reset input
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleUpload(file);
+    }
+  };
+
+  const fileUrl = getFileUrl(value);
+  const fileName = getFileName(value);
+  const isImage = isImageFile(value);
+  const fileSize = typeof value === 'object' && value?.size ? formatFileSize(value.size) : '';
+
+  return (
+    <div {...stylex.props(styles.fileInputWrapper)}>
+      <label {...stylex.props(styles.fileLabel)}>
+        <span>{label}</span>
+        {required && <span style={{ color: tokens.colorError500 }}>*</span>}
+      </label>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
+      {value ? (
+        <div {...stylex.props(styles.attachedCard)}>
+          <div {...stylex.props(styles.attachedLeft)}>
+            {isImage && fileUrl ? (
+              <img
+                src={fileUrl}
+                alt={fileName}
+                {...stylex.props(styles.attachedThumb)}
+              />
+            ) : (
+              <div {...stylex.props(styles.attachedIconBox)}>
+                <FileIcon size={22} color={tokens.colorPrimary500} />
+              </div>
+            )}
+            <div {...stylex.props(styles.attachedInfo)}>
+              <span {...stylex.props(styles.attachedName)} title={fileName}>
+                {fileName}
+              </span>
+              <div {...stylex.props(styles.attachedMeta)}>
+                {fileSize && <span>{fileSize}</span>}
+                {value.created_at && (
+                  <span>{new Date(value.created_at).toLocaleDateString()}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div {...stylex.props(styles.attachedActions)}>
+            {fileUrl && (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="View file"
+                onPress={() => window.open(fileUrl, '_blank')}
+              >
+                <ArrowSquareOutIcon size={14} />
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label="Replace file"
+              isDisabled={isUploading}
+              onPress={() => fileInputRef.current?.click()}
+            >
+              <UploadSimpleIcon size={14} />
+              <span>Replace</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Remove file"
+              isDisabled={isUploading}
+              onPress={() => onChange(null)}
+            >
+              <TrashIcon size={14} color={tokens.colorError500} />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          {...stylex.props(styles.dropzone, isDragging && styles.dropzoneDragging)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => {
+            if (!isUploading) fileInputRef.current?.click();
+          }}
+        >
+          {isUploading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2, padding: tokens.spacing2 }}>
+              <Spinner size="sm" />
+              <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                Uploading file to storage...
+              </span>
+            </div>
+          ) : (
+            <>
+              <CloudArrowUpIcon size={28} color={tokens.colorPrimary500} />
+              <div {...stylex.props(styles.dropzoneText)}>
+                <span>Drag & drop a file here, or </span>
+                <span style={{ color: tokens.colorPrimary500, fontWeight: 500 }}>browse</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function RecordsPage() {
   const { moulName } = Route.useParams();
@@ -426,6 +751,75 @@ function RecordsPage() {
                 )}
                 {displayFields.map((f: any) => {
                   const val = rec[f.name];
+                  if (f.type === 'file') {
+                    if (!val) {
+                      return (
+                        <Cell key={f.name}>
+                          <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                        </Cell>
+                      );
+                    }
+                    const url = getFileUrl(val);
+                    const filename = getFileName(val);
+                    const isImg = isImageFile(val);
+
+                    return (
+                      <Cell key={f.name}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {isImg && url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+                              title={`View ${filename}`}
+                            >
+                              <img
+                                src={url}
+                                alt={filename}
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  objectFit: 'cover',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${tokens.colorBorderSubtle}`,
+                                  boxShadow: tokens.shadowSm,
+                                }}
+                              />
+                            </a>
+                          ) : (
+                            <FileIcon size={18} color={tokens.colorPrimary500} />
+                          )}
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              style={{
+                                color: tokens.colorPrimary500,
+                                textDecoration: 'none',
+                                fontSize: tokens.fontSizeXs,
+                                maxWidth: '140px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              title={filename}
+                            >
+                              <span>{filename}</span>
+                              <ArrowSquareOutIcon size={11} />
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: tokens.fontSizeXs }}>{filename}</span>
+                          )}
+                        </div>
+                      </Cell>
+                    );
+                  }
+
                   return (
                     <Cell key={f.name}>
                       {val === null || val === undefined ? (
@@ -579,10 +973,51 @@ function RecordsPage() {
                         >
                           {f.name}
                         </Checkbox>
+                      ) : f.type === 'file' ? (
+                        <FileFieldInput
+                          label={f.name}
+                          required={Boolean(f.required)}
+                          value={formData[f.name]}
+                          onChange={(val) => setFormData({ ...formData, [f.name]: val })}
+                        />
+                      ) : f.type === 'select' && f.options && f.options.length > 0 ? (
+                        <Select
+                          label={f.name}
+                          placeholder={`Select ${f.name}`}
+                          selectedKey={formData[f.name] || ''}
+                          onSelectionChange={(key) => setFormData({ ...formData, [f.name]: String(key) })}
+                          isRequired={Boolean(f.required)}
+                        >
+                          {f.options.map((opt: string) => (
+                            <SelectItem key={opt} id={opt} textValue={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                      ) : f.type === 'json' ? (
+                        <TextArea
+                          label={f.name}
+                          placeholder='{"key": "value"}'
+                          value={
+                            typeof formData[f.name] === 'object' && formData[f.name] !== null
+                              ? JSON.stringify(formData[f.name], null, 2)
+                              : String(formData[f.name] ?? '')
+                          }
+                          onChange={(val) => {
+                            try {
+                              const parsed = JSON.parse(val);
+                              setFormData({ ...formData, [f.name]: parsed });
+                            } catch {
+                              setFormData({ ...formData, [f.name]: val });
+                            }
+                          }}
+                          rows={4}
+                          isRequired={Boolean(f.required)}
+                        />
                       ) : (
                         <TextField
                           label={f.name}
-                          type={f.type === 'number' ? 'number' : 'text'}
+                          type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'url' ? 'url' : 'text'}
                           value={String(formData[f.name] ?? '')}
                           onChange={(val) =>
                             setFormData({
@@ -616,4 +1051,5 @@ function RecordsPage() {
     </div>
   );
 }
+
 
