@@ -8,6 +8,7 @@ import {
   TrashIcon,
   SlidersIcon,
   TableIcon,
+  LinkIcon,
 } from '@phosphor-icons/react';
 import {
   Card,
@@ -87,6 +88,20 @@ const styles = stylex.create({
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: tokens.colorBorderSubtle,
+  },
+  relationPill: {
+    backgroundColor: tokens.colorBgElevated,
+    paddingBlock: '2px',
+    paddingInline: tokens.spacing1,
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorPrimary500,
+    color: tokens.colorPrimary500,
+    fontWeight: 500,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
   },
   cardActions: {
     display: 'flex',
@@ -226,11 +241,27 @@ function CollectionsPage() {
                   <span {...stylex.props(styles.fieldPill)}>id</span>
                   <span {...stylex.props(styles.fieldPill)}>created_at</span>
                   <span {...stylex.props(styles.fieldPill)}>updated_at</span>
-                  {moul.fields?.map((f: any) => (
-                    <span key={f.name} {...stylex.props(styles.fieldPill)}>
-                      {f.name} ({f.type})
-                    </span>
-                  ))}
+                  {moul.fields?.map((f: any) => {
+                    if (f.type === 'relation' && f.relationConfig) {
+                      return (
+                        <span
+                          key={f.name}
+                          {...stylex.props(styles.relationPill)}
+                          title={`Relation ${f.name} ➔ ${f.relationConfig.targetMoul} (${f.relationConfig.cardinality || '1:N'})`}
+                        >
+                          <LinkIcon size={12} />
+                          <span>
+                            {f.name} ➔ {f.relationConfig.targetMoul}
+                          </span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <span key={f.name} {...stylex.props(styles.fieldPill)}>
+                        {f.name} ({f.type})
+                      </span>
+                    );
+                  })}
                 </div>
               </CardBody>
 

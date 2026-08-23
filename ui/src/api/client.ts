@@ -227,19 +227,25 @@ export const api = {
     }),
 
   // Records CRUD
-  listRecords: (name: string, params?: { page?: number; perPage?: number; sort?: string; filter?: string; search?: string }) => {
+  listRecords: (name: string, params?: { page?: number; perPage?: number; sort?: string; filter?: string; search?: string; expand?: string }) => {
     const q = new URLSearchParams();
     if (params?.page) q.set('page', String(params.page));
     if (params?.perPage) q.set('perPage', String(params.perPage));
     if (params?.sort) q.set('sort', params.sort);
     if (params?.filter) q.set('filter', params.filter);
     if (params?.search) q.set('search', params.search);
+    if (params?.expand) q.set('expand', params.expand);
     const qs = q.toString();
     return request<{ items: any[]; totalItems?: number; page?: number; perPage?: number } | any[]>(
       `/api/moul/${name}/records${qs ? `?${qs}` : ''}`
     );
   },
-  getRecord: (name: string, id: string) => request<any>(`/api/moul/${name}/records/${id}`),
+  getRecord: (name: string, id: string, params?: { expand?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.expand) q.set('expand', params.expand);
+    const qs = q.toString();
+    return request<any>(`/api/moul/${name}/records/${id}${qs ? `?${qs}` : ''}`);
+  },
   createRecord: (name: string, data: any) =>
     request<any>(`/api/moul/${name}/records`, {
       method: 'POST',

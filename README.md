@@ -216,6 +216,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 ### Frontend Architecture & Stack
 
 - **UI Component System**: **Moul UI (`@moul-dev/ui`)** built on **React Aria Components** and **StyleX** for accessible, zero-runtime atomic UI components.
+- **Relational Association Modeling**: Complete visual relationship builder directly in Schema Designer supporting **1:1 (One-to-One)**, **1:N (Many-to-One / Foreign Key)**, **M:N (Many-to-Many)**, self-referencing tree structures, on-delete referential integrity policies (`CASCADE`, `SET_NULL`, `RESTRICT`), and interactive linked record pickers with inline relation expansion.
 - **Theming**: Tri-state theme toggle supporting **System** (default, dynamically adapting to OS preference in real-time), **Light**, and **Dark** modes with persistent storage.
 - **Routing**: **TanStack Router** with file-based routing (`ui/src/routes/`), generated type-safe route trees, typed Zod search schemas, route loaders, intent preloading (`preload: 'intent'`), and automatic code splitting.
 - **Styling**: **Meta StyleX (`@stylexjs/stylex`)** with `@stylexjs/unplugin` for zero-runtime / compile-time atomic CSS-in-JS and dedicated design tokens (`@moul-dev/ui/tokens.stylex`).

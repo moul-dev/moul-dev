@@ -175,7 +175,7 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 
 	updated.Name = strings.TrimSpace(updated.Name)
 	if updated.Name == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Moul name is required")
+		updated.Name = name
 	}
 	if strings.HasPrefix(updated.Name, "_") {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name cannot start with underscore")

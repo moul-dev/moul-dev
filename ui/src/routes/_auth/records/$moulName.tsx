@@ -11,12 +11,10 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   FileIcon,
-  FileTextIcon,
-  FileImageIcon,
-  FileZipIcon,
   ArrowSquareOutIcon,
   CloudArrowUpIcon,
   UploadSimpleIcon,
+  LinkIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -266,6 +264,19 @@ function isImageFile(fileData: any): boolean {
   return isImgExt || hasThumb;
 }
 
+function getRecordDisplayLabel(rec: any): string {
+  if (!rec) return '';
+  if (typeof rec === 'string') return rec;
+  if (rec.name) return String(rec.name);
+  if (rec.title) return String(rec.title);
+  if (rec.username) return String(rec.username);
+  if (rec.email) return String(rec.email);
+  if (rec.label) return String(rec.label);
+  if (rec.slug) return String(rec.slug);
+  if (rec.id) return String(rec.id);
+  return JSON.stringify(rec);
+}
+
 interface FileFieldInputProps {
   label: string;
   required?: boolean;
@@ -308,7 +319,6 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
     if (file) {
       handleUpload(file);
     }
-    // reset input
     e.target.value = '';
   };
 
@@ -440,6 +450,205 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
   );
 }
 
+interface RelationFieldInputProps {
+  label: string;
+  required?: boolean;
+  relationConfig?: {
+    targetMoul: string;
+    cardinality: string;
+    onDelete?: string;
+  };
+  value: any;
+  onChange: (val: any) => void;
+}
+
+function RelationFieldInput({ label, required, relationConfig, value, onChange }: RelationFieldInputProps) {
+  const targetMoul = relationConfig?.targetMoul || '';
+  const card = relationConfig?.cardinality || '1:N';
+
+  // Query records from target collection
+  const { data: targetData, isLoading } = useQuery({
+    queryKey: ['records', targetMoul, 1, 100],
+    queryFn: () => api.listRecords(targetMoul, { perPage: 100 }),
+    enabled: Boolean(targetMoul),
+  });
+
+  const targetRecords = useMemo(() => {
+    if (Array.isArray(targetData)) return targetData;
+    if (targetData && Array.isArray(targetData.items)) return targetData.items;
+    return [];
+  }, [targetData]);
+
+  if (card === 'M:N') {
+    // Value is array of IDs
+    const selectedIds: string[] = Array.isArray(value) ? value : value ? [String(value)] : [];
+
+    const handleToggle = (id: string) => {
+      if (selectedIds.includes(id)) {
+        onChange(selectedIds.filter((i) => i !== id));
+      } else {
+        onChange([...selectedIds, id]);
+      }
+    };
+
+    const handleRemove = (id: string) => {
+      onChange(selectedIds.filter((i) => i !== id));
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label
+            style={{
+              fontSize: tokens.fontSizeSm,
+              fontWeight: 500,
+              color: tokens.colorFg,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <LinkIcon size={14} color={tokens.colorPrimary500} />
+            <span>{label}</span>
+            <Badge size="sm" variant="primary">
+              M:N ➔ {targetMoul}
+            </Badge>
+            {required && <span style={{ color: tokens.colorError500 }}>*</span>}
+          </label>
+        </div>
+
+        {/* Selected Badges */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: tokens.spacing1,
+            minHeight: '36px',
+            padding: '6px',
+            backgroundColor: tokens.colorBgSubtle,
+            borderRadius: tokens.radiusSm,
+            border: `1px solid ${tokens.colorBorderSubtle}`,
+            alignItems: 'center',
+          }}
+        >
+          {selectedIds.length === 0 ? (
+            <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, padding: '2px 4px' }}>
+              No records selected. Select records from the dropdown below to link.
+            </span>
+          ) : (
+            selectedIds.map((id) => {
+              const rec = targetRecords.find((r) => String(r.id) === String(id));
+              const display = rec ? getRecordDisplayLabel(rec) : id;
+              return (
+                <span
+                  key={id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    backgroundColor: tokens.colorBgElevated,
+                    border: `1px solid ${tokens.colorPrimary500}`,
+                    borderRadius: tokens.radiusSm,
+                    padding: '2px 8px',
+                    fontSize: tokens.fontSizeXs,
+                    color: tokens.colorFg,
+                  }}
+                >
+                  <LinkIcon size={12} color={tokens.colorPrimary500} />
+                  <span>{display}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: tokens.colorFgSubtle,
+                      fontSize: '14px',
+                      lineHeight: 1,
+                      marginLeft: '2px',
+                    }}
+                    aria-label={`Remove ${display}`}
+                  >
+                    &times;
+                  </button>
+                </span>
+              );
+            })
+          )}
+        </div>
+
+        {/* Add Record Dropdown */}
+        <Select
+          aria-label={`Add ${label} record`}
+          placeholder={isLoading ? 'Loading records...' : `Select record to add to ${label}...`}
+          selectedKey=""
+          onSelectionChange={(key) => {
+            if (key && String(key) !== '' && String(key) !== '__placeholder__') {
+              handleToggle(String(key));
+            }
+          }}
+        >
+          <SelectItem id="__placeholder__" textValue="Select record to link...">
+            <em>Select record to link...</em>
+          </SelectItem>
+          {targetRecords
+            .filter((r) => !selectedIds.includes(String(r.id)))
+            .map((rec) => (
+              <SelectItem key={rec.id} id={rec.id} textValue={getRecordDisplayLabel(rec)}>
+                {getRecordDisplayLabel(rec)} ({rec.id})
+              </SelectItem>
+            ))}
+        </Select>
+      </div>
+    );
+  }
+
+  // 1:1 or 1:N
+  const currentVal = value ? String(value) : '';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <label
+          style={{
+            fontSize: tokens.fontSizeSm,
+            fontWeight: 500,
+            color: tokens.colorFg,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <LinkIcon size={14} color={tokens.colorPrimary500} />
+          <span>{label}</span>
+          <Badge size="sm" variant="primary">
+            {card} ➔ {targetMoul}
+          </Badge>
+          {required && <span style={{ color: tokens.colorError500 }}>*</span>}
+        </label>
+      </div>
+      <Select
+        aria-label={`${label} (${card} ➔ ${targetMoul})`}
+        placeholder={isLoading ? 'Loading target records...' : `Select ${targetMoul} record...`}
+        selectedKey={currentVal}
+        onSelectionChange={(key) => onChange(key === '__none__' ? '' : String(key))}
+        isRequired={required}
+      >
+        <SelectItem id="__none__" textValue="(None / Clear)">
+          <em>(None / Clear)</em>
+        </SelectItem>
+        {targetRecords.map((rec) => (
+          <SelectItem key={rec.id} id={rec.id} textValue={getRecordDisplayLabel(rec)}>
+            {getRecordDisplayLabel(rec)} ({rec.id})
+          </SelectItem>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
 function RecordsPage() {
   const { moulName } = Route.useParams();
   const search = Route.useSearch();
@@ -462,9 +671,27 @@ function RecordsPage() {
     queryFn: () => api.getMoul(moulName),
   });
 
-  // 2. Fetch records list
+  // Collect all relation field names to pass as expand query param
+  const relationExpandQuery = useMemo(() => {
+    if (!moul?.fields) return undefined;
+    const relFields = moul.fields
+      .filter((f: any) => f.type === 'relation' && f.name)
+      .map((f: any) => f.name);
+    return relFields.length > 0 ? relFields.join(',') : undefined;
+  }, [moul]);
+
+  // 2. Fetch records list with relation expansions
   const { data: recordsData, isLoading } = useQuery({
-    queryKey: ['records', moulName, search.page, search.perPage, search.sort, search.filter, search.search],
+    queryKey: [
+      'records',
+      moulName,
+      search.page,
+      search.perPage,
+      search.sort,
+      search.filter,
+      search.search,
+      relationExpandQuery,
+    ],
     queryFn: () =>
       api.listRecords(moulName, {
         page: search.page,
@@ -472,6 +699,7 @@ function RecordsPage() {
         sort: search.sort,
         filter: search.filter,
         search: search.search,
+        expand: relationExpandQuery,
       }),
   });
 
@@ -533,6 +761,7 @@ function RecordsPage() {
         'tags',
         'meta',
         'args',
+        'expand',
       ]);
 
       const inferredKeys = new Set<string>();
@@ -653,7 +882,7 @@ function RecordsPage() {
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Explore records data grid, execute search filters, and manage collection entries.
+            Explore records data grid, filter relational associations, and manage collection entries.
           </span>
         </div>
         <Button variant="primary" onPress={handleOpenCreate}>
@@ -751,6 +980,8 @@ function RecordsPage() {
                 )}
                 {displayFields.map((f: any) => {
                   const val = rec[f.name];
+
+                  // 1. File Field Rendering
                   if (f.type === 'file') {
                     if (!val) {
                       return (
@@ -820,6 +1051,92 @@ function RecordsPage() {
                     );
                   }
 
+                  // 2. Relation Field Rendering
+                  if (f.type === 'relation') {
+                    const targetMoul = f.relationConfig?.targetMoul || '';
+                    const card = f.relationConfig?.cardinality || '1:N';
+                    const expanded = rec.expand?.[f.name];
+
+                    if (!val || (Array.isArray(val) && val.length === 0)) {
+                      return (
+                        <Cell key={f.name}>
+                          <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                        </Cell>
+                      );
+                    }
+
+                    if (card === 'M:N') {
+                      const ids: string[] = Array.isArray(val) ? val : [String(val)];
+                      const expandedList: any[] = Array.isArray(expanded) ? expanded : [];
+
+                      return (
+                        <Cell key={f.name}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                            {ids.map((id, i) => {
+                              const expItem = expandedList.find((e) => String(e.id) === String(id)) || expandedList[i];
+                              const label = expItem ? getRecordDisplayLabel(expItem) : id;
+                              return (
+                                <span
+                                  key={id || i}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    backgroundColor: tokens.colorBgElevated,
+                                    border: `1px solid ${tokens.colorPrimary500}`,
+                                    borderRadius: tokens.radiusSm,
+                                    padding: '2px 6px',
+                                    fontSize: tokens.fontSizeXs,
+                                    color: tokens.colorFg,
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() => {
+                                    window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
+                                  }}
+                                  title={`Target: ${targetMoul} · ID: ${id}`}
+                                >
+                                  <LinkIcon size={12} color={tokens.colorPrimary500} />
+                                  <span>{label}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </Cell>
+                      );
+                    }
+
+                    // 1:1 or 1:N
+                    const id = String(val);
+                    const label = expanded ? getRecordDisplayLabel(expanded) : id;
+
+                    return (
+                      <Cell key={f.name}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: tokens.colorBgElevated,
+                            border: `1px solid ${tokens.colorPrimary500}`,
+                            borderRadius: tokens.radiusSm,
+                            padding: '2px 6px',
+                            fontSize: tokens.fontSizeXs,
+                            color: tokens.colorFg,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => {
+                            window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
+                          }}
+                          title={`Target: ${targetMoul} · ID: ${id}`}
+                        >
+                          <LinkIcon size={12} color={tokens.colorPrimary500} />
+                          <span>{label}</span>
+                        </span>
+                      </Cell>
+                    );
+                  }
+
+                  // 3. Default Cell Rendering
                   return (
                     <Cell key={f.name}>
                       {val === null || val === undefined ? (
@@ -980,6 +1297,14 @@ function RecordsPage() {
                           value={formData[f.name]}
                           onChange={(val) => setFormData({ ...formData, [f.name]: val })}
                         />
+                      ) : f.type === 'relation' ? (
+                        <RelationFieldInput
+                          label={f.name}
+                          required={Boolean(f.required)}
+                          relationConfig={f.relationConfig}
+                          value={formData[f.name]}
+                          onChange={(val) => setFormData({ ...formData, [f.name]: val })}
+                        />
                       ) : f.type === 'select' && f.options && f.options.length > 0 ? (
                         <Select
                           label={f.name}
@@ -1017,7 +1342,17 @@ function RecordsPage() {
                       ) : (
                         <TextField
                           label={f.name}
-                          type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'url' ? 'url' : 'text'}
+                          type={
+                            f.type === 'number'
+                              ? 'number'
+                              : f.type === 'date'
+                              ? 'date'
+                              : f.type === 'datetime'
+                              ? 'datetime-local'
+                              : f.type === 'url'
+                              ? 'url'
+                              : 'text'
+                          }
                           value={String(formData[f.name] ?? '')}
                           onChange={(val) =>
                             setFormData({
@@ -1051,5 +1386,3 @@ function RecordsPage() {
     </div>
   );
 }
-
-
