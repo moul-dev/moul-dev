@@ -590,7 +590,7 @@ function SettingsPage() {
         </div>
       </div>
 
-      <Tabs selectedKey={selectedTab} onSelectionChange={(k) => setSelectedTab(k as string)}>
+      <Tabs selectedKey={selectedTab} onSelectionChange={(k) => setSelectedTab(k as string)} variant='tertiary'>
         <TabList aria-label="Engine Settings Navigation">
           <Tab id="s3">S3 Storage</Tab>
           <Tab id="litestream">Litestream Backups</Tab>
@@ -611,8 +611,8 @@ function SettingsPage() {
                     <CloudIcon size={20} color={tokens.colorPrimary500} />
                     <span>S3 Object Storage</span>
                   </div>
-                  <Button variant="outline" size="sm" onPress={() => openDrawer('s3')}>
-                    <PencilSimpleIcon size={14} />
+                  <Button variant="outline" onPress={() => openDrawer('s3')}>
+                    <PencilSimpleIcon size={16} />
                     <span>Configure S3</span>
                   </Button>
                 </div>
@@ -620,7 +620,7 @@ function SettingsPage() {
               <CardBody>
                 {!s3Enabled ? (
                   <EmptyState
-                    icon={<CloudIcon size={36} color={tokens.colorPrimary500} />}
+                    icon={<CloudIcon size={22} color={tokens.colorPrimary500} />}
                     title="S3 Object Storage is Disabled"
                     description="Files and media uploads are currently saved to local disk storage. Configure an S3-compatible bucket (AWS, Cloudflare R2, MinIO, Wasabi) for scalable distributed object storage."
                     action={
@@ -682,8 +682,8 @@ function SettingsPage() {
                     <FloppyDiskIcon size={20} color={tokens.colorSuccess500} />
                     <span>Litestream Real-Time Backups</span>
                   </div>
-                  <Button variant="outline" size="sm" onPress={() => openDrawer('litestream')}>
-                    <PencilSimpleIcon size={14} />
+                  <Button variant="outline" onPress={() => openDrawer('litestream')}>
+                    <PencilSimpleIcon size={16} />
                     <span>Configure Litestream</span>
                   </Button>
                 </div>
@@ -691,7 +691,7 @@ function SettingsPage() {
               <CardBody>
                 {!litestreamEnabled ? (
                   <EmptyState
-                    icon={<FloppyDiskIcon size={36} color={tokens.colorSuccess500} />}
+                    icon={<FloppyDiskIcon size={22} color={tokens.colorSuccess500} />}
                     title="Litestream Replication is Disabled"
                     description="Stream SQLite WAL frames continuously to S3 for point-in-time recovery, real-time disaster recovery, and automated failover."
                     action={
@@ -760,8 +760,8 @@ function SettingsPage() {
                     >
                       {rateLimitingEnabled ? 'Rate Limiter Enabled' : 'Rate Limiter Disabled'}
                     </Switch>
-                    <Button variant="primary" size="sm" onPress={() => openDrawer('ratelimit-add')}>
-                      <PlusIcon size={14} />
+                    <Button variant="primary" onPress={() => openDrawer('ratelimit-add')}>
+                      <PlusIcon size={16} />
                       <span>Add Rule</span>
                     </Button>
                   </div>
@@ -770,7 +770,7 @@ function SettingsPage() {
               <CardBody>
                 {rateLimitRules.length === 0 ? (
                   <EmptyState
-                    icon={<ShieldWarningIcon size={36} color={tokens.colorWarning500} />}
+                    icon={<ShieldWarningIcon size={22} color={tokens.colorWarning500} />}
                     title="No Rate Limiting Rules Configured"
                     description="Protect your API endpoints and auth routes against brute-force attacks and abuse by configuring sliding window rate limits."
                     action={
@@ -808,8 +808,8 @@ function SettingsPage() {
                                 rule.targeted_users === 'authenticated'
                                   ? 'primary'
                                   : rule.targeted_users === 'guest'
-                                  ? 'warning'
-                                  : 'neutral'
+                                    ? 'warning'
+                                    : 'neutral'
                               }
                               size="sm"
                             >
@@ -820,7 +820,6 @@ function SettingsPage() {
                             <div {...stylex.props(styles.tableActions)}>
                               <Button
                                 variant="ghost"
-                                size="sm"
                                 aria-label={`Edit ${rule.label}`}
                                 onPress={() => openDrawer('ratelimit-edit', idx)}
                               >
@@ -828,7 +827,6 @@ function SettingsPage() {
                               </Button>
                               <Button
                                 variant="danger-soft"
-                                size="sm"
                                 aria-label={`Delete ${rule.label}`}
                                 onPress={() => handleDeleteRule(idx)}
                               >
@@ -854,8 +852,8 @@ function SettingsPage() {
                     <GlobeHemisphereWestIcon size={20} color={tokens.colorPrimary500} />
                     <span>Root User IP Restriction</span>
                   </div>
-                  <Button variant="outline" size="sm" onPress={() => openDrawer('rootips')}>
-                    <PencilSimpleIcon size={14} />
+                  <Button variant="outline" onPress={() => openDrawer('rootips')}>
+                    <PencilSimpleIcon size={16} />
                     <span>Configure IP Whitelist</span>
                   </Button>
                 </div>
@@ -863,7 +861,7 @@ function SettingsPage() {
               <CardBody>
                 {!rootIPEnabled || allowedIPsList.length === 0 ? (
                   <EmptyState
-                    icon={<GlobeHemisphereWestIcon size={36} color={tokens.colorWarning500} />}
+                    icon={<GlobeHemisphereWestIcon size={22} color={tokens.colorWarning500} />}
                     title="Root User IP Whitelist is Inactive"
                     description="Root administrator accounts can currently authenticate from any network IP address. Restrict root logins to specific trusted corporate IPs or VPN CIDR ranges to prevent unauthorized access."
                     action={
@@ -906,8 +904,8 @@ function SettingsPage() {
                     <EnvelopeSimpleIcon size={20} color={tokens.colorPrimary500} />
                     <span>Transactional Email Delivery</span>
                   </div>
-                  <Button variant="outline" size="sm" onPress={() => openDrawer('email')}>
-                    <PencilSimpleIcon size={14} />
+                  <Button variant="outline" onPress={() => openDrawer('email')}>
+                    <PencilSimpleIcon size={16} />
                     <span>Configure Email</span>
                   </Button>
                 </div>
@@ -915,7 +913,7 @@ function SettingsPage() {
               <CardBody>
                 {!emailEnabled ? (
                   <EmptyState
-                    icon={<EnvelopeSimpleIcon size={36} color={tokens.colorPrimary500} />}
+                    icon={<EnvelopeSimpleIcon size={22} color={tokens.colorPrimary500} />}
                     title="Transactional Email Delivery is Disabled"
                     description="Enable transactional email delivery to send password reset links, OTP verification codes, and user invites via AWS SES, Resend, Mailgun, SendGrid, Cloudflare, or local stdout console."
                     action={
@@ -979,8 +977,8 @@ function SettingsPage() {
                       <LinkSimpleIcon size={18} color={tokens.colorPrimary500} />
                       <span>Global OAuth Callback Redirect URL</span>
                     </div>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-global')}>
-                      <PencilSimpleIcon size={14} />
+                    <Button variant="outline" onPress={() => openDrawer('oauth-global')}>
+                      <PencilSimpleIcon size={16} />
                       <span>Edit Redirect URL</span>
                     </Button>
                   </div>
@@ -1017,8 +1015,8 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-github')}>
-                      <GearIcon size={14} />
+                    <Button variant="outline" onPress={() => openDrawer('oauth-github')}>
+                      <GearIcon size={16} />
                       <span>Configure GitHub</span>
                     </Button>
                   </CardFooter>
@@ -1044,8 +1042,8 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-google')}>
-                      <GearIcon size={14} />
+                    <Button variant="outline" onPress={() => openDrawer('oauth-google')}>
+                      <GearIcon size={16} />
                       <span>Configure Google</span>
                     </Button>
                   </CardFooter>
@@ -1071,8 +1069,8 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-apple')}>
-                      <GearIcon size={14} />
+                    <Button variant="outline" onPress={() => openDrawer('oauth-apple')}>
+                      <GearIcon size={16} />
                       <span>Configure Apple</span>
                     </Button>
                   </CardFooter>
@@ -1090,8 +1088,8 @@ function SettingsPage() {
                     <LockKeyIcon size={20} color={tokens.colorPrimary500} />
                     <span>Root Administrator Credentials</span>
                   </div>
-                  <Button variant="primary" size="sm" onPress={() => openDrawer('password')}>
-                    <LockKeyIcon size={14} />
+                  <Button variant="primary" onPress={() => openDrawer('password')}>
+                    <LockKeyIcon size={16} />
                     <span>Change Root Password</span>
                   </Button>
                 </div>
@@ -1589,8 +1587,8 @@ function SettingsPage() {
                 {updateMutation.isPending || updatePasswordMutation.isPending
                   ? 'Saving...'
                   : drawerMode === 'password'
-                  ? 'Update Password'
-                  : 'Save Settings'}
+                    ? 'Update Password'
+                    : 'Save Settings'}
               </Button>
             </DrawerFooter>
           </DrawerDialog>
