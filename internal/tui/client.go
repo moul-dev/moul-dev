@@ -334,6 +334,19 @@ func (c *Client) SetupRootUser(username, email, password string) error {
 	return c.request("POST", "/api/setup", payload, nil)
 }
 
+// UpdateRootPassword updates the password of a root user.
+func (c *Client) UpdateRootPassword(currentPassword, newPassword, confirmPassword string, identity ...string) error {
+	payload := map[string]string{
+		"currentPassword": currentPassword,
+		"password":        newPassword,
+		"passwordConfirm": confirmPassword,
+	}
+	if len(identity) > 0 && identity[0] != "" {
+		payload["identity"] = identity[0]
+	}
+	return c.request("POST", "/api/admin/password", payload, nil)
+}
+
 // GetSettings fetches all settings from the database and returns them as a JSON object.
 func (c *Client) GetSettings() (map[string]string, error) {
 	var settings map[string]string

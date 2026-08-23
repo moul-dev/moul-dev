@@ -10,7 +10,7 @@
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
-- **Web Admin Console**: TanStack Router (file-based routing), Meta StyleX (`@stylexjs/stylex` with `@stylexjs/unplugin`), TanStack Table & Query, Phosphor Icons (`@phosphor-icons/react`), and unified TanStack DevTools suite (`@tanstack/react-devtools`, `@tanstack/devtools-vite`, `@tanstack/devtools-event-client`) with typed runtime inspection, embedded via Go `//go:embed all:dist`.
+- **Web Admin Console**: TanStack Router (file-based routing), Meta StyleX (`@stylexjs/stylex` with `@stylexjs/unplugin`), Moul UI (`@moul-dev/ui`) with tri-state system/light/dark theming, TanStack Table & Query, Phosphor Icons (`@phosphor-icons/react`), and unified TanStack DevTools suite (`@tanstack/react-devtools`, `@tanstack/devtools-vite`, `@tanstack/devtools-event-client`) with typed runtime inspection, embedded via Go `//go:embed all:dist`.
 - **Database Abstraction**: `github.com/pocketbase/dbx`
 - **SQLite Engine**: `modernc.org/sqlite` (Pure Go, CGO-free)
 - **TUI Framework**: Charm Bubble Tea (`charm.land/bubbletea/v2`)
@@ -101,6 +101,12 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `GET /AGENTS.md`: Agent documentation guide.
 - `GET /llms.txt`: Standard LLM text reference index.
 - `GET /llms-full.txt`: Complete LLM technical specification.
+
+### Setup & Root User Management (Admin Auth)
+- `GET /api/setup`: Check if initial setup is required (`needsSetup: true|false`).
+- `POST /api/setup`: Register initial root user (`username`, `email`, `password`).
+- `POST /api/admin/login`: Authenticate root user with Master Admin Key & credentials.
+- `POST /api/admin/password`: Update root user password (`currentPassword`, `password`, `passwordConfirm`, optional `identity`).
 
 ### Built-in MCP Server (Admin Auth)
 - `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint.

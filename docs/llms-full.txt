@@ -102,6 +102,12 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `GET /llms.txt`: Standard LLM text reference index.
 - `GET /llms-full.txt`: Complete LLM technical specification.
 
+### Setup & Root User Management (Admin Auth)
+- `GET /api/setup`: Check if initial setup is required (`needsSetup: true|false`).
+- `POST /api/setup`: Register initial root user (`username`, `email`, `password`).
+- `POST /api/admin/login`: Authenticate root user with Master Admin Key & credentials.
+- `POST /api/admin/password`: Update root user password (`currentPassword`, `password`, `passwordConfirm`, optional `identity`).
+
 ### Built-in MCP Server (Admin Auth)
 - `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint.
 

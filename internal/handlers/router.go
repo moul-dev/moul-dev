@@ -131,9 +131,16 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
 	setupGroup.GET("", setupHandler.CheckSetupStatus)
 	setupGroup.POST("", setupHandler.SetupRootUser)
+	setupGroup.POST("/password", setupHandler.UpdateRootPassword)
+	setupGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
 	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
 	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
+	adminAuthGroup.POST("/password", setupHandler.UpdateRootPassword)
+	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
+
+	e.POST("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
+	e.PATCH("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
 
 	// Feature flags management & evaluation (Admin-protected)
 	flagsGroup := e.Group("/api/feature-flags", middleware.RequireAuthOrAdmin(adminKey))

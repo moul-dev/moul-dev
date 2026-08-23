@@ -141,6 +141,12 @@ func (m *Model) getSettingsFields() []settingField {
 				settingField{label: "Apple Private Key (.p8)", strVal: &m.settingOAuthApplePrivateKey, inputIdx: 9},
 			)
 		}
+	} else if m.settingsActiveTab == 6 {
+		fields = append(fields,
+			settingField{label: "Current Password", strVal: &m.settingRootCurrentPassword, inputIdx: 0},
+			settingField{label: "New Password", strVal: &m.settingRootNewPassword, inputIdx: 1},
+			settingField{label: "Confirm New Password", strVal: &m.settingRootConfirmPassword, inputIdx: 2},
+		)
 	}
 	return fields
 }
@@ -263,6 +269,26 @@ func (m *Model) initSettingsInputs() {
 		m.oauthInputs[9].EchoCharacter = '•'
 	}
 
+	if len(m.rootPwdInputs) == 0 {
+		m.rootPwdInputs = make([]textinput.Model, 3)
+		for i := range m.rootPwdInputs {
+			t := textinput.New()
+			t.CharLimit = 128
+
+			s := t.Styles()
+			s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+			s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+			t.SetStyles(s)
+			t.EchoMode = textinput.EchoPassword
+			t.EchoCharacter = '•'
+
+			m.rootPwdInputs[i] = t
+		}
+		m.rootPwdInputs[0].Placeholder = "Current root password"
+		m.rootPwdInputs[1].Placeholder = "Min 8 chars, 1 upper, 1 lower, 1 digit"
+		m.rootPwdInputs[2].Placeholder = "Confirm new password"
+	}
+
 	// Load values from model state
 	m.storageInputs[0].SetValue(m.settingFileS3Bucket)
 	m.storageInputs[1].SetValue(m.settingFileS3Endpoint)
@@ -298,6 +324,10 @@ func (m *Model) initSettingsInputs() {
 	m.oauthInputs[7].SetValue(m.settingOAuthAppleTeamID)
 	m.oauthInputs[8].SetValue(m.settingOAuthAppleKeyID)
 	m.oauthInputs[9].SetValue(m.settingOAuthApplePrivateKey)
+
+	m.rootPwdInputs[0].SetValue(m.settingRootCurrentPassword)
+	m.rootPwdInputs[1].SetValue(m.settingRootNewPassword)
+	m.rootPwdInputs[2].SetValue(m.settingRootConfirmPassword)
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -317,6 +347,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.emailInputs[f.inputIdx].Blur()
 			} else if m.settingsActiveTab == 5 {
 				m.oauthInputs[f.inputIdx].Blur()
+			} else if m.settingsActiveTab == 6 {
+				m.rootPwdInputs[f.inputIdx].Blur()
 			}
 		}
 	}
@@ -335,6 +367,8 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 				m.emailInputs[f.inputIdx].Focus()
 			} else if m.settingsActiveTab == 5 {
 				m.oauthInputs[f.inputIdx].Focus()
+			} else if m.settingsActiveTab == 6 {
+				m.rootPwdInputs[f.inputIdx].Focus()
 			}
 		}
 	}
@@ -357,6 +391,9 @@ func (m *Model) blurAllSettingsInputs() {
 	}
 	for i := range m.oauthInputs {
 		m.oauthInputs[i].Blur()
+	}
+	for i := range m.rootPwdInputs {
+		m.rootPwdInputs[i].Blur()
 	}
 }
 
@@ -536,6 +573,17 @@ func (m *Model) viewSettings() string {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  OAUTH2 PROVIDERS  "))
 	}
 
+	// Root Password Tab
+	if m.settingsActiveTab == 6 {
+		if m.settingsFocusIndex == 0 {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT PASSWORD ◀"))
+		} else {
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT PASSWORD  "))
+		}
+	} else {
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT PASSWORD  "))
+	}
+
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
 
 	// Render form state if adding or editing a rate limit rule
@@ -615,6 +663,8 @@ func (m *Model) viewSettings() string {
 				input = m.emailInputs[f.inputIdx]
 			} else if m.settingsActiveTab == 5 {
 				input = m.oauthInputs[f.inputIdx]
+			} else if m.settingsActiveTab == 6 {
+				input = m.rootPwdInputs[f.inputIdx]
 			}
 			line = renderTextField(f.label, input, focused)
 			s.WriteString(line + "\n\n")
@@ -632,11 +682,18 @@ func (m *Model) viewSettings() string {
 		cancelBtnStyle = ButtonActiveStyle
 	}
 
+	saveBtnText := " Save Settings "
+	cancelBtnText := " Cancel "
+	if m.settingsActiveTab == 6 {
+		saveBtnText = " Update Password "
+		cancelBtnText = " Clear "
+	}
+
 	buttons := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		saveBtnStyle.Render(" Save Settings "),
+		saveBtnStyle.Render(saveBtnText),
 		"  ",
-		cancelBtnStyle.Render(" Cancel "),
+		cancelBtnStyle.Render(cancelBtnText),
 	)
 
 	s.WriteString("\n" + SettingsButtonAreaStyle.Render(buttons))
@@ -781,4 +838,50 @@ func (m *Model) updateRateLimitForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) updateRootPasswordForm() {
+	curr := strings.TrimSpace(m.rootPwdInputs[0].Value())
+	newPwd := strings.TrimSpace(m.rootPwdInputs[1].Value())
+	confirmPwd := strings.TrimSpace(m.rootPwdInputs[2].Value())
+
+	if curr == "" {
+		m.Err = fmt.Errorf("current password is required")
+		return
+	}
+	if newPwd == "" {
+		m.Err = fmt.Errorf("new password is required")
+		return
+	}
+	if confirmPwd == "" || newPwd != confirmPwd {
+		m.Err = fmt.Errorf("new password and confirm password do not match")
+		return
+	}
+	if err := ValidatePassword(newPwd); err != nil {
+		m.Err = err
+		return
+	}
+
+	err := m.Client.UpdateRootPassword(curr, newPwd, confirmPwd)
+	if err != nil {
+		m.Err = err
+		return
+	}
+
+	m.clearRootPasswordForm()
+	m.Err = nil
+	m.SuccessMsg = "Root password updated successfully!"
+	m.State = StateDashboard
+}
+
+func (m *Model) clearRootPasswordForm() {
+	if len(m.rootPwdInputs) >= 3 {
+		m.rootPwdInputs[0].SetValue("")
+		m.rootPwdInputs[1].SetValue("")
+		m.rootPwdInputs[2].SetValue("")
+	}
+	m.settingRootCurrentPassword = ""
+	m.settingRootNewPassword = ""
+	m.settingRootConfirmPassword = ""
+	m.Err = nil
 }

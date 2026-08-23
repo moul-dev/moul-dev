@@ -305,11 +305,16 @@ export const api = {
       body: JSON.stringify({ context }),
     }),
 
-  // Settings
+  // Settings & Root User
   getSettings: () => request<any>('/api/settings'),
   updateSettings: (data: any) =>
     request<any>('/api/settings', {
       method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  updateRootPassword: (data: { currentPassword: string; password: string; passwordConfirm: string; identity?: string }) =>
+    request<{ message: string }>('/api/admin/password', {
+      method: 'POST',
       body: JSON.stringify(data),
     }),
 };

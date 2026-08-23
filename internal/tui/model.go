@@ -206,7 +206,11 @@ type Model struct {
 	oauthInputs                     []textinput.Model
 
 	// Settings Tabs & Custom Inputs
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers
+	settingRootCurrentPassword   string
+	settingRootNewPassword       string
+	settingRootConfirmPassword   string
+	rootPwdInputs                []textinput.Model
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers, 6 = Root Password
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -906,7 +910,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 6) % 6
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + 7) % 7
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -915,7 +919,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 6
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % 7
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -1006,10 +1010,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 						return m, nil
 					}
-				} else if m.settingsFocusIndex == numFields+1 { // Save
-					m.saveSettingsForm()
+				} else if m.settingsFocusIndex == numFields+1 { // Save / Update
+					if m.settingsActiveTab == 6 {
+						m.updateRootPasswordForm()
+					} else {
+						m.saveSettingsForm()
+					}
 					return m, nil
-				} else if m.settingsFocusIndex == numFields+2 { // Cancel
+				} else if m.settingsFocusIndex == numFields+2 { // Cancel / Clear
+					if m.settingsActiveTab == 6 {
+						m.clearRootPasswordForm()
+						return m, nil
+					}
 					m.State = StateDashboard
 					return m, nil
 				}
@@ -1036,6 +1048,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if m.settingsActiveTab == 5 {
 					m.oauthInputs[f.inputIdx], cmd = m.oauthInputs[f.inputIdx].Update(msg)
 					*f.strVal = m.oauthInputs[f.inputIdx].Value()
+				} else if m.settingsActiveTab == 6 {
+					m.rootPwdInputs[f.inputIdx], cmd = m.rootPwdInputs[f.inputIdx].Update(msg)
+					*f.strVal = m.rootPwdInputs[f.inputIdx].Value()
 				}
 				if cmd != nil {
 					cmds = append(cmds, cmd)

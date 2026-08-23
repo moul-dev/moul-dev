@@ -103,6 +103,25 @@ func TestGetSettingsFieldsOAuth(t *testing.T) {
 	}
 }
 
+func TestGetSettingsFieldsRootPassword(t *testing.T) {
+	m := &Model{
+		settingsActiveTab: 6,
+	}
+
+	m.initSettingsInputs()
+
+	fields := m.getSettingsFields()
+	if len(fields) != 3 {
+		t.Fatalf("Expected 3 fields for active tab 6 (Root Password), got %d", len(fields))
+	}
+	if fields[0].label != "Current Password" || fields[1].label != "New Password" || fields[2].label != "Confirm New Password" {
+		t.Errorf("Unexpected fields on tab 6: %v", fields)
+	}
+	if len(m.rootPwdInputs) != 3 {
+		t.Fatalf("Expected 3 root password inputs initialized, got %d", len(m.rootPwdInputs))
+	}
+}
+
 func TestSettingsTabNavigation(t *testing.T) {
 	m := &Model{
 		State:             StateSettings,
@@ -116,10 +135,17 @@ func TestSettingsTabNavigation(t *testing.T) {
 		t.Fatalf("Expected active tab to advance to 5 (OAuth2 Providers), got %d", updatedModel.settingsActiveTab)
 	}
 
-	// Press right arrow again (wraps back to 0 S3 Storage)
+	// Press right arrow to advance to tab 6 (Root Password)
 	newM2, _ := updatedModel.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	updatedModel2 := newM2.(*Model)
-	if updatedModel2.settingsActiveTab != 0 {
-		t.Fatalf("Expected active tab to wrap to 0 (S3 Storage), got %d", updatedModel2.settingsActiveTab)
+	if updatedModel2.settingsActiveTab != 6 {
+		t.Fatalf("Expected active tab to advance to 6 (Root Password), got %d", updatedModel2.settingsActiveTab)
+	}
+
+	// Press right arrow again (wraps back to 0 S3 Storage)
+	newM3, _ := updatedModel2.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	updatedModel3 := newM3.(*Model)
+	if updatedModel3.settingsActiveTab != 0 {
+		t.Fatalf("Expected active tab to wrap to 0 (S3 Storage), got %d", updatedModel3.settingsActiveTab)
 	}
 }

@@ -394,18 +394,6 @@ type RefreshTokenPayload struct {
 // RefreshToken revokes the existing JWT token and issues a fresh JWT token.
 func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 	moulName := c.Param("name")
-	moul, err := db.LoadMoulByName(h.DB, moulName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Not found")
-		}
-		logger.Error("Failed to load moul for token refresh", "moul", moulName, "err", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
-	}
-
-	if moul.Type != "auth" {
-		return echo.NewHTTPError(http.StatusBadRequest, "This moul is not an auth collection")
-	}
 
 	tokenString := ""
 	authHeader := c.Request().Header.Get("Authorization")
@@ -447,6 +435,55 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 		expTime = time.Now().Add(24 * time.Hour)
 	}
 	_ = db.RevokeToken(h.DB, tokenString, expTime)
+
+	// Handle special root user refresh (_rootUsers)
+	if moulName == "_rootUsers" {
+		var record dbx.NullStringMap
+		err = h.DB.Select("*").From("_rootUsers").Where(dbx.HashExp{"id": claims.ID}).One(&record)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return echo.NewHTTPError(http.StatusUnauthorized, "User record not found")
+			}
+			logger.Error("Failed to query root user record for refresh", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		}
+
+		recordMap := nullStringMapToMap(record)
+		id, _ := recordMap["id"].(string)
+		userEmail, _ := recordMap["email"].(string)
+		username, _ := recordMap["username"].(string)
+
+		newToken, err := auth.GenerateToken(id, userEmail, username, "_rootUsers")
+		if err != nil {
+			logger.Error("Failed to generate refreshed root auth token", "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate auth token")
+		}
+
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"token": newToken,
+			"record": map[string]interface{}{
+				"id":         id,
+				"email":      userEmail,
+				"username":   username,
+				"moul":       "_rootUsers",
+				"created_at": recordMap["created_at"],
+				"updated_at": recordMap["updated_at"],
+			},
+		})
+	}
+
+	moul, err := db.LoadMoulByName(h.DB, moulName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, "Not found")
+		}
+		logger.Error("Failed to load moul for token refresh", "moul", moulName, "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	if moul.Type != "auth" {
+		return echo.NewHTTPError(http.StatusBadRequest, "This moul is not an auth collection")
+	}
 
 	// Fetch fresh user record
 	var record dbx.NullStringMap

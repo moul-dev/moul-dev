@@ -292,6 +292,101 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
+  /api/admin/login:
+    post:
+      summary: Admin Login
+      description: Authenticates a root user with credentials and Master Admin Key to return a JWT token.
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identity
+                - password
+              properties:
+                identity:
+                  type: string
+                  description: Root user username or email.
+                  example: root
+                password:
+                  type: string
+                  description: Root user password.
+                  example: AdminPassword123
+      responses:
+        '200':
+          description: Successfully authenticated as root user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/admin/password:
+    post:
+      summary: Update Root User Password
+      description: Updates the password of a root user. Requires valid Master Admin Key and verification of the user's current password.
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - password
+                - passwordConfirm
+              properties:
+                currentPassword:
+                  type: string
+                  description: Existing root user password.
+                  example: OldPassword123
+                password:
+                  type: string
+                  description: New root user password (minimum 8 characters, 1 uppercase, 1 lowercase, 1 digit).
+                  example: NewPassword123
+                passwordConfirm:
+                  type: string
+                  description: Confirmation of the new root password (must match password).
+                  example: NewPassword123
+                identity:
+                  type: string
+                  description: Optional username or email to target a specific root user.
+                  example: root
+      responses:
+        '200':
+          description: Root password updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Root password updated successfully
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
   /api/moul:
     get:
       summary: List Moul

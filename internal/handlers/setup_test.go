@@ -43,12 +43,15 @@ func TestSetupFlow(t *testing.T) {
 
 	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
 	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
+	adminAuthGroup.POST("/password", setupHandler.UpdateRootPassword)
+	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
 	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
 	e.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
 	e.GET("/device", deviceFlowHandler.RenderDeviceForm)
 	e.POST("/device/verify", deviceFlowHandler.VerifyDevice)
 	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
+	e.POST("/api/moul/:name/refresh", authHandler.RefreshToken)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
@@ -234,5 +237,103 @@ func TestSetupFlow(t *testing.T) {
 	}
 	if adminLoginRes.Record["username"] != "root" || adminLoginRes.Record["moul"] != "_rootUsers" {
 		t.Errorf("Unexpected record payload from /api/admin/login: %v", adminLoginRes.Record)
+	}
+
+	// 10. Test POST /api/admin/password (Root User Password Update)
+	// 10a. Unauthorized without Admin Key
+	pwdUpdatePayload := `{"currentPassword":"supersecretpassword","password":"NewRootPassword1","passwordConfirm":"NewRootPassword1"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/password", bytes.NewBufferString(pwdUpdatePayload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("Expected 401 Unauthorized for missing admin key on /api/admin/password, got %d", resp.StatusCode)
+	}
+
+	// 10b. Bad Request when currentPassword is wrong
+	wrongCurrentPayload := `{"currentPassword":"incorrectpassword","password":"NewRootPassword1","passwordConfirm":"NewRootPassword1"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/password", bytes.NewBufferString(wrongCurrentPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for incorrect current password, got %d", resp.StatusCode)
+	}
+
+	// 10c. Bad Request when passwordConfirm does not match
+	mismatchPayload := `{"currentPassword":"supersecretpassword","password":"NewRootPassword1","passwordConfirm":"DifferentPassword1"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/password", bytes.NewBufferString(mismatchPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for mismatched password confirm, got %d", resp.StatusCode)
+	}
+
+	// 10d. Bad Request when new password is too simple
+	simplePwdPayload := `{"currentPassword":"supersecretpassword","password":"simple","passwordConfirm":"simple"}`
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/password", bytes.NewBufferString(simplePwdPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for weak new password, got %d", resp.StatusCode)
+	}
+
+	// 10e. Successful password update
+	req, _ = http.NewRequest("POST", server.URL+"/api/admin/password", bytes.NewBufferString(pwdUpdatePayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for successful password update, got %d", resp.StatusCode)
+	}
+	var pwdResp struct {
+		Message string `json:"message"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &pwdResp)
+	if !strings.Contains(pwdResp.Message, "Root password updated") {
+		t.Errorf("Unexpected password update response message: %q", pwdResp.Message)
+	}
+
+	// 10f. Old password should now fail login
+	oldLoginReq, _ := http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(adminLoginPayload))
+	oldLoginReq.Header.Set("Content-Type", "application/json")
+	oldLoginReq.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(oldLoginReq)
+	if err != nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request when logging in with old password, got %d", resp.StatusCode)
+	}
+
+	// 10g. New password should succeed login
+	newLoginPayload := `{"identity":"root","password":"NewRootPassword1"}`
+	newLoginReq, _ := http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(newLoginPayload))
+	newLoginReq.Header.Set("Content-Type", "application/json")
+	newLoginReq.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(newLoginReq)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK when logging in with new password, got %d", resp.StatusCode)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &adminLoginRes)
+	if adminLoginRes.Token == "" {
+		t.Error("Expected token after logging in with updated root password")
+	}
+
+	// 11. Test RefreshToken for root user
+	refreshReq, _ := http.NewRequest("POST", server.URL+"/api/moul/_rootUsers/refresh", nil)
+	refreshReq.Header.Set("Authorization", "Bearer "+adminLoginRes.Token)
+	resp, err = client.Do(refreshReq)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK when refreshing root user token, got %d", resp.StatusCode)
+	}
+	var refreshResp struct {
+		Token  string                 `json:"token"`
+		Record map[string]interface{} `json:"record"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &refreshResp)
+	if refreshResp.Token == "" || refreshResp.Record["username"] != "root" {
+		t.Errorf("Unexpected refresh response for root user: %v", refreshResp)
 	}
 }

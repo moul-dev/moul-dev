@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 	"golang.org/x/crypto/bcrypt"
@@ -182,3 +183,111 @@ func (h *SetupHandler) AdminLogin(c *echo.Context) error {
 		},
 	})
 }
+
+type UpdateRootPasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"passwordConfirm"`
+	Identity        string `json:"identity"`
+	OldPassword     string `json:"oldPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+// UpdateRootPassword allows updating the password of a root user.
+// Requires Admin Key middleware and verification of the user's current password.
+func (h *SetupHandler) UpdateRootPassword(c *echo.Context) error {
+	req := new(UpdateRootPasswordRequest)
+	if err := c.Bind(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	currentPassword := strings.TrimSpace(req.CurrentPassword)
+	if currentPassword == "" {
+		currentPassword = strings.TrimSpace(req.OldPassword)
+	}
+
+	newPassword := strings.TrimSpace(req.Password)
+	if newPassword == "" {
+		newPassword = strings.TrimSpace(req.NewPassword)
+	}
+
+	passwordConfirm := strings.TrimSpace(req.PasswordConfirm)
+	identity := strings.TrimSpace(req.Identity)
+
+	if currentPassword == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "currentPassword is required")
+	}
+	if newPassword == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "password is required")
+	}
+	if passwordConfirm != "" && newPassword != passwordConfirm {
+		return echo.NewHTTPError(http.StatusBadRequest, "password and passwordConfirm must match")
+	}
+	if err := auth.ValidatePassword(newPassword); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	var record dbx.NullStringMap
+	var err error
+
+	authUser := middleware.GetAuthRecord(c)
+	if authUser != nil && authUser["moul"] == "_rootUsers" && authUser["id"] != nil {
+		err = h.DB.Select("*").From("_rootUsers").
+			Where(dbx.HashExp{"id": authUser["id"]}).
+			One(&record)
+	} else if identity != "" {
+		err = h.DB.Select("*").From("_rootUsers").
+			Where(dbx.NewExp("username = {:identity} OR email = {:identity}", dbx.Params{"identity": identity})).
+			One(&record)
+	} else {
+		err = h.DB.Select("*").From("_rootUsers").
+			OrderBy("created_at ASC").
+			Limit(1).
+			One(&record)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, "Root user not found")
+		}
+		logger.Error("Failed to query root user for password update", "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	recordMap := nullStringMapToMap(record)
+	hashVal, ok := recordMap["passwordHash"]
+	if !ok || hashVal == nil {
+		logger.Error("Missing password hash in database record for _rootUsers")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+	passwordHash, ok := hashVal.(string)
+	if !ok {
+		logger.Error("Invalid password hash type in database record for _rootUsers")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(currentPassword)); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid current password")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to hash password: "+err.Error())
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err = h.DB.Update("_rootUsers", dbx.Params{
+		"passwordHash": string(hashedPassword),
+		"updated_at":   now,
+	}, dbx.HashExp{"id": recordMap["id"]}).Execute()
+
+	if err != nil {
+		logger.Error("Failed to update password in _rootUsers", "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update root password: "+err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Root password updated successfully",
+	})
+}
+

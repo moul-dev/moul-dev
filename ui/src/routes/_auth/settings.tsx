@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
-import { EnvelopeSimpleIcon, ShieldCheckIcon, HardDrivesIcon, FloppyDiskIcon } from '@phosphor-icons/react';
+import {
+  EnvelopeSimpleIcon,
+  ShieldCheckIcon,
+  HardDrivesIcon,
+  FloppyDiskIcon,
+  LockKeyIcon,
+} from '@phosphor-icons/react';
 import {
   Card,
   CardHeader,
   CardBody,
+  CardFooter,
   TextField,
   Button,
   toastQueue,
@@ -47,6 +54,21 @@ const styles = stylex.create({
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: tokens.spacing3,
   },
+  passwordForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing3,
+  },
+  twoColGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: tokens.spacing3,
+  },
+  cardFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    paddingTop: tokens.spacing2,
+  },
 });
 
 export const Route = createFileRoute('/_auth/settings')({
@@ -72,6 +94,10 @@ function SettingsPage() {
     domains: '',
     email: '',
   });
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
 
   useEffect(() => {
     if (settingsData) {
@@ -99,10 +125,64 @@ function SettingsPage() {
     },
   });
 
+  const updatePasswordMutation = useMutation({
+    mutationFn: (data: { currentPassword: string; password: string; passwordConfirm: string }) =>
+      api.updateRootPassword(data),
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setPasswordConfirm('');
+      toastQueue.add({
+        title: 'Password Updated',
+        description: 'Password updated successfully.',
+        variant: 'success',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Password Update Failed',
+        description: err.message || 'Failed to update root password.',
+        variant: 'error',
+      });
+    },
+  });
+
   const handleSave = () => {
     updateMutation.mutate({
       smtp,
       tls: tlsConfig,
+    });
+  };
+
+  const handleUpdatePassword = () => {
+    if (!currentPassword) {
+      toastQueue.add({
+        title: 'Validation Error',
+        description: 'Current password is required.',
+        variant: 'error',
+      });
+      return;
+    }
+    if (!newPassword) {
+      toastQueue.add({
+        title: 'Validation Error',
+        description: 'New password is required.',
+        variant: 'error',
+      });
+      return;
+    }
+    if (newPassword !== passwordConfirm) {
+      toastQueue.add({
+        title: 'Validation Error',
+        description: 'New password and confirmation do not match.',
+        variant: 'error',
+      });
+      return;
+    }
+    updatePasswordMutation.mutate({
+      currentPassword,
+      password: newPassword,
+      passwordConfirm,
     });
   };
 
@@ -112,7 +192,7 @@ function SettingsPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>Engine Settings</h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Configure transactional email (SMTP), automatic HTTPS certificates (CertMagic), and backups.
+            Configure root credentials, transactional email (SMTP), automatic HTTPS certificates (CertMagic), and backups.
           </span>
         </div>
         <Button
@@ -124,6 +204,61 @@ function SettingsPage() {
           <span>{updateMutation.isPending ? 'Saving...' : 'Save Settings'}</span>
         </Button>
       </div>
+
+      {/* Root User Password & Security */}
+      <Card variant="glass">
+        <CardHeader>
+          <div {...stylex.props(styles.cardTitle)}>
+            <LockKeyIcon size={20} color={tokens.colorPrimary500} />
+            <span>Root User Password & Security</span>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div {...stylex.props(styles.passwordForm)}>
+            <div>
+              <TextField
+                label="Current Password"
+                type="password"
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                isRequired
+              />
+            </div>
+            <div {...stylex.props(styles.twoColGrid)}>
+              <TextField
+                label="New Password"
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={setNewPassword}
+                description="Minimum 8 characters (1 uppercase, 1 lowercase, 1 digit)"
+                isRequired
+              />
+              <TextField
+                label="Confirm New Password"
+                type="password"
+                placeholder="••••••••"
+                value={passwordConfirm}
+                onChange={setPasswordConfirm}
+                isRequired
+              />
+            </div>
+          </div>
+        </CardBody>
+        <CardFooter>
+          <div {...stylex.props(styles.cardFooter)}>
+            <Button
+              variant="primary"
+              onPress={handleUpdatePassword}
+              isDisabled={updatePasswordMutation.isPending || !currentPassword || !newPassword || !passwordConfirm}
+            >
+              <LockKeyIcon size={16} />
+              <span>{updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}</span>
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
       {/* SMTP Email Settings */}
       <Card variant="glass">
@@ -216,4 +351,5 @@ function SettingsPage() {
     </div>
   );
 }
+
 
