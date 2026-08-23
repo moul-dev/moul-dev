@@ -118,7 +118,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `DELETE /api/moul/:name`: Delete collection schema and drop physical SQLite table.
 
 ### Dynamic Record CRUD
-- `GET /api/moul/:name/records`: List paginated records (`page`, `perPage`, `sort`, `filter`).
+- `GET /api/moul/:name/records`: List paginated records (`page`, `perPage`, `sort`, `filter`, `search`). Admin requests (`X-Admin-Key` or root user JWT) bypass listRule restrictions.
 - `GET /api/moul/:name/records/:id`: Get single record by ID.
 - `POST /api/moul/:name/records`: Create record.
 - `PATCH /api/moul/:name/records/:id`: Update record by ID.

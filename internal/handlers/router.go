@@ -88,7 +88,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	}
 
 	moulHandler := NewMoulHandler(dbConn)
-	recordHandler := NewRecordHandler(dbConn)
+	recordHandler := NewRecordHandler(dbConn, adminKey)
 	recordHandler.Engine = workerEngine
 	recordHandler.AnalyticsEngine = analyticsEngine
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev

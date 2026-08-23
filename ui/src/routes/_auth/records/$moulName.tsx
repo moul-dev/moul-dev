@@ -127,6 +127,10 @@ function RecordsPage() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
 
+  React.useEffect(() => {
+    setSearchVal(search.search || '');
+  }, [search.search]);
+
   // 1. Fetch collection schema to get field definitions
   const { data: moul } = useQuery({
     queryKey: ['moul', moulName],
@@ -152,10 +156,74 @@ function RecordsPage() {
     return [];
   }, [recordsData]);
 
-  const totalPages = (recordsData && !Array.isArray(recordsData) && typeof (recordsData as any).totalPages === 'number')
-    ? (recordsData as any).totalPages
-    : 1;
+  const totalItems =
+    recordsData && !Array.isArray(recordsData) && typeof recordsData.totalItems === 'number'
+      ? recordsData.totalItems
+      : records.length;
+
+  const totalPages =
+    recordsData && !Array.isArray(recordsData) && typeof (recordsData as any).totalPages === 'number'
+      ? Math.max(1, (recordsData as any).totalPages)
+      : 1;
   const currentPage = search.page || 1;
+
+  // Schema field keys with filtering and inference
+  const displayFields = useMemo(() => {
+    const isAuth = moul?.type === 'auth';
+    const isWorker = moul?.type === 'worker';
+
+    if (moul?.fields && moul.fields.length > 0) {
+      return moul.fields.filter((f: any) => {
+        if (isAuth && (f.name === 'username' || f.name === 'email')) return false;
+        if (isWorker && (f.name === 'worker' || f.name === 'state' || f.name === 'queue' || f.name === 'attempt')) return false;
+        return true;
+      });
+    }
+
+    if (records.length > 0) {
+      const ignoredKeys = new Set([
+        'id',
+        'created_at',
+        'updated_at',
+        'username',
+        'email',
+        'passwordHash',
+        'otpCode',
+        'otpExpiresAt',
+        'passkeys',
+        'resetToken',
+        'resetTokenExpiresAt',
+        'oauthProviders',
+        'worker',
+        'state',
+        'queue',
+        'attempt',
+        'max_attempts',
+        'priority',
+        'inserted_at',
+        'scheduled_at',
+        'attempted_at',
+        'attempted_by',
+        'errors',
+        'tags',
+        'meta',
+        'args',
+      ]);
+
+      const inferredKeys = new Set<string>();
+      for (const rec of records) {
+        Object.keys(rec).forEach((k) => {
+          if (!ignoredKeys.has(k)) {
+            inferredKeys.add(k);
+          }
+        });
+      }
+
+      return Array.from(inferredKeys).map((name) => ({ name, type: 'text' }));
+    }
+
+    return [];
+  }, [moul, records]);
 
   // Mutations
   const createMutation = useMutation({
@@ -250,9 +318,6 @@ function RecordsPage() {
     });
   };
 
-  // Schema field keys
-  const schemaFields = moul?.fields || [];
-
   return (
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
@@ -278,6 +343,7 @@ function RecordsPage() {
           <div {...stylex.props(styles.toolbar)}>
             <div {...stylex.props(styles.searchBox)}>
               <SearchField
+                aria-label="Search records"
                 placeholder="Search records..."
                 value={searchVal}
                 onChange={setSearchVal}
@@ -285,7 +351,7 @@ function RecordsPage() {
               />
             </div>
             <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
-              Showing {records.length} record{records.length !== 1 ? 's' : ''}
+              Showing {records.length} of {totalItems} record{totalItems !== 1 ? 's' : ''}
             </span>
           </div>
         </CardBody>
@@ -308,7 +374,15 @@ function RecordsPage() {
                 <Column>Email</Column>
               </>
             )}
-            {schemaFields.map((f: any) => (
+            {moul?.type === 'worker' && (
+              <>
+                <Column>Worker</Column>
+                <Column>State</Column>
+                <Column>Queue</Column>
+                <Column>Attempt</Column>
+              </>
+            )}
+            {displayFields.map((f: any) => (
               <Column key={f.name}>{f.name}</Column>
             ))}
             <Column>Created At</Column>
@@ -328,7 +402,29 @@ function RecordsPage() {
                     <Cell>{rec.email || '-'}</Cell>
                   </>
                 )}
-                {schemaFields.map((f: any) => {
+                {moul?.type === 'worker' && (
+                  <>
+                    <Cell>{rec.worker || '-'}</Cell>
+                    <Cell>
+                      <Badge
+                        variant={
+                          rec.state === 'completed'
+                            ? 'success'
+                            : rec.state === 'failed'
+                            ? 'error'
+                            : rec.state === 'processing'
+                            ? 'warning'
+                            : 'primary'
+                        }
+                      >
+                        {rec.state || 'available'}
+                      </Badge>
+                    </Cell>
+                    <Cell>{rec.queue || 'default'}</Cell>
+                    <Cell>{rec.attempt ?? 0}</Cell>
+                  </>
+                )}
+                {displayFields.map((f: any) => {
                   const val = rec[f.name];
                   return (
                     <Cell key={f.name}>
@@ -348,7 +444,7 @@ function RecordsPage() {
                 })}
                 <Cell>
                   <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
-                    {rec.created_at ? new Date(String(rec.created_at)).toLocaleString() : '-'}
+                    {rec.created_at || rec.inserted_at ? new Date(String(rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
                   </span>
                 </Cell>
                 <Cell>
@@ -474,7 +570,7 @@ function RecordsPage() {
                     </>
                   )}
 
-                  {schemaFields.map((f: any) => (
+                  {displayFields.map((f: any) => (
                     <div key={f.name}>
                       {f.type === 'bool' ? (
                         <Checkbox

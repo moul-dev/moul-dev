@@ -1302,6 +1302,127 @@ func TestGetMoulHandler(t *testing.T) {
 	}
 }
 
+func TestListRecordsAdminKeyBypassAndSearch(t *testing.T) {
+	testAdminKey := "master-admin-key-123"
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	e := echo.New()
+	e.Use(middleware.LoadAuthContextMiddleware())
+
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	recordHandler := handlers.NewRecordHandler(dbConn, testAdminKey)
+
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
+	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create auth collection 'users' with default list rule 'id = @request.auth.id'
+	usersPayload := schema.Moul{
+		Name: "users",
+		Type: "auth",
+		Rules: schema.MoulRules{
+			ListRule: "id = @request.auth.id",
+			ViewRule: "id = @request.auth.id",
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", usersPayload, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for users moul, got %d", resp.StatusCode)
+	}
+
+	// 2. Insert 3 user records
+	users := []map[string]interface{}{
+		{"username": "alice", "email": "alice@moul.dev", "password": "Password123!", "passwordConfirm": "Password123!"},
+		{"username": "bob", "email": "bob@moul.dev", "password": "Password123!", "passwordConfirm": "Password123!"},
+		{"username": "charlie", "email": "charlie@moul.dev", "password": "Password123!", "passwordConfirm": "Password123!"},
+	}
+	var createdIDs []string
+	for _, u := range users {
+		r := postJSON(t, client, server.URL+"/api/moul/users/records", u, "")
+		if r.StatusCode != http.StatusCreated {
+			t.Fatalf("Expected 201 for user %v, got %d", u["username"], r.StatusCode)
+		}
+		var rec map[string]interface{}
+		parseJSON(t, r, &rec)
+		createdIDs = append(createdIDs, rec["id"].(string))
+	}
+
+	// 3. Public GET /api/moul/users/records (no admin key or auth) -> matches listRule 'id = @request.auth.id' against empty auth -> returns 0 items
+	req, _ := http.NewRequest("GET", server.URL+"/api/moul/users/records", nil)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	var unauthResult struct {
+		TotalItems int                      `json:"totalItems"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &unauthResult)
+	if unauthResult.TotalItems != 0 || len(unauthResult.Items) != 0 {
+		t.Errorf("Expected 0 items for unauthenticated request on auth moul, got totalItems=%d, items len=%d", unauthResult.TotalItems, len(unauthResult.Items))
+	}
+
+	// 4. Admin GET /api/moul/users/records with X-Admin-Key -> bypasses listRule -> returns all 3 records
+	adminReq, _ := http.NewRequest("GET", server.URL+"/api/moul/users/records", nil)
+	adminReq.Header.Set("X-Admin-Key", testAdminKey)
+	resp, err = client.Do(adminReq)
+	if err != nil {
+		t.Fatalf("Admin request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for admin records list, got %d", resp.StatusCode)
+	}
+	var adminResult struct {
+		TotalItems int                      `json:"totalItems"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &adminResult)
+	if adminResult.TotalItems != 3 || len(adminResult.Items) != 3 {
+		t.Errorf("Expected 3 items for admin request on auth moul, got totalItems=%d, items len=%d", adminResult.TotalItems, len(adminResult.Items))
+	}
+
+	// 5. Admin search query ?search=alice with X-Admin-Key -> returns 1 record
+	searchReq, _ := http.NewRequest("GET", server.URL+"/api/moul/users/records?search=alice", nil)
+	searchReq.Header.Set("X-Admin-Key", testAdminKey)
+	resp, err = client.Do(searchReq)
+	if err != nil {
+		t.Fatalf("Search request failed: %v", err)
+	}
+	var searchResult struct {
+		TotalItems int                      `json:"totalItems"`
+		Items      []map[string]interface{} `json:"items"`
+	}
+	parseJSON(t, resp, &searchResult)
+	if searchResult.TotalItems != 1 || len(searchResult.Items) != 1 || searchResult.Items[0]["username"] != "alice" {
+		t.Errorf("Expected alice record for search, got totalItems=%d, items=%v", searchResult.TotalItems, searchResult.Items)
+	}
+
+	// 6. Admin GET /api/moul/users/records/:id with X-Admin-Key -> returns the record
+	getReq, _ := http.NewRequest("GET", server.URL+"/api/moul/users/records/"+createdIDs[0], nil)
+	getReq.Header.Set("X-Admin-Key", testAdminKey)
+	resp, err = client.Do(getReq)
+	if err != nil {
+		t.Fatalf("Admin GetRecord request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for admin GetRecord, got %d", resp.StatusCode)
+	}
+	var singleRec map[string]interface{}
+	parseJSON(t, resp, &singleRec)
+	if singleRec["id"] != createdIDs[0] || singleRec["username"] != "alice" {
+		t.Errorf("Unexpected single record: %v", singleRec)
+	}
+}
+
 func TestMain(m *testing.M) {
 	// Initialize JWT for all handler tests
 	auth.InitJWT("test-secret-key-for-unit-tests-1234")

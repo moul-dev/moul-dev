@@ -36,11 +36,28 @@ type RecordHandler struct {
 	DB              *dbx.DB
 	Engine          RecordEngine
 	AnalyticsEngine *analytics.Engine
+	AdminKey        string
 	SecureCookies   bool // Set to true in production, false in development
 }
 
-func NewRecordHandler(dbConn *dbx.DB) *RecordHandler {
-	return &RecordHandler{DB: dbConn, SecureCookies: true}
+func NewRecordHandler(dbConn *dbx.DB, adminKey ...string) *RecordHandler {
+	key := ""
+	if len(adminKey) > 0 {
+		key = adminKey[0]
+	}
+	return &RecordHandler{DB: dbConn, AdminKey: key, SecureCookies: true}
+}
+
+// isRootOrAdmin returns true if the request is authenticated as a root user (_rootUsers) or carries a valid admin key.
+func (h *RecordHandler) isRootOrAdmin(c *echo.Context) bool {
+	authUser := middleware.GetAuthRecord(c)
+	if authUser != nil && authUser["moul"] == "_rootUsers" {
+		return true
+	}
+	if h.AdminKey != "" && middleware.CheckAdminKey(c, h.AdminKey) {
+		return true
+	}
+	return false
 }
 
 // Convert dbx.NullStringMap to map[string]interface{}
@@ -235,7 +252,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 
 		var allowed bool
 		var ruleErr error
-		if authUser != nil && authUser["moul"] == "_rootUsers" {
+		if h.isRootOrAdmin(c) {
 			allowed = true
 		} else {
 			allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, ruleData, buildRequestContext(c, body))
@@ -594,7 +611,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if authUser != nil && authUser["moul"] == "_rootUsers" {
+	if h.isRootOrAdmin(c) {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, insertData, buildRequestContext(c, body))
@@ -699,11 +716,12 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 		perPage = 500
 	}
 
+	isAdmin := h.isRootOrAdmin(c)
+
 	// 1. Build ListRule SQL
 	var ruleSQL string
 	var ruleParams dbx.Params
-	isRootUser := authUser != nil && authUser["moul"] == "_rootUsers"
-	if moul.Rules.ListRule != "" && !isRootUser {
+	if moul.Rules.ListRule != "" && !isAdmin {
 		rSQL, rParams, err := rules.BuildFilterSQL(moul.Rules.ListRule, moul, authUser, reqCtx)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ListRule expression: "+err.Error())
@@ -738,6 +756,28 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 		whereSQLs = append(whereSQLs, fmt.Sprintf("(%s)", filterSQL))
 		for k, v := range filterParams {
 			combinedParams[k] = v
+		}
+	}
+
+	// 2b. Search Param
+	searchParam := strings.TrimSpace(c.QueryParam("search"))
+	if searchParam != "" {
+		var searchConditions []string
+		searchVal := "%" + searchParam + "%"
+		searchConditions = append(searchConditions, "id LIKE {:search_term}")
+		if moul.Type == "auth" {
+			searchConditions = append(searchConditions, "username LIKE {:search_term}", "email LIKE {:search_term}")
+		} else if moul.Type == "worker" {
+			searchConditions = append(searchConditions, "worker LIKE {:search_term}", "queue LIKE {:search_term}", "state LIKE {:search_term}")
+		}
+		for _, f := range moul.Fields {
+			if f.Type == "text" || f.Type == "email" || f.Type == "url" || f.Type == "" {
+				searchConditions = append(searchConditions, fmt.Sprintf("%s LIKE {:search_term}", f.Name))
+			}
+		}
+		if len(searchConditions) > 0 {
+			whereSQLs = append(whereSQLs, fmt.Sprintf("(%s)", strings.Join(searchConditions, " OR ")))
+			combinedParams["search_term"] = searchVal
 		}
 	}
 
@@ -911,7 +951,7 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if authUser != nil && authUser["moul"] == "_rootUsers" {
+	if h.isRootOrAdmin(c) {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.ViewRule, authUser, recordMap, buildRequestContext(c, nil))
@@ -965,7 +1005,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if authUser != nil && authUser["moul"] == "_rootUsers" {
+	if h.isRootOrAdmin(c) {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.UpdateRule, authUser, recordMap, buildRequestContext(c, body))
@@ -1270,7 +1310,7 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if authUser != nil && authUser["moul"] == "_rootUsers" {
+	if h.isRootOrAdmin(c) {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.DeleteRule, authUser, recordMap, buildRequestContext(c, nil))
