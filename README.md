@@ -296,7 +296,7 @@ Credentials and connection state are securely saved to `~/.config/moul.json` (wi
 - **Background Workers Monitor**: Real-time view of background job queues (`executing`, `available`, `completed`, `discarded`). Inspect job parameters, view error stack traces, force-retry failed jobs (`r`), or discard jobs (`c`).
 - **Analytics & Visits Observatory**: Authenticate user credentials (`l`) to inspect live site visit logs (`_visits`) including OS, browser, device type, resolved GeoIP location, landing page, and UTM campaign tracking parameters.
 - **Email Templates Editor**: Customize transactional email templates (OTP verification, Password Reset) per auth collection and send live test emails.
-- **System Settings Panel**: Configure server SMTP/email delivery providers (Amazon SES, Resend, Mailgun, SendGrid, Cloudflare, Console), CORS policy, rate limits, and storage options.
+- **System Settings Panel**: Comprehensive configuration over 7 system areas: S3 Object Storage, Litestream Continuous Backups, Sliding Window Rate Limiting Rules, Root User IP Whitelist, Transactional Email Delivery (SES, Resend, Mailgun, SendGrid, Cloudflare, Console), OAuth2 Identity Providers (GitHub, Google, Apple), and Root Administrator Credentials.
 
 ### Keyboard Controls Guide
 
