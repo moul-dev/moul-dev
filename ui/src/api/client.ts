@@ -116,7 +116,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // Setup
   getSetupStatus: () => request<{ needsSetup: boolean }>('/api/setup'),
-  setupRootUser: (data: { username: string; email: string; password: string }) =>
+  setupRootUser: (data: { username: string; name?: string; email: string; password: string }) =>
     request<{ message: string; id: string }>('/api/setup', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -315,6 +315,42 @@ export const api = {
   getSettings: () => request<any>('/api/settings'),
   updateSettings: (data: any) =>
     request<any>('/api/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  getRootAccount: () =>
+    request<{
+      id: string;
+      username: string;
+      name: string;
+      email: string;
+      moul: string;
+      created_at: string;
+      updated_at: string;
+    }>('/api/admin/account'),
+  updateRootAccount: (data: {
+    username?: string;
+    name?: string;
+    email?: string;
+    currentPassword?: string;
+    password?: string;
+    newPassword?: string;
+    passwordConfirm?: string;
+    identity?: string;
+  }) =>
+    request<{
+      message: string;
+      token?: string;
+      record?: {
+        id: string;
+        username: string;
+        name: string;
+        email: string;
+        moul: string;
+        created_at: string;
+        updated_at: string;
+      };
+    }>('/api/admin/account', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),

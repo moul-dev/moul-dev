@@ -143,9 +143,12 @@ func (m *Model) getSettingsFields() []settingField {
 		}
 	} else if m.settingsActiveTab == 6 {
 		fields = append(fields,
-			settingField{label: "Current Password", strVal: &m.settingRootCurrentPassword, inputIdx: 0},
-			settingField{label: "New Password", strVal: &m.settingRootNewPassword, inputIdx: 1},
-			settingField{label: "Confirm New Password", strVal: &m.settingRootConfirmPassword, inputIdx: 2},
+			settingField{label: "Username", strVal: &m.settingRootUsername, inputIdx: 0},
+			settingField{label: "Display Name", strVal: &m.settingRootName, inputIdx: 1},
+			settingField{label: "Email Address", strVal: &m.settingRootEmail, inputIdx: 2},
+			settingField{label: "Current Password", strVal: &m.settingRootCurrentPassword, inputIdx: 3},
+			settingField{label: "New Password", strVal: &m.settingRootNewPassword, inputIdx: 4},
+			settingField{label: "Confirm New Password", strVal: &m.settingRootConfirmPassword, inputIdx: 5},
 		)
 	}
 	return fields
@@ -270,7 +273,7 @@ func (m *Model) initSettingsInputs() {
 	}
 
 	if len(m.rootPwdInputs) == 0 {
-		m.rootPwdInputs = make([]textinput.Model, 3)
+		m.rootPwdInputs = make([]textinput.Model, 6)
 		for i := range m.rootPwdInputs {
 			t := textinput.New()
 			t.CharLimit = 128
@@ -279,14 +282,20 @@ func (m *Model) initSettingsInputs() {
 			s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
 			s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
 			t.SetStyles(s)
-			t.EchoMode = textinput.EchoPassword
-			t.EchoCharacter = '•'
+
+			if i >= 3 {
+				t.EchoMode = textinput.EchoPassword
+				t.EchoCharacter = '•'
+			}
 
 			m.rootPwdInputs[i] = t
 		}
-		m.rootPwdInputs[0].Placeholder = "Current root password"
-		m.rootPwdInputs[1].Placeholder = "Min 8 chars, 1 upper, 1 lower, 1 digit"
-		m.rootPwdInputs[2].Placeholder = "Confirm new password"
+		m.rootPwdInputs[0].Placeholder = "e.g. admin"
+		m.rootPwdInputs[1].Placeholder = "e.g. Administrator"
+		m.rootPwdInputs[2].Placeholder = "e.g. admin@moul.dev"
+		m.rootPwdInputs[3].Placeholder = "Current password (required when updating password)"
+		m.rootPwdInputs[4].Placeholder = "Min 8 chars (leave blank to keep unchanged)"
+		m.rootPwdInputs[5].Placeholder = "Confirm new password"
 	}
 
 	// Load values from model state
@@ -325,9 +334,14 @@ func (m *Model) initSettingsInputs() {
 	m.oauthInputs[8].SetValue(m.settingOAuthAppleKeyID)
 	m.oauthInputs[9].SetValue(m.settingOAuthApplePrivateKey)
 
-	m.rootPwdInputs[0].SetValue(m.settingRootCurrentPassword)
-	m.rootPwdInputs[1].SetValue(m.settingRootNewPassword)
-	m.rootPwdInputs[2].SetValue(m.settingRootConfirmPassword)
+	if len(m.rootPwdInputs) >= 6 {
+		m.rootPwdInputs[0].SetValue(m.settingRootUsername)
+		m.rootPwdInputs[1].SetValue(m.settingRootName)
+		m.rootPwdInputs[2].SetValue(m.settingRootEmail)
+		m.rootPwdInputs[3].SetValue(m.settingRootCurrentPassword)
+		m.rootPwdInputs[4].SetValue(m.settingRootNewPassword)
+		m.rootPwdInputs[5].SetValue(m.settingRootConfirmPassword)
+	}
 }
 
 func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
@@ -573,15 +587,15 @@ func (m *Model) viewSettings() string {
 		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  OAUTH2 PROVIDERS  "))
 	}
 
-	// Root Password Tab
+	// Root Account Tab
 	if m.settingsActiveTab == 6 {
 		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT PASSWORD ◀"))
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT ACCOUNT ◀"))
 		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT PASSWORD  "))
+			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT ACCOUNT  "))
 		}
 	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT PASSWORD  "))
+		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT ACCOUNT  "))
 	}
 
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
@@ -685,7 +699,7 @@ func (m *Model) viewSettings() string {
 	saveBtnText := " Save Settings "
 	cancelBtnText := " Cancel "
 	if m.settingsActiveTab == 6 {
-		saveBtnText = " Update Password "
+		saveBtnText = " Update Account "
 		cancelBtnText = " Clear "
 	}
 
@@ -758,7 +772,7 @@ func (m *Model) updateRateLimitForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "shift+tab", "up", "k":
 			m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Blur()
-			m.rateLimitFormFocusIdx = (m.rateLimitFormFocusIdx - 1 + 6) % 6
+			m.rateLimitFormFocusIdx = (m.rateLimitFormFocusIdx + 5) % 6
 			if m.rateLimitFormFocusIdx < 4 {
 				m.rateLimitFormInputs[m.rateLimitFormFocusIdx].Focus()
 			}
@@ -841,44 +855,78 @@ func (m *Model) updateRateLimitForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateRootPasswordForm() {
-	curr := strings.TrimSpace(m.rootPwdInputs[0].Value())
-	newPwd := strings.TrimSpace(m.rootPwdInputs[1].Value())
-	confirmPwd := strings.TrimSpace(m.rootPwdInputs[2].Value())
+	username := strings.TrimSpace(m.rootPwdInputs[0].Value())
+	name := strings.TrimSpace(m.rootPwdInputs[1].Value())
+	email := strings.TrimSpace(m.rootPwdInputs[2].Value())
+	curr := strings.TrimSpace(m.rootPwdInputs[3].Value())
+	newPwd := strings.TrimSpace(m.rootPwdInputs[4].Value())
+	confirmPwd := strings.TrimSpace(m.rootPwdInputs[5].Value())
 
-	if curr == "" {
-		m.Err = fmt.Errorf("current password is required")
-		return
-	}
-	if newPwd == "" {
-		m.Err = fmt.Errorf("new password is required")
-		return
-	}
-	if confirmPwd == "" || newPwd != confirmPwd {
-		m.Err = fmt.Errorf("new password and confirm password do not match")
-		return
-	}
-	if err := ValidatePassword(newPwd); err != nil {
-		m.Err = err
+	if username == "" {
+		m.Err = fmt.Errorf("username is required")
 		return
 	}
 
-	err := m.Client.UpdateRootPassword(curr, newPwd, confirmPwd)
+	payload := map[string]interface{}{
+		"username": username,
+		"name":     name,
+		"email":    email,
+	}
+
+	if newPwd != "" || curr != "" || confirmPwd != "" {
+		if curr == "" {
+			m.Err = fmt.Errorf("current password is required to change password")
+			return
+		}
+		if newPwd == "" {
+			m.Err = fmt.Errorf("new password is required")
+			return
+		}
+		if confirmPwd == "" || newPwd != confirmPwd {
+			m.Err = fmt.Errorf("new password and confirm password do not match")
+			return
+		}
+		if err := ValidatePassword(newPwd); err != nil {
+			m.Err = err
+			return
+		}
+		payload["currentPassword"] = curr
+		payload["password"] = newPwd
+		payload["passwordConfirm"] = confirmPwd
+	}
+
+	res, err := m.Client.UpdateRootAccount(payload)
 	if err != nil {
 		m.Err = err
 		return
 	}
 
+	if res != nil && res.Record != nil {
+		if u, ok := res.Record["username"].(string); ok {
+			m.settingRootUsername = u
+		}
+		if n, ok := res.Record["name"].(string); ok {
+			m.settingRootName = n
+		}
+		if e, ok := res.Record["email"].(string); ok {
+			m.settingRootEmail = e
+		}
+	}
+
 	m.clearRootPasswordForm()
 	m.Err = nil
-	m.SuccessMsg = "Root password updated successfully!"
+	m.SuccessMsg = "Root user account updated successfully!"
 	m.State = StateDashboard
 }
 
 func (m *Model) clearRootPasswordForm() {
-	if len(m.rootPwdInputs) >= 3 {
-		m.rootPwdInputs[0].SetValue("")
-		m.rootPwdInputs[1].SetValue("")
-		m.rootPwdInputs[2].SetValue("")
+	if len(m.rootPwdInputs) >= 6 {
+		m.rootPwdInputs[0].SetValue(m.settingRootUsername)
+		m.rootPwdInputs[1].SetValue(m.settingRootName)
+		m.rootPwdInputs[2].SetValue(m.settingRootEmail)
+		m.rootPwdInputs[3].SetValue("")
+		m.rootPwdInputs[4].SetValue("")
+		m.rootPwdInputs[5].SetValue("")
 	}
 	m.settingRootCurrentPassword = ""
 	m.settingRootNewPassword = ""

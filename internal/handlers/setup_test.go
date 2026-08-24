@@ -43,6 +43,8 @@ func TestSetupFlow(t *testing.T) {
 
 	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
 	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
+	adminAuthGroup.GET("/account", setupHandler.GetRootAccount)
+	adminAuthGroup.PATCH("/account", setupHandler.UpdateRootAccount)
 	adminAuthGroup.POST("/password", setupHandler.UpdateRootPassword)
 	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
@@ -335,5 +337,54 @@ func TestSetupFlow(t *testing.T) {
 	json.Unmarshal(body, &refreshResp)
 	if refreshResp.Token == "" || refreshResp.Record["username"] != "root" {
 		t.Errorf("Unexpected refresh response for root user: %v", refreshResp)
+	}
+
+	// 12. Test GET /api/admin/account
+	acctReq, _ := http.NewRequest("GET", server.URL+"/api/admin/account", nil)
+	acctReq.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(acctReq)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for GET /api/admin/account, got %d", resp.StatusCode)
+	}
+	var acctResp struct {
+		ID       string `json:"id"`
+		Username string `json:"username"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &acctResp)
+	if acctResp.Username != "root" || acctResp.Email != "root@moul.dev" || acctResp.Name != "root" {
+		t.Errorf("Unexpected root account response: %v", acctResp)
+	}
+
+	// 13. Test PATCH /api/admin/account (Update username and name)
+	updateAcctPayload := `{"username":"superadmin","name":"Super Administrator","email":"superadmin@moul.dev"}`
+	updateAcctReq, _ := http.NewRequest("PATCH", server.URL+"/api/admin/account", bytes.NewBufferString(updateAcctPayload))
+	updateAcctReq.Header.Set("Content-Type", "application/json")
+	updateAcctReq.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(updateAcctReq)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for PATCH /api/admin/account, got %d", resp.StatusCode)
+	}
+	var updateAcctRes struct {
+		Message string                 `json:"message"`
+		Token   string                 `json:"token"`
+		Record  map[string]interface{} `json:"record"`
+	}
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &updateAcctRes)
+	if updateAcctRes.Record["username"] != "superadmin" || updateAcctRes.Record["name"] != "Super Administrator" || updateAcctRes.Record["email"] != "superadmin@moul.dev" {
+		t.Errorf("Unexpected record payload from PATCH /api/admin/account: %v", updateAcctRes.Record)
+	}
+
+	// 14. Verify updated username can log in
+	updatedLoginPayload := `{"identity":"superadmin","password":"NewRootPassword1"}`
+	updatedLoginReq, _ := http.NewRequest("POST", server.URL+"/api/admin/login", bytes.NewBufferString(updatedLoginPayload))
+	updatedLoginReq.Header.Set("Content-Type", "application/json")
+	updatedLoginReq.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(updatedLoginReq)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK when logging in with updated username, got %d", resp.StatusCode)
 	}
 }

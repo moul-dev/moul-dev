@@ -7,6 +7,7 @@ const USER_STORAGE_KEY = 'mould_admin_user';
 export interface UserInfo {
   id?: string;
   username?: string;
+  name?: string;
   email?: string;
   role?: string;
 }
@@ -22,6 +23,8 @@ interface AuthContextType {
   login: (adminKey: string, identity?: string, password?: string) => Promise<void>;
   saveAdminKey: (key: string) => void;
   saveToken: (token: string) => void;
+  updateUser: (updated: Partial<UserInfo>) => void;
+  refreshUser: () => Promise<void>;
   logout: () => void;
   checkSetup: (key?: string) => Promise<boolean>;
 }
@@ -36,6 +39,7 @@ function getStoredUser(): UserInfo | null {
       return {
         id: payload.id || payload.sub,
         username: payload.username || payload.identity || 'admin',
+        name: payload.name || payload.username || 'admin',
         email: payload.email || '',
         role: payload.role || 'Admin',
       };
@@ -55,6 +59,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [needsSetup, setNeedsSetup] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const refreshUser = async () => {
+    if (!getAuthToken() && !getStoredAdminKey()) return;
+    try {
+      const acc = await api.getRootAccount();
+      if (acc) {
+        const userData: UserInfo = {
+          id: acc.id,
+          username: acc.username || 'admin',
+          name: acc.name || acc.username || 'admin',
+          email: acc.email || '',
+          role: 'Admin',
+        };
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+        setUser(userData);
+        emitAuthChange({
+          isAuthenticated: true,
+          user: userData,
+          adminKey: Boolean(getStoredAdminKey()),
+        });
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const checkSetup = async (overrideKey?: string): Promise<boolean> => {
     if (overrideKey) {
       setStoredAdminKey(overrideKey);
@@ -73,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const init = async () => {
       setIsLoading(true);
       await checkSetup();
+      await refreshUser();
       setIsLoading(false);
       emitAuthChange({
         isAuthenticated: Boolean(token || adminKey),
@@ -106,9 +136,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const userData: UserInfo = res.record || {
         username: trimmedIdentity.includes('@') ? trimmedIdentity.split('@')[0] : trimmedIdentity,
+        name: trimmedIdentity.includes('@') ? trimmedIdentity.split('@')[0] : trimmedIdentity,
         email: trimmedIdentity.includes('@') ? trimmedIdentity : '',
         role: 'Admin',
       };
+      if (res.record?.name) {
+        userData.name = res.record.name;
+      }
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
       setAuthToken(res.token);
@@ -160,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setNeedsSetup(res.needsSetup);
       emitAuthChange({
         isAuthenticated: true,
-        user: { username: 'admin', role: 'Admin' },
+        user: { username: 'admin', name: 'admin', role: 'Admin' },
         adminKey: true,
       });
       emitAppAction({
@@ -201,6 +235,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateUser = (updated: Partial<UserInfo>) => {
+    setUser((prev) => {
+      const next: UserInfo = prev
+        ? { ...prev, ...updated }
+        : { username: 'admin', name: 'admin', role: 'Admin', ...updated };
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next));
+      emitAuthChange({
+        isAuthenticated: Boolean(token || adminKey),
+        user: next,
+        adminKey: Boolean(adminKey),
+      });
+      return next;
+    });
+  };
+
   const logout = () => {
     removeAuthToken();
     removeStoredAdminKey();
@@ -227,7 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         token,
         adminKey,
-        user: user || (isAuthenticated ? { username: 'admin', role: 'Admin' } : null),
+        user: user || (isAuthenticated ? { username: 'admin', name: 'admin', role: 'Admin' } : null),
         isAuthenticated,
         needsSetup,
         isLoading,
@@ -235,6 +284,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         saveAdminKey,
         saveToken,
+        updateUser,
+        refreshUser,
         logout,
         checkSetup,
       }}

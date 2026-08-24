@@ -131,14 +131,23 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
 	setupGroup.GET("", setupHandler.CheckSetupStatus)
 	setupGroup.POST("", setupHandler.SetupRootUser)
+	setupGroup.GET("/account", setupHandler.GetRootAccount)
+	setupGroup.POST("/account", setupHandler.UpdateRootAccount)
+	setupGroup.PATCH("/account", setupHandler.UpdateRootAccount)
 	setupGroup.POST("/password", setupHandler.UpdateRootPassword)
 	setupGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
 	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
 	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
+	adminAuthGroup.GET("/account", setupHandler.GetRootAccount)
+	adminAuthGroup.POST("/account", setupHandler.UpdateRootAccount)
+	adminAuthGroup.PATCH("/account", setupHandler.UpdateRootAccount)
 	adminAuthGroup.POST("/password", setupHandler.UpdateRootPassword)
 	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
+	e.GET("/api/settings/account", setupHandler.GetRootAccount, middleware.RequireAdminKey(adminKey))
+	e.POST("/api/settings/account", setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
+	e.PATCH("/api/settings/account", setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
 	e.POST("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
 	e.PATCH("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
 

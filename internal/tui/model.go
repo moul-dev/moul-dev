@@ -206,11 +206,14 @@ type Model struct {
 	oauthInputs                     []textinput.Model
 
 	// Settings Tabs & Custom Inputs
+	settingRootUsername          string
+	settingRootName              string
+	settingRootEmail             string
 	settingRootCurrentPassword   string
 	settingRootNewPassword       string
 	settingRootConfirmPassword   string
 	rootPwdInputs                []textinput.Model
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers, 6 = Root Password
+	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers, 6 = Root Account
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
@@ -342,6 +345,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingOAuthAppleKeyID = msg.Settings["oauth_apple_key_id"]
 		m.settingOAuthApplePrivateKey = msg.Settings["oauth_apple_private_key"]
 		
+		if msg.Account != nil {
+			if u, ok := msg.Account["username"].(string); ok {
+				m.settingRootUsername = u
+			}
+			if n, ok := msg.Account["name"].(string); ok {
+				m.settingRootName = n
+			}
+			if e, ok := msg.Account["email"].(string); ok {
+				m.settingRootEmail = e
+			}
+		}
+
 		m.settingRateLimitingRules = nil
 		rulesJSON := msg.Settings["rate_limiting_rules"]
 		if rulesJSON != "" {
@@ -1442,6 +1457,7 @@ type devicePollResultMsg struct {
 
 type SettingsMsg struct {
 	Settings map[string]string
+	Account  map[string]interface{}
 }
 
 type settingsSavedMsg struct {

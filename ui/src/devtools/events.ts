@@ -2,7 +2,7 @@ import { EventClient } from '@tanstack/devtools-event-client';
 
 export interface AuthStatePayload {
   isAuthenticated: boolean;
-  user: { id?: string; username?: string; email?: string; role?: string } | null;
+  user: { id?: string; username?: string; name?: string; email?: string; role?: string } | null;
   adminKey: boolean;
   timestamp: number;
 }

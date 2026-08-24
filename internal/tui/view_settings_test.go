@@ -105,20 +105,27 @@ func TestGetSettingsFieldsOAuth(t *testing.T) {
 
 func TestGetSettingsFieldsRootPassword(t *testing.T) {
 	m := &Model{
-		settingsActiveTab: 6,
+		settingsActiveTab:   6,
+		settingRootUsername: "admin",
+		settingRootName:     "Administrator",
+		settingRootEmail:    "admin@moul.dev",
 	}
 
 	m.initSettingsInputs()
 
 	fields := m.getSettingsFields()
-	if len(fields) != 3 {
-		t.Fatalf("Expected 3 fields for active tab 6 (Root Password), got %d", len(fields))
+	if len(fields) != 6 {
+		t.Fatalf("Expected 6 fields for active tab 6 (Root Account), got %d", len(fields))
 	}
-	if fields[0].label != "Current Password" || fields[1].label != "New Password" || fields[2].label != "Confirm New Password" {
+	if fields[0].label != "Username" || fields[1].label != "Display Name" || fields[2].label != "Email Address" ||
+		fields[3].label != "Current Password" || fields[4].label != "New Password" || fields[5].label != "Confirm New Password" {
 		t.Errorf("Unexpected fields on tab 6: %v", fields)
 	}
-	if len(m.rootPwdInputs) != 3 {
-		t.Fatalf("Expected 3 root password inputs initialized, got %d", len(m.rootPwdInputs))
+	if len(m.rootPwdInputs) != 6 {
+		t.Fatalf("Expected 6 root account inputs initialized, got %d", len(m.rootPwdInputs))
+	}
+	if m.rootPwdInputs[0].Value() != "admin" {
+		t.Errorf("Expected username input 'admin', got %q", m.rootPwdInputs[0].Value())
 	}
 }
 

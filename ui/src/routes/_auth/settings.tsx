@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
@@ -18,6 +18,8 @@ import {
   AppleLogoIcon,
   GearIcon,
   LinkSimpleIcon,
+  UserGearIcon,
+  UserIcon,
 } from '@phosphor-icons/react';
 import {
   Tabs,
@@ -61,8 +63,14 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export const Route = createFileRoute('/_auth/settings')({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      tab: (search.tab as string) || undefined,
+    };
+  },
   component: SettingsPage,
 });
 
@@ -85,6 +93,7 @@ type DrawerMode =
   | 'oauth-github'
   | 'oauth-google'
   | 'oauth-apple'
+  | 'account'
   | 'password';
 
 const styles = stylex.create({
@@ -217,13 +226,26 @@ const styles = stylex.create({
 
 function SettingsPage() {
   const queryClient = useQueryClient();
-  const [selectedTab, setSelectedTab] = useState<string>('s3');
+  const search = Route.useSearch();
+  const { user, updateUser, saveToken } = useAuth();
+  const [selectedTab, setSelectedTab] = useState<string>(search?.tab || 's3');
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(null);
+
+  useEffect(() => {
+    if (search?.tab) {
+      setSelectedTab(search.tab);
+    }
+  }, [search?.tab]);
 
   // Queries
   const { data: settingsData } = useQuery<Record<string, string>>({
     queryKey: ['settings'],
     queryFn: api.getSettings,
+  });
+
+  const { data: accountData } = useQuery({
+    queryKey: ['rootAccount'],
+    queryFn: api.getRootAccount,
   });
 
   // Local form states for Drawers
@@ -250,13 +272,12 @@ function SettingsPage() {
 
   const [rateLimitForm, setRateLimitForm] = useState<RateLimitRule>({
     label: '',
-    max_requests: 10,
-    interval: 3,
+    max_requests: 60,
+    interval: 60,
     targeted_users: 'all',
   });
   const [editingRuleIndex, setEditingRuleIndex] = useState<number | null>(null);
-  const [ruleToDelete, setRuleToDelete] = useState<RateLimitRule | null>(null);
-  const [ruleToDeleteIndex, setRuleToDeleteIndex] = useState<number | null>(null);
+  const [ruleToDelete, setRuleToDelete] = useState<{ index: number; label: string } | null>(null);
 
   const [rootIPsForm, setRootIPsForm] = useState({
     root_user_ip_enabled: 'false',
@@ -271,7 +292,7 @@ function SettingsPage() {
     email_api_key: '',
     email_api_secret: '',
     email_domain: '',
-    email_region: 'us-east-1',
+    email_region: '',
     email_endpoint: '',
   });
 
@@ -300,6 +321,12 @@ function SettingsPage() {
     oauth_apple_private_key: '',
   });
 
+  const [accountForm, setAccountForm] = useState({
+    username: '',
+    name: '',
+    email: '',
+  });
+
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -319,84 +346,11 @@ function SettingsPage() {
 
   // Sync settingsData to Drawer form states when opening
   const openDrawer = (mode: DrawerMode, extraIndex?: number) => {
-    if (!settingsData) return;
-
-    if (mode === 's3') {
-      setS3Form({
-        file_s3_enabled: settingsData.file_s3_enabled || 'false',
-        file_s3_bucket: settingsData.file_s3_bucket || '',
-        file_s3_endpoint: settingsData.file_s3_endpoint || '',
-        file_s3_region: settingsData.file_s3_region || '',
-        file_s3_access_key: settingsData.file_s3_access_key || '',
-        file_s3_secret_key: settingsData.file_s3_secret_key || '',
-        file_s3_force_path_style: settingsData.file_s3_force_path_style || 'false',
-      });
-    } else if (mode === 'litestream') {
-      setLitestreamForm({
-        litestream_enabled: settingsData.litestream_enabled || 'false',
-        litestream_s3_bucket: settingsData.litestream_s3_bucket || '',
-        litestream_s3_endpoint: settingsData.litestream_s3_endpoint || '',
-        litestream_s3_region: settingsData.litestream_s3_region || '',
-        litestream_access_key_id: settingsData.litestream_access_key_id || '',
-        litestream_secret_access_key: settingsData.litestream_secret_access_key || '',
-        litestream_s3_force_path_style: settingsData.litestream_s3_force_path_style || 'false',
-        litestream_replica_path: settingsData.litestream_replica_path || '',
-      });
-    } else if (mode === 'ratelimit-add') {
-      setRateLimitForm({
-        label: '',
-        max_requests: 10,
-        interval: 3,
-        targeted_users: 'all',
-      });
-      setEditingRuleIndex(null);
-    } else if (mode === 'ratelimit-edit' && extraIndex !== undefined) {
-      const rule = rateLimitRules[extraIndex];
-      if (rule) {
-        setRateLimitForm({ ...rule });
-        setEditingRuleIndex(extraIndex);
-      }
-    } else if (mode === 'rootips') {
-      setRootIPsForm({
-        root_user_ip_enabled: settingsData.root_user_ip_enabled || 'false',
-        root_user_allowed_ips: settingsData.root_user_allowed_ips || '',
-      });
-    } else if (mode === 'email') {
-      setEmailForm({
-        email_enabled: settingsData.email_enabled || 'false',
-        email_provider: settingsData.email_provider || 'console',
-        email_from_address: settingsData.email_from_address || '',
-        email_from_name: settingsData.email_from_name || '',
-        email_api_key: settingsData.email_api_key || '',
-        email_api_secret: settingsData.email_api_secret || '',
-        email_domain: settingsData.email_domain || '',
-        email_region: settingsData.email_region || 'us-east-1',
-        email_endpoint: settingsData.email_endpoint || '',
-      });
-    } else if (mode === 'oauth-global') {
-      setOAuthGlobalForm({
-        oauth_redirect_url: settingsData.oauth_redirect_url || '',
-      });
-    } else if (mode === 'oauth-github') {
-      setOAuthGitHubForm({
-        oauth_github_enabled: settingsData.oauth_github_enabled || 'false',
-        oauth_github_client_id: settingsData.oauth_github_client_id || '',
-        oauth_github_client_secret: settingsData.oauth_github_client_secret || '',
-      });
-    } else if (mode === 'oauth-google') {
-      setOAuthGoogleForm({
-        oauth_google_enabled: settingsData.oauth_google_enabled || 'false',
-        oauth_google_client_id: settingsData.oauth_google_client_id || '',
-        oauth_google_client_secret: settingsData.oauth_google_client_secret || '',
-      });
-    } else if (mode === 'oauth-apple') {
-      setOAuthAppleForm({
-        oauth_apple_enabled: settingsData.oauth_apple_enabled || 'false',
-        oauth_apple_client_id: settingsData.oauth_apple_client_id || '',
-        oauth_apple_client_secret: settingsData.oauth_apple_client_secret || '',
-        oauth_apple_team_id: settingsData.oauth_apple_team_id || '',
-        oauth_apple_key_id: settingsData.oauth_apple_key_id || '',
-        oauth_apple_private_key: settingsData.oauth_apple_private_key || '',
+    if (mode === 'account') {
+      setAccountForm({
+        username: accountData?.username || user?.username || '',
+        name: accountData?.name || user?.name || '',
+        email: accountData?.email || user?.email || '',
       });
     } else if (mode === 'password') {
       setPasswordForm({
@@ -404,6 +358,85 @@ function SettingsPage() {
         newPassword: '',
         passwordConfirm: '',
       });
+    } else if (settingsData) {
+      if (mode === 's3') {
+        setS3Form({
+          file_s3_enabled: settingsData.file_s3_enabled || 'false',
+          file_s3_bucket: settingsData.file_s3_bucket || '',
+          file_s3_endpoint: settingsData.file_s3_endpoint || '',
+          file_s3_region: settingsData.file_s3_region || '',
+          file_s3_access_key: settingsData.file_s3_access_key || '',
+          file_s3_secret_key: settingsData.file_s3_secret_key || '',
+          file_s3_force_path_style: settingsData.file_s3_force_path_style || 'false',
+        });
+      } else if (mode === 'litestream') {
+        setLitestreamForm({
+          litestream_enabled: settingsData.litestream_enabled || 'false',
+          litestream_s3_bucket: settingsData.litestream_s3_bucket || '',
+          litestream_s3_endpoint: settingsData.litestream_s3_endpoint || '',
+          litestream_s3_region: settingsData.litestream_s3_region || '',
+          litestream_access_key_id: settingsData.litestream_access_key_id || '',
+          litestream_secret_access_key: settingsData.litestream_secret_access_key || '',
+          litestream_s3_force_path_style: settingsData.litestream_s3_force_path_style || 'false',
+          litestream_replica_path: settingsData.litestream_replica_path || '',
+        });
+      } else if (mode === 'ratelimit-add') {
+        setRateLimitForm({
+          label: '',
+          max_requests: 60,
+          interval: 60,
+          targeted_users: 'all',
+        });
+        setEditingRuleIndex(null);
+      } else if (mode === 'ratelimit-edit' && typeof extraIndex === 'number') {
+        const rule = rateLimitRules[extraIndex];
+        if (rule) {
+          setRateLimitForm({ ...rule });
+          setEditingRuleIndex(extraIndex);
+        }
+      } else if (mode === 'rootips') {
+        setRootIPsForm({
+          root_user_ip_enabled: settingsData.root_user_ip_enabled || 'false',
+          root_user_allowed_ips: settingsData.root_user_allowed_ips || '',
+        });
+      } else if (mode === 'email') {
+        setEmailForm({
+          email_provider: settingsData.email_provider || 'console',
+          email_enabled: settingsData.email_enabled || 'false',
+          email_from_address: settingsData.email_from_address || '',
+          email_from_name: settingsData.email_from_name || '',
+          email_api_key: settingsData.email_api_key || '',
+          email_api_secret: settingsData.email_api_secret || '',
+          email_domain: settingsData.email_domain || '',
+          email_region: settingsData.email_region || '',
+          email_endpoint: settingsData.email_endpoint || '',
+        });
+      } else if (mode === 'oauth-global') {
+        setOAuthGlobalForm({
+          oauth_redirect_url: settingsData.oauth_redirect_url || '',
+        });
+      } else if (mode === 'oauth-github') {
+        setOAuthGitHubForm({
+          oauth_github_enabled: settingsData.oauth_github_enabled || 'false',
+          oauth_github_client_id: settingsData.oauth_github_client_id || '',
+          oauth_github_client_secret: settingsData.oauth_github_client_secret || '',
+        });
+      } else if (mode === 'oauth-google') {
+        setOAuthGoogleForm({
+          oauth_google_enabled: settingsData.oauth_google_enabled || 'false',
+          oauth_google_client_id: settingsData.oauth_google_client_id || '',
+          oauth_google_client_secret: settingsData.oauth_google_client_secret || '',
+        });
+      } else if (mode === 'oauth-apple') {
+        setOAuthAppleForm({
+          oauth_apple_enabled: settingsData.oauth_apple_enabled || 'false',
+          oauth_apple_client_id: settingsData.oauth_apple_client_id || '',
+          oauth_apple_client_secret: settingsData.oauth_apple_client_secret || '',
+          oauth_apple_team_id: settingsData.oauth_apple_team_id || '',
+          oauth_apple_key_id: settingsData.oauth_apple_key_id || '',
+          oauth_apple_private_key: settingsData.oauth_apple_private_key || '',
+        });
+      }
     }
 
     setDrawerMode(mode);
@@ -430,6 +463,37 @@ function SettingsPage() {
       toastQueue.add({
         title: 'Save Failed',
         description: err.message || 'Failed to update settings.',
+        variant: 'error',
+      });
+    },
+  });
+
+  const updateAccountMutation = useMutation({
+    mutationFn: (data: { username: string; name: string; email: string }) =>
+      api.updateRootAccount(data),
+    onSuccess: (res) => {
+      if (res.record) {
+        updateUser({
+          username: res.record.username,
+          name: res.record.name,
+          email: res.record.email,
+        });
+      }
+      if (res.token) {
+        saveToken(res.token);
+      }
+      queryClient.invalidateQueries({ queryKey: ['rootAccount'] });
+      closeDrawer();
+      toastQueue.add({
+        title: 'Account Updated',
+        description: 'Root user account details updated successfully.',
+        variant: 'success',
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Account Update Failed',
+        description: err.message || 'Failed to update root user account.',
         variant: 'error',
       });
     },
@@ -472,20 +536,29 @@ function SettingsPage() {
       if (!rateLimitForm.label.trim()) {
         toastQueue.add({
           title: 'Validation Error',
-          description: 'Rule label / route pattern is required.',
+          description: 'Rate limit rule label is required.',
           variant: 'error',
         });
         return;
       }
+      if (rateLimitForm.max_requests <= 0 || rateLimitForm.interval <= 0) {
+        toastQueue.add({
+          title: 'Validation Error',
+          description: 'Max requests and interval must be greater than 0.',
+          variant: 'error',
+        });
+        return;
+      }
+
       const updatedRules = [...rateLimitRules];
       const newRule: RateLimitRule = {
         label: rateLimitForm.label.trim(),
-        max_requests: Number(rateLimitForm.max_requests) || 10,
-        interval: Number(rateLimitForm.interval) || 3,
-        targeted_users: rateLimitForm.targeted_users || 'all',
+        max_requests: Number(rateLimitForm.max_requests),
+        interval: Number(rateLimitForm.interval),
+        targeted_users: rateLimitForm.targeted_users,
       };
 
-      if (editingRuleIndex !== null && editingRuleIndex >= 0) {
+      if (drawerMode === 'ratelimit-edit' && editingRuleIndex !== null) {
         updatedRules[editingRuleIndex] = newRule;
       } else {
         updatedRules.push(newRule);
@@ -506,6 +579,20 @@ function SettingsPage() {
       updateMutation.mutate(oauthGoogleForm);
     } else if (drawerMode === 'oauth-apple') {
       updateMutation.mutate(oauthAppleForm);
+    } else if (drawerMode === 'account') {
+      if (!accountForm.username.trim()) {
+        toastQueue.add({
+          title: 'Validation Error',
+          description: 'Username is required.',
+          variant: 'error',
+        });
+        return;
+      }
+      updateAccountMutation.mutate({
+        username: accountForm.username.trim(),
+        name: accountForm.name.trim(),
+        email: accountForm.email.trim(),
+      });
     } else if (drawerMode === 'password') {
       if (!passwordForm.currentPassword) {
         toastQueue.add({
@@ -547,18 +634,18 @@ function SettingsPage() {
 
   const handleDeleteRule = (index: number) => {
     const rule = rateLimitRules[index];
-    setRuleToDelete(rule);
-    setRuleToDeleteIndex(index);
+    if (rule) {
+      setRuleToDelete({ index, label: rule.label });
+    }
   };
 
   const confirmDeleteRule = () => {
-    if (ruleToDeleteIndex === null) return;
-    const updated = rateLimitRules.filter((_, idx) => idx !== ruleToDeleteIndex);
+    if (!ruleToDelete) return;
+    const updated = rateLimitRules.filter((_, idx) => idx !== ruleToDelete.index);
     updateMutation.mutate({
       rate_limiting_rules: JSON.stringify(updated),
     });
     setRuleToDelete(null);
-    setRuleToDeleteIndex(null);
   };
 
   // Helper values
@@ -598,7 +685,7 @@ function SettingsPage() {
           <Tab id="rootips">Root User IPs</Tab>
           <Tab id="email">Email Delivery</Tab>
           <Tab id="oauth">OAuth2 Providers</Tab>
-          <Tab id="password">Root Password</Tab>
+          <Tab id="account">Root Account</Tab>
         </TabList>
 
         <TabPanels {...stylex.props(styles.tabPanels)}>
@@ -618,57 +705,33 @@ function SettingsPage() {
                 </div>
               </CardHeader>
               <CardBody>
-                {!s3Enabled ? (
-                  <EmptyState
-                    icon={<CloudIcon size={22} color={tokens.colorPrimary500} />}
-                    title="S3 Object Storage is Disabled"
-                    description="Files and media uploads are currently saved to local disk storage. Configure an S3-compatible bucket (AWS, Cloudflare R2, MinIO, Wasabi) for scalable distributed object storage."
-                    action={
-                      <Button variant="primary" onPress={() => openDrawer('s3')}>
-                        <GearIcon size={16} />
-                        <span>Enable & Configure S3</span>
-                      </Button>
-                    }
-                    variant="dashed"
-                  />
-                ) : (
-                  <div {...stylex.props(styles.cardSection)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-                      <Badge variant="success" size="md">
-                        S3 Storage Active
-                      </Badge>
-                      {settingsData?.file_s3_force_path_style === 'true' && (
-                        <Badge variant="neutral" size="sm">
-                          Path-Style Enabled
+                <div {...stylex.props(styles.cardSection)}>
+                  <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
+                    Store and serve user-uploaded files directly through Amazon S3, Cloudflare R2, MinIO, or compatible S3 object storage providers instead of local disk.
+                  </p>
+                  <div {...stylex.props(styles.gridTwoCol)}>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Status</span>
+                      <div>
+                        <Badge variant={settingsData?.file_s3_enabled === 'true' ? 'success' : 'neutral'}>
+                          {settingsData?.file_s3_enabled === 'true' ? 'ENABLED' : 'DISABLED (LOCAL STORAGE)'}
                         </Badge>
-                      )}
+                      </div>
                     </div>
-                    <div {...stylex.props(styles.gridTwoCol)}>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>S3 Bucket</span>
-                        <span {...stylex.props(styles.infoCode)}>{settingsData?.file_s3_bucket || '—'}</span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>S3 Endpoint</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.file_s3_endpoint || '(AWS S3 standard endpoint)'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Region</span>
-                        <span {...stylex.props(styles.infoValue)}>{settingsData?.file_s3_region || 'us-east-1'}</span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Access Key ID</span>
-                        <span {...stylex.props(styles.infoCode)}>
-                          {settingsData?.file_s3_access_key
-                            ? `${settingsData.file_s3_access_key.slice(0, 4)}••••••••`
-                            : '—'}
-                        </span>
-                      </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Bucket Name</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.file_s3_bucket || '—'}</span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Endpoint URL</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.file_s3_endpoint || '—'}</span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Region</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.file_s3_region || '—'}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </CardBody>
             </Card>
           </TabPanel>
@@ -679,67 +742,43 @@ function SettingsPage() {
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
                   <div {...stylex.props(styles.cardTitle)}>
-                    <FloppyDiskIcon size={20} color={tokens.colorSuccess500} />
-                    <span>Litestream Real-Time Backups</span>
+                    <FloppyDiskIcon size={20} color={tokens.colorPrimary500} />
+                    <span>Litestream Real-Time Replication</span>
                   </div>
                   <Button variant="outline" onPress={() => openDrawer('litestream')}>
                     <PencilSimpleIcon size={16} />
-                    <span>Configure Litestream</span>
+                    <span>Configure Replication</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardBody>
-                {!litestreamEnabled ? (
-                  <EmptyState
-                    icon={<FloppyDiskIcon size={22} color={tokens.colorSuccess500} />}
-                    title="Litestream Replication is Disabled"
-                    description="Stream SQLite WAL frames continuously to S3 for point-in-time recovery, real-time disaster recovery, and automated failover."
-                    action={
-                      <Button variant="primary" onPress={() => openDrawer('litestream')}>
-                        <GearIcon size={16} />
-                        <span>Enable & Configure Litestream</span>
-                      </Button>
-                    }
-                    variant="dashed"
-                  />
-                ) : (
-                  <div {...stylex.props(styles.cardSection)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-                      <Badge variant="success" size="md">
-                        Continuous Replication Active
-                      </Badge>
-                      {settingsData?.litestream_s3_force_path_style === 'true' && (
-                        <Badge variant="neutral" size="sm">
-                          Path-Style Enabled
+                <div {...stylex.props(styles.cardSection)}>
+                  <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
+                    Continuously replicate SQLite transactions to S3, Cloudflare R2, or remote object storage for disaster recovery and automated point-in-time restores.
+                  </p>
+                  <div {...stylex.props(styles.gridTwoCol)}>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Replication Status</span>
+                      <div>
+                        <Badge variant={settingsData?.litestream_enabled === 'true' ? 'success' : 'neutral'}>
+                          {settingsData?.litestream_enabled === 'true' ? 'ACTIVE' : 'INACTIVE'}
                         </Badge>
-                      )}
+                      </div>
                     </div>
-                    <div {...stylex.props(styles.gridTwoCol)}>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Backup Bucket</span>
-                        <span {...stylex.props(styles.infoCode)}>{settingsData?.litestream_s3_bucket || '—'}</span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Replica Path</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.litestream_replica_path || '(Default root replication)'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Endpoint</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.litestream_s3_endpoint || '(AWS S3 standard endpoint)'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Region</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.litestream_s3_region || 'us-east-1'}
-                        </span>
-                      </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Replica Target Bucket</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.litestream_s3_bucket || '—'}</span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Replica Path</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.litestream_replica_path || '—'}</span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Endpoint</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.litestream_s3_endpoint || '—'}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </CardBody>
             </Card>
           </TabPanel>
@@ -750,16 +789,19 @@ function SettingsPage() {
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
                   <div {...stylex.props(styles.cardTitle)}>
-                    <GaugeIcon size={20} color={tokens.colorWarning500} />
-                    <span>Sliding Window Rate Limiting</span>
+                    <GaugeIcon size={20} color={tokens.colorPrimary500} />
+                    <span>Rate Limiting & Abuse Prevention</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing3 }}>
-                    <Switch
-                      isSelected={rateLimitingEnabled}
-                      onChange={handleToggleRateLimiting}
-                    >
-                      {rateLimitingEnabled ? 'Rate Limiter Enabled' : 'Rate Limiter Disabled'}
-                    </Switch>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+                      <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>Global Throttle:</span>
+                      <Switch
+                        isSelected={settingsData?.rate_limiting_enabled === 'true'}
+                        onChange={handleToggleRateLimiting}
+                      >
+                        {settingsData?.rate_limiting_enabled === 'true' ? 'Enabled' : 'Disabled'}
+                      </Switch>
+                    </div>
                     <Button variant="primary" onPress={() => openDrawer('ratelimit-add')}>
                       <PlusIcon size={16} />
                       <span>Add Rule</span>
@@ -768,77 +810,70 @@ function SettingsPage() {
                 </div>
               </CardHeader>
               <CardBody>
-                {rateLimitRules.length === 0 ? (
-                  <EmptyState
-                    icon={<ShieldWarningIcon size={22} color={tokens.colorWarning500} />}
-                    title="No Rate Limiting Rules Configured"
-                    description="Protect your API endpoints and auth routes against brute-force attacks and abuse by configuring sliding window rate limits."
-                    action={
-                      <Button variant="primary" onPress={() => openDrawer('ratelimit-add')}>
+                <div {...stylex.props(styles.cardSection)}>
+                  <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
+                    Configure granular sliding-window rate limiters per route, collection, or authentication status to protect against brute-force and DDoS attacks.
+                  </p>
+
+                  {rateLimitRules.length === 0 ? (
+                    <EmptyState
+                      icon={<GaugeIcon size={32} color={tokens.colorFgSubtle} />}
+                      title="No rate limit rules defined"
+                      description="Add custom rate limit rules to protect specific routes or collection endpoints."
+                    >
+                      <Button variant="outline" onPress={() => openDrawer('ratelimit-add')}>
                         <PlusIcon size={16} />
                         <span>Add Rate Limit Rule</span>
                       </Button>
-                    }
-                    variant="dashed"
-                  />
-                ) : (
-                  <Table aria-label="Rate Limiting Rules Table">
-                    <TableHeader>
-                      <Column isRowHeader>Rule Pattern / Label</Column>
-                      <Column>Max Requests</Column>
-                      <Column>Interval Window</Column>
-                      <Column>Target Audience</Column>
-                      <Column>Actions</Column>
-                    </TableHeader>
-                    <TableBody>
-                      {rateLimitRules.map((rule, idx) => (
-                        <Row key={idx} id={`rule-${idx}`}>
-                          <Cell>
-                            <span {...stylex.props(styles.infoCode)}>{rule.label}</span>
-                          </Cell>
-                          <Cell>
-                            <Badge variant="neutral" size="sm">
-                              {rule.max_requests} reqs
-                            </Badge>
-                          </Cell>
-                          <Cell>{rule.interval} seconds</Cell>
-                          <Cell>
-                            <Badge
-                              variant={
-                                rule.targeted_users === 'authenticated'
-                                  ? 'primary'
-                                  : rule.targeted_users === 'guest'
-                                    ? 'warning'
-                                    : 'neutral'
-                              }
-                              size="sm"
-                            >
-                              {rule.targeted_users}
-                            </Badge>
-                          </Cell>
-                          <Cell>
-                            <div {...stylex.props(styles.tableActions)}>
-                              <Button
-                                variant="ghost"
-                                aria-label={`Edit ${rule.label}`}
-                                onPress={() => openDrawer('ratelimit-edit', idx)}
-                              >
-                                <PencilSimpleIcon size={16} />
-                              </Button>
-                              <Button
-                                variant="danger-soft"
-                                aria-label={`Delete ${rule.label}`}
-                                onPress={() => handleDeleteRule(idx)}
-                              >
-                                <TrashIcon size={16} />
-                              </Button>
-                            </div>
-                          </Cell>
-                        </Row>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                    </EmptyState>
+                  ) : (
+                    <Table aria-label="Rate Limit Rules Table">
+                      <TableHeader>
+                        <Column isRowHeader>Rule Pattern / Route</Column>
+                        <Column>Max Requests</Column>
+                        <Column>Window (Seconds)</Column>
+                        <Column>Targeted Audience</Column>
+                        <Column>Actions</Column>
+                      </TableHeader>
+                      <TableBody>
+                        {rateLimitRules.map((rule, idx) => (
+                          <Row key={idx}>
+                            <Cell>
+                              <span style={{ fontWeight: 600, color: tokens.colorFg }}>{rule.label}</span>
+                            </Cell>
+                            <Cell>{rule.max_requests} req</Cell>
+                            <Cell>{rule.interval}s</Cell>
+                            <Cell>
+                              <Badge variant={rule.targeted_users === 'authenticated' ? 'primary' : rule.targeted_users === 'guest' ? 'warning' : 'neutral'}>
+                                {rule.targeted_users?.toUpperCase() || 'ALL'}
+                              </Badge>
+                            </Cell>
+                            <Cell>
+                              <div style={{ display: 'flex', gap: tokens.spacing2 }}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onPress={() => openDrawer('ratelimit-edit', idx)}
+                                  aria-label={`Edit ${rule.label}`}
+                                >
+                                  <PencilSimpleIcon size={16} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onPress={() => handleDeleteRule(idx)}
+                                  aria-label={`Delete ${rule.label}`}
+                                >
+                                  <TrashIcon size={16} color={tokens.colorError500} />
+                                </Button>
+                              </div>
+                            </Cell>
+                          </Row>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
               </CardBody>
             </Card>
           </TabPanel>
@@ -850,7 +885,7 @@ function SettingsPage() {
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
                   <div {...stylex.props(styles.cardTitle)}>
                     <GlobeHemisphereWestIcon size={20} color={tokens.colorPrimary500} />
-                    <span>Root User IP Restriction</span>
+                    <span>Root User Security IP Whitelist</span>
                   </div>
                   <Button variant="outline" onPress={() => openDrawer('rootips')}>
                     <PencilSimpleIcon size={16} />
@@ -859,38 +894,31 @@ function SettingsPage() {
                 </div>
               </CardHeader>
               <CardBody>
-                {!rootIPEnabled || allowedIPsList.length === 0 ? (
-                  <EmptyState
-                    icon={<GlobeHemisphereWestIcon size={22} color={tokens.colorWarning500} />}
-                    title="Root User IP Whitelist is Inactive"
-                    description="Root administrator accounts can currently authenticate from any network IP address. Restrict root logins to specific trusted corporate IPs or VPN CIDR ranges to prevent unauthorized access."
-                    action={
-                      <Button variant="primary" onPress={() => openDrawer('rootips')}>
-                        <GearIcon size={16} />
-                        <span>Configure Allowed IPs</span>
-                      </Button>
-                    }
-                    variant="dashed"
-                  />
-                ) : (
-                  <div {...stylex.props(styles.cardSection)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-                      <Badge variant="success" size="md">
-                        IP Whitelist Enforcement Active
-                      </Badge>
-                    </div>
-                    <div>
-                      <span {...stylex.props(styles.infoLabel)}>Allowed IP Addresses & CIDR Ranges</span>
-                      <div {...stylex.props(styles.tagList)}>
-                        {allowedIPsList.map((ip, i) => (
-                          <Badge key={i} variant="primary" size="md">
-                            {ip}
-                          </Badge>
-                        ))}
+                <div {...stylex.props(styles.cardSection)}>
+                  <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
+                    Restrict access to root administrator logins and elevated API endpoints to specific authorized IP addresses and CIDR subnets.
+                  </p>
+                  <div {...stylex.props(styles.gridTwoCol)}>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>IP Check Status</span>
+                      <div>
+                        <Badge variant={settingsData?.root_user_ip_enabled === 'true' ? 'success' : 'neutral'}>
+                          {settingsData?.root_user_ip_enabled === 'true' ? 'ENFORCED' : 'DISABLED (ANY IP ALLOWED)'}
+                        </Badge>
                       </div>
                     </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Allowed IPs & Subnets</span>
+                      <span {...stylex.props(styles.infoValue)}>
+                        {settingsData?.root_user_allowed_ips ? (
+                          <span {...stylex.props(styles.infoCode)}>{settingsData.root_user_allowed_ips}</span>
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                    </div>
                   </div>
-                )}
+                </div>
               </CardBody>
             </Card>
           </TabPanel>
@@ -906,62 +934,40 @@ function SettingsPage() {
                   </div>
                   <Button variant="outline" onPress={() => openDrawer('email')}>
                     <PencilSimpleIcon size={16} />
-                    <span>Configure Email</span>
+                    <span>Configure Email Provider</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardBody>
-                {!emailEnabled ? (
-                  <EmptyState
-                    icon={<EnvelopeSimpleIcon size={22} color={tokens.colorPrimary500} />}
-                    title="Transactional Email Delivery is Disabled"
-                    description="Enable transactional email delivery to send password reset links, OTP verification codes, and user invites via AWS SES, Resend, Mailgun, SendGrid, Cloudflare, or local stdout console."
-                    action={
-                      <Button variant="primary" onPress={() => openDrawer('email')}>
-                        <GearIcon size={16} />
-                        <span>Enable & Configure Email</span>
-                      </Button>
-                    }
-                    variant="dashed"
-                  />
-                ) : (
-                  <div {...stylex.props(styles.cardSection)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-                      <Badge variant="success" size="md">
-                        Email Service Active
-                      </Badge>
-                      <Badge variant="primary" size="sm">
-                        Provider: {settingsData?.email_provider?.toUpperCase() || 'CONSOLE'}
-                      </Badge>
+                <div {...stylex.props(styles.cardSection)}>
+                  <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
+                    Enable transactional email delivery to send password reset links, OTP verification codes, and user invites via AWS SES, Resend, Mailgun, SendGrid, Cloudflare, or local stdout console.
+                  </p>
+                  <div {...stylex.props(styles.gridTwoCol)}>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Email Service Status</span>
+                      <div>
+                        <Badge variant={settingsData?.email_enabled === 'true' ? 'success' : 'neutral'}>
+                          {settingsData?.email_enabled === 'true' ? 'ENABLED' : 'DISABLED'}
+                        </Badge>
+                      </div>
                     </div>
-                    <div {...stylex.props(styles.gridTwoCol)}>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>From Address</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.email_from_address || '—'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>From Name</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.email_from_name || '—'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Domain / Account ID</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.email_domain || '(Default)'}
-                        </span>
-                      </div>
-                      <div {...stylex.props(styles.infoItem)}>
-                        <span {...stylex.props(styles.infoLabel)}>Region</span>
-                        <span {...stylex.props(styles.infoValue)}>
-                          {settingsData?.email_region || 'us-east-1'}
-                        </span>
-                      </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Active Provider</span>
+                      <span {...stylex.props(styles.infoValue)} style={{ textTransform: 'uppercase' }}>
+                        {settingsData?.email_provider || 'console'}
+                      </span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Sender Address</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.email_from_address || '—'}</span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Sender Name</span>
+                      <span {...stylex.props(styles.infoValue)}>{settingsData?.email_from_name || '—'}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </CardBody>
             </Card>
           </TabPanel>
@@ -969,42 +975,46 @@ function SettingsPage() {
           {/* TAB 6: OAUTH2 PROVIDERS */}
           <TabPanel id="oauth">
             <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing4 }}>
-              {/* Global Redirect URI Card */}
+              {/* GLOBAL CALLBACK CONFIG */}
               <Card elevation="sm">
                 <CardHeader>
                   <div {...stylex.props(styles.cardHeaderWithAction)}>
                     <div {...stylex.props(styles.cardTitle)}>
-                      <LinkSimpleIcon size={18} color={tokens.colorPrimary500} />
+                      <LinkSimpleIcon size={20} color={tokens.colorPrimary500} />
                       <span>Global OAuth Callback Redirect URL</span>
                     </div>
                     <Button variant="outline" onPress={() => openDrawer('oauth-global')}>
                       <PencilSimpleIcon size={16} />
-                      <span>Edit Redirect URL</span>
+                      <span>Configure Redirect</span>
                     </Button>
                   </div>
                 </CardHeader>
                 <CardBody>
                   <div {...stylex.props(styles.infoItem)}>
-                    <span {...stylex.props(styles.infoLabel)}>Authorized Callback URI</span>
-                    <span {...stylex.props(styles.infoCode)}>
-                      {settingsData?.oauth_redirect_url || 'http://localhost:8090/api/oauth2/callback'}
+                    <span {...stylex.props(styles.infoLabel)}>Application Redirect URL</span>
+                    <span {...stylex.props(styles.infoValue)}>
+                      {settingsData?.oauth_redirect_url ? (
+                        <span {...stylex.props(styles.infoCode)}>{settingsData.oauth_redirect_url}</span>
+                      ) : (
+                        '—'
+                      )}
                     </span>
                   </div>
                 </CardBody>
               </Card>
 
-              {/* Provider Cards */}
+              {/* PROVIDER CARDS */}
               <div {...stylex.props(styles.gridThreeCol)}>
                 {/* GitHub */}
                 <Card elevation="sm">
                   <CardBody>
                     <div {...stylex.props(styles.providerHeader)}>
                       <div {...stylex.props(styles.providerInfo)}>
-                        <GithubLogoIcon size={24} />
+                        <GithubLogoIcon size={22} weight="fill" color={tokens.colorFg} />
                         <span {...stylex.props(styles.providerName)}>GitHub</span>
                       </div>
-                      <Badge variant={githubEnabled ? 'success' : 'neutral'} size="sm">
-                        {githubEnabled ? 'Active' : 'Disabled'}
+                      <Badge variant={settingsData?.oauth_github_enabled === 'true' ? 'success' : 'neutral'}>
+                        {settingsData?.oauth_github_enabled === 'true' ? 'ACTIVE' : 'INACTIVE'}
                       </Badge>
                     </div>
                     <div {...stylex.props(styles.infoItem)}>
@@ -1015,7 +1025,7 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" onPress={() => openDrawer('oauth-github')}>
+                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-github')}>
                       <GearIcon size={16} />
                       <span>Configure GitHub</span>
                     </Button>
@@ -1027,11 +1037,11 @@ function SettingsPage() {
                   <CardBody>
                     <div {...stylex.props(styles.providerHeader)}>
                       <div {...stylex.props(styles.providerInfo)}>
-                        <GoogleLogoIcon size={24} color="#EA4335" />
+                        <GoogleLogoIcon size={22} weight="bold" color="#EA4335" />
                         <span {...stylex.props(styles.providerName)}>Google</span>
                       </div>
-                      <Badge variant={googleEnabled ? 'success' : 'neutral'} size="sm">
-                        {googleEnabled ? 'Active' : 'Disabled'}
+                      <Badge variant={settingsData?.oauth_google_enabled === 'true' ? 'success' : 'neutral'}>
+                        {settingsData?.oauth_google_enabled === 'true' ? 'ACTIVE' : 'INACTIVE'}
                       </Badge>
                     </div>
                     <div {...stylex.props(styles.infoItem)}>
@@ -1042,7 +1052,7 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" onPress={() => openDrawer('oauth-google')}>
+                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-google')}>
                       <GearIcon size={16} />
                       <span>Configure Google</span>
                     </Button>
@@ -1054,22 +1064,22 @@ function SettingsPage() {
                   <CardBody>
                     <div {...stylex.props(styles.providerHeader)}>
                       <div {...stylex.props(styles.providerInfo)}>
-                        <AppleLogoIcon size={24} />
+                        <AppleLogoIcon size={22} weight="fill" color={tokens.colorFg} />
                         <span {...stylex.props(styles.providerName)}>Apple</span>
                       </div>
-                      <Badge variant={appleEnabled ? 'success' : 'neutral'} size="sm">
-                        {appleEnabled ? 'Active' : 'Disabled'}
+                      <Badge variant={settingsData?.oauth_apple_enabled === 'true' ? 'success' : 'neutral'}>
+                        {settingsData?.oauth_apple_enabled === 'true' ? 'ACTIVE' : 'INACTIVE'}
                       </Badge>
                     </div>
                     <div {...stylex.props(styles.infoItem)}>
-                      <span {...stylex.props(styles.infoLabel)}>Service / Client ID</span>
+                      <span {...stylex.props(styles.infoLabel)}>Client ID</span>
                       <span {...stylex.props(styles.infoValue)}>
                         {settingsData?.oauth_apple_client_id || 'Not configured'}
                       </span>
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" onPress={() => openDrawer('oauth-apple')}>
+                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-apple')}>
                       <GearIcon size={16} />
                       <span>Configure Apple</span>
                     </Button>
@@ -1079,39 +1089,73 @@ function SettingsPage() {
             </div>
           </TabPanel>
 
-          {/* TAB 7: ROOT PASSWORD */}
-          <TabPanel id="password">
+          {/* TAB 7: ROOT ACCOUNT */}
+          <TabPanel id="account">
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
                   <div {...stylex.props(styles.cardTitle)}>
-                    <LockKeyIcon size={20} color={tokens.colorPrimary500} />
-                    <span>Root Administrator Credentials</span>
+                    <UserGearIcon size={20} color={tokens.colorPrimary500} />
+                    <span>Root Administrator Account</span>
                   </div>
-                  <Button variant="primary" onPress={() => openDrawer('password')}>
-                    <LockKeyIcon size={16} />
-                    <span>Change Root Password</span>
-                  </Button>
+                  <div style={{ display: 'flex', gap: tokens.spacing2 }}>
+                    <Button variant="outline" onPress={() => openDrawer('account')}>
+                      <PencilSimpleIcon size={16} />
+                      <span>Edit Account</span>
+                    </Button>
+                    <Button variant="primary" onPress={() => openDrawer('password')}>
+                      <LockKeyIcon size={16} />
+                      <span>Change Password</span>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardBody>
                 <div {...stylex.props(styles.cardSection)}>
                   <p style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm, margin: 0 }}>
-                    The root account maintains ultimate administrative privileges over schema collections, engine configurations, access controls, and backups. It is strongly recommended to use a high-entropy password and configure IP restrictions.
+                    The root administrator account maintains ultimate privileges over collections, engine configurations, access controls, and backups. You can update your display name, username, and email below.
                   </p>
                   <div {...stylex.props(styles.gridTwoCol)}>
                     <div {...stylex.props(styles.infoItem)}>
-                      <span {...stylex.props(styles.infoLabel)}>Password Requirements</span>
+                      <span {...stylex.props(styles.infoLabel)}>Display Name</span>
                       <span {...stylex.props(styles.infoValue)}>
-                        Minimum 8 characters with uppercase, lowercase, and numeric characters.
+                        {accountData?.name || user?.name || user?.username || 'admin'}
                       </span>
                     </div>
                     <div {...stylex.props(styles.infoItem)}>
-                      <span {...stylex.props(styles.infoLabel)}>Access Privileges</span>
+                      <span {...stylex.props(styles.infoLabel)}>Username</span>
                       <span {...stylex.props(styles.infoValue)}>
-                        Full System Administration (CLI, TUI, and Web Admin Console)
+                        @{accountData?.username || user?.username || 'admin'}
                       </span>
                     </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Email Address</span>
+                      <span {...stylex.props(styles.infoValue)}>
+                        {accountData?.email || user?.email || 'None configured'}
+                      </span>
+                    </div>
+                    <div {...stylex.props(styles.infoItem)}>
+                      <span {...stylex.props(styles.infoLabel)}>Role & Privileges</span>
+                      <span {...stylex.props(styles.infoValue)}>
+                        Root Superadministrator (Full Access)
+                      </span>
+                    </div>
+                    {accountData?.created_at && (
+                      <div {...stylex.props(styles.infoItem)}>
+                        <span {...stylex.props(styles.infoLabel)}>Account Created</span>
+                        <span {...stylex.props(styles.infoValue)}>
+                          {new Date(accountData.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {accountData?.updated_at && (
+                      <div {...stylex.props(styles.infoItem)}>
+                        <span {...stylex.props(styles.infoLabel)}>Last Updated</span>
+                        <span {...stylex.props(styles.infoValue)}>
+                          {new Date(accountData.updated_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardBody>
@@ -1136,6 +1180,7 @@ function SettingsPage() {
                 {drawerMode === 'oauth-github' && 'Configure GitHub OAuth2'}
                 {drawerMode === 'oauth-google' && 'Configure Google OAuth2'}
                 {drawerMode === 'oauth-apple' && 'Configure Apple Sign-In'}
+                {drawerMode === 'account' && 'Edit Root User Account'}
                 {drawerMode === 'password' && 'Change Root Password'}
               </DrawerTitle>
               <DrawerCloseButton />
@@ -1544,6 +1589,35 @@ function SettingsPage() {
                 </div>
               )}
 
+              {/* ROOT ACCOUNT FORM */}
+              {drawerMode === 'account' && (
+                <div {...stylex.props(styles.drawerForm)}>
+                  <TextField
+                    label="Username"
+                    placeholder="e.g. admin"
+                    value={accountForm.username}
+                    onChange={(val) => setAccountForm({ ...accountForm, username: val })}
+                    description="Unique username used for login and CLI authentication"
+                    isRequired
+                  />
+                  <TextField
+                    label="Display Name"
+                    placeholder="e.g. Administrator"
+                    value={accountForm.name}
+                    onChange={(val) => setAccountForm({ ...accountForm, name: val })}
+                    description="Full or display name shown across the administration interface"
+                  />
+                  <TextField
+                    label="Email Address"
+                    type="email"
+                    placeholder="e.g. admin@moul.dev"
+                    value={accountForm.email}
+                    onChange={(val) => setAccountForm({ ...accountForm, email: val })}
+                    description="Root contact email address"
+                  />
+                </div>
+              )}
+
               {/* ROOT PASSWORD FORM */}
               {drawerMode === 'password' && (
                 <div {...stylex.props(styles.drawerForm)}>
@@ -1582,13 +1656,21 @@ function SettingsPage() {
               <Button
                 variant="primary"
                 onPress={handleSaveDrawer}
-                isDisabled={updateMutation.isPending || updatePasswordMutation.isPending}
+                isDisabled={
+                  updateMutation.isPending ||
+                  updatePasswordMutation.isPending ||
+                  updateAccountMutation.isPending
+                }
               >
-                {updateMutation.isPending || updatePasswordMutation.isPending
+                {updateMutation.isPending ||
+                updatePasswordMutation.isPending ||
+                updateAccountMutation.isPending
                   ? 'Saving...'
-                  : drawerMode === 'password'
-                    ? 'Update Password'
-                    : 'Save Settings'}
+                  : drawerMode === 'account'
+                    ? 'Save Account'
+                    : drawerMode === 'password'
+                      ? 'Update Password'
+                      : 'Save Settings'}
               </Button>
             </DrawerFooter>
           </DrawerDialog>

@@ -102,6 +102,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 			id TEXT PRIMARY KEY,
 			username TEXT UNIQUE NOT NULL,
 			email TEXT UNIQUE NOT NULL,
+			name TEXT NOT NULL DEFAULT '',
 			passwordHash TEXT NOT NULL,
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL
@@ -110,6 +111,9 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create _rootUsers table: %w", err)
 	}
+
+	// Ensure name column exists in _rootUsers for backwards compatibility
+	_, _ = db.NewQuery("ALTER TABLE _rootUsers ADD COLUMN name TEXT NOT NULL DEFAULT '';").Execute()
 	// Create meta-table _feature_flags
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _feature_flags (

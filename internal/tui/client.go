@@ -347,6 +347,29 @@ func (c *Client) UpdateRootPassword(currentPassword, newPassword, confirmPasswor
 	return c.request("POST", "/api/admin/password", payload, nil)
 }
 
+// RootAccountResponse represents the response from GetRootAccount and UpdateRootAccount.
+type RootAccountResponse struct {
+	Record map[string]interface{} `json:"record"`
+	Token  string                 `json:"token,omitempty"`
+}
+
+// GetRootAccount retrieves the root administrator user profile.
+func (c *Client) GetRootAccount() (*RootAccountResponse, error) {
+	var res RootAccountResponse
+	err := c.request("GET", "/api/settings/account", nil, &res)
+	return &res, err
+}
+
+// UpdateRootAccount updates the root user username, name, email, or password.
+func (c *Client) UpdateRootAccount(payload map[string]interface{}) (*RootAccountResponse, error) {
+	var res RootAccountResponse
+	err := c.request("PATCH", "/api/settings/account", payload, &res)
+	if err == nil && res.Token != "" {
+		c.Token = res.Token
+	}
+	return &res, err
+}
+
 // GetSettings fetches all settings from the database and returns them as a JSON object.
 func (c *Client) GetSettings() (map[string]string, error) {
 	var settings map[string]string

@@ -382,6 +382,11 @@ func (m *Model) fetchSettings() tea.Cmd {
 		if err != nil {
 			return ErrMsg{err}
 		}
-		return SettingsMsg{Settings: settings}
+		var accMap map[string]interface{}
+		accRes, accErr := m.Client.GetRootAccount()
+		if accErr == nil && accRes != nil {
+			accMap = accRes.Record
+		}
+		return SettingsMsg{Settings: settings, Account: accMap}
 	}
 }

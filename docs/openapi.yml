@@ -387,6 +387,98 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
 
+  /api/admin/account:
+    get:
+      summary: Get Root User Account Profile
+      description: Returns root administrator profile information (username, name, email, created/updated timestamps).
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Root user account retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  record:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+    patch:
+      summary: Update Root User Account Profile
+      description: Updates root administrator username, display name, email address, and optionally password.
+      tags:
+        - Setup Management
+      security:
+        - AdminKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: New unique username/handle.
+                name:
+                  type: string
+                  description: Display name.
+                email:
+                  type: string
+                  description: Contact email address.
+                currentPassword:
+                  type: string
+                  description: Existing password (required if updating password).
+                password:
+                  type: string
+                  description: New password (min 8 chars, 1 upper, 1 lower, 1 digit).
+                passwordConfirm:
+                  type: string
+                  description: New password confirmation.
+      responses:
+        '200':
+          description: Root account updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  record:
+                    type: object
+                  token:
+                    type: string
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
   /api/moul:
     get:
       summary: List Moul

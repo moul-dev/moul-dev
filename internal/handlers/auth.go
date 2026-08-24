@@ -94,6 +94,10 @@ func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 		id, _ := recordMap["id"].(string)
 		email, _ := recordMap["email"].(string)
 		username, _ := recordMap["username"].(string)
+		name, _ := recordMap["name"].(string)
+		if name == "" {
+			name = username
+		}
 
 		token, err := auth.GenerateToken(id, email, username, "_rootUsers")
 		if err != nil {
@@ -107,6 +111,7 @@ func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 				"id":         id,
 				"email":      email,
 				"username":   username,
+				"name":       name,
 				"moul":       "_rootUsers",
 				"created_at": recordMap["created_at"],
 				"updated_at": recordMap["updated_at"],
@@ -452,6 +457,10 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 		id, _ := recordMap["id"].(string)
 		userEmail, _ := recordMap["email"].(string)
 		username, _ := recordMap["username"].(string)
+		name, _ := recordMap["name"].(string)
+		if name == "" {
+			name = username
+		}
 
 		newToken, err := auth.GenerateToken(id, userEmail, username, "_rootUsers")
 		if err != nil {
@@ -465,6 +474,7 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 				"id":         id,
 				"email":      userEmail,
 				"username":   username,
+				"name":       name,
 				"moul":       "_rootUsers",
 				"created_at": recordMap["created_at"],
 				"updated_at": recordMap["updated_at"],

@@ -104,8 +104,10 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 
 ### Setup & Root User Management (Admin Auth)
 - `GET /api/setup`: Check if initial setup is required (`needsSetup: true|false`).
-- `POST /api/setup`: Register initial root user (`username`, `email`, `password`).
+- `POST /api/setup`: Register initial root user (`username`, `name`, `email`, `password`).
 - `POST /api/admin/login`: Authenticate root user with Master Admin Key & credentials.
+- `GET /api/admin/account` / `GET /api/settings/account`: Retrieve root user profile (`username`, `name`, `email`, etc.).
+- `PATCH /api/admin/account` / `PATCH /api/settings/account`: Update root user account (`username`, `name`, `email`, and optional `password`).
 - `POST /api/admin/password`: Update root user password (`currentPassword`, `password`, `passwordConfirm`, optional `identity`).
 
 ### Built-in MCP Server (Admin Auth)
