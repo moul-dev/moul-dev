@@ -43,28 +43,6 @@ import { api } from '../../api/client';
 import { LogoIcon } from './Logo';
 
 const styles = stylex.create({
-  footer: {
-    paddingBlock: '4px',
-    paddingInline: tokens.spacing2,
-    minHeight: '38px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  footerCollapsed: {
-    paddingInline: 0,
-    justifyContent: 'center',
-  },
-  footerContent: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    width: '100%',
-    padding: 0,
-    minHeight: 'auto',
-  },
-  footerContentCollapsed: {
-    justifyContent: 'center',
-  },
   brand: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -76,14 +54,20 @@ const styles = stylex.create({
     borderRadius: tokens.radiusMd,
     lineHeight: 1,
   },
+  sidebarHeader: {
+    paddingInline: tokens.spacing2,
+  },
+  sidebarHeaderCollapsed: {
+    paddingInline: 0,
+  },
   userTrigger: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacing2,
-    paddingBlock: tokens.spacing2,
+    paddingBlock: '4px',
     paddingInline: tokens.spacing3,
-    height: '36px',
+    height: '40px',
     borderRadius: tokens.radiusMd,
     borderWidth: 0,
     backgroundColor: {
@@ -110,7 +94,7 @@ const styles = stylex.create({
   userInfoRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: tokens.spacing3,
+    gap: tokens.spacing2,
     minWidth: 0,
     overflow: 'hidden',
     flex: 1,
@@ -124,31 +108,17 @@ const styles = stylex.create({
     textOverflow: 'ellipsis',
     overflow: 'hidden',
   },
-  popover: {
-    minWidth: '240px',
-    maxWidth: '260px',
-    backgroundColor: tokens.colorBg,
-    borderRadius: tokens.radiusLg,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorderSubtle,
-    boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.16), 0 4px 12px -2px rgba(0, 0, 0, 0.08)',
-    padding: '6px',
-    outline: 'none',
-    zIndex: 1000,
-  },
-  popoverDialog: {
-    outline: 'none',
-  },
   menuContainer: {
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
+    minWidth: '260px',
+    maxWidth: '280px',
   },
   menuHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: tokens.spacing2,
+    gap: tokens.spacing3,
     paddingBlock: '6px',
     paddingInline: '8px',
   },
@@ -163,11 +133,11 @@ const styles = stylex.create({
   menuHeaderNameRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: tokens.spacing1,
+    gap: tokens.spacing2,
     minWidth: 0,
   },
   menuHeaderName: {
-    fontSize: '0.8125rem',
+    fontSize: '0.875rem',
     fontWeight: 600,
     color: tokens.colorFg,
     fontFamily: tokens.fontFamilyBase,
@@ -176,24 +146,25 @@ const styles = stylex.create({
     overflow: 'hidden',
   },
   menuHeaderSub: {
-    fontSize: '0.6875rem',
+    fontSize: '0.75rem',
     color: tokens.colorFgSubtle,
     fontFamily: tokens.fontFamilyBase,
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
     overflow: 'hidden',
+    lineHeight: 1.3,
   },
   menuDivider: {
     height: '1px',
     backgroundColor: tokens.colorBorderSubtle,
     marginBlock: '4px',
-    marginInline: '4px',
+    marginInline: 0,
   },
   menuItem: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
-    paddingBlock: '7px',
+    paddingBlock: '6px',
     paddingInline: '8px',
     borderRadius: tokens.radiusMd,
     borderWidth: 0,
@@ -208,15 +179,19 @@ const styles = stylex.create({
     fontSize: '0.8125rem',
     fontWeight: 500,
     fontFamily: tokens.fontFamilyBase,
-    transition: 'background-color 0.15s ease',
+    transition: 'background-color 0.15s ease, color 0.15s ease',
     textDecoration: 'none',
     boxSizing: 'border-box',
+    minHeight: '36px',
+    outline: 'none',
   },
   menuItemIcon: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    width: '18px',
+    height: '18px',
     color: tokens.colorFgSubtle,
   },
   menuItemLabel: {
@@ -230,7 +205,7 @@ const styles = stylex.create({
     color: tokens.colorError500,
     backgroundColor: {
       default: 'transparent',
-      ':hover': 'rgba(239, 68, 68, 0.08)',
+      ':hover': tokens.colorAlertHoverError,
     },
   },
   menuItemIconDanger: {
@@ -247,45 +222,17 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBlock: '6px',
+    gap: tokens.spacing2,
+    paddingBlock: '4px',
     paddingInline: '8px',
+    borderRadius: tokens.radiusMd,
+    minHeight: '36px',
+    boxSizing: 'border-box',
   },
   themeRowLeft: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
-    fontSize: '0.8125rem',
-    fontWeight: 500,
-    color: tokens.colorFg,
-    fontFamily: tokens.fontFamilyBase,
-  },
-  themeToggleGroup: {
-    backgroundColor: tokens.colorBgSubtle,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorderSubtle,
-    borderRadius: tokens.radiusMd,
-    padding: '2px',
-  },
-  themeToggleBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: tokens.colorFgSubtle,
-    cursor: 'pointer',
-    borderRadius: tokens.radiusSm,
-    transition: 'all 0.15s ease',
-  },
-  themeToggleBtnActive: {
-    color: tokens.colorFg,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-  },
-  main: {
-    backgroundColor: tokens.colorBg,
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
   },
   content: {
     flex: 1,
@@ -371,10 +318,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       selectedKey={currentSelectedKey}
       onSelectionChange={(key) => navigate({ to: key })}
       variant="solid"
-      style={{ height: '100vh', width: '100vw' }}
     >
       <SidebarAside showCollapseToggle>
-        <SidebarHeader>
+        <SidebarHeader style={[styles.sidebarHeader, isCollapsed && styles.sidebarHeaderCollapsed]}>
           <PopoverTrigger>
             <Button
               variant="ghost"
@@ -390,17 +336,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {!isCollapsed && <CaretDownIcon size={12} color={tokens.colorFgSubtle} />}
             </Button>
 
-            <Popover placement="bottom start" showArrow={false} style={styles.popover}>
-              <PopoverDialog style={styles.popoverDialog}>
+            <Popover placement="bottom start" showArrow={false}>
+              <PopoverDialog>
                 {({ close }) => (
                   <div {...stylex.props(styles.menuContainer)}>
                     {/* User profile summary */}
                     <div {...stylex.props(styles.menuHeader)}>
-                      <Avatar initials={userInitials} alt={displayName} />
+                      <Avatar initials={userInitials} alt={displayName} size="sm" />
                       <div {...stylex.props(styles.menuHeaderMeta)}>
                         <div {...stylex.props(styles.menuHeaderNameRow)}>
                           <span {...stylex.props(styles.menuHeaderName)}>{displayName}</span>
-                          <Badge variant="primary">ROOT</Badge>
+                          <Badge variant="primary" size="sm">ROOT</Badge>
                         </div>
                         <span {...stylex.props(styles.menuHeaderSub)}>
                           {hasCustomName
@@ -433,7 +379,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                         <div {...stylex.props(styles.menuItemIcon)}>
                           <SunIcon size={16} />
                         </div>
-                        <span>Theme</span>
+                        <span {...stylex.props(styles.menuItemLabel)}>Theme</span>
                       </div>
                       <ToggleButtonGroup
                         animated
@@ -441,7 +387,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                         selectionMode="single"
                         disallowEmptySelection
                         selectedKeys={[theme]}
-                        style={styles.themeToggleGroup}
                         onSelectionChange={(keys) => {
                           if (keys instanceof Set) {
                             const selected = Array.from(keys)[0] as string;
@@ -456,10 +401,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                           id="light"
                           isIcon
                           aria-label="Light Theme"
-                          style={[
-                            styles.themeToggleBtn,
-                            theme === 'light' && styles.themeToggleBtnActive,
-                          ]}
                         >
                           <SunIcon size={14} weight={theme === 'light' ? 'fill' : 'regular'} />
                         </ToggleButton>
@@ -467,10 +408,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                           id="dark"
                           isIcon
                           aria-label="Dark Theme"
-                          style={[
-                            styles.themeToggleBtn,
-                            theme === 'dark' && styles.themeToggleBtnActive,
-                          ]}
                         >
                           <MoonIcon size={14} weight={theme === 'dark' ? 'fill' : 'regular'} />
                         </ToggleButton>
@@ -478,10 +415,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                           id="system"
                           isIcon
                           aria-label="System Theme"
-                          style={[
-                            styles.themeToggleBtn,
-                            theme === 'system' && styles.themeToggleBtnActive,
-                          ]}
                         >
                           <DesktopIcon size={14} weight={theme === 'system' ? 'fill' : 'regular'} />
                         </ToggleButton>
@@ -535,22 +468,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ))}
         </SidebarGroup>
 
-        <SidebarFooter
-          showBorder
-          style={[styles.footer, isCollapsed && styles.footerCollapsed]}
-        >
-          <div {...stylex.props(styles.footerContent, isCollapsed && styles.footerContentCollapsed)}>
-            <Link to="/" {...stylex.props(styles.brand)} aria-label="moul.dev">
-              <LogoIcon size={32} color={tokens.colorFg} />
-            </Link>
-          </div>
+        <SidebarFooter showBorder>
+          <Link to="/" {...stylex.props(styles.brand)} aria-label="moul.dev">
+            <LogoIcon size={32} color={tokens.colorFg} />
+          </Link>
         </SidebarFooter>
       </SidebarAside>
 
-      <SidebarMain style={styles.main}>
+      <SidebarMain>
         <Header />
         <main {...stylex.props(styles.content)}>{children}</main>
       </SidebarMain>
     </Sidebar>
   );
 };
+

@@ -124,9 +124,6 @@ const styles = stylex.create({
     marginTop: tokens.spacing1,
     display: 'block',
   },
-  tabPanels: {
-    marginTop: tokens.spacing4,
-  },
   cardTitle: {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -688,7 +685,7 @@ function SettingsPage() {
           <Tab id="account">Root Account</Tab>
         </TabList>
 
-        <TabPanels {...stylex.props(styles.tabPanels)}>
+        <TabPanels>
           {/* TAB 1: S3 STORAGE */}
           <TabPanel id="s3">
             <Card elevation="sm">

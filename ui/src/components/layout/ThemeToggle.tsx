@@ -1,24 +1,7 @@
 import React from 'react';
-import * as stylex from '@stylexjs/stylex';
 import { SparkleIcon, SunIcon, MoonIcon } from '@phosphor-icons/react';
 import { Button, TooltipTrigger, Tooltip } from '@moul-dev/ui';
-import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useTheme } from '../../context/ThemeContext';
-
-const styles = stylex.create({
-  button: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: tokens.colorFgSubtle,
-    transition: 'color 0.15s ease, background-color 0.15s ease',
-  },
-  icon: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
 export const ThemeToggle: React.FC = () => {
   const { theme, resolvedTheme, cycleTheme } = useTheme();
@@ -55,14 +38,15 @@ export const ThemeToggle: React.FC = () => {
     <TooltipTrigger delay={250}>
       <Button
         variant="outline"
-        size='sm'
+        size="sm"
         onPress={cycleTheme}
         aria-label={ariaLabel}
         isIcon={true}
       >
-        <span {...stylex.props(styles.icon)}>{icon}</span>
+        {icon}
       </Button>
       <Tooltip offset={8}>{label}</Tooltip>
     </TooltipTrigger>
   );
 };
+

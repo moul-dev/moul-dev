@@ -24,7 +24,7 @@ const styles = stylex.create({
     fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
   },
-  iframeCard: {
+  iframeWrapper: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
@@ -61,9 +61,11 @@ function DocsPage() {
         </Button>
       </div>
 
-      <Card variant="glass" style={styles.iframeCard}>
-        <iframe src="/docs" title="Moul API Docs" {...stylex.props(styles.iframe)} />
-      </Card>
+      <div {...stylex.props(styles.iframeWrapper)}>
+        <Card variant="glass">
+          <iframe src="/docs" title="Moul API Docs" {...stylex.props(styles.iframe)} />
+        </Card>
+      </div>
     </div>
   );
 }
