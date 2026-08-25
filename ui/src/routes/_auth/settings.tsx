@@ -33,10 +33,12 @@ import {
   CardFooter,
   Table,
   TableHeader,
-  Column,
   TableBody,
-  Row,
-  Cell,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableSkeleton,
+  TableEmpty,
   Badge,
   Button,
   Switch,
@@ -812,40 +814,46 @@ function SettingsPage() {
                     Configure granular sliding-window rate limiters per route, collection, or authentication status to protect against brute-force and DDoS attacks.
                   </p>
 
-                  {rateLimitRules.length === 0 ? (
-                    <EmptyState
-                      icon={<GaugeIcon size={32} color={tokens.colorFgSubtle} />}
-                      title="No rate limit rules defined"
-                      description="Add custom rate limit rules to protect specific routes or collection endpoints."
-                    >
-                      <Button variant="outline" onPress={() => openDrawer('ratelimit-add')}>
-                        <PlusIcon size={16} />
-                        <span>Add Rate Limit Rule</span>
-                      </Button>
-                    </EmptyState>
-                  ) : (
-                    <Table aria-label="Rate Limit Rules Table">
-                      <TableHeader>
-                        <Column isRowHeader>Rule Pattern / Route</Column>
-                        <Column>Max Requests</Column>
-                        <Column>Window (Seconds)</Column>
-                        <Column>Targeted Audience</Column>
-                        <Column>Actions</Column>
-                      </TableHeader>
-                      <TableBody>
-                        {rateLimitRules.map((rule, idx) => (
-                          <Row key={idx}>
-                            <Cell>
+                  <Table aria-label="Rate Limit Rules Table" dense stickyHeader hoverable>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rule Pattern / Route</TableHead>
+                        <TableHead align="numeric">Max Requests</TableHead>
+                        <TableHead align="numeric">Window (Seconds)</TableHead>
+                        <TableHead>Targeted Audience</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rateLimitRules.length === 0 ? (
+                        <TableEmpty colSpan={5}>
+                          <EmptyState
+                            variant="default"
+                            icon={<GaugeIcon size={32} color={tokens.colorFgSubtle} />}
+                            title="No rate limit rules defined"
+                            description="Add custom rate limit rules to protect specific routes or collection endpoints."
+                            action={
+                              <Button variant="outline" size="sm" onPress={() => openDrawer('ratelimit-add')}>
+                                <PlusIcon size={16} />
+                                <span>Add Rate Limit Rule</span>
+                              </Button>
+                            }
+                          />
+                        </TableEmpty>
+                      ) : (
+                        rateLimitRules.map((rule, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>
                               <span style={{ fontWeight: 600, color: tokens.colorFg }}>{rule.label}</span>
-                            </Cell>
-                            <Cell>{rule.max_requests} req</Cell>
-                            <Cell>{rule.interval}s</Cell>
-                            <Cell>
+                            </TableCell>
+                            <TableCell align="numeric" tabular>{rule.max_requests} req</TableCell>
+                            <TableCell align="numeric" tabular>{rule.interval}s</TableCell>
+                            <TableCell>
                               <Badge variant={rule.targeted_users === 'authenticated' ? 'primary' : rule.targeted_users === 'guest' ? 'warning' : 'neutral'}>
                                 {rule.targeted_users?.toUpperCase() || 'ALL'}
                               </Badge>
-                            </Cell>
-                            <Cell>
+                            </TableCell>
+                            <TableCell>
                               <div style={{ display: 'flex', gap: tokens.spacing2 }}>
                                 <Button
                                   variant="ghost"
@@ -864,12 +872,12 @@ function SettingsPage() {
                                   <TrashIcon size={16} color={tokens.colorError500} />
                                 </Button>
                               </div>
-                            </Cell>
-                          </Row>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardBody>
             </Card>

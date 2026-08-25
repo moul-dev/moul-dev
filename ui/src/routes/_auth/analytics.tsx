@@ -11,10 +11,13 @@ import {
   TabPanel,
   Table,
   TableHeader,
-  Column,
   TableBody,
-  Row,
-  Cell,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableSkeleton,
+  TableEmpty,
+  EmptyState,
   Badge,
   Button,
 } from '@moul-dev/ui';
@@ -39,17 +42,6 @@ const styles = stylex.create({
     color: tokens.colorFg,
     fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: tokens.spacing6,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    color: tokens.colorFgSubtle,
-    fontFamily: tokens.fontFamilyBase,
   },
 });
 
@@ -112,95 +104,112 @@ function AnalyticsPage() {
 
         <TabPanels>
           <TabPanel id="requests">
-            {reqLoading ? (
-              <div {...stylex.props(styles.emptyState)}>Loading request logs...</div>
-            ) : requests.length === 0 ? (
-              <div {...stylex.props(styles.emptyState)}>No HTTP requests recorded yet.</div>
-            ) : (
-              <Table aria-label="HTTP Request Logs">
-                <TableHeader>
-                  <Column isRowHeader>Status</Column>
-                  <Column>Method</Column>
-                  <Column>Path</Column>
-                  <Column>IP Address</Column>
-                  <Column>Duration</Column>
-                  <Column>Timestamp</Column>
-                </TableHeader>
-                <TableBody>
-                  {requests.map((r: any, idx: number) => {
+            <Table aria-label="HTTP Request Logs" dense stickyHeader hoverable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Path</TableHead>
+                  <TableHead>IP Address</TableHead>
+                  <TableHead align="numeric">Duration</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reqLoading ? (
+                  <TableSkeleton rows={5} columns={6} />
+                ) : requests.length === 0 ? (
+                  <TableEmpty colSpan={6}>
+                    <EmptyState
+                      variant="default"
+                      title="No HTTP requests recorded"
+                      description="Traffic and API request logs will appear here in real-time."
+                    />
+                  </TableEmpty>
+                ) : (
+                  requests.map((r: any, idx: number) => {
                     const status = r.status || r.statusCode || 200;
                     const isErr = status >= 400;
                     return (
-                      <Row key={r.id || idx} id={String(r.id || idx)}>
-                        <Cell>
+                      <TableRow key={r.id || idx}>
+                        <TableCell>
                           <Badge variant={isErr ? 'error' : 'success'}>{String(status)}</Badge>
-                        </Cell>
-                        <Cell>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="neutral">{r.method || 'GET'}</Badge>
-                        </Cell>
-                        <Cell>
+                        </TableCell>
+                        <TableCell>
                           <span style={{ fontFamily: 'var(--font-mono)' }}>{r.path || r.url || '/'}</span>
-                        </Cell>
-                        <Cell>
+                        </TableCell>
+                        <TableCell>
                           <span style={{ color: tokens.colorFgSubtle }}>{r.ip || '127.0.0.1'}</span>
-                        </Cell>
-                        <Cell>
+                        </TableCell>
+                        <TableCell align="numeric" tabular>
                           <span style={{ color: tokens.colorFgSubtle }}>{r.duration ? `${r.duration}ms` : '<1ms'}</span>
-                        </Cell>
-                        <Cell>
+                        </TableCell>
+                        <TableCell>
                           <span style={{ color: tokens.colorFgSubtle }}>
                             {r.created_at ? new Date(r.created_at).toLocaleTimeString() : '-'}
                           </span>
-                        </Cell>
-                      </Row>
+                        </TableCell>
+                      </TableRow>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            )}
+                  })
+                )}
+              </TableBody>
+            </Table>
           </TabPanel>
 
           <TabPanel id="visits">
-            {visitsLoading ? (
-              <div {...stylex.props(styles.emptyState)}>Loading visit sessions...</div>
-            ) : visits.length === 0 ? (
-              <div {...stylex.props(styles.emptyState)}>No visits recorded yet.</div>
-            ) : (
-              <Table aria-label="Visitor Sessions">
-                <TableHeader>
-                  <Column isRowHeader>Session ID</Column>
-                  <Column>IP & Location</Column>
-                  <Column>Landing Page</Column>
-                  <Column>Referrer</Column>
-                  <Column>First Seen</Column>
-                </TableHeader>
-                <TableBody>
-                  {visits.map((v: any) => (
-                    <Row key={v.id} id={v.id}>
-                      <Cell>
+            <Table aria-label="Visitor Sessions" dense stickyHeader hoverable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Session ID</TableHead>
+                  <TableHead>IP & Location</TableHead>
+                  <TableHead>Landing Page</TableHead>
+                  <TableHead>Referrer</TableHead>
+                  <TableHead>First Seen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visitsLoading ? (
+                  <TableSkeleton rows={5} columns={5} />
+                ) : visits.length === 0 ? (
+                  <TableEmpty colSpan={5}>
+                    <EmptyState
+                      variant="default"
+                      title="No visits recorded"
+                      description="Visitor telemetry and session tracking will show up here."
+                    />
+                  </TableEmpty>
+                ) : (
+                  visits.map((v: any) => (
+                    <TableRow key={v.id}>
+                      <TableCell>
                         <span style={{ fontFamily: 'var(--font-mono)', color: tokens.colorPrimary400 }}>{v.id}</span>
-                      </Cell>
-                      <Cell>
+                      </TableCell>
+                      <TableCell>
                         {v.ip} {v.country ? `(${v.country})` : ''}
-                      </Cell>
-                      <Cell>{v.landing_page || '/'}</Cell>
-                      <Cell>
+                      </TableCell>
+                      <TableCell>{v.landing_page || '/'}</TableCell>
+                      <TableCell>
                         <span style={{ color: tokens.colorFgSubtle }}>{v.referrer || 'Direct'}</span>
-                      </Cell>
-                      <Cell>
+                      </TableCell>
+                      <TableCell>
                         <span style={{ color: tokens.colorFgSubtle }}>
                           {v.created_at ? new Date(v.created_at).toLocaleString() : '-'}
                         </span>
-                      </Cell>
-                    </Row>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </TabPanel>
         </TabPanels>
       </Tabs>
     </div>
   );
 }
+
 

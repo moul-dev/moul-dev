@@ -19,10 +19,13 @@ import {
 import {
   Table,
   TableHeader,
-  Column,
   TableBody,
-  Row,
-  Cell,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableSkeleton,
+  TableEmpty,
+  EmptyState,
   Badge,
   Button,
   Card,
@@ -96,17 +99,6 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing3,
     paddingInline: tokens.spacing1,
-  },
-  emptyState: {
-    padding: tokens.spacing8,
-    textAlign: 'center',
-    color: tokens.colorFgSubtle,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    fontFamily: tokens.fontFamilyBase,
   },
   pagination: {
     display: 'flex',
@@ -912,54 +904,73 @@ function RecordsPage() {
       </Card>
 
       {/* Moul UI Table */}
-      {isLoading ? (
-        <div {...stylex.props(styles.emptyState)}>Loading records...</div>
-      ) : records.length === 0 ? (
-        <div {...stylex.props(styles.emptyState)}>
-          No records found. Click "New Record" to insert a record.
-        </div>
-      ) : (
-        <Table aria-label={`${moulName} records table`}>
-          <TableHeader>
-            <Column isRowHeader>ID</Column>
+      <Table aria-label={`${moulName} records table`} dense stickyHeader hoverable>
+        <TableHeader>
+          <TableRow>
+            <TableHead>ID</TableHead>
             {moul?.type === 'auth' && (
               <>
-                <Column>Username</Column>
-                <Column>Email</Column>
+                <TableHead>Username</TableHead>
+                <TableHead>Email</TableHead>
               </>
             )}
             {moul?.type === 'worker' && (
               <>
-                <Column>Worker</Column>
-                <Column>State</Column>
-                <Column>Queue</Column>
-                <Column>Attempt</Column>
+                <TableHead>Worker</TableHead>
+                <TableHead>State</TableHead>
+                <TableHead>Queue</TableHead>
+                <TableHead align="numeric">Attempt</TableHead>
               </>
             )}
             {displayFields.map((f: any) => (
-              <Column key={f.name}>{f.name}</Column>
+              <TableHead key={f.name}>{f.name}</TableHead>
             ))}
-            <Column>Created At</Column>
-            <Column>Actions</Column>
-          </TableHeader>
-          <TableBody>
-            {records.map((rec: any) => (
-              <Row key={rec.id} id={rec.id}>
-                <Cell>
+            <TableHead>Created At</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableSkeleton
+              rows={6}
+              columns={1 + (moul?.type === 'auth' ? 2 : 0) + (moul?.type === 'worker' ? 4 : 0) + displayFields.length + 2}
+            />
+          ) : records.length === 0 ? (
+            <TableEmpty colSpan={1 + (moul?.type === 'auth' ? 2 : 0) + (moul?.type === 'worker' ? 4 : 0) + displayFields.length + 2}>
+              <EmptyState
+                variant="default"
+                title="No records found"
+                description={
+                  search.search?.trim()
+                    ? `No records matching "${search.search}".`
+                    : `No data records in "${moulName}". Click "New Record" to insert one.`
+                }
+                action={
+                  <Button size="sm" variant="primary" onPress={handleOpenCreate}>
+                    <PlusIcon size={14} />
+                    <span>New Record</span>
+                  </Button>
+                }
+              />
+            </TableEmpty>
+          ) : (
+            records.map((rec: any) => (
+              <TableRow key={rec.id}>
+                <TableCell>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs, color: tokens.colorPrimary400 }}>
                     {String(rec.id)}
                   </span>
-                </Cell>
+                </TableCell>
                 {moul?.type === 'auth' && (
                   <>
-                    <Cell>{rec.username || '-'}</Cell>
-                    <Cell>{rec.email || '-'}</Cell>
+                    <TableCell>{rec.username || '-'}</TableCell>
+                    <TableCell>{rec.email || '-'}</TableCell>
                   </>
                 )}
                 {moul?.type === 'worker' && (
                   <>
-                    <Cell>{rec.worker || '-'}</Cell>
-                    <Cell>
+                    <TableCell>{rec.worker || '-'}</TableCell>
+                    <TableCell>
                       <Badge
                         variant={
                           rec.state === 'completed'
@@ -973,9 +984,9 @@ function RecordsPage() {
                       >
                         {rec.state || 'available'}
                       </Badge>
-                    </Cell>
-                    <Cell>{rec.queue || 'default'}</Cell>
-                    <Cell>{rec.attempt ?? 0}</Cell>
+                    </TableCell>
+                    <TableCell>{rec.queue || 'default'}</TableCell>
+                    <TableCell align="numeric" tabular>{rec.attempt ?? 0}</TableCell>
                   </>
                 )}
                 {displayFields.map((f: any) => {
@@ -985,9 +996,9 @@ function RecordsPage() {
                   if (f.type === 'file') {
                     if (!val) {
                       return (
-                        <Cell key={f.name}>
+                        <TableCell key={f.name}>
                           <span style={{ color: tokens.colorFgSubtle }}>-</span>
-                        </Cell>
+                        </TableCell>
                       );
                     }
                     const url = getFileUrl(val);
@@ -995,7 +1006,7 @@ function RecordsPage() {
                     const isImg = isImageFile(val);
 
                     return (
-                      <Cell key={f.name}>
+                      <TableCell key={f.name}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                           {isImg && url ? (
                             <a
@@ -1047,7 +1058,7 @@ function RecordsPage() {
                             <span style={{ fontSize: tokens.fontSizeXs }}>{filename}</span>
                           )}
                         </div>
-                      </Cell>
+                      </TableCell>
                     );
                   }
 
@@ -1059,9 +1070,9 @@ function RecordsPage() {
 
                     if (!val || (Array.isArray(val) && val.length === 0)) {
                       return (
-                        <Cell key={f.name}>
+                        <TableCell key={f.name}>
                           <span style={{ color: tokens.colorFgSubtle }}>-</span>
-                        </Cell>
+                        </TableCell>
                       );
                     }
 
@@ -1070,7 +1081,7 @@ function RecordsPage() {
                       const expandedList: any[] = Array.isArray(expanded) ? expanded : [];
 
                       return (
-                        <Cell key={f.name}>
+                        <TableCell key={f.name}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
                             {ids.map((id, i) => {
                               const expItem = expandedList.find((e) => String(e.id) === String(id)) || expandedList[i];
@@ -1101,7 +1112,7 @@ function RecordsPage() {
                               );
                             })}
                           </div>
-                        </Cell>
+                        </TableCell>
                       );
                     }
 
@@ -1110,7 +1121,7 @@ function RecordsPage() {
                     const label = expanded ? getRecordDisplayLabel(expanded) : id;
 
                     return (
-                      <Cell key={f.name}>
+                      <TableCell key={f.name}>
                         <span
                           style={{
                             display: 'inline-flex',
@@ -1132,13 +1143,13 @@ function RecordsPage() {
                           <LinkIcon size={12} color={tokens.colorPrimary500} />
                           <span>{label}</span>
                         </span>
-                      </Cell>
+                      </TableCell>
                     );
                   }
 
                   // 3. Default Cell Rendering
                   return (
-                    <Cell key={f.name}>
+                    <TableCell key={f.name}>
                       {val === null || val === undefined ? (
                         <span style={{ color: tokens.colorFgSubtle }}>-</span>
                       ) : typeof val === 'boolean' ? (
@@ -1150,15 +1161,15 @@ function RecordsPage() {
                       ) : (
                         String(val)
                       )}
-                    </Cell>
+                    </TableCell>
                   );
                 })}
-                <Cell>
+                <TableCell>
                   <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
                     {rec.created_at || rec.inserted_at ? new Date(String(rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
                   </span>
-                </Cell>
-                <Cell>
+                </TableCell>
+                <TableCell>
                   <div style={{ display: 'flex', gap: '0.25rem' }}>
                     <Button
                       size="sm"
@@ -1181,12 +1192,12 @@ function RecordsPage() {
                       <TrashIcon size={14} color={tokens.colorError500} />
                     </Button>
                   </div>
-                </Cell>
-              </Row>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
       {/* Pagination Controls */}
       <div {...stylex.props(styles.pagination)}>

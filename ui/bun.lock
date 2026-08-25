@@ -5,7 +5,7 @@
     "": {
       "name": "mould-admin-ui",
       "dependencies": {
-        "@moul-dev/ui": "2026.8.22",
+        "@moul-dev/ui": "2026.8.25",
         "@phosphor-icons/react": "^2.1.7",
         "@stylexjs/stylex": "^0.19.0",
         "@tanstack/react-charts": "^0.12.0",
@@ -156,7 +156,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@moul-dev/ui": ["@moul-dev/ui@2026.8.22", "", { "dependencies": { "@phosphor-icons/react": "^2.1.10", "@stylexjs/stylex": "^0.19.0", "input-otp": "^1.4.2", "react-aria": "^3.50.0", "react-aria-components": "^1.19.0", "recharts": "^3.9.2" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-Nn3h/xEOyv4gZTeSEH5XLG5UZDtQ0LDMgyNMe5azQJD6Fcqbts9Il5zUtitciW6wGCBK+BLu4qp8Liwv5b+mrw=="],
+    "@moul-dev/ui": ["@moul-dev/ui@2026.8.25", "", { "dependencies": { "@phosphor-icons/react": "^2.1.10", "@stylexjs/stylex": "^0.19.0", "input-otp": "^1.4.2", "react-aria": "^3.50.0", "react-aria-components": "^1.19.0", "recharts": "^3.9.2" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-rM++PGidY6nd/OwuBXYyOS0YCk+gT10DdTw/8+8LlSytCo/xIyXqMRKpz6seiMzOkA2YjvlZirSCNuISUXuLvQ=="],
 
     "@napi-rs/lzma-linux-x64-gnu": ["@napi-rs/lzma-linux-x64-gnu@1.5.1", "", { "os": "linux", "cpu": "x64" }, "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ=="],
 
