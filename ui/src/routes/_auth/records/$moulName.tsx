@@ -45,6 +45,12 @@ import {
   DrawerCloseButton,
   DrawerBody,
   DrawerFooter,
+  ModalOverlay,
+  Modal,
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
   toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
@@ -648,6 +654,7 @@ function RecordsPage() {
   const queryClient = useQueryClient();
 
   const [activeRecord, setActiveRecord] = useState<any | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<any | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -976,10 +983,10 @@ function RecordsPage() {
                           rec.state === 'completed'
                             ? 'success'
                             : rec.state === 'failed'
-                            ? 'error'
-                            : rec.state === 'processing'
-                            ? 'warning'
-                            : 'primary'
+                              ? 'error'
+                              : rec.state === 'processing'
+                                ? 'warning'
+                                : 'primary'
                         }
                       >
                         {rec.state || 'available'}
@@ -1172,7 +1179,7 @@ function RecordsPage() {
                 <TableCell>
                   <div style={{ display: 'flex', gap: '0.25rem' }}>
                     <Button
-                      size="sm"
+                      isIcon
                       variant="ghost"
                       aria-label={`Edit record ${rec.id}`}
                       onPress={() => handleOpenEdit(rec)}
@@ -1180,14 +1187,10 @@ function RecordsPage() {
                       <PencilSimpleIcon size={14} />
                     </Button>
                     <Button
-                      size="sm"
+                      isIcon
                       variant="ghost"
                       aria-label={`Delete record ${rec.id}`}
-                      onPress={() => {
-                        if (confirm(`Delete record ${rec.id}?`)) {
-                          deleteMutation.mutate(rec.id);
-                        }
-                      }}
+                      onPress={() => setRecordToDelete(rec)}
                     >
                       <TrashIcon size={14} color={tokens.colorError500} />
                     </Button>
@@ -1357,12 +1360,12 @@ function RecordsPage() {
                             f.type === 'number'
                               ? 'number'
                               : f.type === 'date'
-                              ? 'date'
-                              : f.type === 'datetime'
-                              ? 'datetime-local'
-                              : f.type === 'url'
-                              ? 'url'
-                              : 'text'
+                                ? 'date'
+                                : f.type === 'datetime'
+                                  ? 'datetime-local'
+                                  : f.type === 'url'
+                                    ? 'url'
+                                    : 'text'
                           }
                           value={String(formData[f.name] ?? '')}
                           onChange={(val) =>
@@ -1394,6 +1397,49 @@ function RecordsPage() {
           </DrawerDialog>
         </Drawer>
       </DrawerOverlay>
+
+      {/* CONFIRM DELETE RECORD ALERT DIALOG */}
+      <ModalOverlay
+        isOpen={recordToDelete !== null}
+        onOpenChange={(open: boolean) => !open && setRecordToDelete(null)}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Delete Record
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                Are you sure you want to delete record <strong>&ldquo;{recordToDelete?.id}&rdquo;</strong>?
+                <br />
+                <br />
+                This action cannot be undone.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setRecordToDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                isPending={deleteMutation.isPending}
+                onPress={() => {
+                  if (recordToDelete) {
+                    deleteMutation.mutate(recordToDelete.id, {
+                      onSettled: () => setRecordToDelete(null),
+                    });
+                  }
+                }}
+              >
+                Delete Record
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }

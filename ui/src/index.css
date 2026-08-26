@@ -17,6 +17,30 @@
   box-sizing: border-box;
 }
 
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  background-color: transparent;
+  background-image: none;
+  border-width: 0;
+  border-style: none;
+  cursor: pointer;
+}
+
 html, body, #root {
   height: 100%;
   width: 100%;
