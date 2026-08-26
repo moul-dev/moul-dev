@@ -29,6 +29,13 @@ import {
   Select,
   SelectItem,
   Alert,
+  ModalOverlay,
+  Modal,
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
@@ -139,6 +146,7 @@ function CollectionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [collectionToDelete, setCollectionToDelete] = useState<any | null>(null);
   const [newMoulName, setNewMoulName] = useState('');
   const [newMoulType, setNewMoulType] = useState('base');
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +163,12 @@ function CollectionsPage() {
       setIsCreateOpen(false);
       setNewMoulName('');
       setNewMoulType('base');
+      toastQueue.add({
+        title: 'Collection Created',
+        description: 'Collection was created successfully.',
+        variant: 'success',
+        timeout: 4000,
+      });
     },
     onError: (err: any) => {
       setError(err.message || 'Failed to create collection');
@@ -165,6 +179,22 @@ function CollectionsPage() {
     mutationFn: (name: string) => api.deleteMoul(name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mouls'] });
+      setCollectionToDelete(null);
+      toastQueue.add({
+        title: 'Collection Deleted',
+        description: 'Collection was deleted successfully.',
+        variant: 'success',
+        timeout: 4000,
+      });
+    },
+    onError: (err: any) => {
+      setCollectionToDelete(null);
+      toastQueue.add({
+        title: 'Delete Failed',
+        description: err.message || 'Failed to delete collection.',
+        variant: 'danger',
+        timeout: 5000,
+      });
     },
   });
 
@@ -224,10 +254,10 @@ function CollectionsPage() {
                       moul.type === 'auth'
                         ? 'primary'
                         : moul.type === 'worker'
-                        ? 'warning'
-                        : moul.type === 'analytic'
-                        ? 'success'
-                        : 'neutral'
+                          ? 'warning'
+                          : moul.type === 'analytic'
+                            ? 'success'
+                            : 'neutral'
                     }
                   >
                     {moul.type}
@@ -269,7 +299,6 @@ function CollectionsPage() {
                 <div {...stylex.props(styles.cardActions)}>
                   <div {...stylex.props(styles.actionGroup)}>
                     <Button
-                      size="sm"
                       variant="secondary"
                       onPress={() =>
                         navigate({
@@ -283,7 +312,6 @@ function CollectionsPage() {
                       <span>Records</span>
                     </Button>
                     <Button
-                      size="sm"
                       variant="ghost"
                       onPress={() =>
                         navigate({
@@ -298,14 +326,10 @@ function CollectionsPage() {
                   </div>
 
                   <Button
-                    size="sm"
+                    isIcon
                     variant="ghost"
                     aria-label={`Delete collection ${moul.name}`}
-                    onPress={() => {
-                      if (confirm(`Are you sure you want to delete collection "${moul.name}"?`)) {
-                        deleteMutation.mutate(moul.name);
-                      }
-                    }}
+                    onPress={() => setCollectionToDelete(moul)}
                   >
                     <TrashIcon size={14} color={tokens.colorError500} />
                   </Button>
@@ -366,6 +390,47 @@ function CollectionsPage() {
           </DrawerDialog>
         </Drawer>
       </DrawerOverlay>
+
+      {/* Confirm Delete Collection Alert Dialog */}
+      <ModalOverlay
+        isOpen={collectionToDelete !== null}
+        onOpenChange={(open: boolean) => !open && setCollectionToDelete(null)}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Delete Collection
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                Are you sure you want to delete collection <strong>&ldquo;{collectionToDelete?.name}&rdquo;</strong>?
+                <br />
+                <br />
+                This will permanently delete the collection, all of its records, schema fields, and access rules. This action cannot be undone.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setCollectionToDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                isPending={deleteMutation.isPending}
+                onPress={() => {
+                  if (collectionToDelete) {
+                    deleteMutation.mutate(collectionToDelete.name);
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }

@@ -19,6 +19,13 @@ import {
   DrawerFooter,
   TextField,
   Checkbox,
+  ModalOverlay,
+  Modal,
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
@@ -99,6 +106,7 @@ export const Route = createFileRoute('/_auth/flags')({
 function FeatureFlagsPage() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [flagToDelete, setFlagToDelete] = useState<any | null>(null);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newEnabled, setNewEnabled] = useState(true);
@@ -116,6 +124,20 @@ function FeatureFlagsPage() {
       setNewKey('');
       setNewDesc('');
       setNewEnabled(true);
+      toastQueue.add({
+        title: 'Flag Created',
+        description: 'Feature flag was created successfully.',
+        variant: 'success',
+        timeout: 4000,
+      });
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Create Failed',
+        description: err.message || 'Failed to create feature flag.',
+        variant: 'danger',
+        timeout: 5000,
+      });
     },
   });
 
@@ -130,6 +152,22 @@ function FeatureFlagsPage() {
     mutationFn: (key: string) => api.deleteFeatureFlag(key),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flags'] });
+      setFlagToDelete(null);
+      toastQueue.add({
+        title: 'Flag Deleted',
+        description: 'Feature flag was deleted successfully.',
+        variant: 'success',
+        timeout: 4000,
+      });
+    },
+    onError: (err: any) => {
+      setFlagToDelete(null);
+      toastQueue.add({
+        title: 'Delete Failed',
+        description: err.message || 'Failed to delete feature flag.',
+        variant: 'danger',
+        timeout: 5000,
+      });
     },
   });
 
@@ -207,11 +245,7 @@ function FeatureFlagsPage() {
                       size="sm"
                       variant="ghost"
                       aria-label={`Delete flag ${flag.key}`}
-                      onPress={() => {
-                        if (confirm(`Delete flag "${flag.key}"?`)) {
-                          deleteMutation.mutate(flag.key);
-                        }
-                      }}
+                      onPress={() => setFlagToDelete(flag)}
                     >
                       <TrashIcon size={16} color={tokens.colorError500} />
                     </Button>
@@ -271,6 +305,47 @@ function FeatureFlagsPage() {
           </DrawerDialog>
         </Drawer>
       </DrawerOverlay>
+
+      {/* Confirm Delete Flag Alert Dialog */}
+      <ModalOverlay
+        isOpen={flagToDelete !== null}
+        onOpenChange={(open: boolean) => !open && setFlagToDelete(null)}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Delete Feature Flag
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                Are you sure you want to delete feature flag <strong>&ldquo;{flagToDelete?.key}&rdquo;</strong>?
+                <br />
+                <br />
+                This action cannot be undone and will remove all targeting rules associated with this flag.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setFlagToDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                isPending={deleteMutation.isPending}
+                onPress={() => {
+                  if (flagToDelete) {
+                    deleteMutation.mutate(flagToDelete.key);
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }

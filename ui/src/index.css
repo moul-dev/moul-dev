@@ -2,7 +2,8 @@
 
 :root {
   color-scheme: light dark;
-  --brand-hue: 205; /* Sleek Cyan / Slate Blue for Mould */
+  --brand-hue: 205;
+  /* Sleek Cyan / Slate Blue for Mould */
   --brand-chroma-multiplier: 1.0;
   --brand-density-factor: 1.0;
   --brand-radius-factor: 1.0;
@@ -17,31 +18,9 @@
   box-sizing: border-box;
 }
 
-button,
-input,
-optgroup,
-select,
-textarea {
-  font-family: inherit;
-  font-size: 100%;
-  line-height: inherit;
-  color: inherit;
-  margin: 0;
-  padding: 0;
-}
-
-button,
-[type='button'],
-[type='reset'],
-[type='submit'] {
-  background-color: transparent;
-  background-image: none;
-  border-width: 0;
-  border-style: none;
-  cursor: pointer;
-}
-
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -49,7 +28,7 @@ html, body, #root {
   overflow: hidden;
 }
 
-#root > div {
+#root>div {
   height: 100%;
   width: 100%;
 }
@@ -67,14 +46,16 @@ body {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: light-dark(oklch(82% 0.01 250), oklch(30% 0.02 250));
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: light-dark(oklch(68% 0.02 250), oklch(42% 0.04 250));
 }
-
