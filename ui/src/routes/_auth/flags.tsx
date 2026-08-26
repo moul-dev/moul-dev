@@ -128,15 +128,13 @@ function FeatureFlagsPage() {
         title: 'Flag Created',
         description: 'Feature flag was created successfully.',
         variant: 'success',
-        timeout: 4000,
       });
     },
     onError: (err: any) => {
       toastQueue.add({
         title: 'Create Failed',
         description: err.message || 'Failed to create feature flag.',
-        variant: 'danger',
-        timeout: 5000,
+        variant: 'error',
       });
     },
   });
@@ -157,7 +155,6 @@ function FeatureFlagsPage() {
         title: 'Flag Deleted',
         description: 'Feature flag was deleted successfully.',
         variant: 'success',
-        timeout: 4000,
       });
     },
     onError: (err: any) => {
@@ -165,8 +162,7 @@ function FeatureFlagsPage() {
       toastQueue.add({
         title: 'Delete Failed',
         description: err.message || 'Failed to delete feature flag.',
-        variant: 'danger',
-        timeout: 5000,
+        variant: 'error',
       });
     },
   });

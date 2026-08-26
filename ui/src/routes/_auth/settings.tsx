@@ -56,10 +56,10 @@ import {
   DrawerFooter,
   ModalOverlay,
   Modal,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
   EmptyState,
   toastQueue,
 } from '@moul-dev/ui';
@@ -1682,33 +1682,33 @@ function SettingsPage() {
         </Drawer>
       </DrawerOverlay>
 
-      {/* CONFIRM DELETE RULE MODAL */}
+      {/* CONFIRM DELETE RULE ALERT DIALOG */}
       <ModalOverlay
         isOpen={ruleToDelete !== null}
         onOpenChange={(open: boolean) => !open && setRuleToDelete(null)}
         isDismissable
       >
         <Modal size="sm">
-          <ModalDialog>
-            <ModalHeader>
+          <AlertDialog>
+            <AlertDialogHeader>
               <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
                 Delete Rate Limit Rule
               </h3>
-            </ModalHeader>
-            <ModalBody>
+            </AlertDialogHeader>
+            <AlertDialogBody>
               <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
                 Are you sure you want to delete the rate limit rule for <strong>&ldquo;{ruleToDelete?.label}&rdquo;</strong>? This change will take effect immediately.
               </p>
-            </ModalBody>
-            <ModalFooter>
+            </AlertDialogBody>
+            <AlertDialogFooter>
               <Button variant="outline" onPress={() => setRuleToDelete(null)}>
                 Cancel
               </Button>
               <Button variant="danger" onPress={confirmDeleteRule}>
                 Delete Rule
               </Button>
-            </ModalFooter>
-          </ModalDialog>
+            </AlertDialogFooter>
+          </AlertDialog>
         </Modal>
       </ModalOverlay>
     </div>

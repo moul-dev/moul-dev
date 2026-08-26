@@ -167,7 +167,6 @@ function CollectionsPage() {
         title: 'Collection Created',
         description: 'Collection was created successfully.',
         variant: 'success',
-        timeout: 4000,
       });
     },
     onError: (err: any) => {
@@ -184,7 +183,6 @@ function CollectionsPage() {
         title: 'Collection Deleted',
         description: 'Collection was deleted successfully.',
         variant: 'success',
-        timeout: 4000,
       });
     },
     onError: (err: any) => {
@@ -192,8 +190,7 @@ function CollectionsPage() {
       toastQueue.add({
         title: 'Delete Failed',
         description: err.message || 'Failed to delete collection.',
-        variant: 'danger',
-        timeout: 5000,
+        variant: 'error',
       });
     },
   });
