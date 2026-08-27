@@ -1,3 +1,4 @@
+import React from 'react';
 import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
@@ -7,6 +8,8 @@ import {
   HardDrivesIcon,
   PulseIcon,
   ArrowRightIcon,
+  PlusIcon,
+  TableIcon,
 } from '@phosphor-icons/react';
 import {
   Stat,
@@ -36,6 +39,14 @@ const styles = stylex.create({
     color: tokens.colorFg,
     fontFamily: tokens.fontFamilyBase,
     letterSpacing: '-0.025em',
+    margin: 0,
+  },
+  subtitle: {
+    color: tokens.colorFgSubtle,
+    fontSize: tokens.fontSizeSm,
+    fontFamily: tokens.fontFamilyBase,
+    marginTop: tokens.spacing1,
+    display: 'block',
   },
   grid: {
     display: 'grid',
@@ -47,29 +58,59 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
   },
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionTitle: {
     fontSize: '1.125rem',
     fontWeight: 600,
     color: tokens.colorFg,
     fontFamily: tokens.fontFamilyBase,
+    margin: 0,
   },
   collectionList: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
     gap: tokens.spacing4,
   },
   collectionCardInner: {
     display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing3,
+    width: '100%',
+  },
+  cardTopRow: {
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
-    textDecoration: 'none',
   },
   collectionName: {
     fontWeight: 600,
     color: tokens.colorFg,
     fontSize: '0.9375rem',
     fontFamily: tokens.fontFamilyBase,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+    textDecoration: 'none',
+  },
+  cardBottomRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: tokens.spacing2,
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: tokens.colorBorderSubtle,
+  },
+  badgesGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+  },
+  actionsGroup: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
@@ -90,6 +131,93 @@ const styles = stylex.create({
 export const Route = createFileRoute('/_auth/')({
   component: DashboardPage,
 });
+
+function CollectionCardItem({ moul }: { moul: any }) {
+  const navigate = useNavigate();
+
+  const { data: recordsData, isLoading } = useQuery({
+    queryKey: ['collectionRecordCount', moul.name],
+    queryFn: () => api.listRecords(moul.name, { perPage: 1 }),
+  });
+
+  const totalCount =
+    (recordsData && !Array.isArray(recordsData) ? recordsData.totalItems : undefined) ??
+    (Array.isArray(recordsData) ? recordsData.length : 0);
+
+  const typeVariant =
+    moul.type === 'auth'
+      ? 'primary'
+      : moul.type === 'worker'
+        ? 'warning'
+        : moul.type === 'analytic'
+          ? 'success'
+          : 'neutral';
+
+  return (
+    <Card variant="glass">
+      <CardBody>
+        <div {...stylex.props(styles.collectionCardInner)}>
+          <div {...stylex.props(styles.cardTopRow)}>
+            <RouterLink
+              to="/records/$moulName"
+              params={{ moulName: moul.name }}
+              search={{ page: 1, perPage: 30 }}
+              style={{ textDecoration: 'none' }}
+            >
+              <div {...stylex.props(styles.collectionName)}>
+                <DatabaseIcon size={18} color={tokens.colorPrimary500} />
+                <span>{moul.name}</span>
+              </div>
+            </RouterLink>
+
+            <div {...stylex.props(styles.badgesGroup)}>
+              <Badge variant={typeVariant} size="sm">
+                {moul.type}
+              </Badge>
+              <Badge variant="neutral" size="sm">
+                {isLoading ? '...' : `${totalCount} records`}
+              </Badge>
+            </div>
+          </div>
+
+          <div {...stylex.props(styles.cardBottomRow)}>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label={`Create new record in ${moul.name}`}
+              onPress={() =>
+                navigate({
+                  to: '/records/$moulName',
+                  params: { moulName: moul.name },
+                  search: { page: 1, perPage: 30, create: true },
+                })
+              }
+            >
+              <PlusIcon size={14} />
+              <span>New Record</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={`Browse ${moul.name} records`}
+              onPress={() =>
+                navigate({
+                  to: '/records/$moulName',
+                  params: { moulName: moul.name },
+                  search: { page: 1, perPage: 30 },
+                })
+              }
+            >
+              <span>View Table</span>
+              <ArrowRightIcon size={14} />
+            </Button>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -114,7 +242,7 @@ function DashboardPage() {
       <div {...stylex.props(styles.header)}>
         <div>
           <h1 {...stylex.props(styles.title)}>Engine Dashboard</h1>
-          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+          <span {...stylex.props(styles.subtitle)}>
             System overview and database collection metrics
           </span>
         </div>
@@ -164,7 +292,13 @@ function DashboardPage() {
 
       {/* Collections Overview */}
       <div {...stylex.props(styles.section)}>
-        <h2 {...stylex.props(styles.sectionTitle)}>Defined Collections</h2>
+        <div {...stylex.props(styles.sectionHeader)}>
+          <h2 {...stylex.props(styles.sectionTitle)}>Defined Collections</h2>
+          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+            {collectionCount} schema tables
+          </span>
+        </div>
+
         {moulsLoading ? (
           <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
         ) : !mouls || mouls.length === 0 ? (
@@ -174,40 +308,7 @@ function DashboardPage() {
         ) : (
           <div {...stylex.props(styles.collectionList)}>
             {mouls.map((moul: any) => (
-              <RouterLink
-                key={moul.name}
-                to="/records/$moulName"
-                params={{ moulName: moul.name }}
-                search={{ page: 1, perPage: 30 }}
-                style={{ textDecoration: 'none' }}
-              >
-                <Card variant="glass">
-                  <CardBody>
-                    <div {...stylex.props(styles.collectionCardInner)}>
-                      <div {...stylex.props(styles.collectionName)}>
-                        <DatabaseIcon size={18} color={tokens.colorPrimary500} />
-                        <span>{moul.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Badge
-                          variant={
-                            moul.type === 'auth'
-                              ? 'primary'
-                              : moul.type === 'worker'
-                                ? 'warning'
-                                : moul.type === 'analytic'
-                                  ? 'success'
-                                  : 'neutral'
-                          }
-                        >
-                          {moul.type}
-                        </Badge>
-                        <ArrowRightIcon size={14} color={tokens.colorFgSubtle} />
-                      </div>
-                    </div>
-                  </CardBody>
-                </Card>
-              </RouterLink>
+              <CollectionCardItem key={moul.name} moul={moul} />
             ))}
           </div>
         )}
@@ -215,4 +316,3 @@ function DashboardPage() {
     </div>
   );
 }
-

@@ -63,6 +63,7 @@ const recordsSearchSchema = z.object({
   filter: z.string().optional(),
   search: z.string().optional(),
   category: z.string().optional(),
+  create: z.boolean().optional(),
 });
 
 export const Route = createFileRoute('/_auth/records/$moulName')({
@@ -663,6 +664,12 @@ function RecordsPage() {
   React.useEffect(() => {
     setSearchVal(search.search || '');
   }, [search.search]);
+
+  React.useEffect(() => {
+    if (search.create) {
+      handleOpenCreate();
+    }
+  }, [search.create]);
 
   // 1. Fetch collection schema to get field definitions
   const { data: moul } = useQuery({

@@ -248,6 +248,8 @@ function SettingsPage() {
   });
 
   // Local form states for Drawers
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState<boolean>(false);
   const [s3Form, setS3Form] = useState({
     file_s3_enabled: 'false',
     file_s3_bucket: '',
@@ -345,21 +347,26 @@ function SettingsPage() {
 
   // Sync settingsData to Drawer form states when opening
   const openDrawer = (mode: DrawerMode, extraIndex?: number) => {
+    let snapshotVal: any = null;
     if (mode === 'account') {
-      setAccountForm({
+      const initAcc = {
         username: accountData?.username || user?.username || '',
         name: accountData?.name || user?.name || '',
         email: accountData?.email || user?.email || '',
-      });
+      };
+      setAccountForm(initAcc);
+      snapshotVal = initAcc;
     } else if (mode === 'password') {
-      setPasswordForm({
+      const initPwd = {
         currentPassword: '',
         newPassword: '',
         passwordConfirm: '',
-      });
+      };
+      setPasswordForm(initPwd);
+      snapshotVal = initPwd;
     } else if (settingsData) {
       if (mode === 's3') {
-        setS3Form({
+        const initS3 = {
           file_s3_enabled: settingsData.file_s3_enabled || 'false',
           file_s3_bucket: settingsData.file_s3_bucket || '',
           file_s3_endpoint: settingsData.file_s3_endpoint || '',
@@ -367,9 +374,11 @@ function SettingsPage() {
           file_s3_access_key: settingsData.file_s3_access_key || '',
           file_s3_secret_key: settingsData.file_s3_secret_key || '',
           file_s3_force_path_style: settingsData.file_s3_force_path_style || 'false',
-        });
+        };
+        setS3Form(initS3);
+        snapshotVal = initS3;
       } else if (mode === 'litestream') {
-        setLitestreamForm({
+        const initLite = {
           litestream_enabled: settingsData.litestream_enabled || 'false',
           litestream_s3_bucket: settingsData.litestream_s3_bucket || '',
           litestream_s3_endpoint: settingsData.litestream_s3_endpoint || '',
@@ -378,28 +387,36 @@ function SettingsPage() {
           litestream_secret_access_key: settingsData.litestream_secret_access_key || '',
           litestream_s3_force_path_style: settingsData.litestream_s3_force_path_style || 'false',
           litestream_replica_path: settingsData.litestream_replica_path || '',
-        });
+        };
+        setLitestreamForm(initLite);
+        snapshotVal = initLite;
       } else if (mode === 'ratelimit-add') {
-        setRateLimitForm({
+        const initRate: RateLimitRule = {
           label: '',
           max_requests: 60,
           interval: 60,
           targeted_users: 'all',
-        });
+        };
+        setRateLimitForm(initRate);
         setEditingRuleIndex(null);
+        snapshotVal = initRate;
       } else if (mode === 'ratelimit-edit' && typeof extraIndex === 'number') {
         const rule = rateLimitRules[extraIndex];
         if (rule) {
-          setRateLimitForm({ ...rule });
+          const initRate = { ...rule };
+          setRateLimitForm(initRate);
           setEditingRuleIndex(extraIndex);
+          snapshotVal = initRate;
         }
       } else if (mode === 'rootips') {
-        setRootIPsForm({
+        const initIPs = {
           root_user_ip_enabled: settingsData.root_user_ip_enabled || 'false',
           root_user_allowed_ips: settingsData.root_user_allowed_ips || '',
-        });
+        };
+        setRootIPsForm(initIPs);
+        snapshotVal = initIPs;
       } else if (mode === 'email') {
-        setEmailForm({
+        const initEmail = {
           email_provider: settingsData.email_provider || 'console',
           email_enabled: settingsData.email_enabled || 'false',
           email_from_address: settingsData.email_from_address || '',
@@ -409,41 +426,117 @@ function SettingsPage() {
           email_domain: settingsData.email_domain || '',
           email_region: settingsData.email_region || '',
           email_endpoint: settingsData.email_endpoint || '',
-        });
+        };
+        setEmailForm(initEmail);
+        snapshotVal = initEmail;
       } else if (mode === 'oauth-global') {
-        setOAuthGlobalForm({
+        const initOG = {
           oauth_redirect_url: settingsData.oauth_redirect_url || '',
-        });
+        };
+        setOAuthGlobalForm(initOG);
+        snapshotVal = initOG;
       } else if (mode === 'oauth-github') {
-        setOAuthGitHubForm({
+        const initGH = {
           oauth_github_enabled: settingsData.oauth_github_enabled || 'false',
           oauth_github_client_id: settingsData.oauth_github_client_id || '',
           oauth_github_client_secret: settingsData.oauth_github_client_secret || '',
-        });
+        };
+        setOAuthGitHubForm(initGH);
+        snapshotVal = initGH;
       } else if (mode === 'oauth-google') {
-        setOAuthGoogleForm({
+        const initG = {
           oauth_google_enabled: settingsData.oauth_google_enabled || 'false',
           oauth_google_client_id: settingsData.oauth_google_client_id || '',
           oauth_google_client_secret: settingsData.oauth_google_client_secret || '',
-        });
+        };
+        setOAuthGoogleForm(initG);
+        snapshotVal = initG;
       } else if (mode === 'oauth-apple') {
-        setOAuthAppleForm({
+        const initA = {
           oauth_apple_enabled: settingsData.oauth_apple_enabled || 'false',
           oauth_apple_client_id: settingsData.oauth_apple_client_id || '',
           oauth_apple_client_secret: settingsData.oauth_apple_client_secret || '',
           oauth_apple_team_id: settingsData.oauth_apple_team_id || '',
           oauth_apple_key_id: settingsData.oauth_apple_key_id || '',
           oauth_apple_private_key: settingsData.oauth_apple_private_key || '',
-        });
+        };
+        setOAuthAppleForm(initA);
+        snapshotVal = initA;
       }
     }
 
+    setInitialSnapshot(snapshotVal ? JSON.stringify(snapshotVal) : '');
     setDrawerMode(mode);
+  };
+
+  const isDrawerDirty = useMemo(() => {
+    if (!drawerMode || !initialSnapshot) return false;
+    let current: any = null;
+    switch (drawerMode) {
+      case 's3':
+        current = s3Form;
+        break;
+      case 'litestream':
+        current = litestreamForm;
+        break;
+      case 'ratelimit-add':
+      case 'ratelimit-edit':
+        current = rateLimitForm;
+        break;
+      case 'rootips':
+        current = rootIPsForm;
+        break;
+      case 'email':
+        current = emailForm;
+        break;
+      case 'oauth-global':
+        current = oauthGlobalForm;
+        break;
+      case 'oauth-github':
+        current = oauthGitHubForm;
+        break;
+      case 'oauth-google':
+        current = oauthGoogleForm;
+        break;
+      case 'oauth-apple':
+        current = oauthAppleForm;
+        break;
+      case 'account':
+        current = accountForm;
+        break;
+      case 'password':
+        current = passwordForm;
+        break;
+    }
+    return JSON.stringify(current) !== initialSnapshot;
+  }, [
+    drawerMode,
+    initialSnapshot,
+    s3Form,
+    litestreamForm,
+    rateLimitForm,
+    rootIPsForm,
+    emailForm,
+    oauthGlobalForm,
+    oauthGitHubForm,
+    oauthGoogleForm,
+    oauthAppleForm,
+    accountForm,
+    passwordForm,
+  ]);
+
+  const handleRequestClose = () => {
+    if (isDrawerDirty) {
+      setShowDiscardDialog(true);
+    } else {
+      closeDrawer();
+    }
   };
 
   const closeDrawer = () => {
     setDrawerMode(null);
     setEditingRuleIndex(null);
+    setInitialSnapshot('');
   };
 
   // Mutations
@@ -1170,24 +1263,31 @@ function SettingsPage() {
       </Tabs>
 
       {/* DRAWER MODAL FOR CREATING / EDITING SETTINGS */}
-      <DrawerOverlay isOpen={drawerMode !== null} onOpenChange={(open) => !open && closeDrawer()} isDismissable>
+      <DrawerOverlay isOpen={drawerMode !== null} onOpenChange={(open) => !open && handleRequestClose()} isDismissable>
         <Drawer placement="right" size="md">
           <DrawerDialog>
             <DrawerHeader>
-              <DrawerTitle>
-                {drawerMode === 's3' && 'Configure S3 Object Storage'}
-                {drawerMode === 'litestream' && 'Configure Litestream Backups'}
-                {drawerMode === 'ratelimit-add' && 'Add Rate Limit Rule'}
-                {drawerMode === 'ratelimit-edit' && 'Edit Rate Limit Rule'}
-                {drawerMode === 'rootips' && 'Configure Root User IP Whitelist'}
-                {drawerMode === 'email' && 'Configure Transactional Email'}
-                {drawerMode === 'oauth-global' && 'Configure OAuth Callback URL'}
-                {drawerMode === 'oauth-github' && 'Configure GitHub OAuth2'}
-                {drawerMode === 'oauth-google' && 'Configure Google OAuth2'}
-                {drawerMode === 'oauth-apple' && 'Configure Apple Sign-In'}
-                {drawerMode === 'account' && 'Edit Root User Account'}
-                {drawerMode === 'password' && 'Change Root Password'}
-              </DrawerTitle>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: tokens.spacing8 }}>
+                <DrawerTitle>
+                  {drawerMode === 's3' && 'Configure S3 Object Storage'}
+                  {drawerMode === 'litestream' && 'Configure Litestream Backups'}
+                  {drawerMode === 'ratelimit-add' && 'Add Rate Limit Rule'}
+                  {drawerMode === 'ratelimit-edit' && 'Edit Rate Limit Rule'}
+                  {drawerMode === 'rootips' && 'Configure Root User IP Whitelist'}
+                  {drawerMode === 'email' && 'Configure Transactional Email'}
+                  {drawerMode === 'oauth-global' && 'Configure OAuth Callback URL'}
+                  {drawerMode === 'oauth-github' && 'Configure GitHub OAuth2'}
+                  {drawerMode === 'oauth-google' && 'Configure Google OAuth2'}
+                  {drawerMode === 'oauth-apple' && 'Configure Apple Sign-In'}
+                  {drawerMode === 'account' && 'Edit Root User Account'}
+                  {drawerMode === 'password' && 'Change Root Password'}
+                </DrawerTitle>
+                {isDrawerDirty && (
+                  <Badge variant="warning" dot>
+                    Unsaved Changes
+                  </Badge>
+                )}
+              </div>
               <DrawerCloseButton />
             </DrawerHeader>
             <DrawerBody>
@@ -1655,7 +1755,7 @@ function SettingsPage() {
               )}
             </DrawerBody>
             <DrawerFooter>
-              <Button variant="ghost" onPress={closeDrawer}>
+              <Button variant="ghost" onPress={handleRequestClose}>
                 Cancel
               </Button>
               <Button
@@ -1668,8 +1768,8 @@ function SettingsPage() {
                 }
               >
                 {updateMutation.isPending ||
-                updatePasswordMutation.isPending ||
-                updateAccountMutation.isPending
+                  updatePasswordMutation.isPending ||
+                  updateAccountMutation.isPending
                   ? 'Saving...'
                   : drawerMode === 'account'
                     ? 'Save Account'
@@ -1681,6 +1781,42 @@ function SettingsPage() {
           </DrawerDialog>
         </Drawer>
       </DrawerOverlay>
+
+      {/* CONFIRM DISCARD UNSAVED CHANGES ALERT DIALOG */}
+      <ModalOverlay
+        isOpen={showDiscardDialog}
+        onOpenChange={setShowDiscardDialog}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Discard Unsaved Changes?
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                You have unsaved changes in this configuration section. If you close now, your modifications will be discarded.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setShowDiscardDialog(false)}>
+                Keep Editing
+              </Button>
+              <Button
+                variant="danger"
+                onPress={() => {
+                  setShowDiscardDialog(false);
+                  closeDrawer();
+                }}
+              >
+                Discard Changes
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
 
       {/* CONFIRM DELETE RULE ALERT DIALOG */}
       <ModalOverlay
