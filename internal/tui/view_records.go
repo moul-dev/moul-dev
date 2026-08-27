@@ -5,11 +5,44 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
+
+func (m *Model) initRecordSearchInput() {
+	ti := textinput.New()
+	ti.Placeholder = "Search or filter expression (e.g. name ~ 'admin', status = 'active')..."
+	ti.CharLimit = 256
+	s := ti.Styles()
+	s.Focused.Text = lipgloss.NewStyle().Foreground(ColorCyanLight)
+	s.Focused.Prompt = lipgloss.NewStyle().Foreground(ColorCyan)
+	ti.SetStyles(s)
+	ti.Prompt = "🔍 / "
+	m.recordSearchInput = ti
+}
+
+func buildRecordFilter(moul *schema.Moul, query string) string {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return ""
+	}
+	if strings.ContainsAny(query, "=~><!") {
+		return query
+	}
+	var clauses []string
+	clauses = append(clauses, fmt.Sprintf("id ~ %q", query))
+	if moul != nil {
+		for _, f := range moul.Fields {
+			if f.Type == "text" || f.Type == "string" || f.Type == "email" || f.Type == "url" {
+				clauses = append(clauses, fmt.Sprintf("%s ~ %q", f.Name, query))
+			}
+		}
+	}
+	return strings.Join(clauses, " || ")
+}
 
 func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 	moul := m.currentMoul()
@@ -23,6 +56,30 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 	}
 	if m.collectionActiveTab == 2 && moul.Type == "auth" {
 		return m.updateEmailTemplatesTab(msg)
+	}
+
+	// Handle active search text input mode
+	if m.recordSearchActive {
+		if kp, ok := msg.(tea.KeyPressMsg); ok {
+			switch kp.String() {
+			case "esc":
+				m.recordSearchActive = false
+				m.recordSearchFilter = ""
+				m.recordPage = 1
+				m.SelectedRecordIndex = 0
+				return m.fetchRecords()
+			case "enter":
+				m.recordSearchActive = false
+				rawVal := strings.TrimSpace(m.recordSearchInput.Value())
+				m.recordSearchFilter = rawVal
+				m.recordPage = 1
+				m.SelectedRecordIndex = 0
+				return m.fetchRecords()
+			}
+		}
+		var cmd tea.Cmd
+		m.recordSearchInput, cmd = m.recordSearchInput.Update(msg)
+		return cmd
 	}
 
 	switch msg := msg.(type) {
@@ -40,6 +97,23 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 			if m.SelectedRecordIndex < len(m.Records)-1 {
 				m.SelectedRecordIndex++
 			}
+		case "/", "ctrl+f":
+			m.recordSearchActive = true
+			m.initRecordSearchInput()
+			m.recordSearchInput.Focus()
+			return nil
+		case ">", ".", "]", "pgdown":
+			if m.recordTotalPages > 0 && m.recordPage < m.recordTotalPages {
+				m.recordPage++
+				m.SelectedRecordIndex = 0
+				return m.fetchRecords()
+			}
+		case "<", ",", "[", "pgup":
+			if m.recordPage > 1 {
+				m.recordPage--
+				m.SelectedRecordIndex = 0
+				return m.fetchRecords()
+			}
 		case "enter", "v":
 			// Open detail view
 			if len(m.Records) > 0 && m.SelectedRecordIndex >= 0 && m.SelectedRecordIndex < len(m.Records) {
@@ -48,6 +122,7 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 				m.Viewport.SetContent(jsonStr)
 				m.Viewport.SetYOffset(0)
 				m.State = StateRecordDetail
+				m.ViewDetail = "record"
 			}
 		case "e":
 			// Edit record
@@ -117,6 +192,13 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 			// Refresh
 			return m.fetchRecords()
 		case "esc", "left", "h":
+			if m.recordSearchFilter != "" {
+				m.recordSearchFilter = ""
+				m.recordPage = 1
+				m.SelectedRecordIndex = 0
+				m.SuccessMsg = "Filter cleared"
+				return m.fetchRecords()
+			}
 			m.State = StateDashboard
 			m.Records = nil
 			m.SelectedRecordIndex = 0
@@ -171,12 +253,28 @@ func (m *Model) viewRecordList() string {
 		s.WriteString("\n")
 	}
 
+	if m.recordSearchActive {
+		s.WriteString("  " + m.recordSearchInput.View() + "\n\n")
+	} else if m.recordSearchFilter != "" {
+		filterTag := lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render(fmt.Sprintf(" [Filter: %s] ", m.recordSearchFilter))
+		s.WriteString("  " + filterTag + " " + lipgloss.NewStyle().Foreground(ColorTextMuted).Render("(press [/] to edit, [Esc] to clear)") + "\n\n")
+	}
+
 	if len(m.Records) == 0 {
 		s.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  No records found in this collection.\n"))
 		s.WriteString("\n")
-		s.WriteString(HelpStyle.Render(" [n] Create new record  [r] Refresh  [Esc] Back"))
+		s.WriteString(HelpStyle.Render(" [/] Search  [n] Create new record  [r] Refresh  [Esc] Back"))
 		return ContentStyle.Width(m.Width).Render(s.String())
 	}
+
+	// Pagination indicator
+	pageInfo := ""
+	if m.recordTotalPages > 0 {
+		pageInfo = fmt.Sprintf("Page %d of %d (Total: %d)", m.recordPage, m.recordTotalPages, m.recordTotalItems)
+	} else {
+		pageInfo = fmt.Sprintf("Total: %d items", len(m.Records))
+	}
+	s.WriteString("  " + lipgloss.NewStyle().Foreground(ColorIndigoLight).Render(pageInfo) + "\n\n")
 
 	// Headers: ID + first 3 custom fields
 	headers := []string{"ID"}
@@ -195,7 +293,7 @@ func (m *Model) viewRecordList() string {
 	s.WriteString("\n")
 
 	// Calculate window/scrolling logic
-	maxRows := m.Height - 11
+	maxRows := m.Height - 13
 	if maxRows < 3 {
 		maxRows = 3
 	}
@@ -243,7 +341,7 @@ func (m *Model) viewRecordList() string {
 	}
 
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [u] Edit Schema  [r] Refresh  [Esc] Back"))
+	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [>] Next  [<] Prev  [/] Search  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [r] Refresh  [Esc] Back"))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }
@@ -264,6 +362,18 @@ func (m *Model) updateRecordDetail(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "esc", "q", "left", "h":
 			m.State = StateRecordList
+		case "c":
+			// Copy JSON to clipboard
+			if len(m.Records) > 0 && m.SelectedRecordIndex >= 0 && m.SelectedRecordIndex < len(m.Records) {
+				record := m.Records[m.SelectedRecordIndex]
+				jsonStr := formatJSON(record)
+				if err := copyToClipboard(jsonStr); err != nil {
+					m.Err = fmt.Errorf("failed to copy JSON: %w", err)
+				} else {
+					m.SuccessMsg = "Record JSON copied to clipboard!"
+				}
+			}
+			return nil
 		case "e":
 			// Edit record
 			if len(m.Records) > 0 && m.SelectedRecordIndex >= 0 && m.SelectedRecordIndex < len(m.Records) {
@@ -315,11 +425,20 @@ func (m *Model) viewRecordDetail() string {
 	s.WriteString(HeaderStyle.Render(fmt.Sprintf("Record payload in %s", moul.Name)))
 	s.WriteString("\n")
 
+	if m.SuccessMsg != "" {
+		s.WriteString(AlertSuccessStyle.Render(m.SuccessMsg))
+		s.WriteString("\n")
+	}
+	if m.Err != nil {
+		s.WriteString(AlertErrorStyle.Render(fmt.Sprintf("Error: %v", m.Err)))
+		s.WriteString("\n")
+	}
+
 	s.WriteString(DetailTitleStyle.Render("Payload view"))
 	s.WriteString("\n")
 	s.WriteString(DetailBodyStyle.Render(m.Viewport.View()))
 	s.WriteString("\n\n")
-	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [e] Edit  [d] Delete  [Esc/q] Back to records list"))
+	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [c] Copy JSON  [e] Edit  [d] Delete  [Esc/q] Back to records list"))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }

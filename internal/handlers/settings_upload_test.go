@@ -46,6 +46,7 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAdminKey(adminKey))
 	adminSettingsGroup.GET("", settingsHandler.GetSettings)
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
+	adminSettingsGroup.POST("/reload", settingsHandler.ReloadSettings)
 
 	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
 	e.GET("/api/upload", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
@@ -333,5 +334,23 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 		t.Errorf("Expected 404 for deleting non-existent file, got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+
+	// F. POST /api/settings/reload -> 200 OK
+	req, _ = http.NewRequest("POST", server.URL+"/api/settings/reload", nil)
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("POST /api/settings/reload failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200 for POST /api/settings/reload, got %d", resp.StatusCode)
+	}
+	var reloadResult map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&reloadResult)
+	resp.Body.Close()
+
+	if reloadResult["status"] != "ok" {
+		t.Errorf("Expected reload status 'ok', got %v", reloadResult["status"])
+	}
 }
 

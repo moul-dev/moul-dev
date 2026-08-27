@@ -213,10 +213,22 @@ type Model struct {
 	settingRootNewPassword       string
 	settingRootConfirmPassword   string
 	rootPwdInputs                []textinput.Model
-	settingsActiveTab            int // 0 = S3 Storage, 1 = Litestream, 2 = Rate Limiting, 3 = Root User IPs, 4 = Email Delivery, 5 = OAuth2 Providers, 6 = Root Account
+	settingsActiveTab            int // dynamic index into settingsTabs
 	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
 	storageInputs                []textinput.Model
 	liteInputs                   []textinput.Model
+
+	// Records Screen Pagination & Search
+	recordPage         int
+	recordPerPage      int
+	recordTotalPages   int
+	recordTotalItems   int
+	recordSearchActive bool
+	recordSearchInput  textinput.Model
+	recordSearchFilter string
+
+	// Analytics Date Filter
+	analyticsDateFilterIdx int // 0 = All Time, 1 = 24h, 2 = 7d, 3 = 30d
 
 	// Email Templates settings
 	collectionActiveTab   int // 0 = Records, 1 = Email Templates
@@ -294,13 +306,55 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case RecordsMsg:
 		m.Records = msg.Records
+		if msg.Page > 0 {
+			m.recordPage = msg.Page
+		}
+		if msg.PerPage > 0 {
+			m.recordPerPage = msg.PerPage
+		}
+		if msg.TotalPages > 0 {
+			m.recordTotalPages = msg.TotalPages
+		} else if len(msg.Records) > 0 {
+			m.recordTotalPages = 1
+		}
+		if msg.TotalItems > 0 {
+			m.recordTotalItems = msg.TotalItems
+		} else {
+			m.recordTotalItems = len(msg.Records)
+		}
+		if m.SelectedRecordIndex >= len(m.Records) && len(m.Records) > 0 {
+			m.SelectedRecordIndex = len(m.Records) - 1
+		} else if len(m.Records) == 0 {
+			m.SelectedRecordIndex = 0
+		}
 		return m, nil
 	case JobsMsg:
 		m.Jobs = msg.Jobs
+		if m.SelectedJobIndex >= len(m.Jobs) && len(m.Jobs) > 0 {
+			m.SelectedJobIndex = len(m.Jobs) - 1
+		} else if len(m.Jobs) == 0 {
+			m.SelectedJobIndex = 0
+		}
 		return m, nil
 	case VisitsMsg:
 		m.Visits = msg.Visits
+		if m.SelectedVisitIndex >= len(m.Visits) && len(m.Visits) > 0 {
+			m.SelectedVisitIndex = len(m.Visits) - 1
+		} else if len(m.Visits) == 0 {
+			m.SelectedVisitIndex = 0
+		}
 		return m, nil
+	case settingsReloadMsg:
+		m.SuccessMsg = "Settings reloaded successfully in running server!"
+		return m, nil
+	case workerPollTickMsg:
+		if m.State != StateWorkerMonitor {
+			return m, nil
+		}
+		return m, tea.Batch(
+			m.fetchJobsSilent(),
+			m.pollWorkerCmd(3*time.Second),
+		)
 
 	case SettingsMsg:
 		m.settingFileS3Enabled = msg.Settings["file_s3_enabled"]
@@ -923,9 +977,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "esc":
 				m.State = StateDashboard
 				return m, nil
+			case "R":
+				// Manual hot-reload of settings
+				return m, func() tea.Msg {
+					err := m.Client.ReloadSettings()
+					if err != nil {
+						return ErrMsg{err}
+					}
+					return settingsReloadMsg{}
+				}
 			case "left", "h":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab - 1 + 7) % 7
+					m.settingsActiveTab = (m.settingsActiveTab - 1 + len(settingsTabs)) % len(settingsTabs)
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+2 { // Cancel -> Save
@@ -934,7 +997,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "right", "l":
 				if m.settingsFocusIndex == 0 {
-					m.settingsActiveTab = (m.settingsActiveTab + 1) % 7
+					m.settingsActiveTab = (m.settingsActiveTab + 1) % len(settingsTabs)
 					m.updateSettingsFocus(m.settingsFocusIndex, 0)
 					return m, nil
 				} else if m.settingsFocusIndex == numFields+1 { // Save -> Cancel
@@ -1432,11 +1495,46 @@ func openBrowser(url string) error {
 	return exec.Command(cmd, args...).Start()
 }
 
+// SettingsTabs defines the list of all available settings categories.
+var settingsTabs = []string{
+	"S3 STORAGE",
+	"LITESTREAM BACKUPS",
+	"RATE LIMITING",
+	"ROOT USER IPS",
+	"EMAIL DELIVERY",
+	"OAUTH2 PROVIDERS",
+	"ROOT ACCOUNT",
+}
+
 // ── Asynchronous messages for background loading ─────────────────
 type ErrMsg struct{ Err error }
-type RecordsMsg struct{ Records []map[string]interface{} }
+type RecordsMsg struct {
+	Records    []map[string]interface{}
+	Page       int
+	PerPage    int
+	TotalPages int
+	TotalItems int
+}
 type JobsMsg struct{ Jobs []map[string]interface{} }
 type VisitsMsg struct{ Visits []map[string]interface{} }
+type settingsReloadMsg struct{}
+
+func (m *Model) pollWorkerCmd(delay time.Duration) tea.Cmd {
+	return tea.Tick(delay, func(t time.Time) tea.Msg {
+		return workerPollTickMsg{}
+	})
+}
+
+func (m *Model) fetchJobsSilent() tea.Cmd {
+	return func() tea.Msg {
+		workerMoul := m.getWorkerMoulName()
+		jobs, err := m.Client.ListRecords(workerMoul)
+		if err != nil {
+			return nil
+		}
+		return JobsMsg{Jobs: jobs}
+	}
+}
 
 type connectResultMsg struct {
 	mouls []schema.Moul
@@ -1449,6 +1547,7 @@ type deviceFlowStartMsg struct {
 }
 
 type devicePollTickMsg struct{}
+type workerPollTickMsg struct{}
 
 type devicePollResultMsg struct {
 	token string

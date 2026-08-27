@@ -3,11 +3,38 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
 )
+
+var analyticsDateFilterLabels = []string{"All Time", "24 Hours", "7 Days", "30 Days"}
+
+func (m *Model) getAnalyticsDateFilterFrom() string {
+	switch m.analyticsDateFilterIdx {
+	case 1: // 24 Hours
+		return time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+	case 2: // 7 Days
+		return time.Now().UTC().AddDate(0, 0, -7).Format(time.RFC3339)
+	case 3: // 30 Days
+		return time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339)
+	default: // All Time
+		return ""
+	}
+}
+
+func (m *Model) fetchVisits() tea.Cmd {
+	return func() tea.Msg {
+		from := m.getAnalyticsDateFilterFrom()
+		visits, err := m.Client.ListVisits(from)
+		if err != nil {
+			return ErrMsg{err}
+		}
+		return VisitsMsg{Visits: visits}
+	}
+}
 
 func (m *Model) initAnalyticsLoginForm() {
 	if m.analyticsMoul == "" {
@@ -103,6 +130,13 @@ func (m *Model) updateAnalytics(msg tea.Msg) tea.Cmd {
 				m.State = StateRecordDetail
 				m.ViewDetail = "visit"
 			}
+		case "t", "d":
+			// Toggle date range
+			if m.Client.Token != "" {
+				m.analyticsDateFilterIdx = (m.analyticsDateFilterIdx + 1) % len(analyticsDateFilterLabels)
+				m.SelectedVisitIndex = 0
+				return m.fetchVisits()
+			}
 		case "l":
 			if m.Client.Token == "" {
 				m.initAnalyticsLoginForm()
@@ -185,10 +219,21 @@ func (m *Model) viewAnalytics() string {
 		s.WriteString("\n")
 	}
 
+	// Headers & Filter bar
+	var filterBadges []string
+	for i, lbl := range analyticsDateFilterLabels {
+		if m.analyticsDateFilterIdx == i {
+			filterBadges = append(filterBadges, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render(fmt.Sprintf("▶ %s ◀", lbl)))
+		} else {
+			filterBadges = append(filterBadges, lipgloss.NewStyle().Foreground(ColorTextMuted).Render(fmt.Sprintf("  %s  ", lbl)))
+		}
+	}
+	s.WriteString("  " + lipgloss.NewStyle().Foreground(ColorIndigoLight).Render("Range: ") + lipgloss.JoinHorizontal(lipgloss.Top, filterBadges...) + " " + lipgloss.NewStyle().Foreground(ColorTextMuted).Render("(press [t] to cycle)") + "\n\n")
+
 	if len(m.Visits) == 0 {
-		s.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  No visits recorded yet.\n"))
+		s.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  No visits recorded in this time range.\n"))
 		s.WriteString("\n")
-		s.WriteString(HelpStyle.Render(" [f] Refresh  [Esc] Back"))
+		s.WriteString(HelpStyle.Render(" [t] Toggle Range  [f] Refresh  [Esc] Back"))
 		return ContentStyle.Width(m.Width).Render(s.String())
 	}
 
@@ -275,7 +320,7 @@ func (m *Model) viewAnalytics() string {
 	}
 
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [v/Enter] Detail payload  [f] Refresh  [Esc] Back"))
+	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [v/Enter] Detail  [t] Toggle Range  [f] Refresh  [Esc] Back"))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }

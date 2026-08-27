@@ -109,6 +109,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `GET /api/admin/account` / `GET /api/settings/account`: Retrieve root user profile (`username`, `name`, `email`, etc.).
 - `PATCH /api/admin/account` / `PATCH /api/settings/account`: Update root user account (`username`, `name`, `email`, and optional `password`).
 - `POST /api/admin/password`: Update root user password (`currentPassword`, `password`, `passwordConfirm`, optional `identity`).
+- `POST /api/admin/reload` / `POST /api/settings/reload`: Hot-reload runtime middleware (rate limiter, root IP allowlist), mailer, and TLS configurations.
 
 ### Built-in MCP Server (Admin Auth)
 - `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint.

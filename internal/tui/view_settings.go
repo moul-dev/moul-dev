@@ -469,8 +469,11 @@ func (m *Model) saveSettingsForm() {
 		return
 	}
 
+	// Trigger server-side hot-reload
+	_ = m.Client.ReloadSettings()
+
 	m.State = StateDashboard
-	m.SuccessMsg = "Settings saved successfully!"
+	m.SuccessMsg = "Settings saved & reloaded successfully!"
 }
 
 func renderBoolField(label string, val bool, focused bool) string {
@@ -520,82 +523,16 @@ func (m *Model) viewSettings() string {
 
 	// Render Tabs
 	var tabs []string
-
-	// S3 Storage Tab
-	if m.settingsActiveTab == 0 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ S3 STORAGE ◀"))
+	for i, tabName := range settingsTabs {
+		if m.settingsActiveTab == i {
+			if m.settingsFocusIndex == 0 {
+				tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render(fmt.Sprintf("▶ %s ◀", tabName)))
+			} else {
+				tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render(fmt.Sprintf("  %s  ", tabName)))
+			}
 		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  S3 STORAGE  "))
+			tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render(fmt.Sprintf("  %s  ", tabName)))
 		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  S3 STORAGE  "))
-	}
-
-	// Litestream Tab
-	if m.settingsActiveTab == 1 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ LITESTREAM BACKUPS ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  LITESTREAM BACKUPS  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  LITESTREAM BACKUPS  "))
-	}
-
-	// Rate Limiting Tab
-	if m.settingsActiveTab == 2 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ RATE LIMITING ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  RATE LIMITING  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  RATE LIMITING  "))
-	}
-
-	// Root User IPs Tab
-	if m.settingsActiveTab == 3 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT USER IPS ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT USER IPS  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT USER IPS  "))
-	}
-
-	// Email Delivery Tab
-	if m.settingsActiveTab == 4 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ EMAIL DELIVERY ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  EMAIL DELIVERY  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  EMAIL DELIVERY  "))
-	}
-
-	// OAuth2 Providers Tab
-	if m.settingsActiveTab == 5 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ OAUTH2 PROVIDERS ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  OAUTH2 PROVIDERS  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  OAUTH2 PROVIDERS  "))
-	}
-
-	// Root Account Tab
-	if m.settingsActiveTab == 6 {
-		if m.settingsFocusIndex == 0 {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Background(ColorSelectionBg).Render("▶ ROOT ACCOUNT ◀"))
-		} else {
-			tabs = append(tabs, lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Background(ColorSelectionBg).Render("  ROOT ACCOUNT  "))
-		}
-	} else {
-		tabs = append(tabs, lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ROOT ACCOUNT  "))
 	}
 
 	s.WriteString("  " + lipgloss.JoinHorizontal(lipgloss.Top, tabs...) + "\n\n\n")
@@ -715,9 +652,9 @@ func (m *Model) viewSettings() string {
 	// Render navigation help
 	s.WriteString("\n\n")
 	if m.settingsActiveTab == 2 && m.settingRateLimitingEnabled == "true" {
-		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs (when top row is active) or toggle Save/Cancel buttons\n  ↑/↓ or Tab: Navigate fields  |  Space/Enter: Toggle booleans or trigger buttons\n  [a]: Add Rule  |  [e]: Edit Rule  |  [d]: Delete Rule  |  Esc: Back"))
+		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs or toggle Save/Cancel  |  ↑/↓ or Tab: Navigate  |  Space/Enter: Toggle/Trigger\n  [a]: Add Rule  |  [e]: Edit Rule  |  [d]: Delete Rule  |  [R]: Hot-Reload  |  Esc: Back"))
 	} else {
-		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs (when top row is active) or toggle Save/Cancel buttons\n  ↑/↓ or Tab: Navigate fields  |  Space/Enter: Toggle booleans or trigger buttons  |  Esc: Back"))
+		s.WriteString(HelpStyle.Render("  ←/→: Switch Tabs or toggle Save/Cancel  |  ↑/↓ or Tab: Navigate  |  Space/Enter: Toggle/Trigger  |  [R]: Hot-Reload  |  Esc: Back"))
 	}
 
 	return ContentStyle.Width(m.Width).Render(s.String())

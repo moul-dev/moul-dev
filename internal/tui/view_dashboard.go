@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -73,11 +74,13 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 		m.State = StateRecordList
 		m.SelectedRecordIndex = 0
 		m.collectionActiveTab = 0
+		m.recordPage = 1
+		m.recordSearchActive = false
 		return m.fetchRecords()
 	} else if idx == len(m.Mouls) {
 		m.State = StateWorkerMonitor
 		m.SelectedJobIndex = 0
-		return m.fetchJobs()
+		return tea.Batch(m.fetchJobs(), m.pollWorkerCmd(3*time.Second))
 	} else if idx == len(m.Mouls)+1 {
 		m.State = StateAnalytics
 		m.SelectedVisitIndex = 0
@@ -88,6 +91,7 @@ func (m *Model) selectSidebarItem() tea.Cmd {
 		return m.fetchFeatureFlags()
 	} else if idx == len(m.Mouls)+3 {
 		m.State = StateSystemMonitor
+		m.SelectedFlagIndex = 0
 		return m.fetchSystemMetrics()
 	} else if idx == len(m.Mouls)+4 {
 		return m.fetchSettings()
@@ -319,11 +323,25 @@ func (m *Model) fetchRecords() tea.Cmd {
 				expandList = append(expandList, field.Name)
 			}
 		}
-		records, err := m.Client.ListRecords(moul.Name, expandList...)
+		page := m.recordPage
+		if page <= 0 {
+			page = 1
+		}
+		perPage := m.recordPerPage
+		if perPage <= 0 {
+			perPage = 50
+		}
+		res, err := m.Client.ListRecordsPaginated(moul.Name, page, perPage, "", m.recordSearchFilter, expandList...)
 		if err != nil {
 			return ErrMsg{err}
 		}
-		return RecordsMsg{records}
+		return RecordsMsg{
+			Records:    res.Items,
+			Page:       res.Page,
+			PerPage:    res.PerPage,
+			TotalPages: res.TotalPages,
+			TotalItems: res.TotalItems,
+		}
 	}
 }
 
@@ -350,19 +368,6 @@ func (m *Model) fetchJobs() tea.Cmd {
 	}
 }
 
-func (m *Model) fetchVisits() tea.Cmd {
-	return func() tea.Msg {
-		// Visits requires JWT token. Let's make sure we have one.
-		// If we don't have one, we can prompt or try to auto-login.
-		// For now, let's execute the request, if it returns 401,
-		// we'll display the authentication requirement in the view!
-		visits, err := m.Client.ListVisits()
-		if err != nil {
-			return ErrMsg{err}
-		}
-		return VisitsMsg{visits}
-	}
-}
 
 func (m *Model) viewDashboardSettingsInfo(width int) string {
 	content := fmt.Sprintf(

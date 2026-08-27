@@ -539,10 +539,20 @@ func TestTUIE2E(t *testing.T) {
 		t.Fatal("Expected fetchJobs command, got nil")
 	}
 	msg = cmd()
-	if _, ok := msg.(JobsMsg); !ok {
-		t.Fatalf("Expected JobsMsg, got %T", msg)
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, bcmd := range batch {
+			if bcmd != nil {
+				subMsg := bcmd()
+				if _, ok := subMsg.(JobsMsg); ok {
+					_ = update(subMsg)
+				}
+			}
+		}
+	} else if _, ok := msg.(JobsMsg); ok {
+		_ = update(msg)
+	} else {
+		t.Fatalf("Expected JobsMsg or BatchMsg, got %T", msg)
 	}
-	_ = update(msg)
 	if m.State != StateWorkerMonitor {
 		t.Fatalf("Expected StateWorkerMonitor, got %d", m.State)
 	}

@@ -43,3 +43,19 @@ func TestViewWorkerMonitor(t *testing.T) {
 		t.Errorf("Expected state to be StateDashboard after Esc, got %v", m.State)
 	}
 }
+
+func TestWorkerPollingTick(t *testing.T) {
+	m := NewModel("http://localhost:8090", "testkey")
+	m.State = StateWorkerMonitor
+	m.SelectedJobIndex = 0
+
+	// Send worker tick message
+	newM, cmd := m.Update(workerPollTickMsg{})
+	if cmd == nil {
+		t.Fatal("Expected batch cmd from workerPollTickMsg, got nil")
+	}
+	updatedM := newM.(*Model)
+	if updatedM.State != StateWorkerMonitor {
+		t.Fatalf("Expected StateWorkerMonitor, got %d", updatedM.State)
+	}
+}

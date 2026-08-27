@@ -43,3 +43,41 @@ func TestViewAnalytics(t *testing.T) {
 		t.Errorf("Expected state to be StateDashboard after Esc, got %v", m.State)
 	}
 }
+
+func TestAnalyticsDateFilterToggle(t *testing.T) {
+	m := NewModel("http://localhost:8090", "testkey")
+	m.Client = NewClient("http://localhost:8090", "testkey")
+	m.Client.Token = "fake-jwt-token"
+	m.State = StateAnalytics
+	m.analyticsDateFilterIdx = 0
+
+	// 1. Toggle to 24 Hours
+	m.updateAnalytics(tea.KeyPressMsg{Text: "t"})
+	if m.analyticsDateFilterIdx != 1 {
+		t.Fatalf("Expected analyticsDateFilterIdx to be 1 (24h), got %d", m.analyticsDateFilterIdx)
+	}
+	if from := m.getAnalyticsDateFilterFrom(); from == "" {
+		t.Fatal("Expected non-empty from timestamp for 24h filter")
+	}
+
+	// 2. Toggle to 7 Days
+	m.updateAnalytics(tea.KeyPressMsg{Text: "t"})
+	if m.analyticsDateFilterIdx != 2 {
+		t.Fatalf("Expected analyticsDateFilterIdx to be 2 (7d), got %d", m.analyticsDateFilterIdx)
+	}
+
+	// 3. Toggle to 30 Days
+	m.updateAnalytics(tea.KeyPressMsg{Text: "t"})
+	if m.analyticsDateFilterIdx != 3 {
+		t.Fatalf("Expected analyticsDateFilterIdx to be 3 (30d), got %d", m.analyticsDateFilterIdx)
+	}
+
+	// 4. Toggle back to All Time
+	m.updateAnalytics(tea.KeyPressMsg{Text: "t"})
+	if m.analyticsDateFilterIdx != 0 {
+		t.Fatalf("Expected analyticsDateFilterIdx to be 0 (All Time), got %d", m.analyticsDateFilterIdx)
+	}
+	if from := m.getAnalyticsDateFilterFrom(); from != "" {
+		t.Fatalf("Expected empty from timestamp for All Time filter, got %q", from)
+	}
+}

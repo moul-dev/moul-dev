@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,24 +142,28 @@ type RecordListResult struct {
 // ListRecordsPaginated fetches paginated records of a specific moul with filtering and sorting.
 func (c *Client) ListRecordsPaginated(moulName string, page, perPage int, sort, filter string, expand ...string) (*RecordListResult, error) {
 	path := fmt.Sprintf("/api/moul/%s/records", moulName)
-	var params []string
+	values := url.Values{}
 	if page > 0 {
-		params = append(params, fmt.Sprintf("page=%d", page))
+		values.Set("page", strconv.Itoa(page))
 	}
 	if perPage > 0 {
-		params = append(params, fmt.Sprintf("perPage=%d", perPage))
+		values.Set("perPage", strconv.Itoa(perPage))
 	}
 	if sort != "" {
-		params = append(params, fmt.Sprintf("sort=%s", sort))
+		values.Set("sort", sort)
 	}
 	if filter != "" {
-		params = append(params, fmt.Sprintf("filter=%s", filter))
+		if strings.ContainsAny(filter, "=~><!") {
+			values.Set("filter", filter)
+		} else {
+			values.Set("search", filter)
+		}
 	}
 	if len(expand) > 0 {
-		params = append(params, fmt.Sprintf("expand=%s", strings.Join(expand, ",")))
+		values.Set("expand", strings.Join(expand, ","))
 	}
-	if len(params) > 0 {
-		path = fmt.Sprintf("%s?%s", path, strings.Join(params, "&"))
+	if qs := values.Encode(); qs != "" {
+		path = fmt.Sprintf("%s?%s", path, qs)
 	}
 
 	var res RecordListResult
@@ -171,24 +177,28 @@ func (c *Client) ListRecordsPaginated(moulName string, page, perPage int, sort, 
 // ListRecordsCursor fetches records after a cursor ID for cursor-based pagination.
 func (c *Client) ListRecordsCursor(moulName, after string, perPage int, sort, filter string, expand ...string) (*RecordListResult, error) {
 	path := fmt.Sprintf("/api/moul/%s/records", moulName)
-	var params []string
+	values := url.Values{}
 	if after != "" {
-		params = append(params, fmt.Sprintf("after=%s", after))
+		values.Set("after", after)
 	}
 	if perPage > 0 {
-		params = append(params, fmt.Sprintf("perPage=%d", perPage))
+		values.Set("perPage", strconv.Itoa(perPage))
 	}
 	if sort != "" {
-		params = append(params, fmt.Sprintf("sort=%s", sort))
+		values.Set("sort", sort)
 	}
 	if filter != "" {
-		params = append(params, fmt.Sprintf("filter=%s", filter))
+		if strings.ContainsAny(filter, "=~><!") {
+			values.Set("filter", filter)
+		} else {
+			values.Set("search", filter)
+		}
 	}
 	if len(expand) > 0 {
-		params = append(params, fmt.Sprintf("expand=%s", strings.Join(expand, ",")))
+		values.Set("expand", strings.Join(expand, ","))
 	}
-	if len(params) > 0 {
-		path = fmt.Sprintf("%s?%s", path, strings.Join(params, "&"))
+	if qs := values.Encode(); qs != "" {
+		path = fmt.Sprintf("%s?%s", path, qs)
 	}
 
 	var res RecordListResult
@@ -241,10 +251,14 @@ func (c *Client) DeleteRecord(moulName string, id string) error {
 	return c.request("DELETE", path, nil, nil)
 }
 
-// ListVisits retrieves the visits log (requires JWT authentication).
-func (c *Client) ListVisits() ([]map[string]interface{}, error) {
+// ListVisits retrieves the visits log (requires JWT authentication), optionally filtered by 'from' timestamp.
+func (c *Client) ListVisits(from ...string) ([]map[string]interface{}, error) {
+	path := "/api/visits"
+	if len(from) > 0 && from[0] != "" {
+		path = fmt.Sprintf("/api/visits?from=%s", url.QueryEscape(from[0]))
+	}
 	var visits []map[string]interface{}
-	err := c.request("GET", "/api/visits", nil, &visits)
+	err := c.request("GET", path, nil, &visits)
 	return visits, err
 }
 
@@ -382,6 +396,11 @@ func (c *Client) UpdateSettings(settings map[string]string) (map[string]string, 
 	var updated map[string]string
 	err := c.request("PATCH", "/api/settings", settings, &updated)
 	return updated, err
+}
+
+// ReloadSettings triggers a hot-reload of server runtime settings.
+func (c *Client) ReloadSettings() error {
+	return c.request("POST", "/api/admin/reload", nil, nil)
 }
 
 // GetEmailTemplates fetches the email templates for a specific auth moul.

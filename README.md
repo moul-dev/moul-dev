@@ -298,11 +298,11 @@ Credentials and connection state are securely saved to `~/.config/moul.json` (wi
 - **Dashboard**: High-level system overview displaying collection counters, active workers, visit statistics, and quick system links.
 - **Real-Time Inline Form Validation**: Built-in validation for email format, password requirements (minimum 8 characters with confirmation matching during root setup and Auth collection record creation), URLs, numeric inputs, and JSON syntax.
 - **Collection Schema Management**: Create new collections (`base`, `auth`, `worker`, `analytic`), add/remove fields, choose field types, and write HCL access control rules.
-- **Dynamic Record CRUD Console**: Browse collection records with pagination, inspect JSON payloads, add new records, edit existing records, and delete records.
-- **Background Workers Monitor**: Real-time view of background job queues (`executing`, `available`, `completed`, `discarded`). Inspect job parameters, view error stack traces, force-retry failed jobs (`r`), or discard jobs (`c`).
-- **Analytics & Visits Observatory**: Authenticate user credentials (`l`) to inspect live site visit logs (`_visits`) including OS, browser, device type, resolved GeoIP location, landing page, and UTM campaign tracking parameters.
+- **Dynamic Record CRUD Console**: Browse collection records with pagination (`>` / `<`), live search and server-side filtering (`/`), inspect JSON payloads, copy payload directly to clipboard (`c`), add new records, edit existing records, and delete records.
+- **Background Workers Monitor**: Real-time 3-second auto-refreshing monitor of background job queues (`executing`, `available`, `completed`, `discarded`). Inspect job parameters, copy details (`c`), force-retry failed jobs (`r`), or discard jobs (`c`).
+- **Analytics & Visits Observatory**: Authenticate user credentials (`l`) to inspect live site visit logs (`_visits`) with date range filtering (`t`: All Time, 24h, 7d, 30d), OS, browser, device type, resolved GeoIP location, landing page, and UTM campaign tracking parameters.
 - **Email Templates Editor**: Customize transactional email templates (OTP verification, Password Reset) per auth collection and send live test emails.
-- **System Settings Panel**: Comprehensive configuration over 7 system areas: S3 Object Storage, Litestream Continuous Backups, Sliding Window Rate Limiting Rules, Root User IP Whitelist, Transactional Email Delivery (SES, Resend, Mailgun, SendGrid, Cloudflare, Console), OAuth2 Identity Providers (GitHub, Google, Apple), and Root Administrator Credentials.
+- **System Settings Panel**: Comprehensive configuration over dynamic system areas with instant server-side hot-reloading (`POST /api/admin/reload` or `R` in TUI): S3 Object Storage, Litestream Continuous Backups, Sliding Window Rate Limiting Rules, Root User IP Whitelist, Transactional Email Delivery (SES, Resend, Mailgun, SendGrid, Cloudflare, Console), OAuth2 Identity Providers (GitHub, Google, Apple), and Root Administrator Credentials.
 
 ### Keyboard Controls Guide
 
@@ -316,22 +316,33 @@ Credentials and connection state are securely saved to `~/.config/moul.json` (wi
 | | `r` | Refresh schema list from server |
 | | `Esc` | Disconnect and return to login screen |
 | **Record List** | `↑`/`↓` or `k`/`j` | Scroll record list |
+| | `>` / `<` (or `.` / `,`) | Next / Previous page |
+| | `/` | Activate live search & filter query |
 | | `Enter` / `v` | Inspect detailed JSON payload |
 | | `n` | Create new record |
 | | `e` | Edit selected record |
 | | `d` | Delete selected record |
 | | `r` | Refresh record list |
-| | `Esc` / `h` / `←` | Back to dashboard |
-| **Worker Monitor** | `↑`/`↓` or `k`/`j` | Scroll job queue |
+| | `Esc` / `h` / `←` | Clear filter or return to dashboard |
+| **Record Detail / Job Detail** | `c` | Copy JSON payload to OS clipboard |
+| | `↑`/`↓` or `k`/`j` | Scroll payload viewport |
+| | `Esc` / `q` / `h` | Return to list |
+| **Worker Monitor** | `↑`/`↓` or `k`/`j` | Scroll job queue (auto-refreshes every 3s) |
 | | `Enter` / `v` | View job details & stack trace |
 | | `r` | Force-retry failed job |
 | | `c` | Discard/cancel job |
-| | `f` | Refresh worker status |
+| | `f` | Refresh worker status immediately |
 | | `Esc` | Back to dashboard |
 | **Analytics Console** | `l` | Log in user to retrieve JWT token |
+| | `t` / `d` | Cycle date range (All Time, 24h, 7d, 30d) |
 | | `↑`/`↓` or `k`/`j` | Scroll visit logs |
 | | `Enter` / `v` | View visit metadata & UTM details |
 | | `f` | Refresh visits |
+| | `Esc` | Back to dashboard |
+| **Settings Panel** | `←`/`→` | Switch settings tabs or toggle Save/Cancel |
+| | `↑`/`↓` or `Tab` | Navigate settings fields |
+| | `Space` / `Enter` | Toggle booleans or submit form |
+| | `R` | Hot-reload running server runtime settings |
 | | `Esc` | Back to dashboard |
 
 ---

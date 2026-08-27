@@ -131,3 +131,38 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 	// Return updated settings
 	return h.GetSettings(c)
 }
+
+// ReloadSettings triggers hot-reloading of rate limiters, root IPs, mailer, and TLS configurations.
+func (h *SettingsHandler) ReloadSettings(c *echo.Context) error {
+	var errs []string
+	if err := middleware.ReloadRateLimiter(h.DB); err != nil {
+		errs = append(errs, "rate_limiter: "+err.Error())
+	}
+	if err := middleware.ReloadRootIPs(h.DB); err != nil {
+		errs = append(errs, "root_ips: "+err.Error())
+	}
+	if h.Mailer != nil {
+		if err := h.Mailer.Reload(h.DB); err != nil {
+			errs = append(errs, "mailer: "+err.Error())
+		}
+	}
+	if h.TLSManager != nil {
+		if err := h.TLSManager.Reload(h.DB); err != nil {
+			errs = append(errs, "tls: "+err.Error())
+		}
+	}
+
+	if len(errs) > 0 {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"status":  "partial_success",
+			"message": "Settings reloaded with warnings",
+			"errors":  errs,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"status":  "ok",
+		"message": "Settings reloaded successfully",
+	})
+}
+

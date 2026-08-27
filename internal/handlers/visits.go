@@ -47,6 +47,17 @@ func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 		perPage = 200
 	}
 
+	fromParam := c.QueryParam("from")
+	toParam := c.QueryParam("to")
+
+	var conditions []dbx.Expression
+	if fromParam != "" {
+		conditions = append(conditions, dbx.NewExp("started_at >= {:from}", dbx.Params{"from": fromParam}))
+	}
+	if toParam != "" {
+		conditions = append(conditions, dbx.NewExp("started_at <= {:to}", dbx.Params{"to": toParam}))
+	}
+
 	var rows []dbx.NullStringMap
 	var err error
 
@@ -54,13 +65,23 @@ func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 	if pageParam != "" || perPageParam != "" {
 		offset := (page - 1) * perPage
 
+		countQuery := h.DB.Select("COUNT(*)").From("_visits")
+		if len(conditions) > 0 {
+			countQuery = countQuery.Where(dbx.And(conditions...))
+		}
+
 		var totalItems int
-		if err := h.DB.Select("COUNT(*)").From("_visits").Row(&totalItems); err != nil {
+		if err := countQuery.Row(&totalItems); err != nil {
 			logger.Error("Failed to count visits", "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to count visits")
 		}
 
-		err = h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(int64(perPage)).Offset(int64(offset)).All(&rows)
+		selectQuery := h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(int64(perPage)).Offset(int64(offset))
+		if len(conditions) > 0 {
+			selectQuery = selectQuery.Where(dbx.And(conditions...))
+		}
+
+		err = selectQuery.All(&rows)
 		if err != nil && err != sql.ErrNoRows {
 			logger.Error("Failed to retrieve visits", "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")
@@ -90,7 +111,11 @@ func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 	}
 
 	// Legacy / default array response capped at 200 records
-	err = h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(200).All(&rows)
+	selectQuery := h.DB.Select("*").From("_visits").OrderBy("started_at DESC").Limit(200)
+	if len(conditions) > 0 {
+		selectQuery = selectQuery.Where(dbx.And(conditions...))
+	}
+	err = selectQuery.All(&rows)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Error("Failed to retrieve visits", "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve visits")
