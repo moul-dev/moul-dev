@@ -538,5 +538,3 @@ func (h *SetupHandler) UpdateRootAccount(c *echo.Context) error {
 		},
 	})
 }
-
-

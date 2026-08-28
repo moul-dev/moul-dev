@@ -17,15 +17,15 @@ import (
 
 // Options defines configuration parameters for the self-updater.
 type Options struct {
-	RepoOwner      string                           // GitHub owner/org, defaults to "moul-dev"
-	RepoName       string                           // GitHub repo name, defaults to "moul-dev"
-	AppName        string                           // Executable name: "moul-dev" or "moul"
-	CurrentVer     string                           // Current version string (e.g. "v2026.07" or "dev")
-	Force          bool                             // Force update even if version matches
-	SystemdService string                           // Optional systemd service name to restart after binary update
-	ExecPath       string                           // Optional override for target executable path (used in tests)
-	HTTPClient     *http.Client                     // Optional custom HTTP client
-	SystemctlExec  func(serviceName string) error   // Optional custom systemctl executor (used in tests)
+	RepoOwner      string                         // GitHub owner/org, defaults to "moul-dev"
+	RepoName       string                         // GitHub repo name, defaults to "moul-dev"
+	AppName        string                         // Executable name: "moul-dev" or "moul"
+	CurrentVer     string                         // Current version string (e.g. "v2026.07" or "dev")
+	Force          bool                           // Force update even if version matches
+	SystemdService string                         // Optional systemd service name to restart after binary update
+	ExecPath       string                         // Optional override for target executable path (used in tests)
+	HTTPClient     *http.Client                   // Optional custom HTTP client
+	SystemctlExec  func(serviceName string) error // Optional custom systemctl executor (used in tests)
 }
 
 // ReleaseInfo models the GitHub release API payload.
@@ -250,4 +250,3 @@ func restartSystemdService(serviceName string) error {
 	}
 	return nil
 }
-

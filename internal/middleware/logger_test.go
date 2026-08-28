@@ -129,4 +129,3 @@ func TestRequestLogger(t *testing.T) {
 		})
 	}
 }
-

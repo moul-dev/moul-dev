@@ -74,4 +74,3 @@ func (s *Server) StreamableServer() *server.StreamableHTTPServer {
 func (s *Server) ServeStdio() error {
 	return server.ServeStdio(s.mcpServer)
 }
-

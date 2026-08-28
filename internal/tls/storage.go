@@ -22,9 +22,9 @@ var (
 
 // DBStorage implements certmagic.Storage using SQLite via dbx.
 type DBStorage struct {
-	db        *dbx.DB
-	locks     map[string]time.Time
-	locksMu   sync.Mutex
+	db      *dbx.DB
+	locks   map[string]time.Time
+	locksMu sync.Mutex
 }
 
 // NewDBStorage creates a new DBStorage instance.

@@ -23,9 +23,9 @@ type DeviceAuthRequest struct {
 
 // DeviceFlowStore manages the active device flow requests.
 type DeviceFlowStore struct {
-	mu          sync.RWMutex
-	byDevice    map[string]*DeviceAuthRequest
-	byUserCode  map[string]*DeviceAuthRequest
+	mu         sync.RWMutex
+	byDevice   map[string]*DeviceAuthRequest
+	byUserCode map[string]*DeviceAuthRequest
 }
 
 // Global Device Flow Store
@@ -72,7 +72,7 @@ func (s *DeviceFlowStore) CreateDeviceRequest(clientID string, expiry time.Durat
 	}
 
 	s.byDevice[deviceCode] = req
-	
+
 	// Normalize for store lookup key
 	normalizedUserCode := strings.ToUpper(strings.ReplaceAll(userCode, "-", ""))
 	s.byUserCode[normalizedUserCode] = req

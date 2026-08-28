@@ -6,8 +6,9 @@ tmp_dir = "tmp/build"
 [build]
   cmd = "go build -o ./tmp/build/main ./cmd/mould/main.go"
   bin = "./tmp/build/main"
-  delay = 1000
-  exclude_dir = ["bin", "tmp", ".git", ".gemini", ".agents", "website", "ui"]
+  delay = 500
+  include_dir = ["cmd", "internal", "pkg", "docs"]
+  exclude_dir = ["bin", "tmp", ".git", ".gemini", ".agents", "website", "ui", "node_modules", "storage", "assets"]
   exclude_regex = ["_test\\.go"]
   exclude_unchanged = true
   include_ext = ["go", "toml"]

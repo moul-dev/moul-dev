@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atotto/clipboard"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/atotto/clipboard"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 )
@@ -44,14 +44,14 @@ const (
 
 // Model is the main state container for the moul TUI.
 type Model struct {
-	State        AppState
-	Client       *Client
-	Config       *Config
-	Err          error
-	SuccessMsg   string
-	Width        int
-	Height       int
-	Ready        bool
+	State      AppState
+	Client     *Client
+	Config     *Config
+	Err        error
+	SuccessMsg string
+	Width      int
+	Height     int
+	Ready      bool
 
 	// Navigation & Sidebar
 	Mouls              []schema.Moul
@@ -118,33 +118,33 @@ type Model struct {
 	recordFormMultiSel map[string]*[]string
 
 	// Moul creation data
-	newMoulName            string
-	newMoulType            string
-	newMoulListRule        string
-	newMoulViewRule        string
-	newMoulCreateRule      string
-	newMoulUpdateRule      string
-	newMoulDeleteRule      string
-	newMoulFieldsList      []schema.MoulField
-	newMoulAction          string
-	newFieldName           string
-	newFieldType           string
-	newFieldOptions        string
-	newFieldRelationTarget string
-	newFieldRelationCard   string
+	newMoulName              string
+	newMoulType              string
+	newMoulListRule          string
+	newMoulViewRule          string
+	newMoulCreateRule        string
+	newMoulUpdateRule        string
+	newMoulDeleteRule        string
+	newMoulFieldsList        []schema.MoulField
+	newMoulAction            string
+	newFieldName             string
+	newFieldType             string
+	newFieldOptions          string
+	newFieldRelationTarget   string
+	newFieldRelationCard     string
 	newFieldRelationOnDelete string
-	MoulActionForm         *huh.Form
-	MoulFieldForm          *huh.Form
-	MoulRulesForm          *huh.Form
-	MoulFieldDeleteForm    *huh.Form
-	MoulFieldSelectForm    *huh.Form
-	fieldToDelete          string
-	fieldToEdit            string
-	editingFieldName       string
-	isEditingField         bool
-	isEditingMoul          bool
-	editingMoulName        string
-	moulWizardState        string // "metadata", "fields", "add_field", "edit_select", "delete_select", "rules"
+	MoulActionForm           *huh.Form
+	MoulFieldForm            *huh.Form
+	MoulRulesForm            *huh.Form
+	MoulFieldDeleteForm      *huh.Form
+	MoulFieldSelectForm      *huh.Form
+	fieldToDelete            string
+	fieldToEdit              string
+	editingFieldName         string
+	isEditingField           bool
+	isEditingMoul            bool
+	editingMoulName          string
+	moulWizardState          string // "metadata", "fields", "add_field", "edit_select", "delete_select", "rules"
 
 	// Device Auth Data
 	authMode        string
@@ -155,68 +155,68 @@ type Model struct {
 	pollExpiry      time.Time
 
 	// Settings Screen
-	settingFileS3Enabled         string
-	settingFileS3Bucket          string
-	settingFileS3Endpoint        string
-	settingFileS3Region          string
-	settingFileS3AccessKey       string
-	settingFileS3SecretKey       string
-	settingFileS3ForcePath       string
-	settingLiteEnabled           string
-	settingLiteS3Bucket          string
-	settingLiteS3Endpoint        string
-	settingLiteS3Region          string
-	settingLiteAccessKey         string
-	settingLiteSecretKey         string
-	settingLiteS3ForcePath       string
-	settingLiteReplica           string
-	settingRateLimitingEnabled   string
-	settingRateLimitingRules     []schema.RateLimitRule
-	selectedRateLimitRuleIdx     int
-	rateLimitSubState            string // "list", "add", "edit"
-	rateLimitFormInputs          []textinput.Model
-	rateLimitFormFocusIdx        int
-	settingRootIPEnabled         string
-	settingRootAllowedIPs        string
-	rootIPsInputs                []textinput.Model
-	settingEmailEnabled          string
-	settingEmailProvider         string
-	settingEmailFromAddress      string
-	settingEmailFromName         string
-	settingEmailAPIKey           string
-	settingEmailAPISecret        string
-	settingEmailDomain           string
-	settingEmailRegion           string
-	settingEmailEndpoint         string
-	emailInputs                  []textinput.Model
+	settingFileS3Enabled       string
+	settingFileS3Bucket        string
+	settingFileS3Endpoint      string
+	settingFileS3Region        string
+	settingFileS3AccessKey     string
+	settingFileS3SecretKey     string
+	settingFileS3ForcePath     string
+	settingLiteEnabled         string
+	settingLiteS3Bucket        string
+	settingLiteS3Endpoint      string
+	settingLiteS3Region        string
+	settingLiteAccessKey       string
+	settingLiteSecretKey       string
+	settingLiteS3ForcePath     string
+	settingLiteReplica         string
+	settingRateLimitingEnabled string
+	settingRateLimitingRules   []schema.RateLimitRule
+	selectedRateLimitRuleIdx   int
+	rateLimitSubState          string // "list", "add", "edit"
+	rateLimitFormInputs        []textinput.Model
+	rateLimitFormFocusIdx      int
+	settingRootIPEnabled       string
+	settingRootAllowedIPs      string
+	rootIPsInputs              []textinput.Model
+	settingEmailEnabled        string
+	settingEmailProvider       string
+	settingEmailFromAddress    string
+	settingEmailFromName       string
+	settingEmailAPIKey         string
+	settingEmailAPISecret      string
+	settingEmailDomain         string
+	settingEmailRegion         string
+	settingEmailEndpoint       string
+	emailInputs                []textinput.Model
 
-	settingOAuthRedirectURL         string
-	settingOAuthGitHubEnabled       string
-	settingOAuthGitHubClientID      string
-	settingOAuthGitHubClientSecret  string
-	settingOAuthGoogleEnabled       string
-	settingOAuthGoogleClientID      string
-	settingOAuthGoogleClientSecret  string
-	settingOAuthAppleEnabled        string
-	settingOAuthAppleClientID       string
-	settingOAuthAppleClientSecret   string
-	settingOAuthAppleTeamID         string
-	settingOAuthAppleKeyID          string
-	settingOAuthApplePrivateKey     string
-	oauthInputs                     []textinput.Model
+	settingOAuthRedirectURL        string
+	settingOAuthGitHubEnabled      string
+	settingOAuthGitHubClientID     string
+	settingOAuthGitHubClientSecret string
+	settingOAuthGoogleEnabled      string
+	settingOAuthGoogleClientID     string
+	settingOAuthGoogleClientSecret string
+	settingOAuthAppleEnabled       string
+	settingOAuthAppleClientID      string
+	settingOAuthAppleClientSecret  string
+	settingOAuthAppleTeamID        string
+	settingOAuthAppleKeyID         string
+	settingOAuthApplePrivateKey    string
+	oauthInputs                    []textinput.Model
 
 	// Settings Tabs & Custom Inputs
-	settingRootUsername          string
-	settingRootName              string
-	settingRootEmail             string
-	settingRootCurrentPassword   string
-	settingRootNewPassword       string
-	settingRootConfirmPassword   string
-	rootPwdInputs                []textinput.Model
-	settingsActiveTab            int // dynamic index into settingsTabs
-	settingsFocusIndex           int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
-	storageInputs                []textinput.Model
-	liteInputs                   []textinput.Model
+	settingRootUsername        string
+	settingRootName            string
+	settingRootEmail           string
+	settingRootCurrentPassword string
+	settingRootNewPassword     string
+	settingRootConfirmPassword string
+	rootPwdInputs              []textinput.Model
+	settingsActiveTab          int // dynamic index into settingsTabs
+	settingsFocusIndex         int // 0 = Tabs, 1..N = Fields, N+1 = Save, N+2 = Cancel
+	storageInputs              []textinput.Model
+	liteInputs                 []textinput.Model
 
 	// Records Screen Pagination & Search
 	recordPage         int
@@ -251,10 +251,10 @@ type Model struct {
 	flagFormGroups       string
 	FeatureFlagForm      *huh.Form
 
-	flagEvalKey          string
-	flagEvalContextJSON  string
-	flagEvalResult       *EvaluationResultItem
-	FeatureFlagEvalForm  *huh.Form
+	flagEvalKey         string
+	flagEvalContextJSON string
+	flagEvalResult      *EvaluationResultItem
+	FeatureFlagEvalForm *huh.Form
 }
 
 // NewModel initializes the TUI model with default values.
@@ -398,7 +398,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingOAuthAppleTeamID = msg.Settings["oauth_apple_team_id"]
 		m.settingOAuthAppleKeyID = msg.Settings["oauth_apple_key_id"]
 		m.settingOAuthApplePrivateKey = msg.Settings["oauth_apple_private_key"]
-		
+
 		if msg.Account != nil {
 			if u, ok := msg.Account["username"].(string); ok {
 				m.settingRootUsername = u
@@ -1575,4 +1575,3 @@ type testEmailSentMsg struct {
 	msg string
 	err error
 }
-

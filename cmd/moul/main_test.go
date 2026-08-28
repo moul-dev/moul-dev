@@ -174,4 +174,3 @@ func TestMoulUpdate_RunUpdateArgs(t *testing.T) {
 		})
 	}
 }
-

@@ -46,8 +46,8 @@ var (
 				Bold(true)
 
 	SidebarItemInactiveStyle = lipgloss.NewStyle().
-				Foreground(ColorTextMuted).
-				PaddingLeft(1)
+					Foreground(ColorTextMuted).
+					PaddingLeft(1)
 
 	SidebarHeaderStyle = lipgloss.NewStyle().
 				Bold(true).

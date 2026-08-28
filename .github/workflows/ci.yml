@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  test-go:
+    name: Go Tests & Race Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Go Format & Vet Check
+        run: |
+          test -z "$(gofmt -l .)" || (echo "gofmt found unformatted files:" && gofmt -l . && exit 1)
+          go vet ./...
+
+      - name: Run Go Tests & Self-Contained E2E
+        run: |
+          MOUL_TEST_ENV=true go test -v -race -cover ./internal/... ./pkg/...
+
+  check-ui:
+    name: Admin UI Typecheck & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install UI Dependencies
+        run: bun install --cwd ui
+
+      - name: Typecheck Admin UI
+        run: bun --cwd ui tsc
+
+      - name: Build Admin UI
+        run: bun --cwd ui vite build
+
+  check-website:
+    name: Website & Docs Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Website Dependencies
+        run: bun install --cwd website
+
+      - name: Build Website
+        run: bun --cwd website build
+
+  verify-docs-sync:
+    name: Verify Documentation Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Sync Docs
+        run: make sync-docs
+
+      - name: Verify Docs in Sync
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Documentation in website/public/ is out of sync with docs/."
+            echo "Please run 'make sync-docs' locally and commit the changes."
+            exit 1
+          fi

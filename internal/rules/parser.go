@@ -231,7 +231,7 @@ func processCollectionFilters(tokens []Token) ([]Token, map[string]*CollectionGr
 
 				safeKey := strings.ReplaceAll(groupKey, ":", "_")
 				placeholder := "exists_group_" + safeKey
-				
+
 				isFirst := len(g.Conditions) == 1
 				if isFirst {
 					newTokens = append(newTokens, Token{Type: TokenIdentifier, Value: placeholder})

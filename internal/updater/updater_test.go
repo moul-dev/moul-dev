@@ -347,4 +347,3 @@ func TestUpdate_SystemdService_RestartsService(t *testing.T) {
 		t.Errorf("Expected systemd service 'moul.service' to be restarted, got %q", restartedService)
 	}
 }
-

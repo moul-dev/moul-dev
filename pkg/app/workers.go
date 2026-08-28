@@ -101,4 +101,3 @@ func (a *App) RegisterBuiltinWorkers() {
 		return nil
 	})
 }
-

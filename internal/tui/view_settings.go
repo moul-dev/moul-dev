@@ -420,25 +420,25 @@ func (m *Model) saveSettingsForm() {
 	}
 
 	payload := map[string]string{
-		"file_s3_enabled":                 m.settingFileS3Enabled,
-		"file_s3_bucket":                  m.settingFileS3Bucket,
-		"file_s3_endpoint":                m.settingFileS3Endpoint,
-		"file_s3_region":                  m.settingFileS3Region,
-		"file_s3_access_key":              m.settingFileS3AccessKey,
-		"file_s3_secret_key":              m.settingFileS3SecretKey,
-		"file_s3_force_path_style":        m.settingFileS3ForcePath,
-		"litestream_enabled":              m.settingLiteEnabled,
-		"litestream_s3_bucket":            m.settingLiteS3Bucket,
-		"litestream_s3_endpoint":          m.settingLiteS3Endpoint,
-		"litestream_s3_region":            m.settingLiteS3Region,
-		"litestream_access_key_id":        m.settingLiteAccessKey,
-		"litestream_secret_access_key":    m.settingLiteSecretKey,
-		"litestream_s3_force_path_style":  m.settingLiteS3ForcePath,
-		"litestream_replica_path":         m.settingLiteReplica,
-		"rate_limiting_enabled":           m.settingRateLimitingEnabled,
-		"rate_limiting_rules":             string(rulesJSON),
-		"root_user_ip_enabled":            m.settingRootIPEnabled,
-		"root_user_allowed_ips":           m.settingRootAllowedIPs,
+		"file_s3_enabled":                m.settingFileS3Enabled,
+		"file_s3_bucket":                 m.settingFileS3Bucket,
+		"file_s3_endpoint":               m.settingFileS3Endpoint,
+		"file_s3_region":                 m.settingFileS3Region,
+		"file_s3_access_key":             m.settingFileS3AccessKey,
+		"file_s3_secret_key":             m.settingFileS3SecretKey,
+		"file_s3_force_path_style":       m.settingFileS3ForcePath,
+		"litestream_enabled":             m.settingLiteEnabled,
+		"litestream_s3_bucket":           m.settingLiteS3Bucket,
+		"litestream_s3_endpoint":         m.settingLiteS3Endpoint,
+		"litestream_s3_region":           m.settingLiteS3Region,
+		"litestream_access_key_id":       m.settingLiteAccessKey,
+		"litestream_secret_access_key":   m.settingLiteSecretKey,
+		"litestream_s3_force_path_style": m.settingLiteS3ForcePath,
+		"litestream_replica_path":        m.settingLiteReplica,
+		"rate_limiting_enabled":          m.settingRateLimitingEnabled,
+		"rate_limiting_rules":            string(rulesJSON),
+		"root_user_ip_enabled":           m.settingRootIPEnabled,
+		"root_user_allowed_ips":          m.settingRootAllowedIPs,
 		"email_enabled":                  m.settingEmailEnabled,
 		"email_provider":                 m.settingEmailProvider,
 		"email_from_address":             m.settingEmailFromAddress,
@@ -591,7 +591,7 @@ func (m *Model) viewSettings() string {
 					line := fmt.Sprintf("%-25s %-15d %-15d %-20s", r.Label, r.MaxRequests, r.Interval, r.TargetedUsers)
 					isTableFocused := (m.settingsFocusIndex == 2)
 					if rIdx == m.selectedRateLimitRuleIdx && isTableFocused {
-						s.WriteString(TableCellSelectedStyle.Width(m.Width - 10).Render(line) + "\n")
+						s.WriteString(TableCellSelectedStyle.Width(m.Width-10).Render(line) + "\n")
 					} else {
 						if rIdx == m.selectedRateLimitRuleIdx {
 							s.WriteString("  " + lipgloss.NewStyle().Foreground(ColorCyan).Render(">") + " " + TableCellStyle.Render(line) + "\n")

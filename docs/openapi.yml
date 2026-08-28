@@ -2191,7 +2191,109 @@ paths:
         '404':
           description: Collection not found.
 
+  /api/moul/{name}/retry-jobs:
+    post:
+      summary: Retry Failed or Discarded Background Jobs
+      description: Resets discarded or failed jobs back to `available` state for immediate processing by the worker engine.
+      tags:
+        - Background Worker Engine
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional specific list of job IDs to retry. If empty, all discarded/cancelled jobs are retried.
+      responses:
+        '200':
+          description: Jobs retried successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  rows_affected:
+                    type: integer
+        '400':
+          description: Not a worker collection.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          description: Collection not found.
+        '500':
+          $ref: '#/components/responses/500InternalError'
+
+  /api/rules/test:
+    post:
+      summary: Test and Evaluate Rule Expression
+      description: Translates and evaluates a PocketBase-like rule expression against mock record, auth, and request context.
+      tags:
+        - Rules Engine & Tooling
+      security:
+        - BearerAuth: []
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rule
+              properties:
+                rule:
+                  type: string
+                  example: "author_id = @request.auth.id"
+                record:
+                  type: object
+                  additionalProperties: true
+                auth:
+                  type: object
+                  additionalProperties: true
+                request:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Rule evaluation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  matched:
+                    type: boolean
+                  translated:
+                    type: string
+                  duration_us:
+                    type: integer
+                  error:
+                    type: string
+        '400':
+          description: Invalid request payload.
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
   /api/visits:
+
     get:
       summary: List Visitor Sessions
       description: Returns visitor session records recorded by request tracking.

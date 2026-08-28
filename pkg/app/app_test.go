@@ -115,7 +115,6 @@ func TestAppWorkerExtensibility(t *testing.T) {
 	}
 }
 
-
 func TestAppRouteExtensibility(t *testing.T) {
 	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
 	envy.Set("MOUL_ADMIN_KEY", "test-admin-key")
@@ -222,4 +221,3 @@ func TestAppHooksError(t *testing.T) {
 		t.Errorf("Expected error from failing OnBeforeStart hook")
 	}
 }
-

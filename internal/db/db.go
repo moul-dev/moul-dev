@@ -1,14 +1,17 @@
 package db
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/schema"
 
 	"github.com/pocketbase/dbx"
@@ -20,6 +23,15 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	db, err := dbx.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
+	}
+
+	if os.Getenv("MOUL_DEBUG_SQL") == "true" || os.Getenv("MOUL_DEBUG") == "true" {
+		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, rows *sql.Rows, err error) {
+			logger.Debug("SQL Query", "duration", t.String(), "sql", sqlStr, "err", err)
+		}
+		db.ExecLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, result sql.Result, err error) {
+			logger.Debug("SQL Exec", "duration", t.String(), "sql", sqlStr, "err", err)
+		}
 	}
 
 	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
@@ -131,8 +143,6 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create _feature_flags table: %w", err)
 	}
-
-
 
 	// Create meta-table _certmagic
 	_, err = db.NewQuery(`
@@ -1061,6 +1071,3 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 
 	return totalDeleted, nil
 }
-
-
-

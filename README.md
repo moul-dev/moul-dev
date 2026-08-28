@@ -120,6 +120,56 @@ make dev
 # Runs air using .air.toml
 ```
 
+### Unified Multi-Process Dev Runner
+
+Start both the Go backend daemon (with live reload) and the Web Admin UI (Vite dev server) concurrently:
+
+```bash
+make dev-all
+```
+
+### Database Seeding & Mock Fixtures
+
+Populate your local SQLite database with realistic demonstration collections (`users`, `posts`, `categories`, `tasks_queue`, `events`), demo records, relations, worker jobs, and OpenFeature flags:
+
+```bash
+make seed
+# Or directly via CLI:
+go run cmd/mould/main.go seed --db moul-local.db
+```
+
+### TypeScript Type Generation (`typegen`)
+
+Generate end-to-end TypeScript interfaces directly from dynamic collection schemas:
+
+```bash
+make typegen
+# Outputs to ui/src/types/schema.d.ts
+```
+
+### Rule Expression Evaluation Sandbox
+
+Test, validate, and benchmark rule expressions against mock JSON payloads:
+
+```bash
+go run cmd/mould/main.go test-rule \
+  --rule="author_id = @request.auth.id && views_count > 100" \
+  --record='{"author_id": "usr_admin_001", "views_count": 1420}' \
+  --auth='{"id": "usr_admin_001"}'
+```
+
+### Background Worker DLQ Management
+
+Inspect discarded jobs and retry failed worker executions:
+
+```bash
+# List discarded jobs in dead-letter queue (DLQ)
+go run cmd/mould/main.go worker list-failed tasks_queue
+
+# Retry all failed jobs (or a specific job by ID)
+go run cmd/mould/main.go worker retry tasks_queue [optional_job_id]
+```
+
 ### Local S3 Storage (MinIO)
 
 For testing file uploads and Litestream database backups locally against an S3 API:
@@ -144,9 +194,15 @@ For testing file uploads and Litestream database backups locally against an S3 A
 
 ### Testing & Verification Flows
 
-`mould` includes unit tests, integration tests, and automated cURL verification flows.
+`mould` includes self-contained in-process integration tests, unit test suites, and automated cURL verification flows.
 
-#### 1. Unit & Integration Tests
+#### 1. Self-Contained E2E Flow (No External Server Needed)
+```bash
+# Run full CRUD, auth, worker, analytics, and rules verification in-process
+make test-e2e
+```
+
+#### 2. Unit & Integration Tests
 ```bash
 # Run all Go package tests
 make test-go
@@ -158,8 +214,8 @@ make test-coverage
 make test-tui
 ```
 
-#### 2. Automated cURL Flow Scripts
-Ensure the server is running (`make run`) in a separate terminal before executing flow tests:
+#### 3. Automated cURL Flow Scripts (Live Server)
+Ensure the server is running (`make run`) in a separate terminal before executing live curl flow tests:
 
 - **Verify Dynamic CRUD, Auth, and Rules Enforcement**:
   ```bash
@@ -173,6 +229,7 @@ Ensure the server is running (`make run`) in a separate terminal before executin
   ```bash
   make test-analytics
   ```
+
 
 ---
 

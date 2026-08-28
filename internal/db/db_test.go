@@ -316,5 +316,3 @@ func TestCleanupCompletedJobs(t *testing.T) {
 		t.Errorf("Expected job-completed-recent to remain in database, got count %d", count)
 	}
 }
-
-

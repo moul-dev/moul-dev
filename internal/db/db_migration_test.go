@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/pocketbase/dbx"
 )
 
 func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
@@ -23,8 +23,8 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		Type: "base",
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
-			{Name: "price", Type: "text"}, // Stored as text initially ("99.99")
-			{Name: "in_stock", Type: "text"}, // Stored as text ("true")
+			{Name: "price", Type: "text"},            // Stored as text initially ("99.99")
+			{Name: "in_stock", Type: "text"},         // Stored as text ("true")
 			{Name: "deprecated_notes", Type: "text"}, // Field to be removed
 		},
 	}
@@ -54,9 +54,9 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		Type: "base",
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
-			{Name: "price", Type: "number"},    // Type changed to number
-			{Name: "in_stock", Type: "bool"},    // Type changed to bool
-			{Name: "category", Type: "text"},    // New field added
+			{Name: "price", Type: "number"},  // Type changed to number
+			{Name: "in_stock", Type: "bool"}, // Type changed to bool
+			{Name: "category", Type: "text"}, // New field added
 		},
 	}
 
@@ -106,10 +106,10 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 
 	// 4. Verify row data was converted properly
 	var row struct {
-		ID       string  `db:"id"`
-		Title    string  `db:"title"`
-		Price    float64 `db:"price"`
-		InStock  int     `db:"in_stock"`
+		ID      string  `db:"id"`
+		Title   string  `db:"title"`
+		Price   float64 `db:"price"`
+		InStock int     `db:"in_stock"`
 	}
 
 	err = database.NewQuery("SELECT id, title, price, in_stock FROM products WHERE id = 'p1'").One(&row)

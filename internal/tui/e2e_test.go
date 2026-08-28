@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/huh/v2"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
@@ -392,7 +392,7 @@ func TestTUIE2E(t *testing.T) {
 	}
 
 	// Toggle S3 storage enabled
-	_ = update(tea.KeyPressMsg{Text: "down"}) // focus S3 Enabled (index 1)
+	_ = update(tea.KeyPressMsg{Text: "down"})  // focus S3 Enabled (index 1)
 	_ = update(tea.KeyPressMsg{Text: "enter"}) // toggle S3 Enabled to true
 
 	// Set inputs

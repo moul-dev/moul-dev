@@ -120,4 +120,3 @@ func SlugifyFilename(filename string) string {
 
 	return cleanBase + cleanExt.String()
 }
-

@@ -34,7 +34,7 @@ func TestInitEmailTemplateForm(t *testing.T) {
 		Mouls: []schema.Moul{
 			{Name: "users", Type: "auth"},
 		},
-		ActiveSidebarIndex: 0,
+		ActiveSidebarIndex:    0,
 		emailTemplates:        templates,
 		selectedTemplateIndex: 1, // Password Reset
 	}
@@ -54,7 +54,7 @@ func TestInitEmailTemplateForm(t *testing.T) {
 	// Verify we can update fields in form
 	m.tempSubject = "New Subject"
 	m.tempBody = "New Body"
-	
+
 	// Test save updates template object
 	m.saveEmailTemplateForm()
 	if m.emailTemplates.PasswordReset.Subject != "New Subject" {

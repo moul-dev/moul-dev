@@ -12,9 +12,9 @@ import (
 )
 
 type Event struct {
-	Action    string                 `json:"action"`     // "create", "update", "delete"
-	Moul      string                 `json:"moul"`       // collection name
-	Record    map[string]interface{} `json:"record"`     // record map
+	Action    string                 `json:"action"` // "create", "update", "delete"
+	Moul      string                 `json:"moul"`   // collection name
+	Record    map[string]interface{} `json:"record"` // record map
 	OldRecord map[string]interface{} `json:"old_record,omitempty"`
 	Timestamp string                 `json:"timestamp"`
 }

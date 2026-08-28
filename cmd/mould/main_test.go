@@ -175,3 +175,17 @@ func TestParseUpdateArgs(t *testing.T) {
 	}
 }
 
+func TestGetDBPath(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	os.Args = []string{"mould", "seed", "--db", "custom-test.db"}
+	if p := getDBPath(); p != "custom-test.db" {
+		t.Errorf("Expected custom-test.db, got %s", p)
+	}
+
+	os.Args = []string{"mould", "seed", "--db=equal-test.db"}
+	if p := getDBPath(); p != "equal-test.db" {
+		t.Errorf("Expected equal-test.db, got %s", p)
+	}
+}

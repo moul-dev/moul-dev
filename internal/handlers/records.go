@@ -1738,3 +1738,54 @@ func buildRequestContext(c *echo.Context, body map[string]interface{}) map[strin
 		"method":  method,
 	}
 }
+
+// RetryJobs resets failed/discarded worker jobs in a worker moul back to available state.
+func (h *RecordHandler) RetryJobs(c *echo.Context) error {
+	name := c.Param("name")
+	moul, err := db.LoadMoulByName(h.DB, name)
+	if err != nil || moul == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection not found"})
+	}
+	if moul.Type != "worker" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Collection is not a worker collection"})
+	}
+
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	_ = c.Bind(&req)
+
+	nowStr := time.Now().UTC().Format(time.RFC3339)
+	params := dbx.Params{
+		"state":        "available",
+		"scheduled_at": nowStr,
+		"attempt":      0,
+		"updated_at":   nowStr,
+	}
+
+	var where dbx.Expression
+	if len(req.IDs) > 0 {
+		var ids []interface{}
+		for _, id := range req.IDs {
+			ids = append(ids, id)
+		}
+		where = dbx.In("id", ids...)
+	} else {
+		where = dbx.In("state", "discarded", "cancelled")
+	}
+
+	res, err := h.DB.Update(name, params, where).Execute()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	affected, _ := res.RowsAffected()
+	if affected > 0 && h.Engine != nil {
+		h.Engine.Trigger(name, "")
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":       true,
+		"rows_affected": affected,
+	})
+}

@@ -3,7 +3,7 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev build test-go test-flow clean-db test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build
 
 # Start the Echo server locally
 run:
@@ -15,7 +15,25 @@ restore:
 
 # Start the watcher for live-reload development
 dev:
-	air -c .air.toml
+	@ulimit -n 10240 2>/dev/null || true; air -c .air.toml
+
+# Start Go server live-reload and Admin UI concurrently
+dev-all:
+	@ulimit -n 10240 2>/dev/null || true; \
+	echo "Starting mould backend (Air) and Admin UI (Vite) concurrently..."; \
+	trap 'kill 0' EXIT; \
+	air -c .air.toml & \
+	bun --cwd ui dev & \
+	wait
+
+# Seed local database with realistic collections, demo records, and feature flags
+seed:
+	go run cmd/mould/main.go seed
+
+# Generate TypeScript type definitions from collection schemas into Admin UI
+typegen:
+	@mkdir -p ui/src/types
+	go run cmd/mould/main.go typegen --out ui/src/types/schema.d.ts
 
 # Sync docs from docs/ to website/public before building binary
 sync-docs:
@@ -42,16 +60,21 @@ build: sync-docs ui-build
 
 # Run the Go unit and integration tests
 test-go:
-	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -cover ./internal/...
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -cover ./internal/... ./pkg/...
+
+# Run self-contained in-process end-to-end integration tests
+test-e2e:
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -race ./pkg/app/... -run TestAppE2E
 
 # Run tests and output coverage report
 test-coverage:
-	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -coverprofile=coverage.out ./internal/...
+	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -coverprofile=coverage.out ./internal/... ./pkg/...
 	GOTOOLCHAIN=go1.26.5 go tool cover -func=coverage.out
 
 # Remove SQLite database
 clean-db:
 	rm -f moul-local.db
+
 
 # Run the complete API testing flow (dynamic moul, auth, records CRUD, rule enforcement)
 test-flow:

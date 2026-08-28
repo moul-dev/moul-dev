@@ -53,9 +53,23 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 # Start HTTP engine server (default port 8090)
 mould start
 
+# Seed database with realistic collections, demo records, and feature flags
+mould seed
+
+# Generate TypeScript type definitions from collection schemas
+mould typegen --out ui/src/types/schema.d.ts
+
+# Test and validate a rule expression against mock record/auth context
+mould test-rule --rule="author_id = @request.auth.id" --record='{"author_id": "usr_1"}' --auth='{"id": "usr_1"}'
+
+# Manage worker jobs / retry dead-letter queue (DLQ)
+mould worker retry tasks_queue [job_id]
+mould worker list-failed tasks_queue
+
 # Start built-in MCP server over stdio
 mould mcp
 
 # Launch Bubble Tea TUI Admin Console
 moul -server http://localhost:8090 -admin-key test-admin-key-1234
 ```
+

@@ -77,12 +77,12 @@ func EvaluateRule(
 	env["_tomorrow"] = now.AddDate(0, 0, 1).Format("2006-01-02 15:04:05.000Z")
 	env["_todayStart"] = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05.000Z")
 	env["_todayEnd"] = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999000000, time.UTC).Format("2006-01-02 15:04:05.000Z")
-	
+
 	// Month start/end
 	firstDayMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	env["_monthStart"] = firstDayMonth.Format("2006-01-02 15:04:05.000Z")
 	env["_monthEnd"] = firstDayMonth.AddDate(0, 1, -1).Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond).Format("2006-01-02 15:04:05.000Z")
-	
+
 	// Year start/end
 	firstDayYear := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
 	env["_yearStart"] = firstDayYear.Format("2006-01-02 15:04:05.000Z")

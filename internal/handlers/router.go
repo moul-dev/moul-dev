@@ -106,6 +106,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	flagsHandler := NewFlagsHandler(dbConn)
 	webhookHandler := NewWebhookHandler(dbConn)
 	realtimeHandler := NewRealtimeHandler(dbConn)
+	rulesTestHandler := NewRulesTestHandler(dbConn)
 
 	// Built-in MCP Server
 	mcpServer := moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
@@ -115,6 +116,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 
 	// Built-in MCP Server SSE endpoint (Admin-protected)
 	e.Any("/api/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+
+	// Rule expression testing and validation sandbox
+	e.POST("/api/rules/test", rulesTestHandler.TestRule, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Documentation & AI Agent Specification endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
@@ -193,7 +197,6 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.DELETE("/api/upload/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
 	e.DELETE("/api/files/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
 
-
 	// Storage directory serving (local or S3 redirect)
 	e.GET("/storage/*", uploadHandler.ServeStorage)
 
@@ -228,13 +231,13 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	authGroup.GET("/favicon.svg", deviceFlowHandler.ServeFavicon)
 	authGroup.GET("/favicon.ico", deviceFlowHandler.ServeFavicon)
 
-
 	// 3. Record management (Data CRUD) — protected by per-moul rules
 	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
 	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
 	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
 	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
 	e.DELETE("/api/moul/:name/records/:id", recordHandler.DeleteRecord)
+	e.POST("/api/moul/:name/retry-jobs", recordHandler.RetryJobs, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Real-time SSE record subscriptions
 	e.GET("/api/moul/:name/subscribe", realtimeHandler.SubscribeCollection)

@@ -186,10 +186,23 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 
 ---
 
-## 8. Production Deployment Instructions
+## 8. Developer CLI Tooling & Diagnostics
+
+`mould` includes built-in commands for rapid local iteration, type safety, and testing:
+
+- **Database Seeding**: `mould seed` (or `make seed`) populates demo collections, records, and feature flags.
+- **TypeScript Type Generation**: `mould typegen --out ui/src/types/schema.d.ts` (or `make typegen`) extracts schema definitions into strict TypeScript interfaces.
+- **Rule Expression Testing**: `mould test-rule --rule="<rule>" --record='{...}' --auth='{...}'` validates and benchmarks rules.
+- **Worker DLQ Management**: `mould worker retry <table_name> [job_id]` and `mould worker list-failed <table_name>`.
+- **Self-Contained E2E Flow Testing**: `make test-e2e` executes full API authentication, CRUD, worker, and analytics flows in-process without manual server startup.
+
+---
+
+## 9. Production Deployment Instructions
 
 When assisting users with deploying `mould` to production on **Ubuntu Server 26.04 LTS**:
 - Refer to the dedicated LXD system container, Tailscale, and Cloudflare Tunnel deployment guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md).
 - Ensure host firewall rules close public SSH (port 22) after configuring Tailscale, and route public traffic via `cloudflared`.
+
 
 

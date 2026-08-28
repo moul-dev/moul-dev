@@ -7,8 +7,8 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/logger"
 
-	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/pocketbase/dbx"
 )
 

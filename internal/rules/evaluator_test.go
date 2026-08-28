@@ -200,13 +200,13 @@ func TestEvaluateRule_PocketBaseSyntax(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "Function geoDistance",
-			rule: "geoDistance(23.32, 42.69, 23.33, 42.70) < 5",
+			name:     "Function geoDistance",
+			rule:     "geoDistance(23.32, 42.69, 23.33, 42.70) < 5",
 			expected: true,
 		},
 		{
-			name: "Function strftime",
-			rule: "strftime('%Y-%m', '2026-07-19 12:34:56') = '2026-07'",
+			name:     "Function strftime",
+			rule:     "strftime('%Y-%m', '2026-07-19 12:34:56') = '2026-07'",
 			expected: true,
 		},
 		{

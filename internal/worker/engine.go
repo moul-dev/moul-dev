@@ -557,3 +557,85 @@ func nullStringMapToMap(m dbx.NullStringMap) map[string]interface{} {
 	}
 	return res
 }
+
+// RetryFailedJobs resets discarded or failed jobs back to 'available' state for immediate retry.
+func (e *Engine) RetryFailedJobs(tableName string, jobIDs ...string) (int64, error) {
+	nowStr := time.Now().UTC().Format(time.RFC3339)
+	params := dbx.Params{
+		"state":        "available",
+		"scheduled_at": nowStr,
+		"attempt":      0,
+		"updated_at":   nowStr,
+	}
+
+	var where dbx.Expression
+	if len(jobIDs) > 0 {
+		var ids []interface{}
+		for _, id := range jobIDs {
+			ids = append(ids, id)
+		}
+		where = dbx.In("id", ids...)
+	} else {
+		where = dbx.In("state", "discarded", "cancelled")
+	}
+
+	res, err := e.db.Update(tableName, params, where).Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to retry jobs: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected > 0 {
+		e.Trigger(tableName, "")
+	}
+
+	return rowsAffected, nil
+}
+
+// ListDiscardedJobs returns failed/discarded jobs from the specified worker collection.
+func (e *Engine) ListDiscardedJobs(tableName string, limit int) ([]*Job, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var rows []JobRow
+	err := e.db.Select("*").
+		From(tableName).
+		Where(dbx.In("state", "discarded", "cancelled")).
+		OrderBy("inserted_at DESC").
+		Limit(int64(limit)).
+		All(&rows)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list discarded jobs: %w", err)
+	}
+
+	var jobs []*Job
+	for _, row := range rows {
+		var args map[string]interface{}
+		var meta map[string]interface{}
+		var tags []string
+		var errors []string
+
+		_ = json.Unmarshal([]byte(row.Args), &args)
+		_ = json.Unmarshal([]byte(row.Meta), &meta)
+		_ = json.Unmarshal([]byte(row.Tags), &tags)
+		_ = json.Unmarshal([]byte(row.Errors), &errors)
+
+		jobs = append(jobs, &Job{
+			ID:          row.ID,
+			Table:       tableName,
+			State:       row.State,
+			Queue:       row.Queue,
+			Worker:      row.Worker,
+			Args:        args,
+			Meta:        meta,
+			Tags:        tags,
+			Errors:      errors,
+			Attempt:     row.Attempt,
+			MaxAttempts: row.MaxAttempts,
+			Priority:    row.Priority,
+			InsertedAt:  row.InsertedAt,
+			ScheduledAt: row.ScheduledAt,
+		})
+	}
+	return jobs, nil
+}

@@ -174,16 +174,16 @@ func (m *Model) viewDeviceAuth() string {
 	var cardContent strings.Builder
 	cardContent.WriteString(lipgloss.PlaceHorizontal(54, lipgloss.Center, titleStyle.Render("DEVICE AUTHORIZATION REQUIRED")) + "\n\n")
 	cardContent.WriteString("  Please open your browser, visit the URL below and enter the\n  following code if prompted:\n\n")
-	
+
 	// Centered Code
 	cardContent.WriteString(lipgloss.PlaceHorizontal(54, lipgloss.Center, codeStyle.Render(m.userCode)) + "\n\n")
-	
+
 	// URL
 	cardContent.WriteString("  Verification URL:\n")
 	cardContent.WriteString("  " + urlStyle.Render(m.verificationURI) + "\n\n")
-	
+
 	cardContent.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render("  ✓ Copied code to clipboard\n  ✓ Attempted to open browser automatically\n\n"))
-	
+
 	// Polling / Spinner info
 	cardContent.WriteString(lipgloss.NewStyle().Foreground(ColorIndigoLight).Render("  ⟳ Waiting for authorization in browser...") + "\n\n")
 	cardContent.WriteString(HelpStyle.Render("  [Esc] Cancel and go back"))

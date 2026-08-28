@@ -216,7 +216,7 @@ func (m *Model) viewEmailTemplates() string {
 		icon := "✉️"
 		if i == m.selectedTemplateIndex {
 			line := fmt.Sprintf(" %s %s ", icon, name)
-			leftSide.WriteString(lipgloss.NewStyle().Bold(true).Foreground(ColorTextLight).Background(ColorSelectionBg).Width(leftWidth - 2).Render(line) + "\n")
+			leftSide.WriteString(lipgloss.NewStyle().Bold(true).Foreground(ColorTextLight).Background(ColorSelectionBg).Width(leftWidth-2).Render(line) + "\n")
 		} else {
 			line := fmt.Sprintf("   %s", name)
 			leftSide.WriteString(lipgloss.NewStyle().Foreground(ColorTextMuted).Render(line) + "\n")

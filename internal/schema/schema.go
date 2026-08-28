@@ -10,8 +10,8 @@ const (
 
 type RelationConfig struct {
 	TargetMoul  string `json:"targetMoul"`
-	Cardinality string `json:"cardinality"` // "1:1", "1:N", "M:N"
-	OnDelete    string `json:"onDelete,omitempty"`    // "CASCADE", "SET_NULL", "RESTRICT"
+	Cardinality string `json:"cardinality"`        // "1:1", "1:N", "M:N"
+	OnDelete    string `json:"onDelete,omitempty"` // "CASCADE", "SET_NULL", "RESTRICT"
 }
 
 type MoulField struct {
@@ -23,7 +23,6 @@ type MoulField struct {
 	Options        []string        `json:"options,omitempty"`
 	RelationConfig *RelationConfig `json:"relationConfig,omitempty"`
 }
-
 
 type MoulRules struct {
 	ListRule      string `json:"listRule"`

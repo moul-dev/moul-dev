@@ -45,7 +45,7 @@ func TestEngineSuccessFlow(t *testing.T) {
 
 	// 2. Initialize Engine and register handler
 	engine := NewEngine(dbConn)
-	
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	var executedJob *Job

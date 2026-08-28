@@ -55,10 +55,10 @@ type sesDestination struct {
 }
 
 type sesPayload struct {
-	FromEmailAddress      string          `json:"FromEmailAddress"`
-	Destination           sesDestination  `json:"Destination"`
-	Content               sesContent      `json:"Content"`
-	ReplyToEmailAddresses []string        `json:"ReplyToEmailAddresses,omitempty"`
+	FromEmailAddress      string         `json:"FromEmailAddress"`
+	Destination           sesDestination `json:"Destination"`
+	Content               sesContent     `json:"Content"`
+	ReplyToEmailAddresses []string       `json:"ReplyToEmailAddresses,omitempty"`
 }
 
 func (p *SESProvider) Send(ctx context.Context, email *Email) error {

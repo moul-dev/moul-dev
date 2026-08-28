@@ -368,7 +368,6 @@ func (m *Model) fetchJobs() tea.Cmd {
 	}
 }
 
-
 func (m *Model) viewDashboardSettingsInfo(width int) string {
 	content := fmt.Sprintf(
 		"%s\n%s\n\n%s\n%s\n\n%s",

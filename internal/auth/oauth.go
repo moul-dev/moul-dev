@@ -147,7 +147,7 @@ func GetOAuthProvider(providerName string, settings map[string]string) (OAuthPro
 // ── GitHub Provider ─────────────────────────────────────────────────────────
 
 type GitHubProvider struct {
-	Config ProviderConfig
+	Config     ProviderConfig
 	HTTPClient *http.Client
 }
 

@@ -142,4 +142,3 @@ func TestEmailOTPAuthFlow(t *testing.T) {
 		t.Errorf("Expected OTP code in DB to be cleared after successful verification, got %s", clearedOtp.String)
 	}
 }
-

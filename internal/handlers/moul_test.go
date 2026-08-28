@@ -999,10 +999,10 @@ func TestUpdateMoul(t *testing.T) {
 
 	// 3. Rename collection from 'items' to 'products'
 	renamePayload := schema.Moul{
-		Name: "products",
-		Type: "base",
+		Name:   "products",
+		Type:   "base",
 		Fields: updated.Fields,
-		Rules: updated.Rules,
+		Rules:  updated.Rules,
 	}
 	resp = patchJSON(t, client, server.URL+"/api/moul/items", renamePayload, "")
 	if resp.StatusCode != http.StatusOK {

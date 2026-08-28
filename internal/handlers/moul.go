@@ -282,4 +282,3 @@ func validateMoulFields(m *schema.Moul) error {
 	}
 	return nil
 }
-
