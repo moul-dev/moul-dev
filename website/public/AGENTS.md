@@ -175,6 +175,11 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 
 The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
 
+### Records Data Grid & Detail Drawer Capabilities
+- **Record ID Interactive Inspection**: Clicking any record ID opens a slide-over `Drawer` displaying full field attributes, relation associations, and system timestamps.
+- **In-Drawer Record Modification**: Supports direct live editing of schema fields, relations (1:1, 1:N, M:N), file attachments, JSON attributes, and auth fields with instant persistence.
+- **Worker Task Inspector & Retry Actions**: For worker job collections, the drawer features execution health cards (attempt count, queue, worker handler, priority, timestamps), an error trace box with one-click copy, and immediate task retry (`POST /api/moul/:name/retry-jobs`) and discard actions.
+
 ### DevTools Architecture & Capabilities
 - **Unified Framework Adapter**: `<AppDevtools />` wraps `<TanStackDevtools />` from `@tanstack/react-devtools` mounted once at the root route (`__root.tsx`).
 - **Tabbed Plugin System**: Consolidates first-party library panels (`TanStackRouterDevtoolsPanel`, `ReactQueryDevtoolsPanel`) and product-specific panels (`MoulDevtoolsPanel`) into a single docked container.

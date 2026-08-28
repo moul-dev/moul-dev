@@ -27,10 +27,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Ensure Embedded UI Dist Exists
+        run: mkdir -p internal/ui/dist && touch internal/ui/dist/.gitkeep
+
       - name: Go Format & Vet Check
         run: |
           test -z "$(gofmt -l .)" || (echo "gofmt found unformatted files:" && gofmt -l . && exit 1)
           go vet ./...
+
 
       - name: Run Go Tests & Self-Contained E2E
         run: |
