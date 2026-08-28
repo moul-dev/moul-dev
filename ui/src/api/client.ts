@@ -260,6 +260,11 @@ export const api = {
     request<any>(`/api/moul/${name}/records/${id}`, {
       method: 'DELETE',
     }),
+  retryJobs: (name: string, ids?: string[]) =>
+    request<any>(`/api/moul/${name}/retry-jobs`, {
+      method: 'POST',
+      body: JSON.stringify({ ids: ids || [] }),
+    }),
   uploadFile: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

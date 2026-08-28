@@ -15,6 +15,16 @@ import {
   CloudArrowUpIcon,
   UploadSimpleIcon,
   LinkIcon,
+  ArrowsCounterClockwiseIcon,
+  ProhibitIcon,
+  CopyIcon,
+  CheckIcon,
+  ClockIcon,
+  WarningCircleIcon,
+  CheckCircleIcon,
+  CodeIcon,
+  ListBulletsIcon,
+  InfoIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -104,7 +114,7 @@ const styles = stylex.create({
   drawerForm: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacing3,
+    gap: tokens.spacing4,
     paddingInline: tokens.spacing1,
   },
   pagination: {
@@ -229,6 +239,175 @@ const styles = stylex.create({
     gap: '0.25rem',
     flexShrink: 0,
   },
+  recordIdBtn: {
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 600,
+    color: tokens.colorPrimary500,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '3px 7px',
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    textDecoration: 'none',
+    ':hover': {
+      backgroundColor: tokens.colorBgSubtle,
+      borderColor: tokens.colorBorderSubtle,
+      color: tokens.colorPrimary400,
+    },
+  },
+  workerInspector: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing3,
+    padding: tokens.spacing3,
+    backgroundColor: tokens.colorBgElevated,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+  },
+  workerHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: tokens.spacing2,
+  },
+  workerTitle: {
+    fontSize: tokens.fontSizeSm,
+    fontWeight: 600,
+    color: tokens.colorFg,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing1,
+  },
+  workerGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: tokens.spacing2,
+  },
+  workerStatCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    padding: tokens.spacing2,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+  },
+  statLabel: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  statVal: {
+    fontSize: tokens.fontSizeSm,
+    fontWeight: 600,
+    color: tokens.colorFg,
+    fontFamily: 'var(--font-mono, monospace)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  errorTraceBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
+    padding: tokens.spacing3,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: tokens.radiusMd,
+  },
+  errorTraceHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorTraceTitle: {
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 600,
+    color: tokens.colorError500,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  errorTraceContent: {
+    margin: 0,
+    padding: tokens.spacing2,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusSm,
+    color: tokens.colorError500,
+    fontSize: '0.75rem',
+    fontFamily: 'var(--font-mono, monospace)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+    maxHeight: '160px',
+    overflowY: 'auto',
+  },
+  sectionTitle: {
+    fontSize: tokens.fontSizeSm,
+    fontWeight: 600,
+    color: tokens.colorFg,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing1,
+    paddingTop: tokens.spacing2,
+    paddingBottom: tokens.spacing1,
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderBottomColor: tokens.colorBorderSubtle,
+  },
+  metadataCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
+    padding: tokens.spacing3,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: '0.75rem',
+    color: tokens.colorFgSubtle,
+  },
+  metadataRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacing2,
+  },
+  jsonBlock: {
+    margin: 0,
+    padding: tokens.spacing2,
+    backgroundColor: tokens.colorBgElevated,
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorderSubtle,
+    color: tokens.colorFg,
+    fontSize: '0.75rem',
+    fontFamily: 'var(--font-mono, monospace)',
+    maxHeight: '180px',
+    overflowY: 'auto',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+  },
 });
 
 function formatFileSize(bytes?: number): string {
@@ -274,6 +453,25 @@ function getRecordDisplayLabel(rec: any): string {
   if (rec.slug) return String(rec.slug);
   if (rec.id) return String(rec.id);
   return JSON.stringify(rec);
+}
+
+function getWorkerStatusVariant(state?: string): 'success' | 'warning' | 'error' | 'primary' | 'neutral' {
+  switch (String(state || '').toLowerCase()) {
+    case 'completed':
+      return 'success';
+    case 'executing':
+    case 'processing':
+      return 'primary';
+    case 'retryable':
+      return 'warning';
+    case 'discarded':
+    case 'failed':
+    case 'cancelled':
+      return 'error';
+    case 'available':
+    default:
+      return 'neutral';
+  }
 }
 
 interface FileFieldInputProps {
@@ -661,6 +859,12 @@ function RecordsPage() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
 
+  // Copy feedback states
+  const [copiedId, setCopiedId] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [copiedError, setCopiedError] = useState(false);
+  const [showRawJson, setShowRawJson] = useState(false);
+
   React.useEffect(() => {
     setSearchVal(search.search || '');
   }, [search.search]);
@@ -763,7 +967,11 @@ function RecordsPage() {
         'scheduled_at',
         'attempted_at',
         'attempted_by',
+        'completed_at',
+        'discarded_at',
+        'cancelled_at',
         'errors',
+        'last_error',
         'tags',
         'meta',
         'args',
@@ -808,7 +1016,7 @@ function RecordsPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => api.updateRecord(moulName, id, data),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
       setIsDrawerOpen(false);
       toastQueue.add({
@@ -816,6 +1024,9 @@ function RecordsPage() {
         description: 'Record updated successfully.',
         variant: 'success',
       });
+      if (updated && activeRecord?.id === updated.id) {
+        setActiveRecord(updated);
+      }
     },
     onError: (err: any) => {
       toastQueue.add({
@@ -830,6 +1041,7 @@ function RecordsPage() {
     mutationFn: (id: string) => api.deleteRecord(moulName, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      setIsDrawerOpen(false);
       toastQueue.add({
         title: 'Record Deleted',
         description: 'Record was deleted.',
@@ -845,17 +1057,94 @@ function RecordsPage() {
     },
   });
 
+  // Worker task retry mutation
+  const retryTaskMutation = useMutation({
+    mutationFn: async (record: any) => {
+      try {
+        return await api.retryJobs(moulName, [record.id]);
+      } catch {
+        return await api.updateRecord(moulName, record.id, {
+          state: 'available',
+          scheduled_at: new Date().toISOString(),
+          attempt: 0,
+        });
+      }
+    },
+    onSuccess: (_, record) => {
+      queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
+      toastQueue.add({
+        title: 'Task Scheduled for Retry',
+        description: `Worker task ${record.id} marked as available for immediate execution.`,
+        variant: 'success',
+      });
+      if (activeRecord?.id === record.id) {
+        const updated = {
+          ...activeRecord,
+          state: 'available',
+          attempt: 0,
+          scheduled_at: new Date().toISOString(),
+        };
+        setActiveRecord(updated);
+        setFormData(updated);
+      }
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Retry Failed',
+        description: err.message || 'Failed to retry worker task.',
+        variant: 'error',
+      });
+    },
+  });
+
+  // Worker task discard mutation
+  const discardTaskMutation = useMutation({
+    mutationFn: (record: any) =>
+      api.updateRecord(moulName, record.id, {
+        state: 'discarded',
+        discarded_at: new Date().toISOString(),
+      }),
+    onSuccess: (_, record) => {
+      queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
+      toastQueue.add({
+        title: 'Task Discarded',
+        description: `Worker task ${record.id} was marked as discarded.`,
+        variant: 'info',
+      });
+      if (activeRecord?.id === record.id) {
+        const updated = {
+          ...activeRecord,
+          state: 'discarded',
+          discarded_at: new Date().toISOString(),
+        };
+        setActiveRecord(updated);
+        setFormData(updated);
+      }
+    },
+    onError: (err: any) => {
+      toastQueue.add({
+        title: 'Discard Failed',
+        description: err.message || 'Failed to discard task.',
+        variant: 'error',
+      });
+    },
+  });
+
   const handleOpenCreate = () => {
     setFormData({});
     setIsCreating(true);
     setActiveRecord(null);
+    setShowRawJson(false);
     setIsDrawerOpen(true);
   };
 
-  const handleOpenEdit = (rec: any) => {
+  const handleOpenDetail = (rec: any) => {
     setFormData({ ...rec });
     setIsCreating(false);
     setActiveRecord(rec);
+    setShowRawJson(false);
     setIsDrawerOpen(true);
   };
 
@@ -878,6 +1167,36 @@ function RecordsPage() {
     });
   };
 
+  const handleCopyId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleCopyJson = (data: any) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
+
+  const handleCopyError = (err: string) => {
+    navigator.clipboard.writeText(err);
+    setCopiedError(true);
+    setTimeout(() => setCopiedError(false), 2000);
+  };
+
+  // Helper for error string extraction on worker tasks
+  const workerErrors = useMemo(() => {
+    if (!activeRecord) return null;
+    if (Array.isArray(activeRecord.errors) && activeRecord.errors.length > 0) {
+      return activeRecord.errors.join('\n');
+    }
+    if (activeRecord.last_error) {
+      return String(activeRecord.last_error);
+    }
+    return null;
+  }, [activeRecord]);
+
   return (
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
@@ -888,7 +1207,7 @@ function RecordsPage() {
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Explore records data grid, filter relational associations, and manage collection entries.
+            Explore records data grid, click any Record ID to view and modify details, or retry worker tasks.
           </span>
         </div>
         <Button variant="primary" onPress={handleOpenCreate}>
@@ -940,7 +1259,7 @@ function RecordsPage() {
               <TableHead key={f.name}>{f.name}</TableHead>
             ))}
             <TableHead>Created At</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead align="right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -968,243 +1287,273 @@ function RecordsPage() {
               />
             </TableEmpty>
           ) : (
-            records.map((rec: any) => (
-              <TableRow key={rec.id}>
-                <TableCell>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs, color: tokens.colorPrimary400 }}>
-                    {String(rec.id)}
-                  </span>
-                </TableCell>
-                {moul?.type === 'auth' && (
-                  <>
-                    <TableCell>{rec.username || '-'}</TableCell>
-                    <TableCell>{rec.email || '-'}</TableCell>
-                  </>
-                )}
-                {moul?.type === 'worker' && (
-                  <>
-                    <TableCell>{rec.worker || '-'}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          rec.state === 'completed'
-                            ? 'success'
-                            : rec.state === 'failed'
-                              ? 'error'
-                              : rec.state === 'processing'
-                                ? 'warning'
-                                : 'primary'
-                        }
-                      >
-                        {rec.state || 'available'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{rec.queue || 'default'}</TableCell>
-                    <TableCell align="numeric" tabular>{rec.attempt ?? 0}</TableCell>
-                  </>
-                )}
-                {displayFields.map((f: any) => {
-                  const val = rec[f.name];
+            records.map((rec: any) => {
+              const workerState = String(rec.state || 'available').toLowerCase();
+              const canRetry =
+                moul?.type === 'worker' &&
+                (workerState === 'failed' ||
+                  workerState === 'discarded' ||
+                  workerState === 'retryable' ||
+                  workerState === 'completed');
 
-                  // 1. File Field Rendering
-                  if (f.type === 'file') {
-                    if (!val) {
-                      return (
-                        <TableCell key={f.name}>
-                          <span style={{ color: tokens.colorFgSubtle }}>-</span>
-                        </TableCell>
-                      );
-                    }
-                    const url = getFileUrl(val);
-                    const filename = getFileName(val);
-                    const isImg = isImageFile(val);
-
-                    return (
-                      <TableCell key={f.name}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {isImg && url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-                              title={`View ${filename}`}
-                            >
-                              <img
-                                src={url}
-                                alt={filename}
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  objectFit: 'cover',
-                                  borderRadius: '4px',
-                                  border: `1px solid ${tokens.colorBorderSubtle}`,
-                                  boxShadow: tokens.shadowSm,
-                                }}
-                              />
-                            </a>
-                          ) : (
-                            <FileIcon size={18} color={tokens.colorPrimary500} />
-                          )}
-                          {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              style={{
-                                color: tokens.colorPrimary500,
-                                textDecoration: 'none',
-                                fontSize: tokens.fontSizeXs,
-                                maxWidth: '140px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                              }}
-                              title={filename}
-                            >
-                              <span>{filename}</span>
-                              <ArrowSquareOutIcon size={11} />
-                            </a>
-                          ) : (
-                            <span style={{ fontSize: tokens.fontSizeXs }}>{filename}</span>
-                          )}
-                        </div>
+              return (
+                <TableRow key={rec.id}>
+                  <TableCell>
+                    <button
+                      type="button"
+                      {...stylex.props(styles.recordIdBtn)}
+                      onClick={() => handleOpenDetail(rec)}
+                      title={`Click to view and edit record #${rec.id}`}
+                    >
+                      <span>{String(rec.id)}</span>
+                    </button>
+                  </TableCell>
+                  {moul?.type === 'auth' && (
+                    <>
+                      <TableCell>{rec.username || '-'}</TableCell>
+                      <TableCell>{rec.email || '-'}</TableCell>
+                    </>
+                  )}
+                  {moul?.type === 'worker' && (
+                    <>
+                      <TableCell>
+                        <span style={{ fontWeight: 600 }}>{rec.worker || '-'}</span>
                       </TableCell>
-                    );
-                  }
+                      <TableCell>
+                        <Badge variant={getWorkerStatusVariant(rec.state)} size="sm">
+                          {rec.state || 'available'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{rec.queue || 'default'}</TableCell>
+                      <TableCell align="numeric" tabular>
+                        <span
+                          style={{
+                            color:
+                              (rec.attempt ?? 0) >= (rec.max_attempts ?? 3)
+                                ? tokens.colorError500
+                                : tokens.colorFgSubtle,
+                          }}
+                        >
+                          {rec.attempt ?? 0}/{rec.max_attempts ?? 3}
+                        </span>
+                      </TableCell>
+                    </>
+                  )}
+                  {displayFields.map((f: any) => {
+                    const val = rec[f.name];
 
-                  // 2. Relation Field Rendering
-                  if (f.type === 'relation') {
-                    const targetMoul = f.relationConfig?.targetMoul || '';
-                    const card = f.relationConfig?.cardinality || '1:N';
-                    const expanded = rec.expand?.[f.name];
+                    // 1. File Field Rendering
+                    if (f.type === 'file') {
+                      if (!val) {
+                        return (
+                          <TableCell key={f.name}>
+                            <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                          </TableCell>
+                        );
+                      }
+                      const url = getFileUrl(val);
+                      const filename = getFileName(val);
+                      const isImg = isImageFile(val);
 
-                    if (!val || (Array.isArray(val) && val.length === 0)) {
                       return (
                         <TableCell key={f.name}>
-                          <span style={{ color: tokens.colorFgSubtle }}>-</span>
-                        </TableCell>
-                      );
-                    }
-
-                    if (card === 'M:N') {
-                      const ids: string[] = Array.isArray(val) ? val : [String(val)];
-                      const expandedList: any[] = Array.isArray(expanded) ? expanded : [];
-
-                      return (
-                        <TableCell key={f.name}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
-                            {ids.map((id, i) => {
-                              const expItem = expandedList.find((e) => String(e.id) === String(id)) || expandedList[i];
-                              const label = expItem ? getRecordDisplayLabel(expItem) : id;
-                              return (
-                                <span
-                                  key={id || i}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {isImg && url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+                                title={`View ${filename}`}
+                              >
+                                <img
+                                  src={url}
+                                  alt={filename}
                                   style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    backgroundColor: tokens.colorBgElevated,
-                                    border: `1px solid ${tokens.colorPrimary500}`,
-                                    borderRadius: tokens.radiusSm,
-                                    padding: '2px 6px',
-                                    fontSize: tokens.fontSizeXs,
-                                    color: tokens.colorFg,
-                                    cursor: 'pointer',
+                                    width: 28,
+                                    height: 28,
+                                    objectFit: 'cover',
+                                    borderRadius: '4px',
+                                    border: `1px solid ${tokens.colorBorderSubtle}`,
+                                    boxShadow: tokens.shadowSm,
                                   }}
-                                  onClick={() => {
-                                    window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
-                                  }}
-                                  title={`Target: ${targetMoul} · ID: ${id}`}
-                                >
-                                  <LinkIcon size={12} color={tokens.colorPrimary500} />
-                                  <span>{label}</span>
-                                </span>
-                              );
-                            })}
+                                />
+                              </a>
+                            ) : (
+                              <FileIcon size={18} color={tokens.colorPrimary500} />
+                            )}
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                style={{
+                                  color: tokens.colorPrimary500,
+                                  textDecoration: 'none',
+                                  fontSize: tokens.fontSizeXs,
+                                  maxWidth: '140px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                }}
+                                title={filename}
+                              >
+                                <span>{filename}</span>
+                                <ArrowSquareOutIcon size={11} />
+                              </a>
+                            ) : (
+                              <span style={{ fontSize: tokens.fontSizeXs }}>{filename}</span>
+                            )}
                           </div>
                         </TableCell>
                       );
                     }
 
-                    // 1:1 or 1:N
-                    const id = String(val);
-                    const label = expanded ? getRecordDisplayLabel(expanded) : id;
+                    // 2. Relation Field Rendering
+                    if (f.type === 'relation') {
+                      const targetMoul = f.relationConfig?.targetMoul || '';
+                      const card = f.relationConfig?.cardinality || '1:N';
+                      const expanded = rec.expand?.[f.name];
 
+                      if (!val || (Array.isArray(val) && val.length === 0)) {
+                        return (
+                          <TableCell key={f.name}>
+                            <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                          </TableCell>
+                        );
+                      }
+
+                      if (card === 'M:N') {
+                        const ids: string[] = Array.isArray(val) ? val : [String(val)];
+                        const expandedList: any[] = Array.isArray(expanded) ? expanded : [];
+
+                        return (
+                          <TableCell key={f.name}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                              {ids.map((id, i) => {
+                                const expItem = expandedList.find((e) => String(e.id) === String(id)) || expandedList[i];
+                                const label = expItem ? getRecordDisplayLabel(expItem) : id;
+                                return (
+                                  <span
+                                    key={id || i}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      backgroundColor: tokens.colorBgElevated,
+                                      border: `1px solid ${tokens.colorPrimary500}`,
+                                      borderRadius: tokens.radiusSm,
+                                      padding: '2px 6px',
+                                      fontSize: tokens.fontSizeXs,
+                                      color: tokens.colorFg,
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => {
+                                      window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
+                                    }}
+                                    title={`Target: ${targetMoul} · ID: ${id}`}
+                                  >
+                                    <LinkIcon size={12} color={tokens.colorPrimary500} />
+                                    <span>{label}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </TableCell>
+                        );
+                      }
+
+                      // 1:1 or 1:N
+                      const id = String(val);
+                      const label = expanded ? getRecordDisplayLabel(expanded) : id;
+
+                      return (
+                        <TableCell key={f.name}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backgroundColor: tokens.colorBgElevated,
+                              border: `1px solid ${tokens.colorPrimary500}`,
+                              borderRadius: tokens.radiusSm,
+                              padding: '2px 6px',
+                              fontSize: tokens.fontSizeXs,
+                              color: tokens.colorFg,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => {
+                              window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
+                            }}
+                            title={`Target: ${targetMoul} · ID: ${id}`}
+                          >
+                            <LinkIcon size={12} color={tokens.colorPrimary500} />
+                            <span>{label}</span>
+                          </span>
+                        </TableCell>
+                      );
+                    }
+
+                    // 3. Default Cell Rendering
                     return (
                       <TableCell key={f.name}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            backgroundColor: tokens.colorBgElevated,
-                            border: `1px solid ${tokens.colorPrimary500}`,
-                            borderRadius: tokens.radiusSm,
-                            padding: '2px 6px',
-                            fontSize: tokens.fontSizeXs,
-                            color: tokens.colorFg,
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => {
-                            window.open(`/records/${targetMoul}?search=${encodeURIComponent(id)}`, '_blank');
-                          }}
-                          title={`Target: ${targetMoul} · ID: ${id}`}
-                        >
-                          <LinkIcon size={12} color={tokens.colorPrimary500} />
-                          <span>{label}</span>
-                        </span>
+                        {val === null || val === undefined ? (
+                          <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                        ) : typeof val === 'boolean' ? (
+                          <Badge variant={val ? 'success' : 'error'}>{val ? 'true' : 'false'}</Badge>
+                        ) : typeof val === 'object' ? (
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs }}>
+                            {JSON.stringify(val)}
+                          </span>
+                        ) : (
+                          String(val)
+                        )}
                       </TableCell>
                     );
-                  }
-
-                  // 3. Default Cell Rendering
-                  return (
-                    <TableCell key={f.name}>
-                      {val === null || val === undefined ? (
-                        <span style={{ color: tokens.colorFgSubtle }}>-</span>
-                      ) : typeof val === 'boolean' ? (
-                        <Badge variant={val ? 'success' : 'error'}>{val ? 'true' : 'false'}</Badge>
-                      ) : typeof val === 'object' ? (
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: tokens.fontSizeXs }}>
-                          {JSON.stringify(val)}
-                        </span>
-                      ) : (
-                        String(val)
+                  })}
+                  <TableCell>
+                    <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
+                      {rec.created_at || rec.inserted_at ? new Date(String(rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell align="right">
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {canRetry && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          aria-label={`Retry task ${rec.id}`}
+                          isPending={retryTaskMutation.isPending && retryTaskMutation.variables?.id === rec.id}
+                          onPress={() => retryTaskMutation.mutate(rec)}
+                        >
+                          <ArrowsCounterClockwiseIcon size={14} />
+                          <span>Retry</span>
+                        </Button>
                       )}
-                    </TableCell>
-                  );
-                })}
-                <TableCell>
-                  <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
-                    {rec.created_at || rec.inserted_at ? new Date(String(rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div style={{ display: 'flex', gap: '0.25rem' }}>
-                    <Button
-                      isIcon
-                      variant="ghost"
-                      aria-label={`Edit record ${rec.id}`}
-                      onPress={() => handleOpenEdit(rec)}
-                    >
-                      <PencilSimpleIcon size={14} />
-                    </Button>
-                    <Button
-                      isIcon
-                      variant="ghost"
-                      aria-label={`Delete record ${rec.id}`}
-                      onPress={() => setRecordToDelete(rec)}
-                    >
-                      <TrashIcon size={14} color={tokens.colorError500} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`View and edit record ${rec.id}`}
+                        onPress={() => handleOpenDetail(rec)}
+                      >
+                        <PencilSimpleIcon size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Delete record ${rec.id}`}
+                        onPress={() => setRecordToDelete(rec)}
+                      >
+                        <TrashIcon size={14} color={tokens.colorError500} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -1250,7 +1599,7 @@ function RecordsPage() {
         </div>
       </div>
 
-      {/* Record Edit/Create Drawer */}
+      {/* Record Detail & Modification Drawer */}
       <DrawerOverlay isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} isDismissable>
         <Drawer placement="right" size="lg">
           <DrawerDialog>
@@ -1260,12 +1609,162 @@ function RecordsPage() {
             >
               <DrawerHeader>
                 <DrawerTitle>
-                  {isCreating ? `Create ${moulName} Record` : `Edit Record #${activeRecord?.id}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2, flexWrap: 'wrap' }}>
+                    <span>{isCreating ? `Create ${moulName} Record` : `Record #${activeRecord?.id}`}</span>
+                    <Badge variant="primary">{moul?.type || 'base'}</Badge>
+                    {!isCreating && activeRecord?.state && (
+                      <Badge variant={getWorkerStatusVariant(activeRecord.state)} size="sm">
+                        {activeRecord.state}
+                      </Badge>
+                    )}
+                    {!isCreating && activeRecord?.id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label="Copy record ID"
+                        onPress={() => handleCopyId(String(activeRecord.id))}
+                      >
+                        {copiedId ? <CheckIcon size={13} color={tokens.colorSuccess500} /> : <CopyIcon size={13} />}
+                        <span style={{ fontSize: tokens.fontSizeXs }}>{copiedId ? 'Copied' : 'Copy ID'}</span>
+                      </Button>
+                    )}
+                  </div>
                 </DrawerTitle>
                 <DrawerCloseButton />
               </DrawerHeader>
+
               <DrawerBody>
                 <div {...stylex.props(styles.drawerForm)}>
+                  {/* WORKER TASK INSPECTOR & ACTIONS (When Collection is Worker and Not Creating) */}
+                  {moul?.type === 'worker' && !isCreating && activeRecord && (
+                    <div {...stylex.props(styles.workerInspector)}>
+                      <div {...stylex.props(styles.workerHeader)}>
+                        <span {...stylex.props(styles.workerTitle)}>
+                          <ClockIcon size={16} color={tokens.colorPrimary500} />
+                          <span>Worker Task Inspector</span>
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing1 }}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            aria-label="Retry task immediately"
+                            isPending={retryTaskMutation.isPending}
+                            onPress={() => retryTaskMutation.mutate(activeRecord)}
+                          >
+                            <ArrowsCounterClockwiseIcon size={14} />
+                            <span>Retry Task</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger-soft"
+                            aria-label="Discard task"
+                            isDisabled={activeRecord.state === 'discarded'}
+                            isPending={discardTaskMutation.isPending}
+                            onPress={() => discardTaskMutation.mutate(activeRecord)}
+                          >
+                            <ProhibitIcon size={14} />
+                            <span>Discard</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Worker Statistics Grid */}
+                      <div {...stylex.props(styles.workerGrid)}>
+                        <div {...stylex.props(styles.workerStatCard)}>
+                          <span {...stylex.props(styles.statLabel)}>Handler</span>
+                          <span {...stylex.props(styles.statVal)} title={activeRecord.worker || 'anonymous'}>
+                            {activeRecord.worker || 'anonymous'}
+                          </span>
+                        </div>
+                        <div {...stylex.props(styles.workerStatCard)}>
+                          <span {...stylex.props(styles.statLabel)}>Queue</span>
+                          <span {...stylex.props(styles.statVal)}>{activeRecord.queue || 'default'}</span>
+                        </div>
+                        <div {...stylex.props(styles.workerStatCard)}>
+                          <span {...stylex.props(styles.statLabel)}>Attempts</span>
+                          <span
+                            {...stylex.props(styles.statVal)}
+                            style={{
+                              color:
+                                (activeRecord.attempt ?? 0) >= (activeRecord.max_attempts ?? 3)
+                                  ? tokens.colorError500
+                                  : tokens.colorFg,
+                            }}
+                          >
+                            {activeRecord.attempt ?? 0} / {activeRecord.max_attempts ?? 3}
+                          </span>
+                        </div>
+                        <div {...stylex.props(styles.workerStatCard)}>
+                          <span {...stylex.props(styles.statLabel)}>Priority</span>
+                          <span {...stylex.props(styles.statVal)}>{activeRecord.priority ?? 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Error Trace Display if task failed or has errors */}
+                      {workerErrors && (
+                        <div {...stylex.props(styles.errorTraceBox)}>
+                          <div {...stylex.props(styles.errorTraceHeader)}>
+                            <span {...stylex.props(styles.errorTraceTitle)}>
+                              <WarningCircleIcon size={15} />
+                              <span>Error Trace</span>
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              aria-label="Copy error trace"
+                              onPress={() => handleCopyError(workerErrors)}
+                            >
+                              {copiedError ? (
+                                <CheckIcon size={12} color={tokens.colorSuccess500} />
+                              ) : (
+                                <CopyIcon size={12} />
+                              )}
+                              <span style={{ fontSize: '0.75rem' }}>{copiedError ? 'Copied' : 'Copy'}</span>
+                            </Button>
+                          </div>
+                          <pre {...stylex.props(styles.errorTraceContent)}>{workerErrors}</pre>
+                        </div>
+                      )}
+
+                      {/* Worker Arguments (Payload) JSON Field */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <label style={{ fontSize: tokens.fontSizeSm, fontWeight: 500, color: tokens.colorFg }}>
+                            Task Payload / Arguments (args)
+                          </label>
+                          <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
+                            JSON Payload
+                          </span>
+                        </div>
+                        <TextArea
+                          aria-label="Task Payload Arguments"
+                          placeholder="{}"
+                          value={
+                            typeof formData.args === 'object' && formData.args !== null
+                              ? JSON.stringify(formData.args, null, 2)
+                              : String(formData.args ?? '')
+                          }
+                          onChange={(val) => {
+                            try {
+                              const parsed = JSON.parse(val);
+                              setFormData({ ...formData, args: parsed });
+                            } catch {
+                              setFormData({ ...formData, args: val });
+                            }
+                          }}
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section Title for Form Fields */}
+                  <div {...stylex.props(styles.sectionTitle)}>
+                    <ListBulletsIcon size={16} color={tokens.colorPrimary500} />
+                    <span>{isCreating ? 'New Record Attributes' : 'Editable Record Attributes'}</span>
+                  </div>
+
+                  {/* Auth Fields */}
                   {moul?.type === 'auth' && (
                     <>
                       <TextField
@@ -1302,6 +1801,7 @@ function RecordsPage() {
                     </>
                   )}
 
+                  {/* Schema Display Fields */}
                   {displayFields.map((f: any) => (
                     <div key={f.name}>
                       {f.type === 'bool' ? (
@@ -1386,19 +1886,118 @@ function RecordsPage() {
                       )}
                     </div>
                   ))}
+
+                  {/* SYSTEM METADATA & RAW JSON VIEWER (When Editing) */}
+                  {!isCreating && activeRecord && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2, marginTop: tokens.spacing2 }}>
+                      <div {...stylex.props(styles.sectionTitle)}>
+                        <InfoIcon size={16} color={tokens.colorPrimary500} />
+                        <span>System Metadata & Inspection</span>
+                      </div>
+
+                      <div {...stylex.props(styles.metadataCard)}>
+                        <div {...stylex.props(styles.metadataRow)}>
+                          <span>Record ID:</span>
+                          <span style={{ color: tokens.colorFg, fontWeight: 600 }}>{activeRecord.id}</span>
+                        </div>
+                        {activeRecord.created_at && (
+                          <div {...stylex.props(styles.metadataRow)}>
+                            <span>Created At:</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.created_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {activeRecord.inserted_at && (
+                          <div {...stylex.props(styles.metadataRow)}>
+                            <span>Inserted At:</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.inserted_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {activeRecord.updated_at && (
+                          <div {...stylex.props(styles.metadataRow)}>
+                            <span>Updated At:</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.updated_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {activeRecord.scheduled_at && (
+                          <div {...stylex.props(styles.metadataRow)}>
+                            <span>Scheduled At:</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.scheduled_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onPress={() => setShowRawJson(!showRawJson)}
+                        >
+                          <CodeIcon size={14} />
+                          <span>{showRawJson ? 'Hide Raw JSON' : 'Inspect Raw JSON'}</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label="Copy full record JSON"
+                          onPress={() => handleCopyJson(activeRecord)}
+                        >
+                          {copiedJson ? <CheckIcon size={13} color={tokens.colorSuccess500} /> : <CopyIcon size={13} />}
+                          <span style={{ fontSize: tokens.fontSizeXs }}>{copiedJson ? 'Copied' : 'Copy JSON'}</span>
+                        </Button>
+                      </div>
+
+                      {showRawJson && (
+                        <pre {...stylex.props(styles.jsonBlock)}>
+                          {JSON.stringify(activeRecord, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DrawerBody>
+
               <DrawerFooter>
-                <Button type="button" variant="ghost" onPress={() => setIsDrawerOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isDisabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Record'}
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div>
+                    {!isCreating && activeRecord && (
+                      <Button
+                        type="button"
+                        variant="danger-soft"
+                        onPress={() => setRecordToDelete(activeRecord)}
+                      >
+                        <TrashIcon size={14} />
+                        <span>Delete</span>
+                      </Button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+                    <Button type="button" variant="ghost" onPress={() => setIsDrawerOpen(false)}>
+                      Cancel
+                    </Button>
+                    {!isCreating && moul?.type === 'worker' && activeRecord && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        isPending={retryTaskMutation.isPending}
+                        onPress={() => retryTaskMutation.mutate(activeRecord)}
+                      >
+                        <ArrowsCounterClockwiseIcon size={14} />
+                        <span>Retry Task</span>
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      isDisabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {createMutation.isPending || updateMutation.isPending
+                        ? 'Saving...'
+                        : isCreating
+                          ? 'Create Record'
+                          : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
               </DrawerFooter>
             </form>
           </DrawerDialog>
