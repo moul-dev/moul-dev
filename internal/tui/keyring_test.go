@@ -6,8 +6,9 @@ import (
 
 func TestKeyringWrapper(t *testing.T) {
 	// Enable fallback mode for isolated unit testing
+	prev := useFallback
 	useFallback = true
-	defer func() { useFallback = false }()
+	defer func() { useFallback = prev }()
 
 	serverURL := "http://localhost:8090"
 

@@ -82,7 +82,9 @@ func DeleteSecret(serverURL, keyType string) error {
 
 	err := keyring.Delete(keyringService, key)
 	if err != nil && err != keyring.ErrNotFound {
-		return err
+		logger.Warn("OS Keychain delete failed", "err", err)
+		return nil
 	}
 	return nil
+
 }
