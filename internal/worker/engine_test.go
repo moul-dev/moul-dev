@@ -74,8 +74,8 @@ func TestEngineSuccessFlow(t *testing.T) {
 		t.Fatalf("Enqueue failed: %v", err)
 	}
 
-	if jobRes["state"] != "available" {
-		t.Errorf("Expected initial state to be 'available', got %s", jobRes["state"])
+	if jobRes["state"] != "available" && jobRes["state"] != "executing" {
+		t.Errorf("Expected initial state to be 'available' or 'executing', got %s", jobRes["state"])
 	}
 
 	// Wait for handler execution

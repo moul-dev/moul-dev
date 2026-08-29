@@ -1473,6 +1473,9 @@ func (m *Model) setupRootUserCmd() tea.Cmd {
 
 // copyToClipboard copies the given code string to the clipboard.
 func copyToClipboard(text string) error {
+	if os.Getenv("MOUL_TEST_ENV") == "true" {
+		return nil
+	}
 	return clipboard.WriteAll(text)
 }
 

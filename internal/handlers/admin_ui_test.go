@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/ui"
 )
+
 
 func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	e := echo.New()
@@ -106,8 +108,14 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	e.ServeHTTP(rec, req)
 
 	if rec.Code == http.StatusOK {
-		if !strings.Contains(rec.Body.String(), "<polygon") {
-			t.Fatalf("expected favicon svg content, got %s", rec.Body.String())
+		if ui.HasCustomUI() {
+			if !strings.Contains(rec.Body.String(), "<polygon") {
+				t.Fatalf("expected favicon svg content, got %s", rec.Body.String())
+			}
+		} else {
+			if !strings.Contains(rec.Body.String(), "mould Web Admin Console") {
+				t.Fatalf("expected fallback HTML for favicon.svg when UI bundle absent, got %s", rec.Body.String())
+			}
 		}
 	}
 

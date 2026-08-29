@@ -285,14 +285,14 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 		return nil, fmt.Errorf("failed to insert job record: %w", err)
 	}
 
-	e.Trigger(tableName, recordID)
-
-	// Fetch back and parse response format
+	// Fetch back and parse response format before triggering worker execution
 	var record dbx.NullStringMap
 	err = e.db.Select("*").From(tableName).Where(dbx.HashExp{"id": recordID}).One(&record)
 	if err != nil {
 		return nil, err
 	}
+
+	e.Trigger(tableName, recordID)
 
 	// Normalize response map
 	resMap := nullStringMapToMap(record)
