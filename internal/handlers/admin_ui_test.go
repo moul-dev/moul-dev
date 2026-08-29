@@ -10,7 +10,6 @@ import (
 	"github.com/moul-dev/moul-dev/internal/ui"
 )
 
-
 func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	e := echo.New()
 	RegisterAdminUIRoutes(e, "/_moul_")
