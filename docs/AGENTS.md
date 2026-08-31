@@ -175,6 +175,11 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 
 The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
 
+### Collection Creation & Schema Designer Capabilities
+- **Dual-Tab Drawer Workflow**: Create collections with tabs for "General & Fields" and "API Access Rules" without leaving the dashboard.
+- **Type-Based Templates**: Automatic preset field suggestions for `base`, `auth`, `worker`, and `analytic` collections.
+- **Rule Autocomplete & Syntax Help**: Smart suggestions for `@request.*`, `@collection.*`, schema fields, and operators with keyboard navigation, one-click preset chips, and a full Rule Reference Modal Dialog.
+
 ### Records Data Grid & Detail Drawer Capabilities
 - **Record ID Interactive Inspection**: Clicking any record ID opens a slide-over `Drawer` displaying full field attributes, relation associations, and system timestamps.
 - **In-Drawer Record Modification**: Supports direct live editing of schema fields, relations (1:1, 1:N, M:N), file attachments, JSON attributes, and auth fields with instant persistence.

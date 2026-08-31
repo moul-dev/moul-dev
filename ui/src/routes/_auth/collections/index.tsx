@@ -35,10 +35,17 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
   toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
+import { FieldsBuilder, MoulField } from '../../../components/collections/FieldsBuilder';
+import { RulesEditor, MoulRules } from '../../../components/collections/RulesEditor';
 
 const styles = stylex.create({
   container: {
@@ -125,6 +132,12 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing3,
   },
+  drawerTabContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing4,
+    paddingBlock: tokens.spacing3,
+  },
   emptyState: {
     padding: tokens.spacing8,
     backgroundColor: tokens.colorBgSubtle,
@@ -146,9 +159,20 @@ function CollectionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createTab, setCreateTab] = useState<'general' | 'rules'>('general');
   const [collectionToDelete, setCollectionToDelete] = useState<any | null>(null);
+
+  // Form State
   const [newMoulName, setNewMoulName] = useState('');
   const [newMoulType, setNewMoulType] = useState('base');
+  const [newMoulFields, setNewMoulFields] = useState<MoulField[]>([]);
+  const [newMoulRules, setNewMoulRules] = useState<MoulRules>({
+    listRule: '',
+    viewRule: '',
+    createRule: '',
+    updateRule: '',
+    deleteRule: '',
+  });
   const [error, setError] = useState<string | null>(null);
 
   const { data: mouls, isLoading } = useQuery({
@@ -161,11 +185,10 @@ function CollectionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mouls'] });
       setIsCreateOpen(false);
-      setNewMoulName('');
-      setNewMoulType('base');
+      resetCreateForm();
       toastQueue.add({
         title: 'Collection Created',
-        description: 'Collection was created successfully.',
+        description: 'Collection created successfully.',
         variant: 'success',
       });
     },
@@ -195,20 +218,56 @@ function CollectionsPage() {
     },
   });
 
+  const resetCreateForm = () => {
+    setNewMoulName('');
+    setNewMoulType('base');
+    setNewMoulFields([]);
+    setNewMoulRules({
+      listRule: '',
+      viewRule: '',
+      createRule: '',
+      updateRule: '',
+      deleteRule: '',
+    });
+    setCreateTab('general');
+    setError(null);
+  };
+
+  const handleTypeChange = (selectedType: string) => {
+    setNewMoulType(selectedType);
+  };
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const trimmedName = newMoulName.trim().toLowerCase();
+    if (!trimmedName) {
+      setError('Collection name is required.');
+      setCreateTab('general');
+      return;
+    }
+
+    // Clean up fields
+    const cleanedFields = newMoulFields.map((f) => {
+      const cleanField = { ...f, name: f.name.trim() };
+      if (cleanField.type === 'relation') {
+        if (!cleanField.relationConfig) {
+          cleanField.relationConfig = {
+            targetMoul: trimmedName,
+            cardinality: '1:N',
+            onDelete: 'SET_NULL',
+          };
+        }
+      }
+      return cleanField;
+    });
+
     createMutation.mutate({
-      name: newMoulName.trim().toLowerCase(),
+      name: trimmedName,
       type: newMoulType,
-      fields: [],
-      rules: {
-        listRule: '',
-        viewRule: '',
-        createRule: '',
-        updateRule: '',
-        deleteRule: '',
-      },
+      fields: cleanedFields,
+      rules: newMoulRules,
     });
   };
 
@@ -223,7 +282,10 @@ function CollectionsPage() {
         </div>
         <Button
           variant="primary"
-          onPress={() => setIsCreateOpen(true)}
+          onPress={() => {
+            resetCreateForm();
+            setIsCreateOpen(true);
+          }}
         >
           <PlusIcon size={16} weight="bold" />
           <span>New Collection</span>
@@ -234,7 +296,7 @@ function CollectionsPage() {
         <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
       ) : !mouls || mouls.length === 0 ? (
         <div {...stylex.props(styles.emptyState)}>
-          No collections created yet. Click "New Collection" to get started.
+          No collections created yet. Click &quot;New Collection&quot; to get started.
         </div>
       ) : (
         <div {...stylex.props(styles.grid)}>
@@ -337,50 +399,91 @@ function CollectionsPage() {
         </div>
       )}
 
-      {/* Create Collection Drawer */}
+      {/* Create Collection Drawer with 2 Tabs */}
       <DrawerOverlay isOpen={isCreateOpen} onOpenChange={setIsCreateOpen} isDismissable>
-        <Drawer placement="right" size="md">
+        <Drawer placement="right" size="lg">
           <DrawerDialog>
             <form
               onSubmit={handleCreate}
               style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
             >
               <DrawerHeader>
-                <DrawerTitle>Create New Collection</DrawerTitle>
+                <DrawerTitle>Create Collection</DrawerTitle>
                 <DrawerCloseButton />
               </DrawerHeader>
+
               <DrawerBody>
                 <div {...stylex.props(styles.drawerForm)}>
                   {error && <Alert variant="error" description={error} />}
 
-                  <TextField
-                    label="Collection Name"
-                    placeholder="e.g. posts, products, comments"
-                    value={newMoulName}
-                    onChange={setNewMoulName}
-                    isRequired
-                    description="Lower-case alphanumeric table identifier"
-                  />
-
-                  <Select
-                    label="Collection Type"
-                    placeholder="Select Type"
-                    selectedKey={newMoulType}
-                    onSelectionChange={(key) => setNewMoulType(String(key))}
+                  <Tabs
+                    selectedKey={createTab}
+                    onSelectionChange={(key) => setCreateTab(key as 'general' | 'rules')}
+                    variant="tertiary"
                   >
-                    <SelectItem id="base">Base (General data CRUD)</SelectItem>
-                    <SelectItem id="auth">Auth (Users, password, passkey, OAuth2)</SelectItem>
-                    <SelectItem id="worker">Worker (Background job queue)</SelectItem>
-                    <SelectItem id="analytic">Analytic (Time-series & visitor tracking)</SelectItem>
-                  </Select>
+                    <TabList aria-label="Collection Settings Tabs">
+                      <Tab id="general">General & Fields</Tab>
+                      <Tab id="rules">Access Rules</Tab>
+                    </TabList>
+
+                    <TabPanels>
+                      {/* TAB 1: General & Fields */}
+                      <TabPanel id="general">
+                        <div {...stylex.props(styles.drawerTabContent)}>
+                          <TextField
+                            label="Collection Name"
+                            placeholder="e.g. posts, products, customers"
+                            value={newMoulName}
+                            onChange={setNewMoulName}
+                            isRequired
+                            description="Unique table identifier used in API routes and database queries."
+                          />
+
+                          <Select
+                            label="Collection Type"
+                            placeholder="Select Type"
+                            selectedKey={newMoulType}
+                            onSelectionChange={(key) => handleTypeChange(String(key))}
+                          >
+                            <SelectItem id="base">Base — Standard data collection</SelectItem>
+                            <SelectItem id="auth">Auth — Users with authentication</SelectItem>
+                            <SelectItem id="worker">Worker — Background tasks & queue</SelectItem>
+                            <SelectItem id="analytic">Analytic — Event logging & tracking</SelectItem>
+                          </Select>
+
+                          {/* Fields Builder */}
+                          <FieldsBuilder
+                            fields={newMoulFields}
+                            onChange={setNewMoulFields}
+                            currentMoulName={newMoulName}
+                            allMouls={mouls}
+                          />
+                        </div>
+                      </TabPanel>
+
+                      {/* TAB 2: Access Rules */}
+                      <TabPanel id="rules">
+                        <div {...stylex.props(styles.drawerTabContent)}>
+                          <RulesEditor
+                            rules={newMoulRules}
+                            onChange={setNewMoulRules}
+                            collectionFields={newMoulFields}
+                            allCollections={mouls}
+                            isAuthCollection={newMoulType === 'auth'}
+                          />
+                        </div>
+                      </TabPanel>
+                    </TabPanels>
+                  </Tabs>
                 </div>
               </DrawerBody>
+
               <DrawerFooter>
-                <Button type="button" variant="ghost" onPress={() => setIsCreateOpen(false)}>
+                <Button type="button" variant="outline" onPress={() => setIsCreateOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" variant="primary" isDisabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create Collection'}
+                  {createMutation.isPending ? 'Creating Collection...' : 'Create Collection'}
                 </Button>
               </DrawerFooter>
             </form>
@@ -431,4 +534,3 @@ function CollectionsPage() {
     </div>
   );
 }
-
