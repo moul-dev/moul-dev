@@ -87,11 +87,16 @@ func TestStoreAndOpenFeatureProvider(t *testing.T) {
 	provider := NewProvider(store)
 
 	// Register with OpenFeature SDK
-	_ = openfeature.SetProvider(provider)
+	if err := openfeature.SetProviderAndWait(provider); err != nil {
+		t.Fatalf("failed to set provider: %v", err)
+	}
 	client := openfeature.NewClient("test-client")
 
-	// 1. Non-existent flag should return default
+	// 1. Non-existent flag should return default fallback value
 	val, err := client.BooleanValue(context.Background(), "missing-flag", false, openfeature.EvaluationContext{})
+	if err == nil {
+		t.Errorf("expected FLAG_NOT_FOUND error for missing flag, got nil")
+	}
 	if val != false {
 		t.Errorf("expected missing flag to return default false, got %v", val)
 	}

@@ -5,60 +5,21 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v5"
-	"github.com/moul-dev/moul-dev/internal/auth"
-	"github.com/moul-dev/moul-dev/internal/db"
-	"github.com/moul-dev/moul-dev/internal/handlers"
-	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/testutil"
 )
 
 func TestSetupFlow(t *testing.T) {
-	// Initialize JWT
-	auth.InitJWT("test-secret-key-setup-tests")
-
-	// 1. Setup in-memory SQLite DB
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
-
-	// 2. Setup Echo router
-	e := echo.New()
-	e.Use(middleware.LoadAuthContextMiddleware())
-
-	setupHandler := handlers.NewSetupHandler(dbConn)
-	deviceFlowHandler := handlers.NewDeviceFlowHandler(dbConn)
-	authHandler := handlers.NewAuthHandler(dbConn)
-
 	adminKey := "test-admin-key"
-	adminGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
-	adminGroup.GET("", setupHandler.CheckSetupStatus)
-	adminGroup.POST("", setupHandler.SetupRootUser)
-
-	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
-	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
-	adminAuthGroup.GET("/account", setupHandler.GetRootAccount)
-	adminAuthGroup.PATCH("/account", setupHandler.UpdateRootAccount)
-	adminAuthGroup.POST("/password", setupHandler.UpdateRootPassword)
-	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
-
-	e.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
-	e.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
-	e.GET("/device", deviceFlowHandler.RenderDeviceForm)
-	e.POST("/device/verify", deviceFlowHandler.VerifyDevice)
-	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
-	e.POST("/api/moul/:name/refresh", authHandler.RefreshToken)
-
-	server := httptest.NewServer(e)
-	defer server.Close()
-
-	client := server.Client()
+	ts := testutil.NewTestServer(t,
+		testutil.WithAdminKey(adminKey),
+		testutil.WithJWTSecret("test-secret-key-setup-tests"),
+	)
+	server := ts.Server
+	client := ts.Client
 
 	// 1. GET /api/setup - Should return needsSetup: true
 	req, _ := http.NewRequest("GET", server.URL+"/api/setup", nil)

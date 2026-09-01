@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+# Synchronize documentation files from docs/ to website/public/
+make sync-docs
+
+# If make sync-docs modified any files in website/public, reject the commit
+if ! git diff --exit-code -- website/public/ >/dev/null 2>&1; then
+    echo "\033[0;31m[ERROR] Documentation drift detected!\033[0m"
+    echo "Files in website/public/ were out of sync with docs/."
+    echo "They have now been automatically synchronized by 'make sync-docs'."
+    echo "Please stage the updated website/public/ files before committing:"
+    echo "  git add website/public/"
+    echo ""
+    exit 1
+fi
+
+exit 0

@@ -308,10 +308,9 @@ func EvaluateRule(
 		}
 		// Convert ? to {:p0}, {:p1}, etc. for dbx compatibility
 		params := dbx.Params{}
-		runes := []rune(filterStr)
 		var newFilter strings.Builder
 		paramIdx := 0
-		for _, r := range runes {
+		for _, r := range filterStr {
 			if r == '?' {
 				pName := fmt.Sprintf("p%d", paramIdx)
 				newFilter.WriteString("{:" + pName + "}")

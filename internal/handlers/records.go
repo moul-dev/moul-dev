@@ -1418,85 +1418,83 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 	}, h.DB)
 
 	// 5. Handle CASCADE and SET_NULL for referencing collections
-	if allMouls != nil {
-		for _, otherMoul := range allMouls {
-			for _, field := range otherMoul.Fields {
-				if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.TargetMoul == moulName {
-					onDel := field.RelationConfig.OnDelete
-					if onDel == "" {
-						onDel = schema.OnDeleteSetNull
-					}
-					card := field.RelationConfig.Cardinality
+	for _, otherMoul := range allMouls {
+		for _, field := range otherMoul.Fields {
+			if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.TargetMoul == moulName {
+				onDel := field.RelationConfig.OnDelete
+				if onDel == "" {
+					onDel = schema.OnDeleteSetNull
+				}
+				card := field.RelationConfig.Cardinality
 
-					if onDel == schema.OnDeleteCascade {
-						var toDeleteIDs []string
-						if card == "1:1" || card == "1:N" {
-							var rawRecs []dbx.NullStringMap
-							if qErr := h.DB.Select("id").From(otherMoul.Name).Where(dbx.HashExp{field.Name: id}).All(&rawRecs); qErr == nil {
-								for _, rawRec := range rawRecs {
-									recMap := nullStringMapToMap(rawRec)
-									if recID, ok := recMap["id"].(string); ok && recID != "" {
-										toDeleteIDs = append(toDeleteIDs, recID)
-									}
+				if onDel == schema.OnDeleteCascade {
+					var toDeleteIDs []string
+					if card == "1:1" || card == "1:N" {
+						var rawRecs []dbx.NullStringMap
+						if qErr := h.DB.Select("id").From(otherMoul.Name).Where(dbx.HashExp{field.Name: id}).All(&rawRecs); qErr == nil {
+							for _, rawRec := range rawRecs {
+								recMap := nullStringMapToMap(rawRec)
+								if recID, ok := recMap["id"].(string); ok && recID != "" {
+									toDeleteIDs = append(toDeleteIDs, recID)
 								}
 							}
-						} else if card == "M:N" {
-							var rawRecs []dbx.NullStringMap
-							if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
-								for _, rawRec := range rawRecs {
-									recMap := nullStringMapToMap(rawRec)
-									recID, _ := recMap["id"].(string)
-									rawVal, _ := recMap[field.Name].(string)
-									if rawVal != "" {
-										var ids []string
-										if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
-											for _, item := range ids {
-												if item == id {
-													toDeleteIDs = append(toDeleteIDs, recID)
-													break
-												}
+						}
+					} else if card == "M:N" {
+						var rawRecs []dbx.NullStringMap
+						if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
+							for _, rawRec := range rawRecs {
+								recMap := nullStringMapToMap(rawRec)
+								recID, _ := recMap["id"].(string)
+								rawVal, _ := recMap[field.Name].(string)
+								if rawVal != "" {
+									var ids []string
+									if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+										for _, item := range ids {
+											if item == id {
+												toDeleteIDs = append(toDeleteIDs, recID)
+												break
 											}
 										}
 									}
 								}
 							}
 						}
+					}
 
-						// Recursively delete referencing records
-						targetOtherMoul := otherMoul
-						for _, childID := range toDeleteIDs {
-							var childRec dbx.NullStringMap
-							if childErr := h.DB.Select("*").From(targetOtherMoul.Name).Where(dbx.HashExp{"id": childID}).One(&childRec); childErr == nil {
-								childMap := normalizeRecord(targetOtherMoul, nullStringMapToMap(childRec))
-								_ = h.deleteRecordAndCascade(ctx, targetOtherMoul, childMap, childID)
-							}
+					// Recursively delete referencing records
+					targetOtherMoul := otherMoul
+					for _, childID := range toDeleteIDs {
+						var childRec dbx.NullStringMap
+						if childErr := h.DB.Select("*").From(targetOtherMoul.Name).Where(dbx.HashExp{"id": childID}).One(&childRec); childErr == nil {
+							childMap := normalizeRecord(targetOtherMoul, nullStringMapToMap(childRec))
+							_ = h.deleteRecordAndCascade(ctx, targetOtherMoul, childMap, childID)
 						}
-					} else if onDel == schema.OnDeleteSetNull {
-						if card == "1:1" || card == "1:N" {
-							_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: ""}, dbx.HashExp{field.Name: id}).Execute()
-						} else if card == "M:N" {
-							var rawRecs []dbx.NullStringMap
-							if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
-								for _, rawRec := range rawRecs {
-									recMap := nullStringMapToMap(rawRec)
-									recID, _ := recMap["id"].(string)
-									rawVal, _ := recMap[field.Name].(string)
-									if rawVal != "" {
-										var ids []string
-										if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
-											found := false
-											var newIDs []string
-											for _, item := range ids {
-												if item == id {
-													found = true
-												} else {
-													newIDs = append(newIDs, item)
-												}
+					}
+				} else if onDel == schema.OnDeleteSetNull {
+					if card == "1:1" || card == "1:N" {
+						_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: ""}, dbx.HashExp{field.Name: id}).Execute()
+					} else if card == "M:N" {
+						var rawRecs []dbx.NullStringMap
+						if qErr := h.DB.Select("id", field.Name).From(otherMoul.Name).Where(dbx.NewExp(fmt.Sprintf("%s LIKE {:pat}", db.QuoteIdentifier(field.Name)), dbx.Params{"pat": "%" + id + "%"})).All(&rawRecs); qErr == nil {
+							for _, rawRec := range rawRecs {
+								recMap := nullStringMapToMap(rawRec)
+								recID, _ := recMap["id"].(string)
+								rawVal, _ := recMap[field.Name].(string)
+								if rawVal != "" {
+									var ids []string
+									if jsonErr := json.Unmarshal([]byte(rawVal), &ids); jsonErr == nil {
+										found := false
+										var newIDs []string
+										for _, item := range ids {
+											if item == id {
+												found = true
+											} else {
+												newIDs = append(newIDs, item)
 											}
-											if found {
-												newJSON, _ := json.Marshal(newIDs)
-												_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: string(newJSON)}, dbx.HashExp{"id": recID}).Execute()
-											}
+										}
+										if found {
+											newJSON, _ := json.Marshal(newIDs)
+											_, _ = h.DB.Update(otherMoul.Name, dbx.Params{field.Name: string(newJSON)}, dbx.HashExp{"id": recID}).Execute()
 										}
 									}
 								}

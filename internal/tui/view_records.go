@@ -24,26 +24,6 @@ func (m *Model) initRecordSearchInput() {
 	m.recordSearchInput = ti
 }
 
-func buildRecordFilter(moul *schema.Moul, query string) string {
-	query = strings.TrimSpace(query)
-	if query == "" {
-		return ""
-	}
-	if strings.ContainsAny(query, "=~><!") {
-		return query
-	}
-	var clauses []string
-	clauses = append(clauses, fmt.Sprintf("id ~ %q", query))
-	if moul != nil {
-		for _, f := range moul.Fields {
-			if f.Type == "text" || f.Type == "string" || f.Type == "email" || f.Type == "url" {
-				clauses = append(clauses, fmt.Sprintf("%s ~ %q", f.Name, query))
-			}
-		}
-	}
-	return strings.Join(clauses, " || ")
-}
-
 func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 	moul := m.currentMoul()
 	if moul == nil {

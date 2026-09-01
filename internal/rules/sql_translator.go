@@ -148,10 +148,8 @@ func newSQLBuilder(tokens []Token, moul *schema.Moul, authRecord map[string]inte
 		"query":   map[string]interface{}{},
 		"headers": map[string]interface{}{},
 	}
-	if reqContext != nil {
-		for k, v := range reqContext {
-			reqMap[k] = v
-		}
+	for k, v := range reqContext {
+		reqMap[k] = v
 	}
 	return &sqlBuilder{
 		tokens:     tokens,

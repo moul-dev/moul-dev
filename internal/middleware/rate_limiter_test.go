@@ -90,12 +90,12 @@ func TestDynamicRateLimiter(t *testing.T) {
 
 	// Test case 2: Action matching (*:auth)
 	// First request - OK (limit is 2 per 10s)
-	code, body = runMiddleware(http.MethodPost, "/api/moul/users/auth-with-password", "/api/moul/:name/auth-with-password", "name", "users", nil, nil)
+	code, _ = runMiddleware(http.MethodPost, "/api/moul/users/auth-with-password", "/api/moul/:name/auth-with-password", "name", "users", nil, nil)
 	if code != http.StatusOK {
 		t.Errorf("First auth request failed: status %d", code)
 	}
 	// Second request - OK
-	code, body = runMiddleware(http.MethodPost, "/api/moul/users/auth-with-password", "/api/moul/:name/auth-with-password", "name", "users", nil, nil)
+	code, _ = runMiddleware(http.MethodPost, "/api/moul/users/auth-with-password", "/api/moul/:name/auth-with-password", "name", "users", nil, nil)
 	if code != http.StatusOK {
 		t.Errorf("Second auth request failed: status %d", code)
 	}
@@ -108,7 +108,7 @@ func TestDynamicRateLimiter(t *testing.T) {
 	// Test case 3: targeted_users (authenticated rule)
 	// Request on users:list (GET /api/moul/users/records) without auth -> matches fallback "/" rule (limit 5) instead of "users:list"
 	for i := 0; i < 3; i++ {
-		code, body = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, nil)
+		code, _ = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, nil)
 		if code != http.StatusOK {
 			t.Errorf("Guest request on users:list should pass under fallback rule (request %d failed)", i)
 		}
@@ -116,12 +116,12 @@ func TestDynamicRateLimiter(t *testing.T) {
 	// Request with auth -> matches "users:list" (limit 1 per 10s)
 	userAuth := map[string]interface{}{"id": "u1", "username": "usera"}
 	// First request - OK
-	code, body = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, userAuth)
+	code, _ = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, userAuth)
 	if code != http.StatusOK {
 		t.Errorf("Authenticated request on users:list failed: status %d", code)
 	}
 	// Second request - Blocked (exceeds limit 1)
-	code, body = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, userAuth)
+	code, _ = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, userAuth)
 	if code != http.StatusTooManyRequests {
 		t.Errorf("Expected 429 for authenticated user on users:list, got %d", code)
 	}

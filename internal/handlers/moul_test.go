@@ -16,17 +16,14 @@ import (
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/testutil"
 
 	"github.com/labstack/echo/v5"
 )
 
 func TestMoulAuthAndRecordCRUD(t *testing.T) {
 	// 1. Setup in-memory SQLite DB
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	// 2. Setup Echo router
 	e := echo.New()
@@ -189,11 +186,7 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 
 func TestHandlersEdgeCases(t *testing.T) {
 	// 1. Setup in-memory SQLite DB
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	// 2. Setup Echo router
 	e := echo.New()
@@ -944,10 +937,7 @@ func TestMoulAssociations(t *testing.T) {
 }
 
 func TestUpdateMoul(t *testing.T) {
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to init in-memory database: %v", err)
-	}
+	dbConn := testutil.NewTestDB(t)
 
 	moulHandler := handlers.NewMoulHandler(dbConn)
 	e := echo.New()
@@ -1042,11 +1032,7 @@ func TestUpdateMoul(t *testing.T) {
 }
 
 func TestSelectFieldValidationAndCRUD(t *testing.T) {
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	e := echo.New()
 	e.Use(middleware.LoadAuthContextMiddleware())
@@ -1146,11 +1132,7 @@ func TestSelectFieldValidationAndCRUD(t *testing.T) {
 }
 
 func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	analyticsEngine, err := analytics.NewEngine(dbConn, "")
 	if err != nil {
@@ -1255,11 +1237,7 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 }
 
 func TestGetMoulHandler(t *testing.T) {
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	e := echo.New()
 	moulHandler := handlers.NewMoulHandler(dbConn)
@@ -1304,11 +1282,7 @@ func TestGetMoulHandler(t *testing.T) {
 
 func TestListRecordsAdminKeyBypassAndSearch(t *testing.T) {
 	testAdminKey := "master-admin-key-123"
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize test DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	e := echo.New()
 	e.Use(middleware.LoadAuthContextMiddleware())
@@ -1358,7 +1332,7 @@ func TestListRecordsAdminKeyBypassAndSearch(t *testing.T) {
 
 	// 3. Public GET /api/moul/users/records (no admin key or auth) -> matches listRule 'id = @request.auth.id' against empty auth -> returns 0 items
 	req, _ := http.NewRequest("GET", server.URL+"/api/moul/users/records", nil)
-	resp, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}

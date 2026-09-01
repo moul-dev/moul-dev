@@ -112,8 +112,8 @@ func TestWebhooksCRUD(t *testing.T) {
 
 	// 6. Verify Deleted
 	resp, err = client.Get(server.URL + "/api/moul/articles/webhooks/" + createdHook.ID)
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("Expected 404 for deleted webhook, got status=%d", resp.StatusCode)
+	if err != nil || resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Expected 404 for deleted webhook, got status=%d, err=%v", resp.StatusCode, err)
 	}
 }
 

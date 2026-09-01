@@ -72,7 +72,6 @@ type Model struct {
 	webhookFormSecret    string
 	webhookFormEnabled   bool
 	editingWebhookID     string
-	webhookTestResult    string
 
 	// Records Screen
 	Records             []map[string]interface{}

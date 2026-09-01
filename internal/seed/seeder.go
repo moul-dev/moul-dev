@@ -46,7 +46,7 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		return fmt.Errorf("failed to hash admin password: %w", err)
 	}
 
-	_, _ = dbConn.NewQuery(`
+	if _, err := dbConn.NewQuery(`
 		INSERT OR REPLACE INTO _rootUsers (id, username, email, name, passwordHash, created_at, updated_at)
 		VALUES ({:id}, {:username}, {:email}, {:name}, {:passwordHash}, {:created_at}, {:updated_at})
 	`).Bind(dbx.Params{
@@ -57,7 +57,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		"passwordHash": string(adminHash),
 		"created_at":   nowStr,
 		"updated_at":   nowStr,
-	}).Execute()
+	}).Execute(); err != nil {
+		return fmt.Errorf("failed to seed root admin user: %w", err)
+	}
 
 	// 2. Seed 'users' Auth Collection
 	existingUsers, _ := db.LoadMoulByName(dbConn, "users")
@@ -89,7 +91,10 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			return fmt.Errorf("failed to save users metadata: %w", err)
 		}
 
-		userHash, _ := bcrypt.GenerateFromPassword([]byte("Password123!"), bcrypt.DefaultCost)
+		userHash, err := bcrypt.GenerateFromPassword([]byte("Password123!"), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash demo user password: %w", err)
+		}
 		demoUsers := []map[string]interface{}{
 			{
 				"id":           "usr_admin_001",
@@ -127,7 +132,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		}
 
 		for _, u := range demoUsers {
-			_, _ = dbConn.Insert("users", dbx.Params(u)).Execute()
+			if _, err := dbConn.Insert("users", dbx.Params(u)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo user %v: %w", u["username"], err)
+			}
 		}
 	}
 
@@ -168,7 +175,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			{"id": "cat_tut_004", "name": "Tutorials & Guides", "slug": "tutorials", "description": "Step-by-step developer walkthroughs", "color": "#F59E0B", "created_at": nowStr, "updated_at": nowStr},
 		}
 		for _, c := range demoCats {
-			_, _ = dbConn.Insert("categories", dbx.Params(c)).Execute()
+			if _, err := dbConn.Insert("categories", dbx.Params(c)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo category %v: %w", c["slug"], err)
+			}
 		}
 	}
 
@@ -256,7 +265,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			},
 		}
 		for _, p := range demoPosts {
-			_, _ = dbConn.Insert("posts", dbx.Params(p)).Execute()
+			if _, err := dbConn.Insert("posts", dbx.Params(p)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo post %v: %w", p["slug"], err)
+			}
 		}
 	}
 
@@ -333,7 +344,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			},
 		}
 		for _, j := range demoJobs {
-			_, _ = dbConn.Insert("tasks_queue", dbx.Params(j)).Execute()
+			if _, err := dbConn.Insert("tasks_queue", dbx.Params(j)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo job %v: %w", j["id"], err)
+			}
 		}
 	}
 
@@ -389,7 +402,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			},
 		}
 		for _, v := range demoVisits {
-			_, _ = dbConn.Insert("_visits", dbx.Params(v)).Execute()
+			if _, err := dbConn.Insert("_visits", dbx.Params(v)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo visit %v: %w", v["id"], err)
+			}
 		}
 
 		demoEvents := []map[string]interface{}{
@@ -417,7 +432,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			},
 		}
 		for _, e := range demoEvents {
-			_, _ = dbConn.Insert("events", dbx.Params(e)).Execute()
+			if _, err := dbConn.Insert("events", dbx.Params(e)).Execute(); err != nil {
+				return fmt.Errorf("failed to seed demo event %v: %w", e["id"], err)
+			}
 		}
 	}
 
@@ -437,8 +454,11 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		}
 
 		for _, f := range demoFlags {
-			gatesJSON, _ := json.Marshal(f.Gates)
-			_, _ = dbConn.NewQuery(`
+			gatesJSON, err := json.Marshal(f.Gates)
+			if err != nil {
+				return fmt.Errorf("failed to marshal feature flag gates for %s: %w", f.Key, err)
+			}
+			if _, err := dbConn.NewQuery(`
 				INSERT OR REPLACE INTO _feature_flags (id, key, description, enabled, default_value, gates, created_at, updated_at)
 				VALUES ({:id}, {:key}, {:description}, {:enabled}, {:default_value}, {:gates}, {:created_at}, {:updated_at})
 			`).Bind(dbx.Params{
@@ -450,7 +470,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"gates":         string(gatesJSON),
 				"created_at":    nowStr,
 				"updated_at":    nowStr,
-			}).Execute()
+			}).Execute(); err != nil {
+				return fmt.Errorf("failed to seed feature flag %s: %w", f.Key, err)
+			}
 		}
 	}
 

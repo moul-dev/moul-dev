@@ -14,8 +14,27 @@ permissions:
   contents: read
 
 jobs:
+  lint-go:
+    name: Golangci-lint Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
   test-go:
-    name: Go Tests & Race Detection
+    name: Go Tests, Race Detection & Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -35,10 +54,27 @@ jobs:
           test -z "$(gofmt -l .)" || (echo "gofmt found unformatted files:" && gofmt -l . && exit 1)
           go vet ./...
 
-
-      - name: Run Go Tests & Self-Contained E2E
+      - name: Run Go Tests with Atomic Coverage
         run: |
-          MOUL_TEST_ENV=true go test -v -race -cover ./internal/... ./pkg/...
+          MOUL_TEST_ENV=true go test -v -race -covermode=atomic -coverprofile=coverage.out ./internal/... ./pkg/...
+
+      - name: Generate Coverage Summary for Actions
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            echo "### 📊 Go Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            go tool cover -func=coverage.out | tail -n 25 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-test-coverage
+          path: coverage.out
+          retention-days: 14
 
   check-ui:
     name: Admin UI Typecheck & Build

@@ -95,7 +95,7 @@ func (m *Model) viewConnect() string {
 	}
 
 	var formView string
-	var sectionTitle string = fmt.Sprintf("Bring Your Own Compute. Simplified. (v%s)", Version)
+	sectionTitle := fmt.Sprintf("Bring Your Own Compute. Simplified. (v%s)", Version)
 
 	if m.State == StateRootSetup {
 		sectionTitle = "Initial Server Setup: Create Root User"

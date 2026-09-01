@@ -12,6 +12,10 @@ import (
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
+func floatPtr(v float64) *float64 {
+	return &v
+}
+
 func TestExtendedFieldTypes(t *testing.T) {
 	dbConn, err := db.InitDB(":memory:")
 	if err != nil {

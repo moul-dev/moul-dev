@@ -175,6 +175,11 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 
 The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
 
+### Collection Creation & Schema Designer Capabilities
+- **Dual-Tab Drawer Workflow**: Create collections with tabs for "General & Fields" and "API Access Rules" without leaving the dashboard.
+- **Type-Based Templates**: Automatic preset field suggestions for `base`, `auth`, `worker`, and `analytic` collections.
+- **Rule Autocomplete & Syntax Help**: Smart suggestions for `@request.*`, `@collection.*`, schema fields, and operators with keyboard navigation, one-click preset chips, and a full Rule Reference Modal Dialog.
+
 ### Records Data Grid & Detail Drawer Capabilities
 - **Record ID Interactive Inspection**: Clicking any record ID opens a slide-over `Drawer` displaying full field attributes, relation associations, and system timestamps.
 - **In-Drawer Record Modification**: Supports direct live editing of schema fields, relations (1:1, 1:N, M:N), file attachments, JSON attributes, and auth fields with instant persistence.
@@ -208,6 +213,18 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 When assisting users with deploying `mould` to production on **Ubuntu Server 26.04 LTS**:
 - Refer to the dedicated LXD system container, Tailscale, and Cloudflare Tunnel deployment guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md).
 - Ensure host firewall rules close public SSH (port 22) after configuring Tailscale, and route public traffic via `cloudflared`.
+
+---
+
+## 10. Go Backend Engineering Standards
+
+When developing or refactoring backend Go code:
+- **Strict Error Handling**: Never discard errors silently using blank identifiers (`_ = ...` or `_, _ = ...`). Always check and propagate errors with `%w` wrapping (`fmt.Errorf("...: %w", err)`) or map them to structured HTTP domain responses.
+- **Testing Completeness & Shared Helpers**: Every new package, service, or handler must be accompanied by comprehensive tests (`*_test.go`). Use `internal/testutil` (`testutil.NewTestDB(t)` and `testutil.NewTestServer(t)`) for all database and HTTP test setups instead of manual boilerplate.
+- **SQL & Data Access Safety**: Never construct raw SQL strings with dynamic variable concatenation. Always use `safesql` validation and parameterized PocketBase `dbx` builders (`dbx.Params`, `dbx.HashExp`, `dbx.NewExp`).
+- **Synchronous OpenAPI & API Documentation**: Whenever adding, modifying, or deleting HTTP endpoints in `internal/handlers/router.go`, synchronously update `docs/openapi.json` and `docs/openapi.yml`, then run `make sync-docs`.
+- **Concurrency & State Safety**: Stateful services, in-memory caches, and background workers must ensure thread safety with appropriate synchronization primitives (`sync.RWMutex` / `sync.Mutex`).
+
 
 
 

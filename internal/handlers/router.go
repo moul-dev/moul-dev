@@ -30,6 +30,13 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 		appVersion = version[0]
 	}
 
+	if analyticsEngine == nil {
+		analyticsEngine, _ = analytics.NewEngine(dbConn, "")
+	}
+	if mailService == nil {
+		mailService, _ = mailer.NewMailer(dbConn)
+	}
+
 	docsHandler := NewDocsHandler(dbConn, appVersion)
 
 	// ── Global Middleware ────────────────────────────────────────────
@@ -80,12 +87,6 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	e.Use(middleware.DynamicRateLimiter(adminKey))
 
 	// ── Handlers initialization ─────────────────────────────────────
-	if analyticsEngine == nil {
-		analyticsEngine, _ = analytics.NewEngine(dbConn, "")
-	}
-	if mailService == nil {
-		mailService, _ = mailer.NewMailer(dbConn)
-	}
 
 	moulHandler := NewMoulHandler(dbConn)
 	recordHandler := NewRecordHandler(dbConn, adminKey)

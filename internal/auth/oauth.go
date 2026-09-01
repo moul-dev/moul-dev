@@ -251,7 +251,9 @@ func (p *GitHubProvider) FetchUserProfile(ctx context.Context, code, codeVerifie
 	}
 
 	rawMap := make(map[string]interface{})
-	_ = json.Unmarshal(userBytes, &rawMap)
+	if err := json.Unmarshal(userBytes, &rawMap); err != nil {
+		return nil, fmt.Errorf("failed to parse github raw user attributes: %w", err)
+	}
 
 	email := ghUser.Email
 	// If email is private in primary profile, fetch from /user/emails
@@ -405,7 +407,9 @@ func (p *GoogleProvider) FetchUserProfile(ctx context.Context, code, codeVerifie
 	}
 
 	rawMap := make(map[string]interface{})
-	_ = json.Unmarshal(userBytes, &rawMap)
+	if err := json.Unmarshal(userBytes, &rawMap); err != nil {
+		return nil, fmt.Errorf("failed to parse google raw user attributes: %w", err)
+	}
 
 	username := strings.Split(gUser.Email, "@")[0]
 	if username == "" {
@@ -616,10 +620,14 @@ func (p *AppleProvider) FetchUserProfile(ctx context.Context, code, codeVerifier
 		Sub   string `json:"sub"`
 		Email string `json:"email"`
 	}
-	_ = json.Unmarshal(claimsBytes, &claims)
+	if err := json.Unmarshal(claimsBytes, &claims); err != nil {
+		return nil, fmt.Errorf("failed to parse apple id_token claims: %w", err)
+	}
 
 	rawMap := make(map[string]interface{})
-	_ = json.Unmarshal(claimsBytes, &rawMap)
+	if err := json.Unmarshal(claimsBytes, &rawMap); err != nil {
+		return nil, fmt.Errorf("failed to parse apple raw token attributes: %w", err)
+	}
 
 	email := claims.Email
 	name := ""

@@ -1,4 +1,4 @@
-package handlers
+package handlers_test
 
 import (
 	"bytes"
@@ -9,7 +9,9 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/testutil"
 )
 
 func floatPtr(v float64) *float64 {
@@ -17,11 +19,7 @@ func floatPtr(v float64) *float64 {
 }
 
 func TestFieldValidationConstraints(t *testing.T) {
-	dbConn, err := db.InitDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to init DB: %v", err)
-	}
-	defer dbConn.Close()
+	dbConn := testutil.NewTestDB(t)
 
 	// Define a collection with field validation rules
 	productsMoul := &schema.Moul{
@@ -46,7 +44,7 @@ func TestFieldValidationConstraints(t *testing.T) {
 	}
 
 	e := echo.New()
-	handler := NewRecordHandler(dbConn)
+	handler := handlers.NewRecordHandler(dbConn)
 	e.POST("/api/moul/:name/records", handler.CreateRecord)
 	e.PATCH("/api/moul/:name/records/:id", handler.UpdateRecord)
 

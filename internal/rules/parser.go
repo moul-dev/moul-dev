@@ -206,9 +206,7 @@ func processCollectionFilters(tokens []Token) ([]Token, map[string]*CollectionGr
 				isId := false
 				if rightTok.Type == TokenIdentifier {
 					isId = true
-					if strings.HasPrefix(val, "@") {
-						val = strings.TrimPrefix(val, "@")
-					}
+					val = strings.TrimPrefix(val, "@")
 				}
 
 				cond := CollectionCondition{
@@ -284,10 +282,7 @@ func translateTokens(tokens []Token) (string, error) {
 
 		// Check for :each modifier sequence
 		if i+2 < n && tok.Type == TokenIdentifier && strings.HasSuffix(tok.Value, ":each") && tokens[i+1].Type == TokenOperator {
-			baseIdent := strings.TrimSuffix(tok.Value, ":each")
-			if strings.HasPrefix(baseIdent, "@") {
-				baseIdent = strings.TrimPrefix(baseIdent, "@")
-			}
+			baseIdent := strings.TrimPrefix(strings.TrimSuffix(tok.Value, ":each"), "@")
 			op := tokens[i+1].Value
 			valTok := tokens[i+2]
 
@@ -409,18 +404,12 @@ func translateTokens(tokens []Token) (string, error) {
 		// Normal tokens
 		switch tok.Type {
 		case TokenIdentifier:
-			val := tok.Value
-			if strings.HasPrefix(val, "@") {
-				val = strings.TrimPrefix(val, "@")
-			}
+			val := strings.TrimPrefix(tok.Value, "@")
 
 			// Handle modifiers: :lower, :length, :isset, :changed
 			if strings.Contains(val, ":") {
 				parts := strings.Split(val, ":")
-				base := parts[0]
-				if strings.HasPrefix(base, "@") {
-					base = strings.TrimPrefix(base, "@")
-				}
+				base := strings.TrimPrefix(parts[0], "@")
 				mod := parts[1]
 
 				switch mod {

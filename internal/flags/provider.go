@@ -64,7 +64,9 @@ func (s *Store) GetFlag(key string) (*Flag, error) {
 	s.mu.RLock()
 	if time.Since(s.lastRef) > s.ttl {
 		s.mu.RUnlock()
-		_ = s.RefreshCache()
+		if err := s.RefreshCache(); err != nil {
+			return nil, fmt.Errorf("failed to refresh feature flag cache: %w", err)
+		}
 		s.mu.RLock()
 	}
 	flag, exists := s.cache[key]
@@ -81,7 +83,9 @@ func (s *Store) ListFlags() ([]*Flag, error) {
 	s.mu.RLock()
 	if time.Since(s.lastRef) > s.ttl {
 		s.mu.RUnlock()
-		_ = s.RefreshCache()
+		if err := s.RefreshCache(); err != nil {
+			return nil, fmt.Errorf("failed to refresh feature flag cache: %w", err)
+		}
 		s.mu.RLock()
 	}
 	res := make([]*Flag, 0, len(s.cache))

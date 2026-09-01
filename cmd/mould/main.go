@@ -182,10 +182,20 @@ func runTestRule() {
 	}
 
 	var recordData map[string]interface{}
-	_ = json.Unmarshal([]byte(recordJSON), &recordData)
+	if recordJSON != "" {
+		if err := json.Unmarshal([]byte(recordJSON), &recordData); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing --record JSON: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	var authData map[string]interface{}
-	_ = json.Unmarshal([]byte(authJSON), &authData)
+	if authJSON != "" {
+		if err := json.Unmarshal([]byte(authJSON), &authData); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing --auth JSON: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	dbPath := getDBPath()
 	dbConn, _ := db.InitDB(dbPath)

@@ -1,0 +1,83 @@
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - revive
+    - gofmt
+
+linters-settings:
+  govet:
+    disable:
+      - shadow
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+    exclude-functions:
+      - (net/http.ResponseWriter).Write
+      - (*net/http.Response).Body.Close
+      - (*os.File).Close
+      - (*github.com/pocketbase/dbx.DB).Close
+      - (io.Closer).Close
+      - (*bytes.Buffer).Write
+      - (*bytes.Buffer).WriteString
+      - (*database/sql.Tx).Rollback
+      - (*github.com/pocketbase/dbx.Tx).Rollback
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - fmt.Print
+      - fmt.Printf
+      - fmt.Println
+  revive:
+    rules:
+      - name: blank-imports
+        disabled: true
+      - name: context-as-argument
+        disabled: false
+      - name: dot-imports
+        disabled: false
+      - name: error-return
+        disabled: false
+      - name: error-strings
+        disabled: false
+      - name: error-naming
+        disabled: false
+      - name: exported
+        disabled: true
+      - name: if-return
+        disabled: false
+      - name: increment-decrement
+        disabled: false
+      - name: var-naming
+        disabled: true
+      - name: var-declaration
+        disabled: false
+      - name: receiver-naming
+        disabled: false
+      - name: time-naming
+        disabled: false
+      - name: unexported-return
+        disabled: false
+      - name: indent-error-flow
+        disabled: true
+      - name: errorf
+        disabled: false
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - errcheck
+    - linters:
+        - staticcheck
+      text: "SA1019:"

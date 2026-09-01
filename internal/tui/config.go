@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -57,9 +58,12 @@ func LoadConfig() (*Config, error) {
 
 	// One-time migration of AdminKey to OS Keychain
 	if cfg.AdminKey != "" {
-		_ = SetSecret(cfg.ServerURL, "admin_key", cfg.AdminKey)
-		cfg.AdminKey = ""
-		_ = SaveConfig(&cfg)
+		if err := SetSecret(cfg.ServerURL, "admin_key", cfg.AdminKey); err == nil {
+			cfg.AdminKey = ""
+			if err := SaveConfig(&cfg); err != nil {
+				return nil, fmt.Errorf("failed to save migrated config: %w", err)
+			}
+		}
 	}
 
 	return &cfg, nil

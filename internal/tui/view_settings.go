@@ -390,27 +390,6 @@ func (m *Model) updateSettingsFocus(prevIndex, newIndex int) {
 	m.settingsFocusIndex = newIndex
 }
 
-func (m *Model) blurAllSettingsInputs() {
-	for i := range m.storageInputs {
-		m.storageInputs[i].Blur()
-	}
-	for i := range m.liteInputs {
-		m.liteInputs[i].Blur()
-	}
-	for i := range m.rootIPsInputs {
-		m.rootIPsInputs[i].Blur()
-	}
-	for i := range m.emailInputs {
-		m.emailInputs[i].Blur()
-	}
-	for i := range m.oauthInputs {
-		m.oauthInputs[i].Blur()
-	}
-	for i := range m.rootPwdInputs {
-		m.rootPwdInputs[i].Blur()
-	}
-}
-
 // saveSettingsForm compiles form values and saves them on the server.
 func (m *Model) saveSettingsForm() {
 	rulesJSON, err := json.Marshal(m.settingRateLimitingRules)
@@ -477,8 +456,7 @@ func (m *Model) saveSettingsForm() {
 }
 
 func renderBoolField(label string, val bool, focused bool) string {
-	yesStr := " Yes "
-	noStr := " No "
+	var yesStr, noStr string
 	if val {
 		yesStr = lipgloss.NewStyle().Bold(true).Foreground(ColorGreen).Render("[ Yes ]")
 		noStr = " No "

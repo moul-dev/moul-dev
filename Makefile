@@ -3,7 +3,22 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build lint lint-fix install-hooks
+
+# Run static analysis and lint checks
+lint:
+	golangci-lint run ./...
+
+# Run linter and automatically apply fixes
+lint-fix:
+	gofmt -w .
+	golangci-lint run --fix ./...
+
+# Install local git hooks
+install-hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/*
+	@echo "Git hooks successfully configured from .githooks/"
 
 # Start the Echo server locally
 run:
