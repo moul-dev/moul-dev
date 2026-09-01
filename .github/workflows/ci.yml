@@ -27,11 +27,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Ensure Embedded UI Dist Exists
+        run: mkdir -p internal/ui/dist && touch internal/ui/dist/.gitkeep
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+        run: golangci-lint run --timeout=5m ./...
 
   test-go:
     name: Go Tests, Race Detection & Coverage
