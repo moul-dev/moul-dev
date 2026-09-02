@@ -1,0 +1,79 @@
+---
+title: Welcome to Moul
+description: A lightweight, self-contained dynamic database, authentication, and background job processing engine in Go.
+---
+
+import { Card, Cards } from 'fumadocs-ui/components/card'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server } from 'lucide-react'
+
+`mould` is a lightweight, single-binary dynamic database, authentication, and background job processing engine written in Go. Inspired by PocketBase and Elixir's Oban, Moul consolidates everything needed to build modern applications into a single portable binary.
+
+<Callout type="info">
+  **Single Binary Philosophy**: No Docker orchestration or microservice sprawl required. Run dynamic SQLite schema management, multi-factor authentication, background job queues, first-party analytics, and real-time Server-Sent Events with zero external dependencies.
+</Callout>
+
+---
+
+## Core Pillars
+
+<Cards>
+  <Card
+    icon={<Database className="size-5 text-fd-primary" />}
+    title="Dynamic Collections & CRUD"
+    href="/docs/core-concepts/collections"
+    description="Model schemas across 10 field types at runtime with fine-grained HCL-like access control rules."
+  />
+  <Card
+    icon={<ShieldCheck className="size-5 text-fd-primary" />}
+    title="Modern Authentication"
+    href="/docs/features/authentication"
+    description="Out-of-the-box Password, Email OTP, WebAuthn Passkeys, Social OAuth2, and Device Flow."
+  />
+  <Card
+    icon={<Cpu className="size-5 text-fd-primary" />}
+    title="Background Worker Engine"
+    href="/docs/features/workers-and-queues"
+    description="SQLite-backed Oban-style job queues with automatic exponential retries and dead-letter queue (DLQ)."
+  />
+  <Card
+    icon={<Radio className="size-5 text-fd-primary" />}
+    title="Real-Time SSE Subscriptions"
+    href="/docs/features/realtime-sse"
+    description="High-performance Server-Sent Events for instant frontend updates on record mutations."
+  />
+  <Card
+    icon={<Network className="size-5 text-fd-primary" />}
+    title="Built-in MCP Server"
+    href="/docs/features/mcp-server"
+    description="Native Model Context Protocol server exposing database CRUD, workers, and metrics to AI assistants."
+  />
+  <Card
+    icon={<Terminal className="size-5 text-fd-primary" />}
+    title="Admin Consoles (Web & TUI)"
+    href="/docs/features/admin-consoles"
+    description="Responsive Web Admin UI at /_moul_/ alongside a full-featured Bubble Tea Terminal UI (moul)."
+  />
+  <Card
+    icon={<Code2 className="size-5 text-fd-primary" />}
+    title="Go Extensibility (pkg/app)"
+    href="/docs/extensibility/custom-binary"
+    description="Embed the full engine in your Go binary, register custom HTTP endpoints, and run custom workers."
+  />
+  <Card
+    icon={<Server className="size-5 text-fd-primary" />}
+    title="Continuous Backups & Deploy"
+    href="/docs/deployment/production-build"
+    description="Point-in-time SQLite WAL replication to S3 via Litestream and hardened Linux deployment patterns."
+  />
+</Cards>
+
+---
+
+## Next Steps
+
+Follow the guides below to get started in less than two minutes:
+
+1. **[Quick Start Guide](/docs/getting-started/quickstart)**: Install Moul and start your local engine.
+2. **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how collections and field types work.
+3. **[API Reference](/docs/api-reference/overview)**: Explore the interactive OpenAPI 3.0 specification and endpoint catalog.

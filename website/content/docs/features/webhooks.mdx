@@ -1,0 +1,113 @@
+---
+title: Outbound HTTP Webhooks
+description: Connect Moul collections to external systems with synchronous before-hooks, async after-hooks, and HMAC-SHA256 signatures.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Moul supports outbound HTTP webhooks configured per collection, enabling deep integrations with payment gateways, external automation tools, and microservices.
+
+---
+
+## Hook Execution Lifecycles
+
+### 1. Synchronous Before-Hooks (`*:before`)
+- **Triggers**: `create:before`, `update:before`, `delete:before`
+- **Behavior**: Executed **synchronously** before physical database operations are committed.
+- **Validation Guard**: If the target webhook URL returns a non-2xx HTTP response or times out (5-second limit), the database operation is aborted and an error is returned to the client.
+
+### 2. Asynchronous After-Hooks (`*:after`)
+- **Triggers**: `create:after`, `update:after`, `delete:after`
+- **Behavior**: Executed **asynchronously** in the background after successful database commits. Adds zero latency to client response times.
+
+---
+
+## Webhook Payload & Headers
+
+When dispatching webhooks, Moul sends an HTTP POST request with the following headers:
+
+- `Content-Type: application/json`
+- `X-Moul-Event`: Event name (e.g. `create:after`, `update:before`)
+- `X-Moul-Webhook-ID`: Unique ID of the triggered webhook rule
+- `X-Moul-Timestamp`: RFC3339 timestamp of the event
+- `X-Moul-Signature`: HMAC-SHA256 hex digest of the raw JSON body computed using the configured webhook secret.
+
+### Payload Schema
+
+```json
+{
+  "event": "update:after",
+  "moul": "orders",
+  "record": {
+    "id": "ord_9901",
+    "status": "paid",
+    "amount": 149.50,
+    "user_id": "usr_4412"
+  },
+  "old_record": {
+    "id": "ord_9901",
+    "status": "pending",
+    "amount": 149.50,
+    "user_id": "usr_4412"
+  },
+  "timestamp": "2026-08-01T15:30:00Z"
+}
+```
+
+---
+
+## Verifying Webhook Signatures
+
+<Tabs items={['Node.js / TypeScript', 'Go', 'Python']}>
+  <Tab value="Node.js / TypeScript">
+```typescript
+import crypto from 'node:crypto';
+
+export function verifyMoulSignature(payloadRawBody: string, signature: string, secret: string): boolean {
+  const hmac = crypto.createHmac('sha256', secret);
+  const digest = hmac.update(payloadRawBody).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+}
+```
+  </Tab>
+  <Tab value="Go">
+```go
+package main
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+)
+
+func VerifySignature(payload []byte, signature, secret string) bool {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	expectedMAC := hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(signature), []byte(expectedMAC))
+}
+```
+  </Tab>
+  <Tab value="Python">
+```python
+import hmac
+import hashlib
+
+def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+  </Tab>
+</Tabs>
+
+---
+
+## Webhook Management Endpoints
+
+- `GET /api/moul/:name/webhooks` — List all registered webhooks for a collection.
+- `POST /api/moul/:name/webhooks` — Register a new webhook.
+- `GET /api/moul/:name/webhooks/:id` — Get webhook details.
+- `PATCH /api/moul/:name/webhooks/:id` — Update webhook URL, events, or secret.
+- `DELETE /api/moul/:name/webhooks/:id` — Remove a webhook.
+- `POST /api/moul/:name/webhooks/:id/test` — Sends a test `ping` event payload to verify receiver connectivity.

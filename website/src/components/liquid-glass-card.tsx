@@ -1,30 +1,30 @@
-'use client'
+"use client";
 
-import type React from 'react'
-import { useRef } from 'react'
+import type React from "react";
+import { useRef } from "react";
 
 interface LiquidGlassCardProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function LiquidGlassCard({
   children,
-  className = '',
+  className = "",
 }: LiquidGlassCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current
-    if (!card) return
+    const card = cardRef.current;
+    if (!card) return;
 
-    const rect = card.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-    card.style.setProperty('--mouse-x', `${x}px`)
-    card.style.setProperty('--mouse-y', `${y}px`)
-  }
+    card.style.setProperty("--mouse-x", `${x}px`);
+    card.style.setProperty("--mouse-y", `${y}px`);
+  };
 
   return (
     <div
@@ -39,5 +39,5 @@ export function LiquidGlassCard({
         <div className="relative z-10 flex gap-4 h-full">{children}</div>
       </div>
     </div>
-  )
+  );
 }

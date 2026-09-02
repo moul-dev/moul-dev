@@ -1,0 +1,110 @@
+---
+title: Access Rules & Filter Expressions
+description: Enforce row-level security, role-based access, and field constraints with HCL-like rule expressions.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Every dynamic collection in Moul is guarded by five row-level access control rules evaluated dynamically on incoming client requests:
+
+- `listRule` — Restricts which records are returned in collection list queries.
+- `viewRule` — Controls access to view a single record by ID.
+- `createRule` — Validates incoming fields and permissions before record insertion.
+- `updateRule` — Validates current record fields and incoming values before update.
+- `deleteRule` — Validates permissions before record deletion.
+
+---
+
+## Rule Access States
+
+| Value | Access State |
+| :--- | :--- |
+| `null` | **Admin Only**: Only requests carrying a valid master `X-Admin-Key` header can perform this operation. Public and user requests receive HTTP 403 Forbidden. |
+| `""` (Empty string) | **Public**: Anyone (including unauthenticated guests) can perform this operation. |
+| `"expression..."` | **Conditional**: The operation is allowed only if the expression evaluates to `true` against the request context and record state. |
+
+---
+
+## Expression Syntax Reference
+
+### Context Variables
+
+- **`@request.auth.id`**: Authenticated user's unique record ID.
+- **`@request.auth.email`**: Authenticated user's email.
+- **`@request.auth.*`**: Any custom field present on the authenticated user's record.
+- **`@request.body.fieldName`**: Value submitted in incoming JSON request body.
+- **`@request.headers.header_name`**: Incoming HTTP request header value.
+- **`@request.query.paramName`**: URL query parameter value.
+- **`@request.method`**: HTTP request method (`GET`, `POST`, `PATCH`, `DELETE`).
+
+### Operators
+
+| Operator | Meaning | Example |
+| :--- | :--- | :--- |
+| `=` | Equal to | `status = 'published'` |
+| `!=` | Not equal to | `@request.auth.id != ''` |
+| `>`, `>=` | Greater than / Greater than or equal | `views >= 100` |
+| `<`, `<=` | Less than / Less than or equal | `age < 18` |
+| `~` | Contains / LIKE substring match | `title ~ 'tutorial'` |
+| `!~` | Does not contain substring | `email !~ '@spam.com'` |
+| `&&`, `\|\|` | Logical AND / Logical OR | `published = true \|\| author_id = @request.auth.id` |
+| `?=` | Array modifier (contains element) | `collaborator_ids.id ?= @request.auth.id` |
+
+### Field Modifiers
+
+- **`:lower`**: Converts string to lowercase for case-insensitive comparison (e.g. `email:lower = @request.body.email:lower`).
+- **`:length`**: Returns length of string or array (e.g. `content:length > 20`).
+- **`:isset`**: Checks if a field was provided in request body (e.g. `@request.body.password:isset = true`).
+- **`:changed`**: Checks if field value is being modified in an update request (e.g. `@request.body.role:changed = false`).
+- **`:each`**: Evaluates condition across all elements of an array.
+
+### Helper Functions
+
+- **`geoDistance(lon1, lat1, lon2, lat2)`**: Calculates distance in kilometers between two geographic coordinates.
+- **`strftime(format, timestamp)`**: Evaluates SQLite datetime string formatting.
+
+---
+
+## Cross-Collection Join Queries
+
+Access rules can query other collections dynamically using `@collection` syntax:
+
+```text
+@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'
+```
+
+---
+
+## Common Rule Recipes
+
+### 1. Public Read, Authenticated Write
+```text
+listRule:   ""
+viewRule:   ""
+createRule: "@request.auth.id != ''"
+updateRule: "author_id = @request.auth.id"
+deleteRule: "author_id = @request.auth.id"
+```
+
+### 2. Multi-Tenant Organization Isolation
+```text
+listRule:   "org_id = @request.auth.org_id"
+viewRule:   "org_id = @request.auth.org_id"
+createRule: "@request.body.org_id = @request.auth.org_id"
+updateRule: "org_id = @request.auth.org_id"
+deleteRule: "org_id = @request.auth.org_id && @request.auth.role = 'org_admin'"
+```
+
+---
+
+## Testing Rules via CLI Sandbox
+
+You can test and benchmark rules locally without executing live HTTP requests:
+
+```bash
+mould test-rule \
+  --rule="author_id = @request.auth.id && views > 100" \
+  --record='{"author_id": "usr_001", "views": 250}' \
+  --auth='{"id": "usr_001"}'
+```

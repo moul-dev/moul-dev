@@ -1,0 +1,111 @@
+---
+title: Systemd Linux Service Setup
+description: Run Moul as a hardened, auto-restarting background systemd service on Linux VPS hosts.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+For standard Linux Virtual Private Servers (Ubuntu, Debian, Fedora, Rocky Linux), running Moul as a systemd service guarantees high availability, automatic crash restarts, and structured journal logging.
+
+---
+
+## Service Installation
+
+<Steps>
+<Step>
+### Create System User & Data Directories
+
+```bash
+# Create dedicated system user without login shell
+sudo useradd -r -s /bin/false moul
+
+# Create data and config directories
+sudo mkdir -p /var/lib/moul /etc/moul
+sudo chown -R moul:moul /var/lib/moul /etc/moul
+sudo chmod 700 /var/lib/moul /etc/moul
+```
+</Step>
+
+<Step>
+### Install Moul Executable
+
+```bash
+sudo cp ./bin/mould /usr/local/bin/mould
+sudo chmod +x /usr/local/bin/mould
+```
+</Step>
+
+<Step>
+### Configure Secure Environment File
+
+Create `/etc/moul/moul.env`:
+
+```bash
+MOUL_ENV=production
+MOUL_PORT=8090
+MOUL_ADMIN_KEY=your-production-admin-key-9988
+MOUL_JWT_SECRET=your-production-jwt-secret-3344
+MOUL_DB_PATH=/var/lib/moul/moul.db
+MOUL_PUBLIC_URL=https://api.yourdomain.com
+MOUL_CORS_ORIGINS=https://yourdomain.com
+```
+
+```bash
+sudo chown moul:moul /etc/moul/moul.env
+sudo chmod 600 /etc/moul/moul.env
+```
+</Step>
+
+<Step>
+### Create Systemd Service File
+
+Create `/etc/systemd/system/moul.service`:
+
+```ini
+[Unit]
+Description=Moul Dynamic Database & Engine
+After=network.target
+
+[Service]
+Type=simple
+User=moul
+Group=moul
+WorkingDirectory=/var/lib/moul
+EnvironmentFile=/etc/moul/moul.env
+ExecStart=/usr/local/bin/mould start
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+# Security Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+```
+</Step>
+
+<Step>
+### Enable and Start Service
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now moul
+```
+</Step>
+</Steps>
+
+---
+
+## Monitoring Logs
+
+```bash
+# Stream live logs
+sudo journalctl -u moul -f
+
+# Check service status
+sudo systemctl status moul
+```

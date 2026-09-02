@@ -2,10 +2,14 @@
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
 @layer base, utilities, priority1, priority2, priority3, priority4, priority5;
 
-@import 'tailwindcss';
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 @theme {
-  --color-fd-primary: oklch(0.60 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198));
+  --color-fd-primary: oklch(
+    0.6 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198)
+  );
   --font-sans: "Google Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
@@ -14,9 +18,6 @@
   --brand-hue: 198; /* Cyan theme matching the dodecahedron */
   --brand-chroma-multiplier: 1;
 }
-
-@import 'fumadocs-ui/css/neutral.css';
-@import 'fumadocs-ui/css/preset.css';
 
 .dark {
   --color-fd-background: #000000;
@@ -31,7 +32,7 @@ body {
   font-family: var(--font-sans);
 }
 
-html>body[data-scroll-locked] {
+html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
 }
@@ -46,7 +47,9 @@ html>body[data-scroll-locked] {
   background: rgba(229, 231, 235, 0.2);
   overflow: hidden;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
-  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
 }
 
 .dark .liquid-glass-card {
@@ -56,14 +59,19 @@ html>body[data-scroll-locked] {
 
 /* Moving Spotlight Border mask trick */
 .liquid-glass-card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: radial-gradient(300px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.78 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.5),
-      transparent 80%);
+  background: radial-gradient(
+    300px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.78 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.5
+    ),
+    transparent 80%
+  );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -76,9 +84,14 @@ html>body[data-scroll-locked] {
 }
 
 .dark .liquid-glass-card::before {
-  background: radial-gradient(300px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.6),
-      transparent 80%);
+  background: radial-gradient(
+    300px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.6
+    ),
+    transparent 80%
+  );
 }
 
 .liquid-glass-card:hover {
@@ -117,9 +130,14 @@ html>body[data-scroll-locked] {
   position: absolute;
   inset: 0;
   border-radius: calc(1rem - 1px);
-  background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.04),
-      transparent 80%);
+  background: radial-gradient(
+    400px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.04
+    ),
+    transparent 80%
+  );
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -127,9 +145,15 @@ html>body[data-scroll-locked] {
 }
 
 .dark .liquid-glass-glow {
-  background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) + 10) / 0.07),
-      transparent 80%);
+  background: radial-gradient(
+    400px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.82 calc(0.15 * var(--brand-chroma-multiplier, 1))
+        calc(var(--brand-hue, 198) + 10) /
+      0.07
+    ),
+    transparent 80%
+  );
 }
 
 .liquid-glass-card:hover .liquid-glass-glow {
@@ -142,7 +166,7 @@ html>body[data-scroll-locked] {
   --mouse-x: 0px;
   --mouse-y: 0px;
   --mouse-opacity: 0;
-  
+
   mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 }
@@ -156,11 +180,21 @@ html>body[data-scroll-locked] {
 
 /* Soft ambient dark shadow behind the 3D logo to enhance contrast and readability */
 .logo-ambient-shadow {
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.40) 0%, rgba(0, 0, 0, 0.15) 30%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.15) 30%,
+    transparent 70%
+  );
 }
 
 .light .logo-ambient-shadow {
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.07) 0%, rgba(0, 0, 0, 0.02) 35%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.07) 0%,
+    rgba(0, 0, 0, 0.02) 35%,
+    transparent 70%
+  );
 }
 
 .interactive-grid-base {
@@ -168,8 +202,16 @@ html>body[data-scroll-locked] {
     linear-gradient(to right, rgba(128, 128, 128, 0.07) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(128, 128, 128, 0.07) 1px, transparent 1px);
   background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 80%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 80%, transparent 100%);
+  mask-image: radial-gradient(
+    ellipse 90% 90% at 50% 40%,
+    black 80%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 90% 90% at 50% 40%,
+    black 80%,
+    transparent 100%
+  );
 }
 
 .dark .interactive-grid-base {
@@ -187,22 +229,62 @@ html>body[data-scroll-locked] {
 
   /* Light mode spotlight: cyan */
   background-image:
-    linear-gradient(to right, oklch(0.75 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.3) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.75 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.3) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      oklch(
+          0.75 calc(0.16 * var(--brand-chroma-multiplier, 1))
+            var(--brand-hue, 198) /
+          0.3
+        )
+        1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      oklch(
+          0.75 calc(0.16 * var(--brand-chroma-multiplier, 1))
+            var(--brand-hue, 198) /
+          0.3
+        )
+        1px,
+      transparent 1px
+    );
 
-  mask-image: radial-gradient(250px circle at var(--mouse-x) var(--mouse-y),
-      black 20%,
-      transparent 100%);
-  -webkit-mask-image: radial-gradient(250px circle at var(--mouse-x) var(--mouse-y),
-      black 20%,
-      transparent 100%);
+  mask-image: radial-gradient(
+    250px circle at var(--mouse-x) var(--mouse-y),
+    black 20%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    250px circle at var(--mouse-x) var(--mouse-y),
+    black 20%,
+    transparent 100%
+  );
 }
 
 .dark .interactive-grid-spotlight {
   /* Dark mode spotlight: brighter cyan */
   background-image:
-    linear-gradient(to right, oklch(0.80 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.4) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.80 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.4) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      oklch(
+          0.8 calc(0.15 * var(--brand-chroma-multiplier, 1))
+            var(--brand-hue, 198) /
+          0.4
+        )
+        1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      oklch(
+          0.8 calc(0.15 * var(--brand-chroma-multiplier, 1))
+            var(--brand-hue, 198) /
+          0.4
+        )
+        1px,
+      transparent 1px
+    );
 }
 
 /* Soft glowing radial background that moves with cursor */
@@ -214,18 +296,36 @@ html>body[data-scroll-locked] {
   transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 0;
 
-  background: radial-gradient(300px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.12),
-      transparent 80%);
+  background: radial-gradient(
+    300px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.12
+    ),
+    transparent 80%
+  );
 
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 80%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 80%, transparent 100%);
+  mask-image: radial-gradient(
+    ellipse 90% 90% at 50% 40%,
+    black 80%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 90% 90% at 50% 40%,
+    black 80%,
+    transparent 100%
+  );
 }
 
 .dark .interactive-grid-glow {
-  background: radial-gradient(350px circle at var(--mouse-x) var(--mouse-y),
-      oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.18),
-      transparent 80%);
+  background: radial-gradient(
+    350px circle at var(--mouse-x) var(--mouse-y),
+    oklch(
+      0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.18
+    ),
+    transparent 80%
+  );
 }
 
 /* ─── Install Command Block ─── */
@@ -240,9 +340,11 @@ html>body[data-scroll-locked] {
   font-size: 0.875rem;
   line-height: 1.5;
   background: oklch(0.96 0.005 260);
-  border: 1px solid oklch(0.90 0.005 260);
+  border: 1px solid oklch(0.9 0.005 260);
   color: oklch(0.35 0.01 260);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   user-select: all;
 }
 
@@ -266,16 +368,20 @@ html>body[data-scroll-locked] {
 }
 
 .dark .install-block .prompt {
-  color: oklch(0.50 0.01 260);
+  color: oklch(0.5 0.01 260);
 }
 
 .install-block .command-text {
-  color: oklch(0.75 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198));
+  color: oklch(
+    0.75 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198)
+  );
   font-weight: 500;
 }
 
 .dark .install-block .command-text {
-  color: oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198));
+  color: oklch(
+    0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198)
+  );
 }
 
 .install-block .copy-btn {
@@ -288,7 +394,9 @@ html>body[data-scroll-locked] {
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
   user-select: none;
   flex-shrink: 0;
 }
@@ -303,7 +411,7 @@ html>body[data-scroll-locked] {
 }
 
 .dark .install-block .copy-btn:hover {
-  color: oklch(0.80 0.01 260);
+  color: oklch(0.8 0.01 260);
   background: oklch(0.22 0.005 260);
 }
 
@@ -313,26 +421,36 @@ html>body[data-scroll-locked] {
 
 /* ─── Feature Card Accent Bar ─── */
 .feature-card .liquid-glass-inner::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg,
-      transparent,
-      oklch(0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.5),
-      transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(
+      0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.5
+    ),
+    transparent
+  );
   border-radius: 1px;
   z-index: 10;
   pointer-events: none;
 }
 
 .dark .feature-card .liquid-glass-inner::after {
-  background: linear-gradient(90deg,
-      transparent,
-      oklch(0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.6),
-      transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(
+      0.82 calc(0.15 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) /
+      0.6
+    ),
+    transparent
+  );
 }
 
 /* ─── Tech Stack Strip ─── */
@@ -348,7 +466,7 @@ html>body[data-scroll-locked] {
 }
 
 .dark .tech-stack-strip {
-  color: oklch(0.50 0.01 260);
+  color: oklch(0.5 0.01 260);
 }
 
 .tech-stack-strip .separator {
@@ -357,7 +475,7 @@ html>body[data-scroll-locked] {
 }
 
 .dark .tech-stack-strip .separator {
-  color: oklch(0.30 0.005 260);
+  color: oklch(0.3 0.005 260);
 }
 
 /* ─── Transparent Header Overrides ─── */
@@ -369,5 +487,8 @@ html>body[data-scroll-locked] {
 }
 
 #nd-nav > div {
-  transition: border-color 0.3s, background-color 0.3s, backdrop-filter 0.3s;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s,
+    backdrop-filter 0.3s;
 }

@@ -1,0 +1,10 @@
+{
+  "title": "Core Concepts",
+  "root": true,
+  "pages": [
+    "collections",
+    "records-and-crud",
+    "relations",
+    "access-rules"
+  ]
+}

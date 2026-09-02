@@ -1,0 +1,97 @@
+---
+title: Built-in Model Context Protocol (MCP) Server
+description: Native MCP server enabling AI coding assistants to inspect schemas, execute CRUD, manage background jobs, and monitor metrics.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+`mould` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This empowers AI coding assistants (Claude Desktop, Cursor, Antigravity, Windsurf) with deep inspection and operational control over your backend.
+
+---
+
+## Transport Modes
+
+### 1. Stdio Mode (`mould mcp`)
+Communicates directly over standard input and output streams. Ideal for local IDEs without running a separate HTTP process.
+
+### 2. Streamable HTTP & SSE Mode (`/api/mcp`)
+Enabled automatically when running `mould start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams.
+
+---
+
+## Assistant Configuration
+
+<Tabs items={['Claude Desktop', 'Cursor IDE', 'cURL Direct JSON-RPC']}>
+  <Tab value="Claude Desktop">
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mould": {
+      "command": "/usr/local/bin/mould",
+      "args": ["mcp"],
+      "env": {
+        "MOUL_DB_PATH": "/path/to/moul-local.db"
+      }
+    }
+  }
+}
+```
+  </Tab>
+  <Tab value="Cursor IDE">
+Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mould": {
+      "command": "mould",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+  </Tab>
+  <Tab value="cURL Direct JSON-RPC">
+```bash
+curl -X POST "http://localhost:8090/api/mcp" \
+  -H "X-Admin-Key: test-admin-key-1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "moul_list_collections",
+      "arguments": {}
+    }
+  }'
+```
+  </Tab>
+</Tabs>
+
+---
+
+## Available MCP Tools Catalog
+
+| MCP Tool Name | Category | Description |
+| :--- | :--- | :--- |
+| `moul_list_collections` | Schema | List all dynamic collection schemas and tables. |
+| `moul_get_collection` | Schema | Get detailed schema definition, field types, and rules. |
+| `moul_create_collection` | Schema | Create a new dynamic collection and SQLite table. |
+| `moul_delete_collection` | Schema | Delete a collection and drop its SQLite table. |
+| `moul_list_records` | CRUD | Query paginated records with optional filters. |
+| `moul_get_record` | CRUD | Retrieve a single record by collection name and ID. |
+| `moul_create_record` | CRUD | Insert a new dynamic record into a collection. |
+| `moul_update_record` | CRUD | Update an existing record by ID. |
+| `moul_delete_record` | CRUD | Delete a record by ID. |
+| `moul_list_worker_jobs` | Workers | List background jobs by status (`available`, `executing`, etc.). |
+| `moul_enqueue_job` | Workers | Enqueue a new background worker job. |
+| `moul_cancel_job` | Workers | Cancel a pending or retryable worker job. |
+| `moul_list_feature_flags` | Flags | List OpenFeature flags and targeting gate rules. |
+| `moul_set_feature_flag` | Flags | Create or update a feature flag and rollout percentage. |
+| `moul_get_system_metrics` | Metrics | Fetch host CPU, Memory, Disk, and load metrics. |
+| `moul_get_analytics_summary` | Observability | Fetch visitor and request analytics totals. |
+| `moul_list_requests` | Observability | Query recent HTTP request logs. |

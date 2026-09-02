@@ -1,31 +1,31 @@
-'use client'
+"use client";
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState } from "react";
 
 interface CopyBlockProps {
-  command: string
+  command: string;
 }
 
 export function CopyBlock({ command }: CopyBlockProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(command)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for non-secure contexts
-      const textarea = document.createElement('textarea')
-      textarea.value = command
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      const textarea = document.createElement("textarea");
+      textarea.value = command;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  }, [command])
+  }, [command]);
 
   return (
     <div className="install-block">
@@ -34,8 +34,8 @@ export function CopyBlock({ command }: CopyBlockProps) {
       <button
         type="button"
         onClick={handleCopy}
-        className={`copy-btn ${copied ? 'copied' : ''}`}
-        aria-label={copied ? 'Copy to clipboard' : 'Copy to clipboard'}
+        className={`copy-btn ${copied ? "copied" : ""}`}
+        aria-label={copied ? "Copy to clipboard" : "Copy to clipboard"}
       >
         {copied ? (
           <svg
@@ -67,5 +67,5 @@ export function CopyBlock({ command }: CopyBlockProps) {
         )}
       </button>
     </div>
-  )
+  );
 }

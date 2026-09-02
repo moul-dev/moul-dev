@@ -1,0 +1,114 @@
+---
+title: Configuration & Environment
+description: Comprehensive configuration reference for environment variables, runtime settings, and CLI subcommands.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+`mould` can be configured via environment variables, `.env` files in the project root, or CLI flags.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description | Example |
+| :--- | :---: | :---: | :--- | :--- |
+| `MOUL_ENV` | Yes | `development` | Environment mode (`development` or `production`). | `production` |
+| `MOUL_ADMIN_KEY` | Yes | — | Master administrative key for backend API access. | `super-secret-admin-key-9988` |
+| `MOUL_JWT_SECRET` | Yes | — | Secret key used to sign and verify JWT authentication tokens. | `jwt-secret-key-production-3344` |
+| `MOUL_PORT` | No | `8090` | TCP port the Echo HTTP server listens on. | `8090` |
+| `MOUL_DB_PATH` | No | `moul-local.db` | Path to the SQLite database file. | `/var/lib/moul/moul.db` |
+| `MOUL_PUBLIC_URL` | No | `http://localhost:8090` | Canonical public URL used in transactional email links. | `https://api.myapp.com` |
+| `MOUL_CORS_ORIGINS` | No | `*` | Comma-separated list of allowed CORS origins. | `https://myapp.com,https://admin.myapp.com` |
+| `GEOIP_DB_PATH` | No | — | Path to MaxMind GeoIP2 `.mmdb` database file for visitor analytics. | `/var/lib/moul/GeoLite2-City.mmdb` |
+
+### S3 & Litestream Replication Variables
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `LITESTREAM_ENABLED` | No | `false` | Enable automated continuous SQLite WAL replication to S3. |
+| `LITESTREAM_S3_BUCKET` | Conditional | — | Target S3 bucket name for backups. |
+| `LITESTREAM_ACCESS_KEY_ID` | Conditional | — | AWS or S3-compatible Access Key ID. |
+| `LITESTREAM_SECRET_ACCESS_KEY` | Conditional | — | AWS or S3-compatible Secret Access Key. |
+| `LITESTREAM_REGION` | No | `us-east-1` | S3 region. |
+| `LITESTREAM_S3_ENDPOINT` | No | — | Custom S3 endpoint (for MinIO, Cloudflare R2, DigitalOcean Spaces). |
+| `LITESTREAM_S3_FORCE_PATH_STYLE` | No | `false` | Enable path-style S3 URLs (required for MinIO). |
+
+---
+
+## Local `.env` Template
+
+Create a `.env` file in your workspace root:
+
+```bash
+MOUL_ENV=development
+MOUL_PORT=8090
+MOUL_JWT_SECRET=test-secret-key-for-unit-tests-1234
+MOUL_ADMIN_KEY=test-admin-key-1234
+MOUL_DB_PATH=moul-local.db
+MOUL_PUBLIC_URL=http://localhost:8090
+MOUL_CORS_ORIGINS=*
+```
+
+---
+
+## Runtime Settings & Hot Reload
+
+Many system settings (Email providers, S3 storage, Litestream, OAuth providers, rate limits) can be updated dynamically in the Web Admin Console (`/_moul_/settings`) or TUI without restarting the binary.
+
+To trigger an immediate server-side hot reload of dynamic configuration:
+
+```bash
+curl -X POST "http://localhost:8090/api/admin/reload" \
+  -H "X-Admin-Key: test-admin-key-1234"
+```
+
+---
+
+## CLI Subcommands Reference
+
+`mould` includes a rich set of CLI subcommands:
+
+### `mould start`
+Starts the HTTP daemon and worker engine.
+```bash
+mould start --port 8090 --db /path/to/moul.db
+```
+
+### `mould seed`
+Seeds demo collections, records, and feature flags.
+```bash
+mould seed --db moul-local.db
+```
+
+### `mould mcp`
+Launches the native Model Context Protocol (MCP) server over standard input/output (`stdio`).
+```bash
+mould mcp --db moul-local.db
+```
+
+### `mould test-rule`
+Evaluates and benchmarks an access rule expression against mock JSON payload and auth context.
+```bash
+mould test-rule \
+  --rule="author_id = @request.auth.id && views_count > 100" \
+  --record='{"author_id": "usr_admin_001", "views_count": 1420}' \
+  --auth='{"id": "usr_admin_001"}'
+```
+
+### `mould worker list-failed` & `mould worker retry`
+Inspects and manages the Dead-Letter Queue (DLQ).
+```bash
+# List discarded jobs in dead-letter queue
+mould worker list-failed tasks_queue
+
+# Force-retry failed jobs
+mould worker retry tasks_queue [optional_job_id]
+```
+
+### `mould restore`
+Restores a database from S3 backup using Litestream.
+```bash
+mould restore --db /var/lib/moul/moul.db
+```

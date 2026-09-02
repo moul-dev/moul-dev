@@ -1,0 +1,83 @@
+---
+title: Responses & Error Handling
+description: Standard JSON response envelopes, validation error dictionaries, and HTTP status code reference.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+All Moul API endpoints return JSON payloads following predictable, structured conventions.
+
+---
+
+## Standard Success Envelope
+
+Single-resource endpoints return the record directly:
+
+```json
+{
+  "id": "rec_01J6XYZ123",
+  "collectionId": "col_users",
+  "collectionName": "users",
+  "username": "alex",
+  "email": "alex@example.com",
+  "created": "2026-08-01T12:00:00Z",
+  "updated": "2026-08-01T12:00:00Z"
+}
+```
+
+Paginated list endpoints wrap items in a pagination metadata envelope:
+
+```json
+{
+  "page": 1,
+  "perPage": 30,
+  "totalItems": 105,
+  "totalPages": 4,
+  "items": [ /* ... */ ]
+}
+```
+
+---
+
+## Standard Error Envelope
+
+When an operation fails, Moul returns an HTTP error status code accompanied by a standard error payload:
+
+```json
+{
+  "code": 400,
+  "message": "Failed to create record.",
+  "data": {
+    "email": {
+      "code": "validation_invalid_email",
+      "message": "Must be a valid email address."
+    },
+    "password": {
+      "code": "validation_length_out_of_range",
+      "message": "Password must be at least 8 characters."
+    }
+  }
+}
+```
+
+### Error Fields Breakdown
+- **`code`** (`integer`): HTTP status code matching the response header.
+- **`message`** (`string`): Human-readable top-level summary of the error.
+- **`data`** (`object`): Dictionary mapping field names to specific validation error codes and descriptions.
+
+---
+
+## Common HTTP Status Codes
+
+| Status Code | Reason | Typical Cause |
+| :---: | :--- | :--- |
+| **`200 OK`** | Success | Successful GET, PATCH, or auth request. |
+| **`201 Created`** | Created | Record or collection successfully created. |
+| **`204 No Content`** | Deleted | Successful DELETE operation. |
+| **`400 Bad Request`** | Validation Error | Missing required fields, invalid JSON syntax, or relation violation. |
+| **`401 Unauthorized`** | Auth Required | Missing or expired JWT token. |
+| **`403 Forbidden`** | Access Denied | Access rule expression evaluated to `false` or invalid Admin Key. |
+| **`404 Not Found`** | Not Found | Target collection or record ID does not exist. |
+| **`429 Too Many Requests`** | Rate Limited | Sliding-window request rate limit exceeded. |
+| **`500 Internal Error`** | Server Error | Unhandled server panic or SQLite storage error. |

@@ -1,8 +1,8 @@
-import type * as React from 'react'
+import type * as React from "react";
 
 export interface LogoProps extends React.HTMLAttributes<HTMLSpanElement> {
-  iconOnly?: boolean
-  iconClassName?: string
+  iconOnly?: boolean;
+  iconClassName?: string;
 }
 
 export function Logo({
@@ -16,7 +16,7 @@ export function Logo({
       viewBox="0 0 100 100"
       fill="currentColor"
       className={iconClassName}
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: "100%", height: "100%" }}
       aria-hidden="true"
     >
       <title>moul.dev</title>
@@ -34,19 +34,19 @@ export function Logo({
       {/* Top-Right Face */}
       <polygon points="66.78,25.68 71.53,11.06 88.99,27.17 95.00,48.76 82.01,48.76" />
     </svg>
-  )
+  );
 
   if (iconOnly) {
     return (
       <span className={className} {...props}>
         {icon}
       </span>
-    )
+    );
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-2.5 font-semibold tracking-tight text-fd-foreground whitespace-nowrap ${className || ''}`}
+      className={`inline-flex items-center gap-2.5 font-semibold tracking-tight text-fd-foreground whitespace-nowrap ${className || ""}`}
       {...props}
     >
       <span className="h-6 w-6 flex-shrink-0 text-fd-primary">{icon}</span>
@@ -54,5 +54,5 @@ export function Logo({
         Moul
       </span>
     </span>
-  )
+  );
 }

@@ -1,0 +1,68 @@
+---
+title: Web Admin & TUI Consoles
+description: Manage your engine via the rich browser Web Admin at /_moul_/ or the terminal-native Bubble Tea TUI.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Moul ships with two fully functional administrative consoles embedded directly into the binary:
+
+1. **Web Admin Console (`/_moul_/`)**: Modern responsive browser dashboard.
+2. **Terminal User Interface (TUI)**: Fast keyboard-driven CLI console built with Charm's Bubble Tea.
+
+---
+
+## 1. Web Admin Console (`/_moul_/`)
+
+Accessed at `http://localhost:8090/_moul_/`.
+
+### Architecture & Features
+- **Frontend Stack**: Built on **Moul UI (`@moul-dev/ui`)**, **React Aria Components**, and **StyleX** for atomic compile-time CSS-in-JS.
+- **Visual Schema Designer**: Drag-and-drop field modeling, real-time expression validator, and relationship configuration.
+- **Live Worker Queue Monitor**: Inspect running jobs, retry failed items from DLQ, or discard pending tasks.
+- **Telemetry Charts**: Interactive request latency, throughput, and error graphs.
+- **Real-Time Stream Viewer**: Server-Sent Events (SSE) live logs viewer with syntax highlighting and auto-follow.
+- **Feature Flag Playground**: Test gate targeting rules against custom JSON payloads with live reason code breakdowns.
+- **Form Divergence Guards**: `AlertDialog` confirmation dialogs protect against unsaved settings loss.
+
+---
+
+## 2. Moul TUI Console (`moul`)
+
+The TUI provides complete headless server administration directly in your terminal.
+
+```bash
+# Launch TUI
+make tui
+# Or directly via Go:
+go run cmd/moul/main.go
+```
+
+On first launch, enter your server URL (`http://localhost:8090`) and `MOUL_ADMIN_KEY`. Credentials are saved securely to `~/.config/moul.json`.
+
+---
+
+## TUI Keyboard Shortcuts Reference
+
+| Screen | Key | Action |
+| :--- | :--- | :--- |
+| **Global** | `ctrl+c` | Exit program |
+| **Dashboard** | `↑` / `↓` (or `k` / `j`) | Navigate collections & menu items |
+| | `Enter` / `l` / `→` | Open selected item |
+| | `r` | Refresh schemas from server |
+| | `Esc` | Disconnect and return to connection screen |
+| **Record List** | `↑` / `↓` (or `k` / `j`) | Scroll records list |
+| | `>` / `<` | Next / Previous page |
+| | `/` | Activate live search & filter query |
+| | `Enter` / `v` | Inspect JSON payload |
+| | `n` | Create new record |
+| | `e` | Edit selected record |
+| | `d` | Delete selected record |
+| **Record / Job Detail** | `c` | Copy JSON payload to OS clipboard |
+| | `Esc` / `q` | Return to list |
+| **Worker Monitor** | `r` | Force-retry failed job |
+| | `c` | Discard / cancel job |
+| | `f` | Refresh worker status immediately |
+| **Settings Panel** | `←` / `→` | Switch settings tabs |
+| | `R` | Trigger instant server-side hot-reload |

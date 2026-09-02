@@ -1,0 +1,157 @@
+---
+title: Records & Dynamic CRUD
+description: Create, read, update, filter, paginate, sort, and delete dynamic collection records via REST API.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Moul provides instant, fully typed REST API endpoints for every dynamic collection. Record operations are validated against the schema and checked against the collection's access rules.
+
+---
+
+## Query Parameters
+
+List queries (`GET /api/moul/:name/records`) accept the following standard query parameters:
+
+| Parameter | Type | Default | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `page` | `integer` | `1` | 1-indexed page number. | `page=2` |
+| `perPage` | `integer` | `30` | Number of records per page (max `500`). | `perPage=50` |
+| `sort` | `string` | `-created` | Comma-separated sort fields. Prefix with `-` for descending. | `sort=-views,title` |
+| `filter` | `string` | `""` | Filter expression evaluated against SQLite records. | `filter=published=true && views>100` |
+| `expand` | `string` | `""` | Comma-separated relation field names to expand inline. | `expand=author_id,categories` |
+| `fields` | `string` | `*` | Comma-separated fields to return in the payload. | `fields=id,title,created` |
+
+---
+
+## Standard List Response Format
+
+```json
+{
+  "page": 1,
+  "perPage": 30,
+  "totalItems": 142,
+  "totalPages": 5,
+  "items": [
+    {
+      "id": "rec_01J6XYZ123",
+      "collectionId": "col_posts",
+      "collectionName": "posts",
+      "title": "Getting Started with Moul",
+      "slug": "getting-started-with-moul",
+      "published": true,
+      "views": 420,
+      "created": "2026-08-01T12:00:00Z",
+      "updated": "2026-08-02T15:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## CRUD Operations
+
+### 1. List Records (`GET /api/moul/:name/records`)
+
+<Tabs items={['cURL', 'TypeScript', 'Go']}>
+  <Tab value="cURL">
+```bash
+curl -s "http://localhost:8090/api/moul/posts/records?page=1&perPage=20&sort=-created&filter=published=true"
+```
+  </Tab>
+  <Tab value="TypeScript">
+```typescript
+const params = new URLSearchParams({
+  page: '1',
+  perPage: '20',
+  sort: '-created',
+  filter: 'published = true',
+});
+
+const res = await fetch(`http://localhost:8090/api/moul/posts/records?${params}`);
+const data = await res.json();
+console.log(`Found ${data.totalItems} posts:`, data.items);
+```
+  </Tab>
+  <Tab value="Go">
+```go
+req, _ := http.NewRequest("GET", "http://localhost:8090/api/moul/posts/records?page=1&perPage=20", nil)
+resp, err := http.DefaultClient.Do(req)
+// parse JSON...
+```
+  </Tab>
+</Tabs>
+
+### 2. View Single Record (`GET /api/moul/:name/records/:id`)
+
+```bash
+curl -s "http://localhost:8090/api/moul/posts/records/rec_01J6XYZ123"
+```
+
+### 3. Create Record (`POST /api/moul/:name/records`)
+
+<Tabs items={['cURL', 'TypeScript', 'Go']}>
+  <Tab value="cURL">
+```bash
+curl -X POST "http://localhost:8090/api/moul/posts/records" \
+  -H "Authorization: Bearer <user_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Deploying on Bare Metal",
+    "slug": "deploying-on-bare-metal",
+    "content": "A complete walk-through...",
+    "published": true
+  }'
+```
+  </Tab>
+  <Tab value="TypeScript">
+```typescript
+const res = await fetch('http://localhost:8090/api/moul/posts/records', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${userToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    title: 'Deploying on Bare Metal',
+    slug: 'deploying-on-bare-metal',
+    content: 'A complete walk-through...',
+    published: true,
+  }),
+});
+const record = await res.json();
+```
+  </Tab>
+  <Tab value="Go">
+```go
+payload := map[string]any{
+	"title":     "Deploying on Bare Metal",
+	"slug":      "deploying-on-bare-metal",
+	"published": true,
+}
+body, _ := json.Marshal(payload)
+req, _ := http.NewRequest("POST", "http://localhost:8090/api/moul/posts/records", bytes.NewReader(body))
+req.Header.Set("Authorization", "Bearer "+userToken)
+req.Header.Set("Content-Type", "application/json")
+```
+  </Tab>
+</Tabs>
+
+### 4. Update Record (`PATCH /api/moul/:name/records/:id`)
+
+```bash
+curl -X PATCH "http://localhost:8090/api/moul/posts/records/rec_01J6XYZ123" \
+  -H "Authorization: Bearer <user_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"views": 500}'
+```
+
+### 5. Delete Record (`DELETE /api/moul/:name/records/:id`)
+
+```bash
+curl -X DELETE "http://localhost:8090/api/moul/posts/records/rec_01J6XYZ123" \
+  -H "Authorization: Bearer <user_token>"
+# Returns HTTP 204 No Content on success
+```

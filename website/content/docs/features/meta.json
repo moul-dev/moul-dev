@@ -1,0 +1,13 @@
+{
+  "title": "Features & Integrations",
+  "root": true,
+  "pages": [
+    "authentication",
+    "workers-and-queues",
+    "realtime-sse",
+    "webhooks",
+    "mcp-server",
+    "analytics",
+    "admin-consoles"
+  ]
+}

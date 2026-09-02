@@ -1,16 +1,16 @@
-import { metaSchema, pageSchema } from 'fumadocs-core/source/schema'
+import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
 import {
   defineCollections,
   defineConfig,
   defineDocs,
   frontmatterSchema,
-} from 'fumadocs-mdx/config'
-import { z } from 'zod'
+} from "fumadocs-mdx/config";
+import { z } from "zod";
 
 // You can customize Zod schemas for frontmatter and `meta.json` here
 // see https://fumadocs.dev/docs/mdx/collections
 export const docs = defineDocs({
-  dir: 'content/docs',
+  dir: "content/docs",
   docs: {
     schema: pageSchema,
     postprocess: {
@@ -20,11 +20,11 @@ export const docs = defineDocs({
   meta: {
     schema: metaSchema,
   },
-})
+});
 
 export const devlog = defineCollections({
-  type: 'doc',
-  dir: 'content/devlog',
+  type: "doc",
+  dir: "content/devlog",
   schema: frontmatterSchema.extend({
     date: z
       .string()
@@ -32,10 +32,10 @@ export const devlog = defineCollections({
       .transform((val) => new Date(val)),
     author: z.string(),
   }),
-})
+});
 
 export default defineConfig({
   mdxOptions: {
     // MDX options
   },
-})
+});

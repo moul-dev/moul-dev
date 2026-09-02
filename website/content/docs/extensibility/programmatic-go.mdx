@@ -1,0 +1,90 @@
+---
+title: Programmatic Go API
+description: Direct Go SDK integrations for worker job scheduling, analytics tracking, and data access.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Beyond HTTP endpoints, you can import and interact directly with Moul's internal core engines in Go.
+
+---
+
+## 1. Programmatic Worker Engine
+
+You can initialize and control the worker queue engine directly:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/pocketbase/dbx"
+)
+
+func main() {
+	// Initialize worker engine with SQLite db connection
+	workerEngine := worker.NewEngine(dbConn)
+
+	// Register job handler
+	workerEngine.Register("SendSlackAlert", func(ctx context.Context, job *worker.Job) error {
+		channel := job.Args["channel"].(string)
+		msg := job.Args["message"].(string)
+
+		fmt.Printf("Sending message to #%s: %s\n", channel, msg)
+		return nil
+	})
+
+	// Start worker loop in background
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	workerEngine.Start(ctx)
+
+	// Enqueue job programmatically
+	jobOpts := map[string]any{
+		"worker":   "SendSlackAlert",
+		"priority": 1,
+		"args": map[string]any{
+			"channel": "deployments",
+			"message": "Production build completed successfully",
+		},
+	}
+
+	job, err := workerEngine.Enqueue(context.Background(), "tasks_queue", jobOpts)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Job enqueued with ID: %s\n", job.ID)
+
+	// Gracefully stop engine when exiting
+	defer workerEngine.Stop()
+}
+```
+
+---
+
+## 2. Programmatic Analytics Ingestion
+
+Record custom user events from Go backend handlers:
+
+```go
+import (
+	"context"
+	"github.com/moul-dev/moul-dev/internal/analytics"
+)
+
+params := &analytics.EventParams{
+	VisitToken:   "visit_abc123",
+	VisitorToken: "visitor_xyz789",
+	Name:         "checkout_completed",
+	Properties: map[string]any{
+		"order_id": "ord_9981",
+		"currency": "USD",
+		"total":    129.99,
+	},
+}
+
+event, err := analyticsEngine.Track(context.Background(), "events", params)
+```

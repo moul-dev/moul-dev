@@ -1,0 +1,72 @@
+---
+title: Litestream S3 Backups & Disaster Recovery
+description: Continuous real-time SQLite WAL replication to S3/R2 and point-in-time disaster recovery restore.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+
+`mould` features embedded [Litestream](https://litestream.io/) replication directly in the binary. It streams SQLite Write-Ahead Log (WAL) changes to S3-compatible object storage asynchronously with near-zero latency impact and point-in-time recovery capabilities.
+
+---
+
+## Supported Object Storage Providers
+
+- **AWS S3**
+- **Cloudflare R2**
+- **MinIO**
+- **DigitalOcean Spaces**
+- **Wasabi / Backblaze B2**
+
+---
+
+## Configuring Continuous Replication
+
+<Tabs items={['AWS S3', 'Cloudflare R2', 'Local MinIO']}>
+  <Tab value="AWS S3">
+```bash
+LITESTREAM_ENABLED=true
+LITESTREAM_S3_BUCKET=my-moul-production-backups
+LITESTREAM_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+LITESTREAM_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+LITESTREAM_REGION=us-east-1
+```
+  </Tab>
+  <Tab value="Cloudflare R2">
+```bash
+LITESTREAM_ENABLED=true
+LITESTREAM_S3_BUCKET=my-moul-backups
+LITESTREAM_ACCESS_KEY_ID=YOUR_R2_ACCESS_KEY_ID
+LITESTREAM_SECRET_ACCESS_KEY=YOUR_R2_SECRET_ACCESS_KEY
+LITESTREAM_S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+LITESTREAM_REGION=auto
+```
+  </Tab>
+  <Tab value="Local MinIO">
+```bash
+LITESTREAM_ENABLED=true
+LITESTREAM_S3_BUCKET=moul-litestream
+LITESTREAM_ACCESS_KEY_ID=minioadmin
+LITESTREAM_SECRET_ACCESS_KEY=minioadmin
+LITESTREAM_S3_ENDPOINT=http://localhost:9000
+LITESTREAM_S3_FORCE_PATH_STYLE=true
+```
+  </Tab>
+</Tabs>
+
+---
+
+## Disaster Recovery / Restoring a Database
+
+To restore a fresh database from the remote S3 backup on a new server or following hardware failure:
+
+```bash
+# Using the same Litestream environment variables:
+mould restore --db /var/lib/moul/moul.db
+
+# Or via Makefile:
+make restore
+```
+
+Litestream will automatically pull the latest point-in-time snapshot and replay WAL frames to reconstruct an exact copy of the database.

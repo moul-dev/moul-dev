@@ -1,8 +1,8 @@
-import { Link } from 'waku'
-import { CopyBlock } from '@/components/copy-block'
-import { DodecahedronLogo } from '@/components/dodecahedron-logo'
-import { InteractiveGrid } from '@/components/interactive-grid'
-import { LiquidGlassCard } from '@/components/liquid-glass-card'
+import { Link } from "waku";
+import { CopyBlock } from "@/components/copy-block";
+import { DodecahedronLogo } from "@/components/dodecahedron-logo";
+import { InteractiveGrid } from "@/components/interactive-grid";
+import { LiquidGlassCard } from "@/components/liquid-glass-card";
 
 export default function Home() {
   return (
@@ -28,7 +28,7 @@ export default function Home() {
               className="relative left-[calc(50%-11rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 rotate-[30deg] sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
               style={{
                 background:
-                  'linear-gradient(to top right, oklch(0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.12), oklch(0.70 calc(0.10 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 15) / 0.08))',
+                  "linear-gradient(to top right, oklch(0.78 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.12), oklch(0.70 calc(0.10 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 15) / 0.08))",
               }}
             />
           </div>
@@ -44,7 +44,7 @@ export default function Home() {
                     className="inline-block h-1.5 w-1.5 rounded-full"
                     style={{
                       background:
-                        'oklch(0.75 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                        "oklch(0.75 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     }}
                     aria-hidden="true"
                   />
@@ -65,7 +65,7 @@ export default function Home() {
                   className="block bg-clip-text text-transparent"
                   style={{
                     backgroundImage:
-                      'linear-gradient(to right, oklch(0.72 calc(0.17 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 5)), oklch(0.78 calc(0.16 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) + 10)), oklch(0.72 calc(0.14 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 15)))',
+                      "linear-gradient(to right, oklch(0.72 calc(0.17 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 5)), oklch(0.78 calc(0.16 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) + 10)), oklch(0.72 calc(0.14 * var(--brand-chroma-multiplier, 1)) calc(var(--brand-hue, 198) - 15)))",
                   }}
                 >
                   Simplified.
@@ -75,7 +75,7 @@ export default function Home() {
               {/* Tagline */}
               <p className="text-lg leading-8 text-fd-muted-foreground max-w-2xl mx-auto lg:mx-0 mb-8">
                 Combine your server hardware, private cloud, or local
-                development instances into one{' '}
+                development instances into one{" "}
                 <strong className="font-semibold text-fd-foreground">
                   secure, zero-trust compute grid
                 </strong>
@@ -96,9 +96,9 @@ export default function Home() {
                   className="px-6 py-2.5 rounded-full font-semibold text-sm shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                   style={{
                     background:
-                      'oklch(0.75 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                      "oklch(0.75 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     color:
-                      'oklch(0.15 calc(0.01 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                      "oklch(0.15 calc(0.01 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                   }}
                 >
                   Get Started
@@ -141,7 +141,7 @@ export default function Home() {
                 className="text-sm font-mono font-medium tracking-widest uppercase text-center mb-3"
                 style={{
                   color:
-                    'oklch(0.70 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                    "oklch(0.70 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                 }}
               >
                 Why moul.dev
@@ -162,9 +162,9 @@ export default function Home() {
                     className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center"
                     style={{
                       background:
-                        'oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)',
+                        "oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)",
                       color:
-                        'oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                        "oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     }}
                   >
                     <svg
@@ -198,9 +198,9 @@ export default function Home() {
                     className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center"
                     style={{
                       background:
-                        'oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)',
+                        "oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)",
                       color:
-                        'oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                        "oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     }}
                   >
                     <svg
@@ -235,9 +235,9 @@ export default function Home() {
                     className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center"
                     style={{
                       background:
-                        'oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)',
+                        "oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)",
                       color:
-                        'oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                        "oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     }}
                   >
                     <svg
@@ -272,9 +272,9 @@ export default function Home() {
                     className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center"
                     style={{
                       background:
-                        'oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)',
+                        "oklch(0.75 calc(0.14 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198) / 0.1)",
                       color:
-                        'oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))',
+                        "oklch(0.70 calc(0.16 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198))",
                     }}
                   >
                     <svg
@@ -308,11 +308,11 @@ export default function Home() {
         </div>
       </div>
     </>
-  )
+  );
 }
 
 export async function getConfig() {
   return {
-    render: 'static',
-  }
+    render: "static",
+  };
 }

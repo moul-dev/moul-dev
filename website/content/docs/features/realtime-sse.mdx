@@ -1,0 +1,119 @@
+---
+title: Real-Time SSE Subscriptions
+description: High-performance Server-Sent Events (SSE) subscriptions for live data synchronization without polling.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Moul provides built-in Server-Sent Events (SSE) streaming for real-time reactivity. Whenever dynamic records are created, updated, or deleted, subscribed clients receive instant notification events over persistent HTTP streams.
+
+---
+
+## Subscription Endpoints
+
+### 1. Single Collection Subscription
+`GET /api/moul/:name/subscribe`
+
+Query Parameters:
+- `event`: Comma-separated list of event actions to filter (`create`, `update`, `delete`, or `*`). Default: `*`.
+- `id`: Optional filter for a specific record ID.
+- `token`: Optional JWT authorization token (useful for standard browser `EventSource` which does not support custom authorization headers).
+
+### 2. Multi-Collection Subscription
+`GET /api/moul/subscribe?mouls=posts,comments,notifications`
+
+---
+
+## Client Integration Examples
+
+### JavaScript / TypeScript Browser Client
+
+```typescript
+const userToken = 'eyJhbGciOi...';
+const sseUrl = `/api/moul/posts/subscribe?event=create,update,delete&token=${userToken}`;
+
+const evtSource = new EventSource(sseUrl);
+
+// Listen for new record insertions
+evtSource.addEventListener('create', (event) => {
+  const data = JSON.parse(event.data);
+  console.log('New record created:', data.record);
+});
+
+// Listen for updates
+evtSource.addEventListener('update', (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Record updated:', data.record);
+});
+
+// Listen for deletions
+evtSource.addEventListener('delete', (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Record deleted with ID:', data.record.id);
+});
+
+evtSource.onerror = (err) => {
+  console.error('SSE connection error:', err);
+};
+```
+
+### React Hook Example
+
+```tsx
+import { useEffect, useState } from 'react';
+
+export function useRecordSubscription<T>(collection: string, initialData: T[]) {
+  const [records, setRecords] = useState<T[]>(initialData);
+
+  useEffect(() => {
+    const evtSource = new EventSource(`/api/moul/${collection}/subscribe`);
+
+    evtSource.addEventListener('create', (e) => {
+      const { record } = JSON.parse(e.data);
+      setRecords((prev) => [record, ...prev]);
+    });
+
+    evtSource.addEventListener('update', (e) => {
+      const { record } = JSON.parse(e.data);
+      setRecords((prev) => prev.map((r: any) => (r.id === record.id ? record : r)));
+    });
+
+    evtSource.addEventListener('delete', (e) => {
+      const { record } = JSON.parse(e.data);
+      setRecords((prev) => prev.filter((r: any) => r.id !== record.id));
+    });
+
+    return () => {
+      evtSource.close();
+    };
+  }, [collection]);
+
+  return records;
+}
+```
+
+### cURL CLI Streaming
+
+```bash
+curl -N "http://localhost:8090/api/moul/posts/subscribe?token=test-admin-key-1234"
+```
+
+---
+
+## Event Payload Structure
+
+```json
+{
+  "action": "create",
+  "collection": "posts",
+  "record": {
+    "id": "rec_01J6XYZ123",
+    "title": "Realtime Streams in Moul",
+    "slug": "realtime-streams-in-moul",
+    "published": true,
+    "created": "2026-08-01T12:00:00Z",
+    "updated": "2026-08-01T12:00:00Z"
+  }
+}
+```

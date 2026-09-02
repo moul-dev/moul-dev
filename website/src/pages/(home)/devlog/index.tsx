@@ -1,13 +1,13 @@
-import { LiquidGlassCard } from '@/components/liquid-glass-card'
-import { getAuthor } from '@/lib/authors'
-import { devlogSource } from '@/lib/source'
+import { LiquidGlassCard } from "@/components/liquid-glass-card";
+import { getAuthor } from "@/lib/authors";
+import { devlogSource } from "@/lib/source";
 
 export default function DevlogIndex() {
   const posts = devlogSource.getPages().sort((a, b) => {
-    const dateA = new Date(a.data.date)
-    const dateB = new Date(b.data.date)
-    return dateB.getTime() - dateA.getTime()
-  })
+    const dateA = new Date(a.data.date);
+    const dateB = new Date(b.data.date);
+    return dateB.getTime() - dateA.getTime();
+  });
 
   return (
     <>
@@ -56,8 +56,8 @@ export default function DevlogIndex() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {posts.map((post) => {
-              const date = new Date(post.data.date)
-              const author = getAuthor(post.data.author)
+              const date = new Date(post.data.date);
+              const author = getAuthor(post.data.author);
 
               return (
                 <LiquidGlassCard key={post.url} className="h-full">
@@ -68,10 +68,10 @@ export default function DevlogIndex() {
                           dateTime={date.toISOString()}
                           className="text-xs font-mono text-fd-muted-foreground/80"
                         >
-                          {date.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
+                          {date.toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
                           })}
                         </time>
                       </div>
@@ -154,17 +154,17 @@ export default function DevlogIndex() {
                     </div>
                   </div>
                 </LiquidGlassCard>
-              )
+              );
             })}
           </div>
         )}
       </main>
     </>
-  )
+  );
 }
 
 export async function getConfig() {
   return {
-    render: 'static',
-  } as const
+    render: "static",
+  } as const;
 }

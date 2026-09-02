@@ -1,0 +1,174 @@
+---
+title: Quick Start
+description: Install Moul, start your local server, and launch the Web Admin and TUI consoles in minutes.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+This guide walks you through installing `mould`, starting the local development server, creating your first dynamic collection, and inspecting your engine through both the Web Admin Console and Terminal UI.
+
+---
+
+## Prerequisites
+
+- **Go**: Version 1.26 or higher (if building from source)
+- **Air** *(Optional, for hot reloading)*: `go install github.com/air-verse/air@latest`
+- **Node.js / Bun** *(Optional, for hacking on the Web Admin UI)*: Node 20+ or Bun 1.1+
+
+---
+
+## Getting Started Workflow
+
+<Steps>
+<Step>
+### Install or Download Moul
+
+You can install the compiled binary via the official installation script or clone the repository directly:
+
+<Tabs items={['Install Script', 'Build from Source', 'Go Run']}>
+  <Tab value="Install Script">
+```bash
+# Downloads and installs the latest binary to /usr/local/bin
+curl -fsSL https://moul.dev/install.sh | sh
+```
+  </Tab>
+  <Tab value="Build from Source">
+```bash
+git clone https://github.com/moul-dev/moul-dev.git
+cd moul-dev
+
+# Build the single-binary executable with embedded assets
+make build
+# Binary created at ./bin/mould
+```
+  </Tab>
+  <Tab value="Go Run">
+```bash
+# Run directly without pre-building
+go run cmd/mould/main.go start
+```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Start the Local Engine
+
+Start the Echo HTTP server and background worker engine on port `:8090`. This automatically initializes a local SQLite database at `moul-local.db`:
+
+```bash
+make run
+# Or with live hot-reloading:
+make dev
+```
+
+You should see logs indicating the database was created and services are ready:
+```text
+{"time":"...","level":"INFO","msg":"Database initialized at moul-local.db"}
+{"time":"...","level":"INFO","msg":"Worker engine started with 10 workers"}
+{"time":"...","level":"INFO","msg":"Server listening on :8090"}
+```
+</Step>
+
+<Step>
+### Seed Demo Data & Schema Fixtures
+
+Populate your database with demonstration collections (`users`, `posts`, `categories`, `tasks_queue`, `events`), relations, worker jobs, and OpenFeature flags:
+
+```bash
+make seed
+```
+</Step>
+
+<Step>
+### Access the Admin Consoles
+
+Moul provides two built-in administrative interfaces:
+
+1. **Web Admin Console (`/_moul_/`)**:
+   Open [http://localhost:8090/_moul_/](http://localhost:8090/_moul_/) in your browser. Complete root setup or log in with your admin key (`test-admin-key-1234`).
+2. **Terminal User Interface (TUI)**:
+   Launch the Charm Bubble Tea console in a new terminal window:
+   ```bash
+   make tui
+   # Or run: go run cmd/moul/main.go
+   ```
+</Step>
+
+<Step>
+### Perform Your First API Call
+
+Create a new record or query existing posts from the API:
+
+<Tabs items={['cURL', 'TypeScript', 'Go']}>
+  <Tab value="cURL">
+```bash
+# List records in the "posts" collection
+curl -s "http://localhost:8090/api/moul/posts/records?page=1&perPage=10"
+```
+  </Tab>
+  <Tab value="TypeScript">
+```typescript
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  published: boolean;
+}
+
+const response = await fetch('http://localhost:8090/api/moul/posts/records?page=1&perPage=10');
+const data = await response.json();
+console.log(data.items);
+```
+  </Tab>
+  <Tab value="Go">
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+func main() {
+	resp, err := http.Get("http://localhost:8090/api/moul/posts/records?page=1&perPage=10")
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	var result map[string]any
+	json.NewDecoder(resp.Body).Decode(&result)
+	fmt.Printf("Fetched %v records\n", result["totalItems"])
+}
+```
+  </Tab>
+</Tabs>
+</Step>
+</Steps>
+
+---
+
+## Tests
+
+Run automated tests against the engine to verify all dynamic database operations, authentication flows, workers, and analytics:
+
+```bash
+# In-process end-to-end integration tests
+make test-e2e
+
+# Run all unit test suites
+make test-go
+
+# Live cURL verification scripts against running server
+make test-flow
+make test-worker
+make test-analytics
+```
+
+<Callout type="idea">
+  For interactive API testing in the browser, navigate to the runtime API docs at [http://localhost:8090/docs](http://localhost:8090/docs) (Scalar UI) or [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger) (Swagger UI).
+</Callout>

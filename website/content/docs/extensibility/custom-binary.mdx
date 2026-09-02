@@ -1,0 +1,86 @@
+---
+title: Custom Binary Embedding (pkg/app)
+description: Embed the complete Moul engine in your Go binary, add custom HTTP routes, and register worker handlers.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+`pkg/app` allows embedding the complete `mould` server into custom Go binaries with tailored HTTP endpoints, custom middleware, and Go worker handlers.
+
+---
+
+## Complete Custom Binary Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/app"
+)
+
+func main() {
+	// 1. Instantiate engine
+	mouldApp := app.New(app.Config{
+		Version: "1.0.0-custom",
+	})
+
+	// 2. Register custom HTTP route
+	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "pong",
+			"server": "custom-mould",
+		})
+	})
+
+	// 3. Attach directly to raw Echo router
+	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+		router.GET("/api/custom/health", func(c *echo.Context) error {
+			return c.String(http.StatusOK, "Engine healthy")
+		})
+		return nil
+	})
+
+	// 4. Register custom background job handler
+	mouldApp.RegisterWorker("ProcessThumbnail", func(ctx context.Context, job *worker.Job) error {
+		imageURL, ok := job.Args["image_url"].(string)
+		if !ok {
+			return fmt.Errorf("missing image_url")
+		}
+		
+		fmt.Printf("Processing thumbnail for: %s\n", imageURL)
+		// Process image logic...
+		return nil
+	})
+
+	// 5. Register periodic cron worker
+	mouldApp.RegisterPeriodicWorker("DailyReport", "@daily", func(ctx context.Context, job *worker.Job) error {
+		fmt.Println("Running daily report cleanup...")
+		return nil
+	})
+
+	// 6. Start the server (blocks until SIGINT / SIGTERM)
+	if err := mouldApp.Start(context.Background()); err != nil {
+		panic(err)
+	}
+}
+```
+
+---
+
+## Extension Hooks Reference
+
+### `RegisterRoute(method, path, handler)`
+Registers a single HTTP handler on the embedded router before server start.
+
+### `OnRouterInit(callback)`
+Provides access to the underlying `*echo.Echo` instance, enabling custom middleware registration, grouping, and advanced route configurations.
+
+### `OnBeforeStart(callback)`
+Fires after SQLite database connections and dynamic collections are initialized, but before HTTP listening begins. Ideal for running custom migrations or seeding initial collection fixtures.

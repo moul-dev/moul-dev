@@ -1,0 +1,162 @@
+---
+title: Collections & Schemas
+description: Understand Moul collections, schema modeling, collection types, and the 10 supported dynamic field types.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+In Moul, a **Collection** (internally called a *Moul*) represents a dynamic SQLite database table together with its schema, field validation constraints, and access control rules.
+
+Collections can be created, updated, inspected, or deleted dynamically at runtime via the HTTP API, the Web Admin Console (`/_moul_/`), the TUI (`moul`), or AI assistants via MCP without restarting the server.
+
+---
+
+## Collection Types
+
+Moul supports four distinct collection types tailored for different application architectures:
+
+| Type | Description | Built-in Capabilities |
+| :--- | :--- | :--- |
+| `base` | Standard dynamic relational database table. | Dynamic CRUD, custom fields, HCL access rules, webhooks, SSE. |
+| `auth` | User account & authentication collection. | Automatic password hashing, Email OTP, Passkey WebAuthn, OAuth2 social login, session refresh/logout. |
+| `worker` | Asynchronous background job queue. | Oban-style job dispatch, state transitions, automatic retries with exponential backoff, priority sorting. |
+| `analytic` | First-party visitor and event tracking table. | Automatic client header parsing (IP, User-Agent, Referrer, UTM), visitor session deduplication, optional GeoIP resolution. |
+
+---
+
+## Supported Dynamic Field Types
+
+Moul supports 10 dynamic field types with automatic SQLite column mapping, runtime validation, and OpenAPI 3.0 type generation:
+
+| Field Type | Description | SQLite Storage | Validation Constraints | OpenAPI Type / Format |
+| :--- | :--- | :--- | :--- | :--- |
+| `text` | Character string data | `TEXT` | `min`, `max` length, `pattern` (regex) | `type: string`, `minLength`, `maxLength` |
+| `number` | Numeric values (integer/float) | `NUMERIC` | `min`, `max` numeric bounds | `type: number`, `minimum`, `maximum` |
+| `bool` | Boolean flag (`true`/`false`) | `INTEGER` (`1`/`0`) | Validates boolean or `1`/`0` | `type: boolean` |
+| `date` | Calendar date | `TEXT` | Enforces `YYYY-MM-DD` ISO format | `type: string`, `format: date` |
+| `datetime` | Timestamp with timezone | `TEXT` | Enforces ISO 8601 / RFC 3339 format | `type: string`, `format: date-time` |
+| `json` | Arbitrary JSON object/array | `TEXT` | Enforces valid JSON syntax | `type: object` |
+| `url` | Web URL string | `TEXT` | Enforces valid HTTP/HTTPS URI | `type: string`, `format: uri` |
+| `file` | Uploaded file or S3 key | `TEXT` | File size bounds, MIME types | `type: string` |
+| `select` | Constrained enum string | `TEXT` | Must match one of `options` array | `type: string`, `enum: [...]` |
+| `relation` | Foreign key association | `TEXT` | Validates target record ID exists | `type: string` or `type: array` |
+
+---
+
+## Schema Management API
+
+### Create a Collection (`POST /api/moul`)
+
+Schema creation and management endpoints require administrative authorization via either:
+- **`_rootUsers` Admin JWT Bearer Token**: `Authorization: Bearer <root_user_token>` (obtained via `POST /api/moul/_rootUsers/auth-with-password`).
+- **Administrative Master Key**: `X-Admin-Key: <MOUL_ADMIN_KEY>` (or `Authorization: Bearer <MOUL_ADMIN_KEY>`).
+
+<Tabs items={['cURL (Root Token)', 'cURL (Admin Key)', 'TypeScript', 'Go']}>
+  <Tab value="cURL (Root Token)">
+```bash
+curl -X POST "http://localhost:8090/api/moul" \
+  -H "Authorization: Bearer <root_user_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "articles",
+    "type": "base",
+    "schema": [
+      { "name": "title", "type": "text", "required": true, "options": { "min": 3, "max": 200 } },
+      { "name": "slug", "type": "text", "required": true, "unique": true },
+      { "name": "content", "type": "text", "required": false },
+      { "name": "views", "type": "number", "options": { "min": 0 } },
+      { "name": "published", "type": "bool" }
+    ],
+    "listRule": "published = true || @request.auth.id != \"\"",
+    "viewRule": "published = true || @request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": "@request.auth.id != \"\"",
+    "deleteRule": "@request.auth.role = \"admin\""
+  }'
+```
+  </Tab>
+  <Tab value="cURL (Admin Key)">
+```bash
+curl -X POST "http://localhost:8090/api/moul" \
+  -H "X-Admin-Key: test-admin-key-1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "articles",
+    "type": "base",
+    "schema": [
+      { "name": "title", "type": "text", "required": true, "options": { "min": 3, "max": 200 } },
+      { "name": "slug", "type": "text", "required": true, "unique": true },
+      { "name": "content", "type": "text", "required": false },
+      { "name": "views", "type": "number", "options": { "min": 0 } },
+      { "name": "published", "type": "bool" }
+    ]
+  }'
+```
+  </Tab>
+  <Tab value="TypeScript">
+```typescript
+const response = await fetch('http://localhost:8090/api/moul', {
+  method: 'POST',
+  headers: {
+    'X-Admin-Key': 'test-admin-key-1234',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: 'articles',
+    type: 'base',
+    schema: [
+      { name: 'title', type: 'text', required: true },
+      { name: 'slug', type: 'text', required: true, unique: true },
+      { name: 'content', type: 'text' },
+      { name: 'published', type: 'bool' },
+    ],
+    listRule: 'published = true',
+  }),
+});
+const collection = await response.json();
+console.log('Collection created:', collection);
+```
+  </Tab>
+  <Tab value="Go">
+```go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+)
+
+func main() {
+	payload := map[string]any{
+		"name": "articles",
+		"type": "base",
+		"schema": []map[string]any{
+			{"name": "title", "type": "text", "required": true},
+			{"name": "published", "type": "bool"},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", "http://localhost:8090/api/moul", bytes.NewReader(body))
+	req.Header.Set("X-Admin-Key", "test-admin-key-1234")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+}
+```
+  </Tab>
+</Tabs>
+
+### Collection Management Endpoints
+
+- `GET /api/moul` - List all dynamic collections.
+- `GET /api/moul/:name` - Get schema definition, field types, and rules for a collection.
+- `PATCH /api/moul/:name` - Update fields, schema, or access rules.
+- `DELETE /api/moul/:name` - Delete a collection and drop its SQLite table.
+- `POST /api/moul/:name/truncate` - Truncate all records from a collection while preserving the schema.

@@ -1,0 +1,61 @@
+---
+title: Production Build & Deployment
+description: Compile a lightweight, standalone production binary with embedded web admin and OpenAPI docs.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+
+`mould` compiles into a single, self-contained executable containing the Go HTTP daemon, background worker processor, embedded Web Admin Console, and CGO-free pure-Go SQLite driver.
+
+---
+
+## 1. Single-Binary Build
+
+Compile the production binary with stripped debug symbols and embedded web assets:
+
+```bash
+# 1. Build the frontend web admin UI
+make ui-build
+
+# 2. Compile the single-binary executable
+make build
+```
+
+The resulting standalone executable will be placed at `./bin/mould`.
+
+<Callout type="info">
+  **Zero Runtime Assets Needed**: In production, the compiled binary does not need any external static files, node_modules, or templates. Everything is embedded directly into Go binary memory via Go's `//go:embed` directive.
+</Callout>
+
+---
+
+## 2. Production Environment Checklist
+
+Create a secure `.env` file or export the following variables in your production environment:
+
+```bash
+# Essential Production Settings
+MOUL_ENV=production
+MOUL_PORT=8090
+MOUL_PUBLIC_URL=https://api.yourdomain.com
+MOUL_DB_PATH=/var/lib/moul/moul.db
+
+# Master Secrets (Generate with `openssl rand -hex 32`)
+MOUL_ADMIN_KEY=c3ab89d02e4827104bfa90123ef61789c3ab89d02e4827104bfa90123ef61789
+MOUL_JWT_SECRET=88f912c9a01e3b526c810d2940248c88f912c9a01e3b526c810d2940248c1234
+
+# Security & CORS
+MOUL_CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
+```
+
+---
+
+## 3. Running in Production
+
+```bash
+./bin/mould start
+```
+
+Access the live Web Admin Console at `https://api.yourdomain.com/_moul_/` and authenticate with your production `MOUL_ADMIN_KEY`.

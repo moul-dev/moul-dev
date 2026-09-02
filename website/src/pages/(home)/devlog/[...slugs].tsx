@@ -1,16 +1,16 @@
-import type { PageProps } from 'waku/router'
-import { unstable_notFound } from 'waku/router/server'
-import { getMDXComponents } from '@/components/mdx'
-import { getAuthor } from '@/lib/authors'
-import { devlogSource, getDevlogPageImage } from '@/lib/source'
+import type { PageProps } from "waku/router";
+import { unstable_notFound } from "waku/router/server";
+import { getMDXComponents } from "@/components/mdx";
+import { getAuthor } from "@/lib/authors";
+import { devlogSource, getDevlogPageImage } from "@/lib/source";
 
-export default function Page({ slugs }: PageProps<'/devlog/[...slugs]'>) {
-  const page = devlogSource.getPage(slugs)
-  if (!page) unstable_notFound()
+export default function Page({ slugs }: PageProps<"/devlog/[...slugs]">) {
+  const page = devlogSource.getPage(slugs);
+  if (!page) unstable_notFound();
 
-  const MDX = page.data.body
-  const date = new Date(page.data.date)
-  const author = getAuthor(page.data.author)
+  const MDX = page.data.body;
+  const date = new Date(page.data.date);
+  const author = getAuthor(page.data.author);
 
   return (
     <>
@@ -22,7 +22,7 @@ export default function Page({ slugs }: PageProps<'/devlog/[...slugs]'>) {
       <meta
         property="og:image"
         content={
-          getDevlogPageImage(page.data.title, page.data.description, 'facebook')
+          getDevlogPageImage(page.data.title, page.data.description, "facebook")
             .url
         }
       />
@@ -32,7 +32,7 @@ export default function Page({ slugs }: PageProps<'/devlog/[...slugs]'>) {
       <meta
         name="twitter:image"
         content={
-          getDevlogPageImage(page.data.title, page.data.description, 'x').url
+          getDevlogPageImage(page.data.title, page.data.description, "x").url
         }
       />
 
@@ -50,10 +50,10 @@ export default function Page({ slugs }: PageProps<'/devlog/[...slugs]'>) {
           dateTime={date.toISOString()}
           className="text-sm font-mono text-fd-muted-foreground/80"
         >
-          {date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+          {date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           })}
         </time>
 
@@ -131,16 +131,16 @@ export default function Page({ slugs }: PageProps<'/devlog/[...slugs]'>) {
         </article>
       </main>
     </>
-  )
+  );
 }
 
 export async function getConfig() {
   const pages = devlogSource
     .generateParams()
-    .map((item) => (item.lang ? [item.lang, ...item.slug] : item.slug))
+    .map((item) => (item.lang ? [item.lang, ...item.slug] : item.slug));
 
   return {
-    render: 'static' as const,
+    render: "static" as const,
     staticPaths: pages,
-  } as const
+  } as const;
 }

@@ -1,0 +1,158 @@
+---
+title: Modern Authentication
+description: Built-in Password, Email OTP, WebAuthn Passkeys, Social OAuth2, OAuth2 Device Flow, and JWT session management.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+
+Moul includes a comprehensive authentication engine baked directly into any collection with `type: "auth"`. It supports modern passwordless standards, biometric passkeys, social logins, and CLI device authorization.
+
+---
+
+## 1. Password Authentication
+
+### Signup
+Create a record in an `auth` collection (`e.g. users`). Passwords are automatically salted and hashed using bcrypt.
+
+```bash
+curl -X POST "http://localhost:8090/api/moul/users/records" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "alex",
+    "email": "alex@example.com",
+    "password": "SuperSecretPassword123!",
+    "passwordConfirm": "SuperSecretPassword123!"
+  }'
+```
+
+### Login (`POST /api/moul/:name/auth-with-password`)
+
+<Tabs items={['cURL', 'TypeScript', 'Go']}>
+  <Tab value="cURL">
+```bash
+curl -X POST "http://localhost:8090/api/moul/users/auth-with-password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "identity": "alex@example.com",
+    "password": "SuperSecretPassword123!"
+  }'
+```
+  </Tab>
+  <Tab value="TypeScript">
+```typescript
+const res = await fetch('http://localhost:8090/api/moul/users/auth-with-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    identity: 'alex@example.com',
+    password: 'SuperSecretPassword123!',
+  }),
+});
+const authData = await res.json();
+console.log('JWT Token:', authData.token);
+console.log('User Record:', authData.record);
+```
+  </Tab>
+  <Tab value="Go">
+```go
+// POST /api/moul/users/auth-with-password
+```
+  </Tab>
+</Tabs>
+
+### Password Reset Flow
+1. **Request Reset**: `POST /api/moul/:name/request-password-reset` with `{"email": "alex@example.com"}`. Sends transactional reset link with token.
+2. **Confirm Reset**: `POST /api/moul/:name/confirm-password-reset` with `{"token": "...", "password": "...", "passwordConfirm": "..."}`.
+
+---
+
+## 2. Passwordless Email OTP Flow
+
+Moul's Email OTP flow allows instant sign-in and automatic account creation without passwords.
+
+<Steps>
+<Step>
+### Request 6-Digit OTP Code
+```bash
+curl -X POST "http://localhost:8090/api/moul/users/otp/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alex@example.com"}'
+```
+If the email does not exist, Moul automatically provisions a new user record.
+</Step>
+
+<Step>
+### Verify OTP & Retrieve JWT
+```bash
+curl -X POST "http://localhost:8090/api/moul/users/auth-with-otp" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alex@example.com",
+    "otp": "481920"
+  }'
+```
+</Step>
+</Steps>
+
+---
+
+## 3. WebAuthn Passkeys (Biometrics & Hardware Keys)
+
+Moul natively implements FIDO2 / WebAuthn for biometric logins (Touch ID, Face ID, Windows Hello, YubiKey):
+
+- **Signup**:
+  - `POST /api/moul/:name/passkey/signup/options` — Generates WebAuthn credential creation options.
+  - `POST /api/moul/:name/passkey/signup/verify` — Verifies attestation and creates user account.
+- **Login**:
+  - `POST /api/moul/:name/passkey/login/options` — Generates assertion challenge.
+  - `POST /api/moul/:name/passkey/login/verify` — Verifies signature and returns JWT session.
+- **Register Additional Passkey for Existing User**:
+  - `POST /api/moul/:name/passkey/register/options`
+  - `POST /api/moul/:name/passkey/register/verify`
+
+---
+
+## 4. OAuth2 Device Flow (CLI & Headless Auth)
+
+The OAuth2 Device Authorization Grant allows CLI tools, smart TVs, and headless devices to authenticate users seamlessly.
+
+1. **Initiate Device Flow**:
+   ```bash
+   curl -X POST "http://localhost:8090/api/oauth2/device/code" \
+     -H "Content-Type: application/json" \
+     -d '{"auth_moul": "users"}'
+   ```
+   **Response**:
+   ```json
+   {
+     "device_code": "dev_01JXYZ99",
+     "user_code": "ABCD-WXYZ",
+     "verification_uri": "http://localhost:8090/device",
+     "verification_uri_complete": "http://localhost:8090/device?code=ABCD-WXYZ",
+     "expires_in": 900,
+     "interval": 5
+   }
+   ```
+2. **User Authorization**: User visits verification URL and approves the login.
+3. **Poll Token**: CLI client polls `POST /api/oauth2/device/token` until granted.
+
+---
+
+## 5. Session Management
+
+- **Token Refresh**: `POST /api/moul/:name/refresh` (with Bearer token) issues a fresh JWT.
+- **Logout**: `POST /api/moul/:name/logout` invalidates the active JWT session immediately.
+
+---
+
+## Supported Transactional Email Providers
+
+Configure delivery in Web Admin (`/_moul_/settings`) or `.env`:
+- **Amazon SES**: SigV4 AWS SES v2 REST integration.
+- **Resend**: Modern developer email delivery.
+- **Mailgun**: Global & EU transactional API.
+- **SendGrid**: Mail Send API v3.
+- **Cloudflare Email Sending**: Cloudflare REST API.
+- **Console**: Local development fallback.

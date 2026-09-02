@@ -1,0 +1,95 @@
+---
+title: Relational Modeling & Associations
+description: Model 1:1, 1:N, and M:N relationships, configure referential integrity on-delete rules, and expand relational data inline.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+Moul supports rich relational data modeling between dynamic collections with automatic referential integrity validation and zero-cost inline relation expansion.
+
+---
+
+## Association Topologies
+
+Moul supports three primary relationship types configured through the `relation` field type:
+
+### 1. Many-to-One / One-to-One (`1:N` / `1:1`)
+Stores a single target record ID string in the field.
+- **Example**: An `articles` record pointing to an `author_id` in the `users` collection.
+
+### 2. Many-to-Many (`M:N`)
+Stores a JSON array of record ID strings (`["rec_01", "rec_02"]`) in the field (`options.maxSelect > 1` or `null`).
+- **Example**: An `articles` record associated with multiple `categories` (`tag_ids: ["cat_tech", "cat_go"]`).
+
+### 3. Self-Referencing / Hierarchical Trees
+A relation field pointing back to its own parent collection.
+- **Example**: `comments.parent_id` pointing to `comments.id`, or `categories.parent_category_id`.
+
+---
+
+## Referential Integrity & On-Delete Rules
+
+When configuring a relation field in schema options, you can specify how deletions of the target record propagate:
+
+| Policy | Behavior |
+| :--- | :--- |
+| `CASCADE` | Deleting the parent record automatically deletes all child records referencing it. |
+| `SET_NULL` | Deleting the parent record clears the foreign key field in child records to `null` (or removes ID from M:N array). |
+| `RESTRICT` | Rejects deletion of the target record with an HTTP 400 error if any child records reference it. |
+
+---
+
+## Relation Field Schema Definition
+
+```json
+{
+  "name": "author_id",
+  "type": "relation",
+  "required": true,
+  "options": {
+    "collectionId": "col_users",
+    "cascadeDelete": "SET_NULL",
+    "maxSelect": 1
+  }
+}
+```
+
+---
+
+## Inline Relation Expansion (`?expand=...`)
+
+Instead of performing multiple round-trip API queries, pass the `expand` query parameter to populate relational data inline:
+
+```bash
+# Expand single relation
+curl -s "http://localhost:8090/api/moul/posts/records?expand=author_id"
+
+# Expand multiple relations
+curl -s "http://localhost:8090/api/moul/posts/records?expand=author_id,category_ids"
+```
+
+### Response Payload with Expanded Relations
+
+When expanded, referenced records are placed into a nested `expand` dictionary on each record:
+
+```json
+{
+  "id": "rec_post_001",
+  "title": "Building Single-Binary Systems",
+  "author_id": "usr_9988",
+  "category_ids": ["cat_go", "cat_sqlite"],
+  "expand": {
+    "author_id": {
+      "id": "usr_9988",
+      "username": "alice",
+      "email": "alice@example.com",
+      "name": "Alice Developer"
+    },
+    "category_ids": [
+      { "id": "cat_go", "name": "Go Programming" },
+      { "id": "cat_sqlite", "name": "SQLite Architecture" }
+    ]
+  }
+}
+```
