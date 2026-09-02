@@ -7,15 +7,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-This guide walks you through installing `mould`, starting the local development server, creating your first dynamic collection, and inspecting your engine through both the Web Admin Console and Terminal UI.
-
----
-
-## Prerequisites
-
-- **Go**: Version 1.26 or higher (if building from source)
-- **Air** *(Optional, for hot reloading)*: `go install github.com/air-verse/air@latest`
-- **Node.js / Bun** *(Optional, for hacking on the Web Admin UI)*: Node 20+ or Bun 1.1+
+This guide walks you through installing Moul, launching the backend daemon (`mould`), populating demo collections, and administering your database through both the **Web Admin Console** and the **Terminal UI (`moul`)**.
 
 ---
 
@@ -23,84 +15,108 @@ This guide walks you through installing `mould`, starting the local development 
 
 <Steps>
 <Step>
-### Install or Download Moul
+### Install Moul
 
-You can install the compiled binary via the official installation script or clone the repository directly:
+Install the official pre-compiled binaries via the automated install script. This installs both `mould` (the server daemon) and `moul` (the terminal management client) directly into `/usr/local/bin`:
 
-<Tabs items={['Install Script', 'Build from Source', 'Go Run']}>
-  <Tab value="Install Script">
+<Tabs items={['Install Script (macOS / Linux)', 'Manual Download']}>
+  <Tab value="Install Script (macOS / Linux)">
 ```bash
-# Downloads and installs the latest binary to /usr/local/bin
+# Downloads and installs 'mould' and 'moul' binaries
 curl -fsSL https://moul.dev/install.sh | sh
 ```
-  </Tab>
-  <Tab value="Build from Source">
-```bash
-git clone https://github.com/moul-dev/moul-dev.git
-cd moul-dev
 
-# Build the single-binary executable with embedded assets
-make build
-# Binary created at ./bin/mould
+Verify that both commands are accessible in your shell:
+```bash
+mould --version
+moul --version
 ```
   </Tab>
-  <Tab value="Go Run">
+  <Tab value="Manual Download">
+Download the pre-compiled archive for your operating system and architecture from the [GitHub Releases](https://github.com/moul-dev/moul-dev/releases) page:
+
 ```bash
-# Run directly without pre-building
-go run cmd/mould/main.go start
+# Extract the archive and move binaries to your system PATH
+tar -xzf mould_*_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz
+sudo mv mould /usr/local/bin/
+
+tar -xzf moul_*_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz
+sudo mv moul /usr/local/bin/
 ```
   </Tab>
 </Tabs>
+
+<Callout type="info">
+  **Building from source?** If you are contributing to Moul or embedding it into your custom Go application, see the [Building from Source](/docs/extensibility/building-from-source) guide.
+</Callout>
 </Step>
 
 <Step>
 ### Start the Local Engine
 
-Start the Echo HTTP server and background worker engine on port `:8090`. This automatically initializes a local SQLite database at `moul-local.db`:
+Start the `mould` server engine. By default, it creates an embedded SQLite database (`moul-local.db`), launches the background worker pool, and listens on port `:8090`:
 
 ```bash
-make run
-# Or with live hot-reloading:
-make dev
+mould start
 ```
 
-You should see logs indicating the database was created and services are ready:
+You should see startup logs confirming the database is ready:
 ```text
 {"time":"...","level":"INFO","msg":"Database initialized at moul-local.db"}
 {"time":"...","level":"INFO","msg":"Worker engine started with 10 workers"}
 {"time":"...","level":"INFO","msg":"Server listening on :8090"}
 ```
+
+<Callout type="idea">
+  You can customize the SQLite database path by setting the `--db` flag or `MOUL_DB_PATH` environment variable:
+  ```bash
+  mould start --db /path/to/my-app.db
+  ```
+</Callout>
 </Step>
 
 <Step>
 ### Seed Demo Data & Schema Fixtures
 
-Populate your database with demonstration collections (`users`, `posts`, `categories`, `tasks_queue`, `events`), relations, worker jobs, and OpenFeature flags:
+In a new terminal window, populate your database with demonstration collections (`users`, `posts`, `categories`, `tasks_queue`, `events`), relationship records, worker jobs, and OpenFeature flags:
 
 ```bash
-make seed
+mould seed
+```
+
+Output:
+```text
+Seeding database at: moul-local.db...
+Successfully seeded database with demo collections, records, and feature flags!
 ```
 </Step>
 
 <Step>
 ### Access the Admin Consoles
 
-Moul provides two built-in administrative interfaces:
+Moul includes two built-in management interfaces to inspect and configure your engine:
 
-1. **Web Admin Console (`/_moul_/`)**:
-   Open [http://localhost:8090/_moul_/](http://localhost:8090/_moul_/) in your browser. Complete root setup or log in with your admin key (`test-admin-key-1234`).
-2. **Terminal User Interface (TUI)**:
-   Launch the Charm Bubble Tea console in a new terminal window:
-   ```bash
-   make tui
-   # Or run: go run cmd/moul/main.go
-   ```
+#### 1. Web Admin Console (Browser)
+Open **[http://localhost:8090/_moul_/](http://localhost:8090/_moul_/)** in your web browser. 
+
+- Complete the initial root admin setup or log in with your master administrative key (`MOUL_ADMIN_KEY`).
+- Browse dynamic collections, edit schema fields visually, monitor background worker queues, and inspect real-time telemetry.
+
+#### 2. Terminal User Interface (`moul`)
+Launch the keyboard-driven terminal console in your terminal:
+
+```bash
+moul
+```
+
+- When prompted, connect to `http://localhost:8090` using your admin key.
+- Use arrow keys and shortcuts to navigate collections, inspect JSON records, and manage worker queues without leaving the terminal.
 </Step>
 
 <Step>
 ### Perform Your First API Call
 
-Create a new record or query existing posts from the API:
+Query the newly seeded `posts` collection from your terminal or application code:
 
 <Tabs items={['cURL', 'TypeScript', 'Go']}>
   <Tab value="cURL">
@@ -141,7 +157,9 @@ func main() {
 	defer resp.Body.Close()
 
 	var result map[string]any
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		panic(err)
+	}
 	fmt.Printf("Fetched %v records\n", result["totalItems"])
 }
 ```
@@ -152,23 +170,18 @@ func main() {
 
 ---
 
-## Tests
+## Interactive API Exploration
 
-Run automated tests against the engine to verify all dynamic database operations, authentication flows, workers, and analytics:
+`mould` serves interactive API documentation directly at runtime:
 
-```bash
-# In-process end-to-end integration tests
-make test-e2e
+- **Scalar API Reference**: [http://localhost:8090/docs](http://localhost:8090/docs)
+- **Swagger UI**: [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger)
+- **Raw OpenAPI Spec**: [http://localhost:8090/openapi.json](http://localhost:8090/openapi.json)
 
-# Run all unit test suites
-make test-go
+---
 
-# Live cURL verification scripts against running server
-make test-flow
-make test-worker
-make test-analytics
-```
+## Next Steps
 
-<Callout type="idea">
-  For interactive API testing in the browser, navigate to the runtime API docs at [http://localhost:8090/docs](http://localhost:8090/docs) (Scalar UI) or [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger) (Swagger UI).
-</Callout>
+- **[Architecture & Tools](/docs/getting-started/architecture)**: Deep dive into `mould`, `moul`, and the Web Admin Console.
+- **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how dynamic schemas, fields, and access rules work.
+- **[Configuration & Environment](/docs/getting-started/configuration)**: Configure environment variables, JWT secrets, and S3 backups.

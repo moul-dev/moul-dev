@@ -120,7 +120,7 @@ The OAuth2 Device Authorization Grant allows CLI tools, smart TVs, and headless 
 
 1. **Initiate Device Flow**:
    ```bash
-   curl -X POST "http://localhost:8090/api/oauth2/device/code" \
+   curl -X POST "http://localhost:8090/api/oauth2/device/authorize" \
      -H "Content-Type: application/json" \
      -d '{"auth_moul": "users"}'
    ```

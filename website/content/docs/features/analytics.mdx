@@ -75,6 +75,6 @@ await fetch('http://localhost:8090/api/moul/events/records', {
 
 ## Analytics Endpoints
 
-- `GET /api/analytics/summary` — Returns total visits, unique visitors, page views, and error rates.
-- `GET /api/analytics/requests` — Paginated list of recent HTTP requests.
-- `GET /api/system/metrics` — Live host CPU usage, RAM utilization, disk space, and active Go goroutines.
+- `GET /api/visits` — Paginated list of visitor sessions with browser, OS, device, UTM, and GeoIP data. Requires auth or admin key.
+- `GET /api/requests` — Paginated list of recent HTTP request logs (method, path, status, latency). Requires auth or admin key.
+- `GET /api/system/metrics` — Live host CPU usage, RAM utilization, disk space, and active Go goroutines. Requires auth or admin key.

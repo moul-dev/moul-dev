@@ -794,9 +794,7 @@ To restore a database state from S3 backup onto a new server:
 
 ```bash
 # Run restore command using the same Litestream S3 env configuration
-./bin/mould restore
-# Or via Makefile:
-make restore
+mould restore --db /var/lib/moul/moul.db
 ```
 
 ### Systemd Service Deployment Example

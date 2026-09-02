@@ -83,14 +83,6 @@ export default function Home() {
             {/* Install Command & Docs Link */}
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center lg:justify-start mb-4">
               <CopyBlock command="curl -fsSL https://moul.dev/install.sh | sh" />
-              <a
-                href="/docs"
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border border-fd-border/80 bg-fd-card/40 hover:bg-fd-accent hover:text-fd-accent-foreground text-fd-foreground backdrop-blur-sm transition-all duration-200 group"
-              >
-                <BookOpen className="size-4 text-fd-muted-foreground group-hover:text-fd-primary transition-colors" />
-                <span>Read the Docs</span>
-                <ArrowRight className="size-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-              </a>
             </div>
           </div>
 

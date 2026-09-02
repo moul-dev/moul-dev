@@ -61,18 +61,20 @@ curl -X POST "http://localhost:8090/api/moul" \
   -d '{
     "name": "articles",
     "type": "base",
-    "schema": [
+    "fields": [
       { "name": "title", "type": "text", "required": true, "options": { "min": 3, "max": 200 } },
       { "name": "slug", "type": "text", "required": true, "unique": true },
       { "name": "content", "type": "text", "required": false },
       { "name": "views", "type": "number", "options": { "min": 0 } },
       { "name": "published", "type": "bool" }
     ],
-    "listRule": "published = true || @request.auth.id != \"\"",
-    "viewRule": "published = true || @request.auth.id != \"\"",
-    "createRule": "@request.auth.id != \"\"",
-    "updateRule": "@request.auth.id != \"\"",
-    "deleteRule": "@request.auth.role = \"admin\""
+    "rules": {
+      "listRule": "published = true || @request.auth.id != \"\"",
+      "viewRule": "published = true || @request.auth.id != \"\"",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.id != \"\"",
+      "deleteRule": "@request.auth.role = \"admin\""
+    }
   }'
 ```
   </Tab>
@@ -84,7 +86,7 @@ curl -X POST "http://localhost:8090/api/moul" \
   -d '{
     "name": "articles",
     "type": "base",
-    "schema": [
+    "fields": [
       { "name": "title", "type": "text", "required": true, "options": { "min": 3, "max": 200 } },
       { "name": "slug", "type": "text", "required": true, "unique": true },
       { "name": "content", "type": "text", "required": false },
@@ -105,13 +107,15 @@ const response = await fetch('http://localhost:8090/api/moul', {
   body: JSON.stringify({
     name: 'articles',
     type: 'base',
-    schema: [
+    fields: [
       { name: 'title', type: 'text', required: true },
       { name: 'slug', type: 'text', required: true, unique: true },
       { name: 'content', type: 'text' },
       { name: 'published', type: 'bool' },
     ],
-    listRule: 'published = true',
+    rules: {
+      listRule: 'published = true',
+    },
   }),
 });
 const collection = await response.json();
@@ -132,7 +136,7 @@ func main() {
 	payload := map[string]any{
 		"name": "articles",
 		"type": "base",
-		"schema": []map[string]any{
+		"fields": []map[string]any{
 			{"name": "title", "type": "text", "required": true},
 			{"name": "published", "type": "bool"},
 		},
@@ -159,4 +163,3 @@ func main() {
 - `GET /api/moul/:name` - Get schema definition, field types, and rules for a collection.
 - `PATCH /api/moul/:name` - Update fields, schema, or access rules.
 - `DELETE /api/moul/:name` - Delete a collection and drop its SQLite table.
-- `POST /api/moul/:name/truncate` - Truncate all records from a collection while preserving the schema.

@@ -1,0 +1,133 @@
+---
+title: Building from Source & Contributor Workflows
+description: Guide for compiling Moul from source, running development hot-reload environments, and executing test suites.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Callout } from 'fumadocs-ui/components/callout'
+
+If you are developing features for Moul, embedding custom Go handlers, or contributing to the core engine and UI, this guide covers setting up your local development environment, compiling binaries from source, and running automated test suites.
+
+---
+
+## Prerequisites
+
+Ensure you have the following toolchains installed on your development machine:
+
+- **Go**: Version 1.26 or higher
+- **Node.js / Bun**: Node 20+ or Bun 1.1+ (for Web Admin UI compilation)
+- **Air** *(Optional, for Go live hot-reloading)*:
+  ```bash
+  go install github.com/air-verse/air@latest
+  ```
+
+---
+
+## Clone and Setup
+
+```bash
+git clone https://github.com/moul-dev/moul-dev.git
+cd moul-dev
+
+# Install Web Admin UI dependencies
+make ui-install
+```
+
+---
+
+## Compiling Binaries
+
+Moul compiles into two standalone single binaries with stripped debug symbols and all static assets embedded:
+
+```bash
+# 1. Build the 'mould' server engine with embedded Web Admin UI
+make build
+# Output: ./bin/mould
+
+# 2. Build the 'moul' TUI console binary
+make build-tui
+# Output: ./bin/moul
+```
+
+---
+
+## Local Development Workflows
+
+<Tabs items={['Full Stack Live Dev', 'Backend Only (Air)', 'Admin UI Dev (Vite)']}>
+  <Tab value="Full Stack Live Dev">
+```bash
+# Runs backend with Air hot-reload and Vite Admin UI concurrently
+make dev-all
+```
+  </Tab>
+  <Tab value="Backend Only (Air)">
+```bash
+# Live hot-reloading for Go backend changes
+make dev
+```
+  </Tab>
+  <Tab value="Admin UI Dev (Vite)">
+```bash
+# Start Vite development server for the Web Admin UI with HMR
+make ui-dev
+```
+  </Tab>
+</Tabs>
+
+### Running TUI from Source
+
+You can launch the Bubble Tea terminal UI directly from source against your running local server:
+
+```bash
+make tui
+# Or run directly with Go:
+go run cmd/moul/main.go
+```
+
+### Seeding Fixtures & Type Generation
+
+```bash
+# Populate local SQLite database with demo collections and records
+make seed
+
+# Generate TypeScript type definitions from collection schemas into UI
+make typegen
+```
+
+---
+
+## Running Test Suites
+
+Moul includes comprehensive unit, integration, and end-to-end verification suites:
+
+```bash
+# Run all Go unit and internal package tests
+make test-go
+
+# Run in-process end-to-end test suite (race detector enabled)
+make test-e2e
+
+# Run live HTTP API verification scripts against a running server
+make test-flow
+make test-worker
+make test-analytics
+
+# Run TUI tests
+make test-tui
+
+# Generate test coverage report
+make test-coverage
+```
+
+---
+
+## Code Quality & Linting
+
+```bash
+# Run golangci-lint
+make lint
+
+# Automatically format code and apply lint fixes
+make lint-fix
+```

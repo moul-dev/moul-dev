@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/worker"
@@ -60,7 +61,7 @@ func main() {
 	})
 
 	// 5. Register periodic cron worker
-	mouldApp.RegisterPeriodicWorker("DailyReport", "@daily", func(ctx context.Context, job *worker.Job) error {
+	mouldApp.RegisterPeriodicWorker(24*time.Hour, "DailyReport", func(ctx context.Context, job *worker.Job) error {
 		fmt.Println("Running daily report cleanup...")
 		return nil
 	})

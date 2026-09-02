@@ -5,12 +5,17 @@ description: A lightweight, self-contained dynamic database, authentication, and
 
 import { Card, Cards } from 'fumadocs-ui/components/card'
 import { Callout } from 'fumadocs-ui/components/callout'
-import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server } from 'lucide-react'
+import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server, Layers } from 'lucide-react'
 
-`mould` is a lightweight, single-binary dynamic database, authentication, and background job processing engine written in Go. Inspired by PocketBase and Elixir's Oban, Moul consolidates everything needed to build modern applications into a single portable binary.
+**Moul** is a lightweight, modern backend ecosystem written in Go, inspired by PocketBase and Elixir's Oban. It unifies dynamic schema management, multi-factor authentication, background job queues, and real-time events into a clean, single-binary architecture.
+
+Moul consists of three core components:
+1. **`mould`**: The headless backend daemon engine that runs the database, REST API, background workers, SSE, and serves the web admin console.
+2. **`moul`**: The keyboard-driven Terminal User Interface (TUI) client built with Bubble Tea for fast terminal administration.
+3. **Web Admin Console**: The full-featured browser dashboard served at `/_moul_/` for visual schema modeling and management.
 
 <Callout type="info">
-  **Single Binary Philosophy**: No Docker orchestration or microservice sprawl required. Run dynamic SQLite schema management, multi-factor authentication, background job queues, first-party analytics, and real-time Server-Sent Events with zero external dependencies.
+  **Single Binary Philosophy**: No Docker orchestration or microservice sprawl required. Run dynamic SQLite schema management, authentication, background job queues, first-party analytics, and real-time Server-Sent Events with zero external dependencies.
 </Callout>
 
 ---
@@ -18,6 +23,12 @@ import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server } f
 ## Core Pillars
 
 <Cards>
+  <Card
+    icon={<Layers className="size-5 text-fd-primary" />}
+    title="Architecture & Tools"
+    href="/docs/getting-started/architecture"
+    description="Understand the relationship between the mould engine, moul TUI, and Web Admin Console."
+  />
   <Card
     icon={<Database className="size-5 text-fd-primary" />}
     title="Dynamic Collections & CRUD"
@@ -60,12 +71,6 @@ import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server } f
     href="/docs/extensibility/custom-binary"
     description="Embed the full engine in your Go binary, register custom HTTP endpoints, and run custom workers."
   />
-  <Card
-    icon={<Server className="size-5 text-fd-primary" />}
-    title="Continuous Backups & Deploy"
-    href="/docs/deployment/production-build"
-    description="Point-in-time SQLite WAL replication to S3 via Litestream and hardened Linux deployment patterns."
-  />
 </Cards>
 
 ---
@@ -75,5 +80,6 @@ import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server } f
 Follow the guides below to get started in less than two minutes:
 
 1. **[Quick Start Guide](/docs/getting-started/quickstart)**: Install Moul and start your local engine.
-2. **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how collections and field types work.
-3. **[API Reference](/docs/api-reference/overview)**: Explore the interactive OpenAPI 3.0 specification and endpoint catalog.
+2. **[Architecture & Tools](/docs/getting-started/architecture)**: Explore how `mould`, `moul`, and the Web Admin work together.
+3. **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how collections and field types work.
+4. **[API Reference](/docs/api-reference/overview)**: Explore the interactive OpenAPI 3.0 specification and endpoint catalog.
