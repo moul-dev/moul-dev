@@ -6,7 +6,7 @@ description: Embed the complete Moul engine in your Go binary, add custom HTTP r
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-`pkg/app` allows embedding the complete `mould` server into custom Go binaries with tailored HTTP endpoints, custom middleware, and Go worker handlers.
+`pkg/app` allows embedding the complete `moul` server into custom Go binaries with tailored HTTP endpoints, custom middleware, and Go worker handlers.
 
 ---
 
@@ -28,20 +28,20 @@ import (
 
 func main() {
 	// 1. Instantiate engine
-	mouldApp := app.New(app.Config{
+	moulApp := app.New(app.Config{
 		Version: "1.0.0-custom",
 	})
 
 	// 2. Register custom HTTP route
-	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status": "pong",
-			"server": "custom-mould",
+			"server": "custom-moul",
 		})
 	})
 
 	// 3. Attach directly to raw Echo router
-	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+	moulApp.OnRouterInit(func(router *echo.Echo) error {
 		router.GET("/api/custom/health", func(c *echo.Context) error {
 			return c.String(http.StatusOK, "Engine healthy")
 		})
@@ -49,7 +49,7 @@ func main() {
 	})
 
 	// 4. Register custom background job handler
-	mouldApp.RegisterWorker("ProcessThumbnail", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("ProcessThumbnail", func(ctx context.Context, job *worker.Job) error {
 		imageURL, ok := job.Args["image_url"].(string)
 		if !ok {
 			return fmt.Errorf("missing image_url")
@@ -61,13 +61,13 @@ func main() {
 	})
 
 	// 5. Register periodic cron worker
-	mouldApp.RegisterPeriodicWorker(24*time.Hour, "DailyReport", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterPeriodicWorker(24*time.Hour, "DailyReport", func(ctx context.Context, job *worker.Job) error {
 		fmt.Println("Running daily report cleanup...")
 		return nil
 	})
 
 	// 6. Start the server (blocks until SIGINT / SIGTERM)
-	if err := mouldApp.Start(context.Background()); err != nil {
+	if err := moulApp.Start(context.Background()); err != nil {
 		panic(err)
 	}
 }

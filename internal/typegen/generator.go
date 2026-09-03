@@ -26,8 +26,8 @@ func GenerateTypeScript(mouls []*schema.Moul) string {
 	var buf bytes.Buffer
 
 	buf.WriteString("/**\n")
-	buf.WriteString(" * Auto-generated TypeScript definitions by `mould typegen`.\n")
-	buf.WriteString(" * Do NOT edit manually. Run `mould typegen` to regenerate.\n")
+	buf.WriteString(" * Auto-generated TypeScript definitions by `moul typegen`.\n")
+	buf.WriteString(" * Do NOT edit manually. Run `moul typegen` to regenerate.\n")
 	buf.WriteString(" */\n\n")
 
 	// Base Interfaces

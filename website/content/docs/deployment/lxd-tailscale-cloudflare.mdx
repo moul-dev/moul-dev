@@ -7,7 +7,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-This guide walks through deploying `mould` in a hardened production environment on **Ubuntu Server** using **unprivileged LXD system containers**, **Tailscale** for private host management, and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public HTTPS ingress.
+This guide walks through deploying `moul` in a hardened production environment on **Ubuntu Server** using **unprivileged LXD system containers**, **Tailscale** for private host management, and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public HTTPS ingress.
 
 ---
 
@@ -29,7 +29,7 @@ flowchart TD
         CFDaemon["cloudflared Daemon"]
 
         subgraph LXD ["LXD Container (moul-prod)"]
-            Engine["mould Engine\n(Port 8090)"]
+            Engine["moul Engine\n(Port 8090)"]
             DB[("SQLite Database\n/var/lib/moul/moul.db")]
             Litestream["Litestream Backup Processor"]
         end

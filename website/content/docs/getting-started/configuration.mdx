@@ -6,7 +6,7 @@ description: Comprehensive configuration reference for environment variables, ru
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-`mould` can be configured via environment variables, `.env` files in the project root, or CLI flags.
+`moul` can be configured via environment variables, `.env` files in the project root, or CLI flags.
 
 ---
 
@@ -68,47 +68,47 @@ curl -X POST "http://localhost:8090/api/admin/reload" \
 
 ## CLI Subcommands Reference
 
-`mould` includes a rich set of CLI subcommands:
+`moul` includes a rich set of CLI subcommands:
 
-### `mould start`
+### `moul start`
 Starts the HTTP daemon and worker engine.
 ```bash
-mould start --port 8090 --db /path/to/moul.db
+moul start --port 8090 --db /path/to/moul.db
 ```
 
-### `mould seed`
+### `moul seed`
 Seeds demo collections, records, and feature flags.
 ```bash
-mould seed --db moul-local.db
+moul seed --db moul-local.db
 ```
 
-### `mould mcp`
+### `moul mcp`
 Launches the native Model Context Protocol (MCP) server over standard input/output (`stdio`).
 ```bash
-mould mcp --db moul-local.db
+moul mcp --db moul-local.db
 ```
 
-### `mould test-rule`
+### `moul test-rule`
 Evaluates and benchmarks an access rule expression against mock JSON payload and auth context.
 ```bash
-mould test-rule \
+moul test-rule \
   --rule="author_id = @request.auth.id && views_count > 100" \
   --record='{"author_id": "usr_admin_001", "views_count": 1420}' \
   --auth='{"id": "usr_admin_001"}'
 ```
 
-### `mould worker list-failed` & `mould worker retry`
+### `moul worker list-failed` & `moul worker retry`
 Inspects and manages the Dead-Letter Queue (DLQ).
 ```bash
 # List discarded jobs in dead-letter queue
-mould worker list-failed tasks_queue
+moul worker list-failed tasks_queue
 
 # Force-retry failed jobs
-mould worker retry tasks_queue [optional_job_id]
+moul worker retry tasks_queue [optional_job_id]
 ```
 
-### `mould restore`
+### `moul restore`
 Restores a database from S3 backup using Litestream.
 ```bash
-mould restore --db /var/lib/moul/moul.db
+moul restore --db /var/lib/moul/moul.db
 ```

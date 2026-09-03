@@ -316,7 +316,7 @@ func (a *App) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to configure TLS for Echo server: %w", err)
 		}
 		addr := ":" + a.tlsManager.HTTPSPort()
-		logger.Info("Starting mould engine server (HTTPS)", "version", a.config.Version, "addr", "https://localhost"+addr, "env", a.config.Env)
+		logger.Info("Starting moul engine server (HTTPS)", "version", a.config.Version, "addr", "https://localhost"+addr, "env", a.config.Env)
 		sc := echo.StartConfig{
 			Address:         addr,
 			TLSConfig:       tlsCfg,
@@ -327,7 +327,7 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	} else {
 		addr := ":" + port
-		logger.Info("Starting mould engine server", "version", a.config.Version, "addr", "http://localhost"+addr, "env", a.config.Env)
+		logger.Info("Starting moul engine server", "version", a.config.Version, "addr", "http://localhost"+addr, "env", a.config.Env)
 		sc := echo.StartConfig{
 			Address:         addr,
 			GracefulTimeout: 10 * time.Second,

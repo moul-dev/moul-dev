@@ -10,8 +10,8 @@ import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server, La
 **Moul** is a lightweight, modern backend ecosystem written in Go, inspired by PocketBase and Elixir's Oban. It unifies dynamic schema management, multi-factor authentication, background job queues, and real-time events into a clean, single-binary architecture.
 
 Moul consists of three core components:
-1. **`mould`**: The headless backend daemon engine that runs the database, REST API, background workers, SSE, and serves the web admin console.
-2. **`moul`**: The keyboard-driven Terminal User Interface (TUI) client built with Bubble Tea for fast terminal administration.
+1. **`moul`**: The backend daemon engine that runs the database, REST API, background workers, SSE, and serves the web admin console.
+2. **`moul-ctl`**: The keyboard-driven Terminal User Interface (TUI) client built with Bubble Tea for fast terminal administration.
 3. **Web Admin Console**: The full-featured browser dashboard served at `/_moul_/` for visual schema modeling and management.
 
 <Callout type="info">
@@ -27,7 +27,7 @@ Moul consists of three core components:
     icon={<Layers className="size-5 text-fd-primary" />}
     title="Architecture & Tools"
     href="/docs/getting-started/architecture"
-    description="Understand the relationship between the mould engine, moul TUI, and Web Admin Console."
+    description="Understand the relationship between the moul engine, moul-ctl TUI, and Web Admin Console."
   />
   <Card
     icon={<Database className="size-5 text-fd-primary" />}
@@ -63,7 +63,7 @@ Moul consists of three core components:
     icon={<Terminal className="size-5 text-fd-primary" />}
     title="Admin Consoles (Web & TUI)"
     href="/docs/features/admin-consoles"
-    description="Responsive Web Admin UI at /_moul_/ alongside a full-featured Bubble Tea Terminal UI (moul)."
+    description="Responsive Web Admin UI at /_moul_/ alongside a full-featured Bubble Tea Terminal UI (moul-ctl)."
   />
   <Card
     icon={<Code2 className="size-5 text-fd-primary" />}
@@ -80,6 +80,6 @@ Moul consists of three core components:
 Follow the guides below to get started in less than two minutes:
 
 1. **[Quick Start Guide](/docs/getting-started/quickstart)**: Install Moul and start your local engine.
-2. **[Architecture & Tools](/docs/getting-started/architecture)**: Explore how `mould`, `moul`, and the Web Admin work together.
+2. **[Architecture & Tools](/docs/getting-started/architecture)**: Explore how `moul`, `moul-ctl`, and the Web Admin work together.
 3. **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how collections and field types work.
 4. **[API Reference](/docs/api-reference/overview)**: Explore the interactive OpenAPI 3.0 specification and endpoint catalog.

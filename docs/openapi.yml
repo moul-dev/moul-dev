@@ -3,7 +3,7 @@ info:
   title: Moul API Reference
   version: dev
   description: |
-    `mould` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
+    `moul` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 
     ### Authentication and Authorization
     - **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.
@@ -40,9 +40,9 @@ info:
     - **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker`.
 
     ### Built-in Model Context Protocol (MCP) Server
-    - **Overview**: `mould` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This allows AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity) to inspect schema definitions, execute record CRUD, track background jobs, manage feature flags, and monitor host system metrics.
+    - **Overview**: `moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This allows AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity) to inspect schema definitions, execute record CRUD, track background jobs, manage feature flags, and monitor host system metrics.
     - **Transport Modes**:
-      - **Stdio Transport Mode**: Executed via `mould mcp`. Communicates directly over standard input/output streams. Ideal for local IDE configuration without running a public HTTP daemon.
+      - **Stdio Transport Mode**: Executed via `moul mcp`. Communicates directly over standard input/output streams. Ideal for local IDE configuration without running a public HTTP daemon.
       - **Streamable HTTP Transport Mode (MCP 2025 Spec)**: Served at `http://localhost:8090/api/mcp`. Natively accepts direct JSON-RPC POST requests, SSE stream GET requests, and DELETE session termination requests.
       - **HTTP SSE Transport Mode (Legacy Spec)**: Served at `http://localhost:8090/api/mcp` (with client POST messages directed to `/api/mcp/message`).
     - **Authentication Options**:
@@ -57,8 +57,8 @@ info:
           ```json
           {
             "mcpServers": {
-              "mould": {
-                "command": "/usr/local/bin/mould",
+              "moul": {
+                "command": "/usr/local/bin/moul",
                 "args": ["mcp"],
                 "env": {
                   "MOUL_DB_PATH": "./moul-local.db"
@@ -71,7 +71,7 @@ info:
           ```json
           {
             "mcpServers": {
-              "mould-sse": {
+              "moul-sse": {
                 "url": "http://localhost:8090/api/mcp",
                 "headers": {
                   "X-Admin-Key": "<MOUL_ADMIN_KEY>"
@@ -84,7 +84,7 @@ info:
           ```json
           {
             "mcpServers": {
-              "mould-sse": {
+              "moul-sse": {
                 "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
               }
             }
@@ -96,8 +96,8 @@ info:
           ```json
           {
             "mcpServers": {
-              "mould": {
-                "command": "mould",
+              "moul": {
+                "command": "moul",
                 "args": ["mcp"]
               }
             }
@@ -161,10 +161,10 @@ tags:
     description: Administrative and tracking endpoints for HTTP requests and site visit analytics.
   - name: Model Context Protocol (MCP)
     description: |
-      Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `mould`.
+      Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `moul`.
 
       #### Connection Modes & Setup
-      1. **Stdio Transport (`mould mcp`)**: Standard I/O bridge mode for local AI clients.
+      1. **Stdio Transport (`moul mcp`)**: Standard I/O bridge mode for local AI clients.
       2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.
 
       #### Authentication
@@ -176,12 +176,12 @@ tags:
         ```json
         {
           "mcpServers": {
-            "mould": {
-              "command": "/usr/local/bin/mould",
+            "moul": {
+              "command": "/usr/local/bin/moul",
               "args": ["mcp"],
               "env": { "MOUL_DB_PATH": "./moul-local.db" }
             },
-            "mould-sse": {
+            "moul-sse": {
               "url": "http://localhost:8090/api/mcp",
               "headers": { "X-Admin-Key": "<MOUL_ADMIN_KEY>" }
             }
@@ -192,7 +192,7 @@ tags:
         ```json
         {
           "mcpServers": {
-            "mould": { "command": "mould", "args": ["mcp"] }
+            "moul": { "command": "moul", "args": ["mcp"] }
           }
         }
         ```

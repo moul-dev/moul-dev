@@ -103,7 +103,7 @@ deleteRule: "org_id = @request.auth.org_id && @request.auth.role = 'org_admin'"
 You can test and benchmark rules locally without executing live HTTP requests:
 
 ```bash
-mould test-rule \
+moul test-rule \
   --rule="author_id = @request.auth.id && views > 100" \
   --record='{"author_id": "usr_001", "views": 250}' \
   --auth='{"id": "usr_001"}'

@@ -58,7 +58,7 @@ func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 func TestMoulUpdate_Success(t *testing.T) {
-	newBinaryContent := []byte("updated-moul-tui-binary")
+	newBinaryContent := []byte("updated-moul-server-binary")
 	appName := "moul"
 	targetAssetName := fmt.Sprintf("%s_v2026.07_%s_%s.tar.gz", appName, runtime.GOOS, runtime.GOARCH)
 
@@ -91,7 +91,7 @@ func TestMoulUpdate_Success(t *testing.T) {
 
 	tempDir := t.TempDir()
 	dummyExecPath := filepath.Join(tempDir, appName)
-	if err := os.WriteFile(dummyExecPath, []byte("old-moul-tui-binary"), 0755); err != nil {
+	if err := os.WriteFile(dummyExecPath, []byte("old-moul-binary"), 0755); err != nil {
 		t.Fatalf("Failed to write dummy binary: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func TestMoulUpdate_Success(t *testing.T) {
 	}
 }
 
-func TestMoulUpdate_RunUpdateArgs(t *testing.T) {
+func TestParseUpdateArgs(t *testing.T) {
 	tests := []struct {
 		name            string
 		args            []string
@@ -172,5 +172,20 @@ func TestMoulUpdate_RunUpdateArgs(t *testing.T) {
 				t.Errorf("Expected service %q, got %q", tt.expectedService, service)
 			}
 		})
+	}
+}
+
+func TestGetDBPath(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	os.Args = []string{"moul", "seed", "--db", "custom-test.db"}
+	if p := getDBPath(); p != "custom-test.db" {
+		t.Errorf("Expected custom-test.db, got %s", p)
+	}
+
+	os.Args = []string{"moul", "seed", "--db=equal-test.db"}
+	if p := getDBPath(); p != "equal-test.db" {
+		t.Errorf("Expected equal-test.db, got %s", p)
 	}
 }

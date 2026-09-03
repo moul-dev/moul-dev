@@ -117,11 +117,11 @@ When jobs fail repeatedly and exceed `max_attempts`, they enter the `discarded` 
 
 ```bash
 # 1. List all failed/discarded jobs in a queue
-mould worker list-failed tasks_queue
+moul worker list-failed tasks_queue
 
 # 2. Retry all failed jobs in the queue
-mould worker retry tasks_queue
+moul worker retry tasks_queue
 
 # 3. Retry a specific job by ID
-mould worker retry tasks_queue job_01JXYZ123
+moul worker retry tasks_queue job_01JXYZ123
 ```

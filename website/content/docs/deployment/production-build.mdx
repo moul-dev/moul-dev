@@ -7,7 +7,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Step, Steps } from 'fumadocs-ui/components/steps'
 
-`mould` compiles into a single, self-contained executable containing the Go HTTP daemon, background worker processor, embedded Web Admin Console, and CGO-free pure-Go SQLite driver.
+`moul` compiles into a single, self-contained executable containing the Go HTTP daemon, background worker processor, embedded Web Admin Console, and CGO-free pure-Go SQLite driver.
 
 ---
 
@@ -23,7 +23,7 @@ make ui-build
 make build
 ```
 
-The resulting standalone executable will be placed at `./bin/mould`.
+The resulting standalone executable will be placed at `./bin/moul`.
 
 <Callout type="info">
   **Zero Runtime Assets Needed**: In production, the compiled binary does not need any external static files, node_modules, or templates. Everything is embedded directly into Go binary memory via Go's `//go:embed` directive.
@@ -55,7 +55,7 @@ MOUL_CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
 ## 3. Running in Production
 
 ```bash
-./bin/mould start
+./bin/moul start
 ```
 
 Access the live Web Admin Console at `https://api.yourdomain.com/_moul_/` and authenticate with your production `MOUL_ADMIN_KEY`.

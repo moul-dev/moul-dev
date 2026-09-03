@@ -4,11 +4,11 @@
 
 ## Overview
 
-Moul (`mould`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, Social OAuth2, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
+Moul (`moul`) provides an all-in-one backend platform combining dynamic schema creation, record CRUD, multi-factor authentication (Password, Email OTP, WebAuthn, Social OAuth2, OAuth2 Device Flow), Oban-inspired SQLite background worker queues, OpenFeature-compatible feature flags, host system observability, and a built-in MCP server for AI coding agents.
 
 ## Core Resources & Documentation
 
-- [AGENTS.md](/AGENTS.md): Complete guide for AI Coding Agents and LLMs interacting with mould.
+- [AGENTS.md](/AGENTS.md): Complete guide for AI Coding Agents and LLMs interacting with moul.
 - [llms-full.txt](/llms-full.txt): Comprehensive API reference, schema specifications, and complete technical guide for LLMs.
 - [README.md](https://github.com/moul-dev/moul-dev/blob/main/README.md): Main repository README with quickstart and local development instructions.
 - [OpenAPI Spec](/openapi.json): Dynamic live OpenAPI 3.0 specification generated at runtime.
@@ -25,7 +25,7 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
 - **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin`), built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with tri-state system/light/dark theme toggle, and unified TanStack DevTools embedded into the single binary.
-- **Built-in MCP Server**: Native MCP protocol server accessible via `mould mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
+- **Built-in MCP Server**: Native MCP protocol server accessible via `moul mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
 ## Built-in MCP Server Tools Summary
 
@@ -51,25 +51,27 @@ Moul (`mould`) provides an all-in-one backend platform combining dynamic schema 
 
 ```bash
 # Start HTTP engine server (default port 8090)
-mould start
+moul start
 
 # Seed database with realistic collections, demo records, and feature flags
-mould seed
+moul seed
 
 # Generate TypeScript type definitions from collection schemas
-mould typegen --out ui/src/types/schema.d.ts
+moul typegen --out ui/src/types/schema.d.ts
 
 # Test and validate a rule expression against mock record/auth context
-mould test-rule --rule="author_id = @request.auth.id" --record='{"author_id": "usr_1"}' --auth='{"id": "usr_1"}'
+moul test-rule --rule="author_id = @request.auth.id" --record='{"author_id": "usr_1"}' --auth='{"id": "usr_1"}'
 
 # Manage worker jobs / retry dead-letter queue (DLQ)
-mould worker retry tasks_queue [job_id]
-mould worker list-failed tasks_queue
+moul worker retry tasks_queue [job_id]
+moul worker list-failed tasks_queue
 
 # Start built-in MCP server over stdio
-mould mcp
+moul mcp
 
 # Launch Bubble Tea TUI Admin Console
-moul -server http://localhost:8090 -admin-key test-admin-key-1234
+moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
+# Or via convenience subcommand in moul:
+moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 ```
 

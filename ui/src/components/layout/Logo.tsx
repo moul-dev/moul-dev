@@ -76,7 +76,7 @@ export interface LogoProps {
 
 export const Logo: React.FC<LogoProps> = ({
   size = 24,
-  text = 'mould',
+  text = 'moul',
   iconOnly = false,
   badge,
   style,

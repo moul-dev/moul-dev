@@ -31,8 +31,8 @@ sudo chmod 700 /var/lib/moul /etc/moul
 ### Install Moul Executable
 
 ```bash
-sudo cp ./bin/mould /usr/local/bin/mould
-sudo chmod +x /usr/local/bin/mould
+sudo cp ./bin/moul /usr/local/bin/moul
+sudo chmod +x /usr/local/bin/moul
 ```
 </Step>
 
@@ -73,7 +73,7 @@ User=moul
 Group=moul
 WorkingDirectory=/var/lib/moul
 EnvironmentFile=/etc/moul/moul.env
-ExecStart=/usr/local/bin/mould start
+ExecStart=/usr/local/bin/moul start
 Restart=always
 RestartSec=5
 LimitNOFILE=65536

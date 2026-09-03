@@ -52,7 +52,7 @@ export const Header: React.FC = () => {
       <Breadcrumbs aria-label="Breadcrumbs">
         <BreadcrumbItem>
           <RouterLink to="/" {...stylex.props(styles.homeLink)}>
-            <Link variant="primary">mould</Link>
+            <Link variant="primary">moul</Link>
           </RouterLink>
         </BreadcrumbItem>
         <BreadcrumbItem isCurrent>{currentTitle}</BreadcrumbItem>

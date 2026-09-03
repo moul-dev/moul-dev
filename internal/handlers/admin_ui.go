@@ -15,7 +15,7 @@ const fallbackHTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mould — Web Admin Console</title>
+  <title>moul — Web Admin Console</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
     body {
@@ -55,7 +55,7 @@ const fallbackHTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="card">
-    <h1>mould Web Admin Console</h1>
+    <h1>moul Web Admin Console</h1>
     <p>The Web Admin Console UI bundle is currently not built into this binary.</p>
     <p>To compile the full console with TanStack Router and StyleX, run:</p>
     <pre><code>make ui-build && make build</code></pre>

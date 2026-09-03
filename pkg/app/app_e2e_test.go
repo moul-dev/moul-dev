@@ -19,7 +19,7 @@ func TestAppE2EFlow(t *testing.T) {
 	envy.Set("MOUL_JWT_SECRET", jwtSecret)
 	envy.Set("MOUL_ADMIN_KEY", adminKey)
 
-	mouldApp := New(Config{
+	moulApp := New(Config{
 		DBPath:    ":memory:",
 		Env:       "test",
 		Version:   "test-e2e-1.0",
@@ -28,16 +28,16 @@ func TestAppE2EFlow(t *testing.T) {
 	})
 
 	workerExecuted := false
-	mouldApp.RegisterWorker("SendWelcomeEmail", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("SendWelcomeEmail", func(ctx context.Context, job *worker.Job) error {
 		workerExecuted = true
 		return nil
 	})
 
-	if err := mouldApp.Bootstrap(); err != nil {
+	if err := moulApp.Bootstrap(); err != nil {
 		t.Fatalf("Bootstrap failed: %v", err)
 	}
 
-	ts := httptest.NewServer(mouldApp.Router())
+	ts := httptest.NewServer(moulApp.Router())
 	defer ts.Close()
 
 	client := ts.Client()
@@ -223,7 +223,7 @@ func TestAppE2EFlow(t *testing.T) {
 	}
 
 	// Verify worker handler registration check
-	h, ok := mouldApp.WorkerEngine().GetHandler("SendWelcomeEmail")
+	h, ok := moulApp.WorkerEngine().GetHandler("SendWelcomeEmail")
 	if !ok {
 		t.Errorf("Expected SendWelcomeEmail handler to be registered")
 	} else {

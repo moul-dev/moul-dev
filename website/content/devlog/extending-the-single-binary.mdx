@@ -15,7 +15,7 @@ Here is how the latest release opens up the architecture without adding external
 
 ## Opening the Architecture (`pkg/app`)
 
-To fix this, I refactored the server daemon (`mould`[^1]) into an embeddable Go library. Instead of running a closed binary, you can now import `moul-dev/pkg/app` directly into your own Go `main()` function.
+To fix this, I refactored the server daemon (`moul`[^1]) into an embeddable Go library. Instead of running a closed binary, you can now import `moul-dev/pkg/app` directly into your own Go `main()` function.
 
 - **Custom Background Workers:** You can register custom task functions using `app.RegisterWorker("pdf:generate", handlePDF)`. The job executes inside the existing SQLite queue engine alongside standard system workers.
 - **Custom HTTP Route Hooks:** Using `app.OnBeforeServe` and `app.Router()`, you can attach standard Echo routes, custom middleware, and raw web handlers directly to the embedded HTTP server.
@@ -26,13 +26,13 @@ The server remains a single compiled binary. But now, it grows with your codebas
 
 User authentication shouldn't require subscribing to third-party identity management platforms that charge per monthly active user.
 
-I added native OAuth2 social login flows for GitHub, Google, and Apple directly into the binary. The engine handles authorization code exchanges, cryptographically signs state tokens, maps profile metadata, and binds social identities to user records. You can configure credentials directly via the REST API or through the `moul` terminal console.
+I added native OAuth2 social login flows for GitHub, Google, and Apple directly into the binary. The engine handles authorization code exchanges, cryptographically signs state tokens, maps profile metadata, and binds social identities to user records. You can configure credentials directly via the REST API or through the `moul-ctl` terminal console.
 
 ## Making the Binary Agent-Native with MCP
 
 Modern development increasingly relies on AI coding assistants. Yet most backend runtimes remain opaque black boxes to these tools, forcing developers to manually copy schema definitions, job queue states, or log outputs into context windows.
 
-To make Moul native to AI workflows, I embedded a Model Context Protocol (MCP) server directly into `mould`. Any AI assistant—whether running locally in Cursor, Antigravity, or via stdio—can query `/mcp` to inspect database collections, check background worker health, toggle feature flags, and read server CPU metrics.
+To make Moul native to AI workflows, I embedded a Model Context Protocol (MCP) server directly into `moul`. Any AI assistant—whether running locally in Cursor, Antigravity, or via stdio—can query `/mcp` to inspect database collections, check background worker health, toggle feature flags, and read server CPU metrics.
 
 I also embedded `llms.txt` and `AGENTS.md` documentation into the HTTP router. The binary carries its own architectural map. When an AI model interacts with your backend, it doesn't have to guess how the engine works; it reads the documentation directly from the running binary.
 
@@ -40,7 +40,7 @@ I also embedded `llms.txt` and `AGENTS.md` documentation into the HTTP router. T
 
 Modifying SQLite schemas at runtime is notoriously fragile. Adding columns is simple; dropping fields or altering column data types requires creating shadow tables, copying existing rows, dropping the old table, and renaming the copy.
 
-I updated the database engine to handle non-destructive column removals and type mutations automatically. When you modify a schema via REST or the TUI, `mould` builds the migration transaction in memory, verifies foreign key constraints, and executes the table swap cleanly.
+I updated the database engine to handle non-destructive column removals and type mutations automatically. When you modify a schema via REST or the TUI, `moul` builds the migration transaction in memory, verifies foreign key constraints, and executes the table swap cleanly.
 
 ---
 
@@ -48,4 +48,4 @@ Engineering infrastructure is a continuous exercise in finding balance. You want
 
 Moul is growing, but its goal remains unchanged: to give developers a quiet, self-contained stack that runs reliably on simple hardware without requiring a cloud operations team.
 
-[^1]: We renamed the server executable from `moul-dev` to `mould` (daemon) to distinguish it clearly from the `moul` TUI client.
+[^1]: We renamed the server executable to `moul` and the TUI management client to `moul-ctl`.

@@ -126,31 +126,31 @@ DATA_DIR="${MOUL_DATA_DIR:-/var/lib/moul}"
 TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'moul-install')
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
-log_info "Downloading mould server binary for Linux/${ARCH}..."
+log_info "Downloading moul server binary for Linux/${ARCH}..."
 
-# Download 'mould' (Server)
-MOULD_ASSET="mould_${TAG}_linux_${ARCH}.tar.gz"
-MOULD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOULD_ASSET}"
+# Download 'moul' (Server)
+MOUL_ASSET="moul_${TAG}_linux_${ARCH}.tar.gz"
+MOUL_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG}/${MOUL_ASSET}"
 
-if ! curl -sSL --fail "$MOULD_URL" -o "$TMP_DIR/$MOULD_ASSET"; then
-    log_error "Failed to download $MOULD_URL"
+if ! curl -sSL --fail "$MOUL_URL" -o "$TMP_DIR/$MOUL_ASSET"; then
+    log_error "Failed to download $MOUL_URL"
     exit 1
 fi
 
-tar -xzf "$TMP_DIR/$MOULD_ASSET" -C "$TMP_DIR"
+tar -xzf "$TMP_DIR/$MOUL_ASSET" -C "$TMP_DIR"
 
-if [ ! -f "$TMP_DIR/mould" ]; then
-    log_error "Server binary 'mould' was not found inside downloaded archive $MOULD_ASSET"
+if [ ! -f "$TMP_DIR/moul" ]; then
+    log_error "Server binary 'moul' was not found inside downloaded archive $MOUL_ASSET"
     exit 1
 fi
 
 # Install Server Binary
 mkdir -p "$INSTALL_DIR"
-log_info "Installing mould binary into ${INSTALL_DIR}..."
+log_info "Installing moul binary into ${INSTALL_DIR}..."
 
-cp "$TMP_DIR/mould" "$INSTALL_DIR/mould"
-chmod 0755 "$INSTALL_DIR/mould"
-log_success "Installed mould -> ${INSTALL_DIR}/mould"
+cp "$TMP_DIR/moul" "$INSTALL_DIR/moul"
+chmod 0755 "$INSTALL_DIR/moul"
+log_success "Installed moul -> ${INSTALL_DIR}/moul"
 
 # 7. Create System User and Group
 log_info "Setting up system user and group 'moul'..."
@@ -237,7 +237,7 @@ Type=simple
 User=moul
 Group=moul
 WorkingDirectory=${DATA_DIR}
-ExecStart=${INSTALL_DIR}/mould start
+ExecStart=${INSTALL_DIR}/moul start
 Restart=always
 RestartSec=5
 EnvironmentFile=-${ENV_FILE}
@@ -273,7 +273,7 @@ log_success "  Moul Server Systemd Installation Complete!      "
 log_success "=================================================="
 echo ""
 log_info "Service Summary:"
-echo "  - Binary:         ${INSTALL_DIR}/mould"
+echo "  - Binary:         ${INSTALL_DIR}/moul"
 echo "  - Service Name:   ${SERVICE_NAME}.service"
 echo "  - Data Directory: ${DATA_DIR}"
 echo "  - Environment:    ${ENV_FILE}"

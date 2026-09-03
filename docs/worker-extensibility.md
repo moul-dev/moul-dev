@@ -1,12 +1,12 @@
 # Worker Handler Extensibility Guide
 
-This document describes how to extend `mould` with custom background worker job handlers and periodic background tasks without modifying or forking core `mould` files (`cmd/mould/main.go`).
+This document describes how to extend `moul` with custom background worker job handlers and periodic background tasks without modifying or forking core `moul` files (`cmd/moul/main.go`).
 
 ---
 
 ## Overview
 
-`mould` exposes a public Go package `github.com/moul-dev/moul-dev/pkg/app` that allows developers to embed the `mould` engine into custom Go applications, register custom job handlers, and run tailored server binaries.
+`moul` exposes a public Go package `github.com/moul-dev/moul-dev/pkg/app` that allows developers to embed the `moul` engine into custom Go applications, register custom job handlers, and run tailored server binaries.
 
 ---
 
@@ -27,25 +27,25 @@ import (
 )
 
 func main() {
-	mouldApp := app.New(app.Config{
+	moulApp := app.New(app.Config{
 		Version: "1.0.0-custom",
 	})
 
 	// Register custom worker handler
-	mouldApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.Job) error {
 		reportID, _ := job.Args["report_id"].(string)
 		logger.Info("Generating report background job", "report_id", reportID)
 		return nil
 	})
 
 	// Register custom periodic task (runs every 30 minutes)
-	mouldApp.RegisterPeriodicWorker(30*time.Minute, "SyncStripeCustomers", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterPeriodicWorker(30*time.Minute, "SyncStripeCustomers", func(ctx context.Context, job *worker.Job) error {
 		logger.Info("Running periodic Stripe customer sync")
 		return nil
 	})
 
 	// Start application
-	if err := mouldApp.Start(context.Background()); err != nil {
+	if err := moulApp.Start(context.Background()); err != nil {
 		logger.Fatal("Server failed", "err", err)
 	}
 }
@@ -58,7 +58,7 @@ func main() {
 For modular codebases or multi-package plugins, you can register hooks using `OnWorkerInit`:
 
 ```go
-mouldApp.OnWorkerInit(func(engine *worker.Engine) error {
+moulApp.OnWorkerInit(func(engine *worker.Engine) error {
     engine.Register("ProcessImage", func(ctx context.Context, job *worker.Job) error {
         // Image processing logic
         return nil
@@ -71,12 +71,12 @@ mouldApp.OnWorkerInit(func(engine *worker.Engine) error {
 
 ## Enqueueing Custom Background Jobs
 
-Once custom handlers are registered with `mouldApp`, API routes or schema actions can enqueue jobs by inserting records into any collection table configured with type `"worker"`.
+Once custom handlers are registered with `moulApp`, API routes or schema actions can enqueue jobs by inserting records into any collection table configured with type `"worker"`.
 
 For example, enqueuing a `GenerateReport` job via Go:
 
 ```go
-workerEngine := mouldApp.WorkerEngine()
+workerEngine := moulApp.WorkerEngine()
 job, err := workerEngine.Enqueue("background_jobs", map[string]interface{}{
     "worker": "GenerateReport",
     "args": map[string]interface{}{

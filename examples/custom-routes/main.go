@@ -13,21 +13,21 @@ import (
 )
 
 func main() {
-	// Initialize Mould application instance
-	mouldApp := app.New(app.Config{
+	// Initialize Moul application instance
+	moulApp := app.New(app.Config{
 		Version: "1.0.0-custom-backend",
 	})
 
 	// 1. Shorthand: Register a custom HTTP route via RegisterRoute helper
-	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"status":  "pong",
-			"backend": "custom-mould-engine",
+			"backend": "custom-moul-engine",
 		})
 	})
 
 	// 2. Advanced: Access the underlying Echo router via OnRouterInit hook
-	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+	moulApp.OnRouterInit(func(router *echo.Echo) error {
 		// Define custom endpoint group or attach custom Echo middleware
 		customGroup := router.Group("/api/custom")
 		customGroup.GET("/health", func(c *echo.Context) error {
@@ -39,7 +39,7 @@ func main() {
 	})
 
 	// 3. Lifecycle hook: OnBeforeStart runs after DB & services boot up
-	mouldApp.OnBeforeStart(func(a *app.App) error {
+	moulApp.OnBeforeStart(func(a *app.App) error {
 		logger.Info("Executing OnBeforeStart hook",
 			"has_db", a.DB() != nil,
 			"has_router", a.Router() != nil,
@@ -48,14 +48,14 @@ func main() {
 	})
 
 	// 4. Combine custom HTTP routes with custom background job workers
-	mouldApp.RegisterWorker("ProcessCustomReport", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("ProcessCustomReport", func(ctx context.Context, job *worker.Job) error {
 		logger.Info("Processing background report", "job_id", job.ID)
 		return nil
 	})
 
-	fmt.Println("Starting custom Mould backend server on http://localhost:8090...")
-	if err := mouldApp.Start(context.Background()); err != nil {
-		logger.Fatal("Failed to start custom mould backend", "err", err)
+	fmt.Println("Starting custom Moul backend server on http://localhost:8090...")
+	if err := moulApp.Start(context.Background()); err != nil {
+		logger.Fatal("Failed to start custom moul backend", "err", err)
 		os.Exit(1)
 	}
 }

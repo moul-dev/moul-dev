@@ -22,11 +22,11 @@ install-hooks:
 
 # Start the Echo server locally
 run:
-	go run cmd/mould/main.go start
+	go run cmd/moul/main.go start
 
 # Restore database from Litestream S3 backup
 restore:
-	go run cmd/mould/main.go restore
+	go run cmd/moul/main.go restore
 
 # Start the watcher for live-reload development
 dev:
@@ -35,7 +35,7 @@ dev:
 # Start Go server live-reload and Admin UI concurrently
 dev-all:
 	@ulimit -n 10240 2>/dev/null || true; \
-	echo "Starting mould backend (Air) and Admin UI (Vite) concurrently..."; \
+	echo "Starting moul backend (Air) and Admin UI (Vite) concurrently..."; \
 	trap 'kill 0' EXIT; \
 	air -c .air.toml & \
 	bun --cwd ui dev & \
@@ -43,12 +43,12 @@ dev-all:
 
 # Seed local database with realistic collections, demo records, and feature flags
 seed:
-	go run cmd/mould/main.go seed
+	go run cmd/moul/main.go seed
 
 # Generate TypeScript type definitions from collection schemas into Admin UI
 typegen:
 	@mkdir -p ui/src/types
-	go run cmd/mould/main.go typegen --out ui/src/types/schema.d.ts
+	go run cmd/moul/main.go typegen --out ui/src/types/schema.d.ts
 
 # Sync docs from docs/ to website/public before building binary
 sync-docs:
@@ -71,7 +71,7 @@ ui-build:
 # Build for production with stripped debug symbols, embedded docs, and embedded Web Admin Console
 build: sync-docs ui-build
 	mkdir -p bin
-	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/mould cmd/mould/main.go
+	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul cmd/moul/main.go
 
 # Run the Go unit and integration tests
 test-go:
@@ -271,14 +271,20 @@ test-analytics:
 	@echo "\n"
 	@echo "=== Analytics Flow Test Complete! ==="
 
-# Run the TUI client
-tui:
-	go run cmd/moul/main.go
+# Run the management TUI client (moul-ctl)
+ctl:
+	go run cmd/moul-ctl/main.go
 
-# Build the TUI client binary
-build-tui:
+# Alias for ctl
+tui: ctl
+
+# Build the management TUI client binary (moul-ctl)
+build-ctl:
 	mkdir -p bin
-	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul cmd/moul/main.go
+	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/moul-ctl cmd/moul-ctl/main.go
+
+# Alias for build-ctl
+build-tui: build-ctl
 
 # Start local MinIO server with local data directory
 minio-start:

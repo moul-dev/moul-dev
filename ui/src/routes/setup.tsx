@@ -129,7 +129,7 @@ function SetupPage() {
               <div {...stylex.props(styles.icon)}>
                 <LogoIcon size={44} />
               </div>
-              <h1 {...stylex.props(styles.title)}>Welcome to mould</h1>
+              <h1 {...stylex.props(styles.title)}>Welcome to moul</h1>
               <p {...stylex.props(styles.subtitle)}>
                 Create the primary root administrator account to initialize your database engine.
               </p>

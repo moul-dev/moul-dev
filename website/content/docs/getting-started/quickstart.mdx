@@ -7,7 +7,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-This guide walks you through installing Moul, launching the backend daemon (`mould`), populating demo collections, and administering your database through both the **Web Admin Console** and the **Terminal UI (`moul`)**.
+This guide walks you through installing Moul, launching the backend daemon (`moul`), populating demo collections, and administering your database through both the **Web Admin Console** and the **Terminal UI (`moul-ctl`)**.
 
 ---
 
@@ -17,19 +17,19 @@ This guide walks you through installing Moul, launching the backend daemon (`mou
 <Step>
 ### Install Moul
 
-Install the official pre-compiled binaries via the automated install script. This installs both `mould` (the server daemon) and `moul` (the terminal management client) directly into `/usr/local/bin`:
+Install the official pre-compiled binaries via the automated install script. This installs both `moul` (the server daemon) and `moul-ctl` (the terminal management client) directly into `/usr/local/bin`:
 
 <Tabs items={['Install Script (macOS / Linux)', 'Manual Download']}>
   <Tab value="Install Script (macOS / Linux)">
 ```bash
-# Downloads and installs 'mould' and 'moul' binaries
+# Downloads and installs 'moul' and 'moul-ctl' binaries
 curl -fsSL https://moul.dev/install.sh | sh
 ```
 
 Verify that both commands are accessible in your shell:
 ```bash
-mould --version
 moul --version
+moul-ctl --version
 ```
   </Tab>
   <Tab value="Manual Download">
@@ -37,11 +37,11 @@ Download the pre-compiled archive for your operating system and architecture fro
 
 ```bash
 # Extract the archive and move binaries to your system PATH
-tar -xzf mould_*_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz
-sudo mv mould /usr/local/bin/
-
 tar -xzf moul_*_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz
 sudo mv moul /usr/local/bin/
+
+tar -xzf moul-ctl_*_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz
+sudo mv moul-ctl /usr/local/bin/
 ```
   </Tab>
 </Tabs>
@@ -54,10 +54,10 @@ sudo mv moul /usr/local/bin/
 <Step>
 ### Start the Local Engine
 
-Start the `mould` server engine. By default, it creates an embedded SQLite database (`moul-local.db`), launches the background worker pool, and listens on port `:8090`:
+Start the `moul` server engine. By default, it creates an embedded SQLite database (`moul-local.db`), launches the background worker pool, and listens on port `:8090`:
 
 ```bash
-mould start
+moul start
 ```
 
 You should see startup logs confirming the database is ready:
@@ -70,7 +70,7 @@ You should see startup logs confirming the database is ready:
 <Callout type="idea">
   You can customize the SQLite database path by setting the `--db` flag or `MOUL_DB_PATH` environment variable:
   ```bash
-  mould start --db /path/to/my-app.db
+  moul start --db /path/to/my-app.db
   ```
 </Callout>
 </Step>
@@ -81,7 +81,7 @@ You should see startup logs confirming the database is ready:
 In a new terminal window, populate your database with demonstration collections (`users`, `posts`, `categories`, `tasks_queue`, `events`), relationship records, worker jobs, and OpenFeature flags:
 
 ```bash
-mould seed
+moul seed
 ```
 
 Output:
@@ -102,11 +102,13 @@ Open **[http://localhost:8090/_moul_/](http://localhost:8090/_moul_/)** in your 
 - Complete the initial root admin setup or log in with your master administrative key (`MOUL_ADMIN_KEY`).
 - Browse dynamic collections, edit schema fields visually, monitor background worker queues, and inspect real-time telemetry.
 
-#### 2. Terminal User Interface (`moul`)
+#### 2. Terminal User Interface (`moul-ctl`)
 Launch the keyboard-driven terminal console in your terminal:
 
 ```bash
-moul
+moul-ctl
+# Or via convenience subcommand:
+moul ctl
 ```
 
 - When prompted, connect to `http://localhost:8090` using your admin key.
@@ -172,7 +174,7 @@ func main() {
 
 ## Interactive API Exploration
 
-`mould` serves interactive API documentation directly at runtime:
+`moul` serves interactive API documentation directly at runtime:
 
 - **Scalar API Reference**: [http://localhost:8090/docs](http://localhost:8090/docs)
 - **Swagger UI**: [http://localhost:8090/docs?ui=swagger](http://localhost:8090/docs?ui=swagger)
@@ -182,6 +184,6 @@ func main() {
 
 ## Next Steps
 
-- **[Architecture & Tools](/docs/getting-started/architecture)**: Deep dive into `mould`, `moul`, and the Web Admin Console.
+- **[Architecture & Tools](/docs/getting-started/architecture)**: Deep dive into `moul`, `moul-ctl`, and the Web Admin Console.
 - **[Collections & Data Modeling](/docs/core-concepts/collections)**: Learn how dynamic schemas, fields, and access rules work.
 - **[Configuration & Environment](/docs/getting-started/configuration)**: Configure environment variables, JWT secrets, and S3 backups.

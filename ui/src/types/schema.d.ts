@@ -1,6 +1,6 @@
 /**
- * Auto-generated TypeScript definitions by `mould typegen`.
- * Do NOT edit manually. Run `mould typegen` to regenerate.
+ * Auto-generated TypeScript definitions by `moul typegen`.
+ * Do NOT edit manually. Run `moul typegen` to regenerate.
  */
 
 export interface BaseSystemFields {

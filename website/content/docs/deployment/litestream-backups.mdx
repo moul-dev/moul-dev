@@ -7,7 +7,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Step, Steps } from 'fumadocs-ui/components/steps'
 
-`mould` features embedded [Litestream](https://litestream.io/) replication directly in the binary. It streams SQLite Write-Ahead Log (WAL) changes to S3-compatible object storage asynchronously with near-zero latency impact and point-in-time recovery capabilities.
+`moul` features embedded [Litestream](https://litestream.io/) replication directly in the binary. It streams SQLite Write-Ahead Log (WAL) changes to S3-compatible object storage asynchronously with near-zero latency impact and point-in-time recovery capabilities.
 
 ---
 
@@ -63,7 +63,7 @@ To restore a fresh database from the remote S3 backup on a new server or followi
 
 ```bash
 # Using the same Litestream environment variables:
-mould restore --db /var/lib/moul/moul.db
+moul restore --db /var/lib/moul/moul.db
 ```
 
 Litestream will automatically pull the latest point-in-time snapshot and replay WAL frames to reconstruct an exact copy of the database.

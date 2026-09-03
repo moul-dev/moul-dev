@@ -61,7 +61,7 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	if cc := rec.Header().Get("Cache-Control"); !strings.Contains(cc, "no-cache") {
 		t.Fatalf("expected Cache-Control no-cache for index.html, got %q", cc)
 	}
-	if !strings.Contains(rec.Body.String(), "<div id=\"root\"></div>") && !strings.Contains(rec.Body.String(), "mould Web Admin Console") {
+	if !strings.Contains(rec.Body.String(), "<div id=\"root\"></div>") && !strings.Contains(rec.Body.String(), "moul Web Admin Console") {
 		t.Fatalf("unexpected index.html body: %s", rec.Body.String())
 	}
 
@@ -112,7 +112,7 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 				t.Fatalf("expected favicon svg content, got %s", rec.Body.String())
 			}
 		} else {
-			if !strings.Contains(rec.Body.String(), "mould Web Admin Console") {
+			if !strings.Contains(rec.Body.String(), "moul Web Admin Console") {
 				t.Fatalf("expected fallback HTML for favicon.svg when UI bundle absent, got %s", rec.Body.String())
 			}
 		}

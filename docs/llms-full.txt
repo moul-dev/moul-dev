@@ -1,12 +1,12 @@
 # Mould Technical Specification & Complete Reference (llms-full.txt)
 
-> Full system reference and documentation for LLMs and AI Agents interacting with `mould`.
+> Full system reference and documentation for LLMs and AI Agents interacting with `moul`.
 
 ---
 
 ## 1. System Overview & Technical Stack
 
-`mould` is a self-contained dynamic database, multi-factor authentication, background worker processing, feature flag, and observability engine written in Go.
+`moul` is a self-contained dynamic database, multi-factor authentication, background worker processing, feature flag, and observability engine written in Go.
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
@@ -39,7 +39,7 @@ The engine reads environment variables from `.env` in the current working direct
 
 ## 3. Database Architecture & Meta-Tables
 
-`mould` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
+`moul` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
 
 1. **`_moul`**: Stores schema metadata for all dynamic collections.
    - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `created_at` (TEXT), `updated_at` (TEXT).
@@ -154,7 +154,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 
 ## 7. Built-in MCP Server Tool Specifications
 
-The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or Streamable HTTP & SSE (`/api/mcp`):
+The built-in MCP server provides 17 tools accessible over stdio (`moul mcp`) or Streamable HTTP & SSE (`/api/mcp`):
 
 1. `moul_list_collections`: List all dynamic collection schemas and tables.
 2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.
@@ -178,7 +178,7 @@ The built-in MCP server provides 17 tools accessible over stdio (`mould mcp`) or
 
 ## 8. Programmatic Go Extensibility & HTTP Route Hooks (`pkg/app`)
 
-`mould` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes or background workers without forking code.
+`moul` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes or background workers without forking code.
 
 ### Core API Methods & Hooks
 - `app.New(cfg app.Config) *app.App`: Creates a new Mould app instance.
@@ -202,22 +202,22 @@ import (
 )
 
 func main() {
-	mouldApp := app.New(app.Config{Version: "1.0.0-custom"})
+	moulApp := app.New(app.Config{Version: "1.0.0-custom"})
 
 	// Register custom HTTP route
-	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "pong"})
 	})
 
 	// Access raw Echo router via hook
-	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+	moulApp.OnRouterInit(func(router *echo.Echo) error {
 		router.GET("/api/custom/health", func(c *echo.Context) error {
 			return c.String(http.StatusOK, "OK")
 		})
 		return nil
 	})
 
-	mouldApp.Start(context.Background())
+	moulApp.Start(context.Background())
 }
 ```
 
@@ -226,7 +226,7 @@ func main() {
 ## 10. Production Deployment (LXD + Tailscale + Cloudflare Tunnel)
 
 For hardened enterprise production environments on **Ubuntu Server 26.04 LTS**:
-- **Host Containerization**: Run `mould` inside unprivileged LXD system containers (`lxc launch ubuntu:26.04 moul-prod`).
+- **Host Containerization**: Run `moul` inside unprivileged LXD system containers (`lxc launch ubuntu:26.04 moul-prod`).
 - **Host Administration**: Install Tailscale on the host FIRST. Restrict SSH access (port 22) exclusively to the `tailscale0` interface (`ufw allow in on tailscale0 to any port 22`) and close all public inbound host ports (`ufw default deny incoming`).
 - **Zero-Trust Public Ingress**: Route public HTTPS traffic to the LXD container port 8090 using Cloudflare Tunnel (`cloudflared`).
 - **Database Backups**: Configure Litestream S3 replication for point-in-time SQLite disaster recovery.

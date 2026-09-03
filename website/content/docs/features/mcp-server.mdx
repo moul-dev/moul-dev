@@ -6,17 +6,17 @@ description: Native MCP server enabling AI coding assistants to inspect schemas,
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-`mould` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This empowers AI coding assistants (Claude Desktop, Cursor, Antigravity, Windsurf) with deep inspection and operational control over your backend.
+`moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This empowers AI coding assistants (Claude Desktop, Cursor, Antigravity, Windsurf) with deep inspection and operational control over your backend.
 
 ---
 
 ## Transport Modes
 
-### 1. Stdio Mode (`mould mcp`)
+### 1. Stdio Mode (`moul mcp`)
 Communicates directly over standard input and output streams. Ideal for local IDEs without running a separate HTTP process.
 
 ### 2. Streamable HTTP & SSE Mode (`/api/mcp`)
-Enabled automatically when running `mould start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams.
+Enabled automatically when running `moul start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams.
 
 ---
 
@@ -29,8 +29,8 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "mould": {
-      "command": "/usr/local/bin/mould",
+    "moul": {
+      "command": "/usr/local/bin/moul",
       "args": ["mcp"],
       "env": {
         "MOUL_DB_PATH": "/path/to/moul-local.db"
@@ -46,8 +46,8 @@ Add to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "mould": {
-      "command": "mould",
+    "moul": {
+      "command": "moul",
       "args": ["mcp"]
     }
   }

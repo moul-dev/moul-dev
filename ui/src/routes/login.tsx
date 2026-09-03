@@ -127,7 +127,7 @@ function LoginPage() {
               <div {...stylex.props(styles.icon)}>
                 <LogoIcon size={44} />
               </div>
-              <h1 {...stylex.props(styles.title)}>mould console</h1>
+              <h1 {...stylex.props(styles.title)}>moul console</h1>
               <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>
             </div>
           </CardHeader>
@@ -179,7 +179,7 @@ function LoginPage() {
           {needsSetup && (
             <CardFooter>
               <div {...stylex.props(styles.footer)}>
-                First time running mould?{' '}
+                First time running moul?{' '}
                 <RouterLink to="/setup" style={{ textDecoration: 'none' }}>
                   <Link variant="primary">Initialize Root Administrator</Link>
                 </RouterLink>

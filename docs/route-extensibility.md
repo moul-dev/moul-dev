@@ -1,12 +1,12 @@
 # Custom HTTP Route Extensibility Guide
 
-This document describes how to extend `mould` with custom HTTP routes, Echo middlewares, and server lifecycle hooks without modifying or forking core `mould` files (`cmd/mould/main.go`).
+This document describes how to extend `moul` with custom HTTP routes, Echo middlewares, and server lifecycle hooks without modifying or forking core `moul` files (`cmd/moul/main.go`).
 
 ---
 
 ## Overview
 
-`mould` exposes a public Go package `github.com/moul-dev/moul-dev/pkg/app` that allows developers to embed the `mould` engine into custom Go applications, attach custom endpoints directly to the embedded Echo web server, and register startup lifecycle hooks.
+`moul` exposes a public Go package `github.com/moul-dev/moul-dev/pkg/app` that allows developers to embed the `moul` engine into custom Go applications, attach custom endpoints directly to the embedded Echo web server, and register startup lifecycle hooks.
 
 ---
 
@@ -27,19 +27,19 @@ import (
 )
 
 func main() {
-	mouldApp := app.New(app.Config{
+	moulApp := app.New(app.Config{
 		Version: "1.0.0-custom",
 	})
 
 	// Register custom GET endpoint
-	mouldApp.RegisterRoute("GET", "/api/v1/healthcheck", func(c *echo.Context) error {
+	moulApp.RegisterRoute("GET", "/api/v1/healthcheck", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status": "healthy",
 		})
 	})
 
 	// Start application
-	if err := mouldApp.Start(context.Background()); err != nil {
+	if err := moulApp.Start(context.Background()); err != nil {
 		logger.Fatal("Server failed", "err", err)
 	}
 }
@@ -49,10 +49,10 @@ func main() {
 
 ## Pattern 2: Echo Router Hook (`OnRouterInit`)
 
-For complex routing needs (such as endpoint groups, custom router middlewares, or third-party webhooks), use `OnRouterInit`. The callback receives the underlying `*echo.Echo` instance immediately after core `mould` routes are configured.
+For complex routing needs (such as endpoint groups, custom router middlewares, or third-party webhooks), use `OnRouterInit`. The callback receives the underlying `*echo.Echo` instance immediately after core `moul` routes are configured.
 
 ```go
-mouldApp.OnRouterInit(func(router *echo.Echo) error {
+moulApp.OnRouterInit(func(router *echo.Echo) error {
     // Add custom route group
     v2Group := router.Group("/api/v2")
     
@@ -72,7 +72,7 @@ mouldApp.OnRouterInit(func(router *echo.Echo) error {
 `OnBeforeStart` executes at the end of `Bootstrap()`, before server listeners start accepting traffic. This callback provides full access to initialized services via `app.DB()`, `app.Router()`, `app.WorkerEngine()`, `app.Mailer()`, and `app.AnalyticsEngine()`.
 
 ```go
-mouldApp.OnBeforeStart(func(a *app.App) error {
+moulApp.OnBeforeStart(func(a *app.App) error {
     // Access database or services during startup
     dbConn := a.DB()
     logger.Info("App bootstrapped with DB connection", "db", dbConn != nil)
@@ -88,8 +88,8 @@ mouldApp.OnBeforeStart(func(a *app.App) error {
 
 ```go
 // Custom HTTP Route enqueuing a background job
-mouldApp.RegisterRoute("POST", "/api/v1/reports", func(c *echo.Context) error {
-    engine := mouldApp.WorkerEngine()
+moulApp.RegisterRoute("POST", "/api/v1/reports", func(c *echo.Context) error {
+    engine := moulApp.WorkerEngine()
     job, err := engine.Enqueue(c.Request().Context(), "background_jobs", map[string]interface{}{
         "worker": "GenerateReport",
         "args": map[string]interface{}{"report_type": "monthly"},
@@ -101,7 +101,7 @@ mouldApp.RegisterRoute("POST", "/api/v1/reports", func(c *echo.Context) error {
 })
 
 // Custom worker handler processing the job
-mouldApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.Job) error {
+moulApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.Job) error {
     // Process report asynchronously
     return nil
 })
@@ -117,32 +117,32 @@ A complete runnable example is available at [examples/custom-routes/main.go](../
 
 ## Integration Testing Hooks
 
-When embedding `mould`, integration-test custom hooks (`OnWorkerInit`, `OnRouterInit`, `OnBeforeStart`) by calling `app.Bootstrap()` and leveraging standard Go test utilities (`httptest.NewServer(app.Router())` and `t.TempDir()`):
+When embedding `moul`, integration-test custom hooks (`OnWorkerInit`, `OnRouterInit`, `OnBeforeStart`) by calling `app.Bootstrap()` and leveraging standard Go test utilities (`httptest.NewServer(app.Router())` and `t.TempDir()`):
 
 ```go
 func TestEmbeddedAppIntegration(t *testing.T) {
-	mouldApp := app.New(app.Config{
+	moulApp := app.New(app.Config{
 		DBPath:    filepath.Join(t.TempDir(), "test.db"),
 		Env:       "test",
 		JWTSecret: "test-secret-key-32-bytes-minimum!!",
 		AdminKey:  "test-admin-key",
 	})
 
-	mouldApp.OnBeforeStart(func(a *app.App) error {
+	moulApp.OnBeforeStart(func(a *app.App) error {
 		// Initialize database tables or seed data
 		return nil
 	})
 
-	mouldApp.OnRouterInit(func(r *echo.Echo) error {
+	moulApp.OnRouterInit(func(r *echo.Echo) error {
 		// Attach custom routes and middleware
 		return nil
 	})
 
-	if err := mouldApp.Bootstrap(); err != nil {
+	if err := moulApp.Bootstrap(); err != nil {
 		t.Fatalf("Bootstrap failed: %v", err)
 	}
 
-	server := httptest.NewServer(mouldApp.Router())
+	server := httptest.NewServer(moulApp.Router())
 	defer server.Close()
 
 	// Execute HTTP requests against server.URL

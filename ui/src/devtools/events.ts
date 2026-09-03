@@ -40,7 +40,7 @@ export type MoulDevtoolsEvents = {
 class MoulDevtoolsEventClient extends EventClient<MoulDevtoolsEvents> {
   constructor() {
     super({
-      pluginId: 'mould-inspector',
+      pluginId: 'moul-inspector',
       debug: false,
     });
   }

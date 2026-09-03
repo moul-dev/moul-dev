@@ -52,7 +52,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       <div {...stylex.props(styles.loadingIcon)}>
         <LogoIcon size={32} />
       </div>
-      <span style={{ fontSize: '0.875rem' }}>Loading mould console...</span>
+      <span style={{ fontSize: '0.875rem' }}>Loading moul console...</span>
     </div>
   ),
   errorComponent: ({ error }) => (

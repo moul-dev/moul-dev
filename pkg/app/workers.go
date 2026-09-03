@@ -11,7 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/worker"
 )
 
-// RegisterBuiltinWorkers registers standard mould background workers like SendEmail and CleanupRevokedTokens.
+// RegisterBuiltinWorkers registers standard moul background workers like SendEmail and CleanupRevokedTokens.
 func (a *App) RegisterBuiltinWorkers() {
 	if a.workerEngine == nil {
 		return

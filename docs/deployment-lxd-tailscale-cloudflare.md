@@ -1,6 +1,6 @@
 # Production Deployment Guide: LXD (Ubuntu Server 26.04 LTS) with Tailscale & Cloudflare Tunnel
 
-This guide provides a step-by-step walkthrough for deploying `mould` in a hardened production environment on **Ubuntu Server 26.04 LTS** using **LXD unprivileged containers**, **Tailscale** for host management, and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public ingress.
+This guide provides a step-by-step walkthrough for deploying `moul` in a hardened production environment on **Ubuntu Server 26.04 LTS** using **LXD unprivileged containers**, **Tailscale** for host management, and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public ingress.
 
 ---
 
@@ -22,7 +22,7 @@ flowchart TD
         CFDaemon["cloudflared Daemon"]
 
         subgraph LXD ["LXD Container (moul-prod)\nUbuntu 26.04 LTS"]
-            Engine["mould Engine\n(Port 8090)"]
+            Engine["moul Engine\n(Port 8090)"]
             DB[("SQLite Database\n/var/lib/moul/moul.db")]
             Litestream["Litestream Backup Processor"]
         end
@@ -47,7 +47,7 @@ flowchart TD
 
 1. **Zero Open Public Host Ports**: Cloudflare Tunnel establishes outbound connections to Cloudflare edges. Public inbound ports 80, 443, and 22 on the host's public IP are completely closed.
 2. **Tailscale Host Management**: All SSH connections, server management, and `lxc exec` commands occur exclusively over the encrypted Tailscale private mesh network.
-3. **Unprivileged LXD Container Isolation**: The `mould` application runs inside a lightweight, unprivileged Ubuntu 26.04 LTS container with CPU, RAM, and disk quotas.
+3. **Unprivileged LXD Container Isolation**: The `moul` application runs inside a lightweight, unprivileged Ubuntu 26.04 LTS container with CPU, RAM, and disk quotas.
 4. **Litestream Automated Disaster Recovery**: Real-time SQLite Write-Ahead Log (WAL) streaming to S3/R2 storage ensures point-in-time recovery.
 
 ---
@@ -169,7 +169,7 @@ sudo lxc start moul-prod
 
 ---
 
-## 5. Step 4: Deploy `mould` inside LXD Container
+## 5. Step 4: Deploy `moul` inside LXD Container
 
 Enter the LXD container shell:
 
@@ -188,14 +188,14 @@ sudo mkdir -p /var/lib/moul /etc/moul
 sudo chown -R moul:moul /var/lib/moul /etc/moul
 ```
 
-### 2. Install `mould` Binary
+### 2. Install `moul` Binary
 
-Download or transfer the pre-built `mould` Linux binary to `/usr/local/bin/mould`:
+Download or transfer the pre-built `moul` Linux binary to `/usr/local/bin/moul`:
 
 ```bash
 # Install binary and set executable permissions
-sudo chmod +x /usr/local/bin/mould
-sudo /usr/local/bin/mould version
+sudo chmod +x /usr/local/bin/moul
+sudo /usr/local/bin/moul version
 ```
 
 ### 3. Create Environment Configuration File
@@ -243,7 +243,7 @@ User=moul
 Group=moul
 WorkingDirectory=/var/lib/moul
 EnvironmentFile=/etc/moul/moul.env
-ExecStart=/usr/local/bin/mould start
+ExecStart=/usr/local/bin/moul start
 Restart=always
 RestartSec=5s
 
@@ -273,7 +273,7 @@ sudo systemctl status moul
 
 ## 6. Step 5: Configure Cloudflare Tunnel (`cloudflared`)
 
-Install `cloudflared` on either the host machine or inside a dedicated container to handle public HTTPS traffic routing to `mould`.
+Install `cloudflared` on either the host machine or inside a dedicated container to handle public HTTPS traffic routing to `moul`.
 
 ### 1. Install `cloudflared`
 
@@ -372,5 +372,5 @@ sudo lxc info moul-prod
 To restore a database state from Litestream S3 backup onto a new LXD container:
 
 ```bash
-sudo lxc exec moul-prod -- /usr/local/bin/mould restore
+sudo lxc exec moul-prod -- /usr/local/bin/moul restore
 ```

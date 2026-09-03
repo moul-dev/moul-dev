@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api, getAuthToken, setAuthToken, removeAuthToken, getStoredAdminKey, setStoredAdminKey, removeStoredAdminKey } from '../api/client';
 import { emitAuthChange, emitAppAction } from '../devtools/events';
 
-const USER_STORAGE_KEY = 'mould_admin_user';
+const USER_STORAGE_KEY = 'moul_admin_user';
+const LEGACY_USER_STORAGE_KEY = 'mould_admin_user';
 
 export interface UserInfo {
   id?: string;
@@ -31,7 +32,7 @@ interface AuthContextType {
 
 function getStoredUser(): UserInfo | null {
   try {
-    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    const raw = localStorage.getItem(USER_STORAGE_KEY) || localStorage.getItem(LEGACY_USER_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
     const token = getAuthToken();
     if (token && token.includes('.')) {
@@ -161,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       removeAuthToken();
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
       setUser(null);
       setToken(null);
       emitAuthChange({
@@ -254,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeAuthToken();
     removeStoredAdminKey();
     localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
     setUser(null);
     setToken(null);
     setAdminKey(null);

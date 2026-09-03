@@ -494,7 +494,7 @@ function McpPreview() {
           <span className="text-emerald-500 font-bold">14 Tools</span>
         </div>
         <div className="text-[9px] text-fd-foreground/80 truncate">
-          Claude / Cursor ↔ <span className="text-fd-primary">mould mcp</span>
+          Claude / Cursor ↔ <span className="text-fd-primary">moul mcp</span>
         </div>
       </div>
     </div>

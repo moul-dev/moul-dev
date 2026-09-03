@@ -2,7 +2,7 @@
 
 ![Device OAuth Demo](assets/device-oauth-demo.png)
 
-`mould` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
+`moul` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.
 
 ---
 
@@ -26,7 +26,7 @@
   - [Frontend Architecture & Stack](#frontend-architecture--stack)
   - [Local UI Development & Live Reloading](#local-ui-development--live-reloading)
   - [Single-Binary Embedding in Production](#single-binary-embedding-in-production)
-- [Moul TUI Admin Console (`moul`)](#moul-tui-admin-console-moul)
+- [Moul TUI Admin Console (`moul-ctl`)](#moul-tui-admin-console-moul-ctl)
   - [Overview](#overview)
   - [Build and Run](#build-and-run)
   - [Connection Setup & Config Storage](#connection-setup--config-storage)
@@ -62,7 +62,7 @@
 11. **Native Host System Monitoring**: Lightweight, zero-dependency host system metrics collector (CPU, memory, disk space, goroutines, system load) for real-time observability in the TUI console and REST API.
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
 13. **Real-time SSE Record Subscriptions**: High-performance, lock-optimized Server-Sent Events (SSE) subscriptions via `GET /api/moul/:name/subscribe`. Frontend clients react instantly to record changes (`create`, `update`, `delete`) without polling, complete with event filtering, single-record targeting, and `subscribeRule` security checks.
-14. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`mould mcp`) and HTTP SSE (`/api/mcp`).
+14. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`moul mcp`) and HTTP SSE (`/api/mcp`).
 
 ---
 
@@ -108,7 +108,7 @@ Start the Echo HTTP server and background worker engine on port `:8090` (this au
 ```bash
 make run
 # Or directly via Go:
-go run cmd/mould/main.go start
+go run cmd/moul/main.go start
 ```
 
 ### Live Reloading (Hot Reload)
@@ -135,7 +135,7 @@ Populate your local SQLite database with realistic demonstration collections (`u
 ```bash
 make seed
 # Or directly via CLI:
-go run cmd/mould/main.go seed --db moul-local.db
+go run cmd/moul/main.go seed --db moul-local.db
 ```
 
 ### TypeScript Type Generation (`typegen`)
@@ -152,7 +152,7 @@ make typegen
 Test, validate, and benchmark rule expressions against mock JSON payloads:
 
 ```bash
-go run cmd/mould/main.go test-rule \
+go run cmd/moul/main.go test-rule \
   --rule="author_id = @request.auth.id && views_count > 100" \
   --record='{"author_id": "usr_admin_001", "views_count": 1420}' \
   --auth='{"id": "usr_admin_001"}'
@@ -164,10 +164,10 @@ Inspect discarded jobs and retry failed worker executions:
 
 ```bash
 # List discarded jobs in dead-letter queue (DLQ)
-go run cmd/mould/main.go worker list-failed tasks_queue
+go run cmd/moul/main.go worker list-failed tasks_queue
 
 # Retry all failed jobs (or a specific job by ID)
-go run cmd/mould/main.go worker retry tasks_queue [optional_job_id]
+go run cmd/moul/main.go worker retry tasks_queue [optional_job_id]
 ```
 
 ### Local S3 Storage (MinIO)
@@ -194,7 +194,7 @@ For testing file uploads and Litestream database backups locally against an S3 A
 
 ### Testing & Verification Flows
 
-`mould` includes self-contained in-process integration tests, unit test suites, and automated cURL verification flows.
+`moul` includes self-contained in-process integration tests, unit test suites, and automated cURL verification flows.
 
 #### 1. Self-Contained E2E Flow (No External Server Needed)
 ```bash
@@ -235,7 +235,7 @@ Ensure the server is running (`make run`) in a separate terminal before executin
 
 ## Documentation & API Specification (`/docs`)
 
-`mould` maintains an accurate OpenAPI 3.0 specification serving interactive API documentation directly from the running engine.
+`moul` maintains an accurate OpenAPI 3.0 specification serving interactive API documentation directly from the running engine.
 
 ### Interactive Runtime `/docs` Endpoint
 
@@ -258,8 +258,8 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 
 ### Extensibility & Custom Workers
 
-- **Worker Extensibility Guide**: [`docs/worker-extensibility.md`](docs/worker-extensibility.md) - Learn how to build custom `mould` binaries with custom background job handlers and periodic tasks using `pkg/app`.
-- **Example Binary**: [`examples/custom-worker/main.go`](examples/custom-worker/main.go) - A runnable code example of an embedded Mould application.
+- **Worker Extensibility Guide**: [`docs/worker-extensibility.md`](docs/worker-extensibility.md) - Learn how to build custom `moul` binaries with custom background job handlers and periodic tasks using `pkg/app`.
+- **Example Binary**: [`examples/custom-worker/main.go`](examples/custom-worker/main.go) - A runnable code example of an embedded Moul application.
 
 ---
 
@@ -268,7 +268,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 <a id="web-admin-overview"></a>
 ### Overview
 
-`mould` features a high-performance, single-binary **Web Admin Console** mounted at `/_moul_/` (with automatic redirects from `/admin` and `/_moul_`). It provides a rich, responsive browser-based dashboard to manage collection schemas, dynamic records, real-time SSE subscriptions, analytics, background worker queues, feature flags, and server settings.
+`moul` features a high-performance, single-binary **Web Admin Console** mounted at `/_moul_/` (with automatic redirects from `/admin` and `/_moul_`). It provides a rich, responsive browser-based dashboard to manage collection schemas, dynamic records, real-time SSE subscriptions, analytics, background worker queues, feature flags, and server settings.
 
 ### Frontend Architecture & Stack
 
@@ -295,7 +295,7 @@ For frontend development with instant Hot Module Replacement (HMR) and API proxy
 # 1. Install frontend dependencies
 make ui-install
 
-# 2. Start the mould backend engine in one terminal
+# 2. Start the moul backend engine in one terminal
 make run
 
 # 3. Start the Vite dev server in another terminal (proxies /api to localhost:8090)
@@ -309,22 +309,22 @@ Open [http://localhost:5173/_moul_/](http://localhost:5173/_moul_/) in your brow
 In production, the compiled SPA bundle is embedded directly into the Go binary at compile time via Go's `//go:embed all:dist` directive in [`internal/ui/ui.go`](internal/ui/ui.go).
 
 ```bash
-# Build standalone mould binary with embedded docs and Web Admin Console
+# Build standalone moul binary with embedded docs and Web Admin Console
 make build
 
 # Start single-binary server
-./bin/mould start
+./bin/moul start
 ```
 
 Access the Web Admin Console at [http://localhost:8090/_moul_/](http://localhost:8090/_moul_/). All HTML5 SPA sub-routes (e.g. `/_moul_/collections/posts`, `/_moul_/settings`) are resolved seamlessly via Echo's embedded SPA fallback router.
 
 ---
 
-## Moul TUI Admin Console (`moul`)
+## Moul TUI Admin Console (`moul-ctl`)
 
 ### Overview
 
-`moul` comes with a modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem (`bubbletea`, `bubbles`, `lipgloss`). It provides full administration over your engine directly from the command line without opening a browser.
+`moul-ctl` is a modern, self-contained Terminal User Interface (TUI) built with Charm's **Bubble Tea** ecosystem (`bubbletea`, `bubbles`, `lipgloss`). It provides full administration over your `moul` engine directly from the command line without opening a browser.
 
 ![TUI Demo](assets/device-oauth-demo.png)
 
@@ -332,20 +332,22 @@ Access the Web Admin Console at [http://localhost:8090/_moul_/](http://localhost
 
 #### Run via Go
 ```bash
-make tui
-# Or:
-go run cmd/moul/main.go
+make ctl
+# Or run via convenience subcommand in moul:
+./bin/moul ctl
+# Or directly from source:
+go run cmd/moul-ctl/main.go
 ```
 
 #### Build Compiled TUI Binary
 ```bash
-make build-tui
-./bin/moul
+make build-ctl
+./bin/moul-ctl
 ```
 
 ### Connection Setup & Config Storage
 
-On initial startup, `moul` prompts for connection credentials:
+On initial startup, `moul-ctl` prompts for connection credentials:
 1. **Server URL**: Server address (defaults to `http://localhost:8090`).
 2. **Admin Key**: The security key configured on the server (`MOUL_ADMIN_KEY`).
 
@@ -454,7 +456,7 @@ job, err := workerEngine.Enqueue(context.Background(), "background_tasks", jobOp
 
 ### 3. Embedding `pkg/app` with Custom HTTP Routes and Workers
 
-`pkg/app` allows embedding the complete `mould` server into custom Go binaries with tailored HTTP endpoints and background workers:
+`pkg/app` allows embedding the complete `moul` server into custom Go binaries with tailored HTTP endpoints and background workers:
 
 ```go
 package main
@@ -468,15 +470,15 @@ import (
 )
 
 func main() {
-	mouldApp := app.New(app.Config{Version: "1.0.0-custom"})
+	moulApp := app.New(app.Config{Version: "1.0.0-custom"})
 
 	// Register custom HTTP route
-	mouldApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
+	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "pong"})
 	})
 
 	// Access raw Echo router via hook
-	mouldApp.OnRouterInit(func(router *echo.Echo) error {
+	moulApp.OnRouterInit(func(router *echo.Echo) error {
 		router.GET("/api/custom/health", func(c *echo.Context) error {
 			return c.String(http.StatusOK, "OK")
 		})
@@ -484,11 +486,11 @@ func main() {
 	})
 
 	// Register custom background worker
-	mouldApp.RegisterWorker("CustomTask", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("CustomTask", func(ctx context.Context, job *worker.Job) error {
 		return nil
 	})
 
-	mouldApp.Start(context.Background())
+	moulApp.Start(context.Background())
 }
 ```
 
@@ -520,12 +522,12 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 
 ## Built-in Model Context Protocol (MCP) Server
 
-`mould` includes a built-in MCP server powered by `github.com/mark3labs/mcp-go`. This allows AI assistants (Claude Desktop, Cursor, AI agents) to inspect, query, and manage your dynamic database, background jobs, feature flags, and host metrics.
+`moul` includes a built-in MCP server powered by `github.com/mark3labs/mcp-go`. This allows AI assistants (Claude Desktop, Cursor, AI agents) to inspect, query, and manage your dynamic database, background jobs, feature flags, and host metrics.
 
 ### Transport Modes
 
-1. **Stdio Transport Mode (`mould mcp`)**: Runs directly as a CLI subcommand over standard input/output.
-2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `mould start`. Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
+1. **Stdio Transport Mode (`moul mcp`)**: Runs directly as a CLI subcommand over standard input/output.
+2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `moul start`. Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
 3. **Flexible Authentication**: Pass key via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query parameter `?adminKey=<MOUL_ADMIN_KEY>`.
 
 ### Integration Examples
@@ -536,8 +538,8 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "mould": {
-      "command": "/path/to/mould",
+    "moul": {
+      "command": "/path/to/moul",
       "args": ["mcp"],
       "env": {
         "MOUL_DB_PATH": "/path/to/moul-local.db"
@@ -551,8 +553,8 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "mould": {
-      "command": "mould",
+    "moul": {
+      "command": "moul",
       "args": ["mcp"]
     }
   }
@@ -565,7 +567,7 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "mould-http": {
+    "moul-http": {
       "url": "http://localhost:8090/api/mcp",
       "headers": {
         "X-Admin-Key": "test-admin-key-1234"
@@ -579,7 +581,7 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "mould-http": {
+    "moul-http": {
       "url": "http://localhost:8090/api/mcp?adminKey=test-admin-key-1234"
     }
   }
@@ -743,13 +745,13 @@ Each Moul (table) supports five HCL-like expression rules evaluated on client AP
 
 ### Single-Binary Production Build
 
-`mould` compiles into a single, self-contained binary containing the HTTP engine, worker processor, embedded web docs, and CGO-free SQLite database driver.
+`moul` compiles into a single, self-contained binary containing the HTTP engine, worker processor, embedded web docs, and CGO-free SQLite database driver.
 
 To build the production binary with stripped debug symbols and version metadata:
 
 ```bash
 make build
-# Creates executable at bin/mould
+# Creates executable at bin/moul
 ```
 
 ### Production Environment Variables
@@ -769,11 +771,11 @@ Set the following environment variables on your production server or container:
 
 ### Litestream Automated S3 Backup & Disaster Recovery
 
-`mould` includes built-in [Litestream](https://litestream.io/) replication directly in the binary for real-time, point-in-time SQLite replication to S3-compatible cloud storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces).
+`moul` includes built-in [Litestream](https://litestream.io/) replication directly in the binary for real-time, point-in-time SQLite replication to S3-compatible cloud storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces).
 
 #### Enabling Replication in Production
 
-To enable background replication, set the following environment variables before running `mould start`:
+To enable background replication, set the following environment variables before running `moul start`:
 
 ```env
 LITESTREAM_ENABLED=true
@@ -786,7 +788,7 @@ LITESTREAM_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
 LITESTREAM_S3_FORCE_PATH_STYLE=false
 ```
 
-When enabled, `mould` automatically streams SQLite Write-Ahead Log (WAL) changes to S3 asynchronously with zero downtime.
+When enabled, `moul` automatically streams SQLite Write-Ahead Log (WAL) changes to S3 asynchronously with zero downtime.
 
 #### Database Disaster Recovery / Restore
 
@@ -794,7 +796,7 @@ To restore a database state from S3 backup onto a new server:
 
 ```bash
 # Run restore command using the same Litestream S3 env configuration
-mould restore --db /var/lib/moul/moul.db
+moul restore --db /var/lib/moul/moul.db
 ```
 
 ### Systemd Service Deployment Example
@@ -811,7 +813,7 @@ Type=simple
 User=moul
 Group=moul
 WorkingDirectory=/var/lib/moul
-ExecStart=/usr/local/bin/mould start
+ExecStart=/usr/local/bin/moul start
 Restart=always
 RestartSec=5
 Environment=MOUL_ENV=production
@@ -832,7 +834,7 @@ sudo systemctl enable --now moul
 
 ### Production Deployment with LXD, Tailscale & Cloudflare Tunnel
 
-For hardened enterprise production deployments on **Ubuntu Server 26.04 LTS**, `mould` can be deployed in an **unprivileged LXD system container** combined with **Tailscale** for private host management and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public HTTPS ingress.
+For hardened enterprise production deployments on **Ubuntu Server 26.04 LTS**, `moul` can be deployed in an **unprivileged LXD system container** combined with **Tailscale** for private host management and **Cloudflare Tunnel (`cloudflared`)** for zero-trust public HTTPS ingress.
 
 Key features of this deployment architecture:
 - **Zero Open Public Inbound Ports**: Firewall drops public SSH (22) and HTTP/HTTPS (80/443).

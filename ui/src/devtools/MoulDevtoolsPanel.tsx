@@ -249,7 +249,7 @@ export function MoulDevtoolsPanel() {
     // Listen to all events from the event bus
     const unsubAll = moulDevtoolsClient.onAllPluginEvents((evt) => {
       const newEvent: EventItem = {
-        type: evt.type.replace('mould-inspector:', '') as any,
+        type: evt.type.replace('moul-inspector:', '') as any,
         data: evt.payload as any,
         timestamp: (evt.payload as any)?.timestamp || Date.now(),
         id: (evt.payload as any)?.id || Math.random().toString(36).substring(2, 9),

@@ -1,37 +1,37 @@
-# AGENTS.md - AI Agent & LLM Guide for `mould`
+# AGENTS.md - AI Agent & LLM Guide for `moul`
 
-Welcome to `mould`. This document provides essential instructions, operating rules, API reference concepts, and tool definitions for AI coding agents and LLMs interacting with or managing a `mould` server instance.
+Welcome to `moul`. This document provides essential instructions, operating rules, API reference concepts, and tool definitions for AI coding agents and LLMs interacting with or managing a `moul` server instance.
 
 ---
 
 ## 1. Overview & Architecture
 
-`mould` is a single-binary dynamic database, multi-factor authentication engine, background job processor (inspired by Elixir's Oban), feature flag targeting provider, host system observability server, and AI-native MCP server.
+`moul` is a single-binary dynamic database, multi-factor authentication engine, background job processor (inspired by Elixir's Oban), feature flag targeting provider, host system observability server, and AI-native MCP server.
 
 Key Capabilities:
-- **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`mould`) backed by SQLite.
+- **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`moul`) backed by SQLite.
 - **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin`), built with TanStack Router, Meta StyleX, Moul UI (`@moul-dev/ui`), tri-state system/light/dark theme toggle, and Phosphor Icons embedded via Go `embed.FS`.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
 - **Programmatic Go API & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
-- **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`mould mcp`) and HTTP SSE transport (`/api/mcp`).
+- **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`moul mcp`) and HTTP SSE transport (`/api/mcp`).
 
 ---
 
-## 2. Connecting AI Agents to `mould`
+## 2. Connecting AI Agents to `moul`
 
-AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connect to `mould` using two primary interfaces:
+AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connect to `moul` using two primary interfaces:
 
 ### Option A: Built-in MCP Server (Recommended)
-`mould` exposes 17 native MCP tools spanning database management, record CRUD, worker jobs, feature flags, and system telemetry.
+`moul` exposes 17 native MCP tools spanning database management, record CRUD, worker jobs, feature flags, and system telemetry.
 
 1. **Stdio Transport**:
-   - Command: `mould mcp`
+   - Command: `moul mcp`
    - Configuration in `claude_desktop_config.json` or `.cursor/mcp.json`:
      ```json
      {
        "mcpServers": {
-         "mould": {
-           "command": "/path/to/mould",
+         "moul": {
+           "command": "/path/to/moul",
            "args": ["mcp"],
            "env": {
              "MOUL_DB_PATH": "/path/to/moul-local.db"
@@ -48,7 +48,7 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
      ```json
      {
        "mcpServers": {
-         "mould-http": {
+         "moul-http": {
            "url": "http://localhost:8090/api/mcp",
            "headers": {
              "X-Admin-Key": "<MOUL_ADMIN_KEY>"
@@ -61,7 +61,7 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
      ```json
      {
        "mcpServers": {
-         "mould-http": {
+         "moul-http": {
            "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
          }
        }
@@ -83,23 +83,26 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 
 ## 3. Server Management & CLI Commands
 
-`mould` is distributed as a single executable binary.
+`moul` is distributed as a single executable binary.
 
 ```bash
 # Start the HTTP server engine and MCP SSE endpoint (default port 8090)
-mould start
+moul start
 
 # Run built-in MCP server in stdio transport mode
-mould mcp
+moul mcp
 
 # Restore SQLite database from Litestream S3 backup
-mould restore
+moul restore
 
-# Update mould binary to the latest release
-mould update
+# Update moul binary to the latest release
+moul update
 
-# Launch Bubble Tea TUI Admin Console (via moul binary)
-moul -server http://localhost:8090 -admin-key test-admin-key-1234
+# Launch Bubble Tea TUI Admin Console (via moul-ctl binary)
+moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
+
+# Or launch TUI via convenience subcommand in moul:
+moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 ```
 
 ---
@@ -198,19 +201,19 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 
 ## 8. Developer CLI Tooling & Diagnostics
 
-`mould` includes built-in commands for rapid local iteration, type safety, and testing:
+`moul` includes built-in commands for rapid local iteration, type safety, and testing:
 
-- **Database Seeding**: `mould seed` (or `make seed`) populates demo collections, records, and feature flags.
-- **TypeScript Type Generation**: `mould typegen --out ui/src/types/schema.d.ts` (or `make typegen`) extracts schema definitions into strict TypeScript interfaces.
-- **Rule Expression Testing**: `mould test-rule --rule="<rule>" --record='{...}' --auth='{...}'` validates and benchmarks rules.
-- **Worker DLQ Management**: `mould worker retry <table_name> [job_id]` and `mould worker list-failed <table_name>`.
+- **Database Seeding**: `moul seed` (or `make seed`) populates demo collections, records, and feature flags.
+- **TypeScript Type Generation**: `moul typegen --out ui/src/types/schema.d.ts` (or `make typegen`) extracts schema definitions into strict TypeScript interfaces.
+- **Rule Expression Testing**: `moul test-rule --rule="<rule>" --record='{...}' --auth='{...}'` validates and benchmarks rules.
+- **Worker DLQ Management**: `moul worker retry <table_name> [job_id]` and `moul worker list-failed <table_name>`.
 - **Self-Contained E2E Flow Testing**: `make test-e2e` executes full API authentication, CRUD, worker, and analytics flows in-process without manual server startup.
 
 ---
 
 ## 9. Production Deployment Instructions
 
-When assisting users with deploying `mould` to production on **Ubuntu Server 26.04 LTS**:
+When assisting users with deploying `moul` to production on **Ubuntu Server 26.04 LTS**:
 - Refer to the dedicated LXD system container, Tailscale, and Cloudflare Tunnel deployment guide: [docs/deployment-lxd-tailscale-cloudflare.md](/docs/deployment-lxd-tailscale-cloudflare.md).
 - Ensure host firewall rules close public SSH (port 22) after configuring Tailscale, and route public traffic via `cloudflared`.
 

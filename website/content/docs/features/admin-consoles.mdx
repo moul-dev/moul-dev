@@ -1,15 +1,15 @@
 ---
 title: Web Admin & TUI Consoles
-description: Manage your engine via the rich browser Web Admin at /_moul_/ or the terminal-native Bubble Tea TUI (moul).
+description: Manage your engine via the rich browser Web Admin at /_moul_/ or the terminal-native Bubble Tea TUI (moul-ctl).
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-Moul provides two dedicated administrative interfaces to manage and inspect your running `mould` engine:
+Moul provides two dedicated administrative interfaces to manage and inspect your running `moul` engine:
 
-1. **Web Admin Console (`/_moul_/`)**: Modern responsive browser dashboard embedded directly into `mould`.
-2. **Moul Terminal User Interface (`moul`)**: Fast, keyboard-driven CLI console built with Charm's Bubble Tea.
+1. **Web Admin Console (`/_moul_/`)**: Modern responsive browser dashboard embedded directly into `moul`.
+2. **Moul Terminal User Interface (`moul-ctl`)**: Fast, keyboard-driven CLI console built with Charm's Bubble Tea.
 
 ---
 
@@ -29,17 +29,17 @@ Accessed at `http://localhost:8090/_moul_/` (or your production domain).
 
 ---
 
-## 2. Moul TUI Console (`moul`)
+## 2. Moul TUI Console (`moul-ctl`)
 
 The TUI provides complete headless server administration directly from your command line.
 
 ### Launching the TUI
 
-<Tabs items={['Interactive Mode', 'Direct Connection Flags']}>
+<Tabs items={['Interactive Mode', 'Direct Connection Flags', 'Convenience Subcommand']}>
   <Tab value="Interactive Mode">
 ```bash
 # Launch interactive connection prompt
-moul
+moul-ctl
 ```
 
 On first launch, enter your server URL (`http://localhost:8090` or remote URL) and your `MOUL_ADMIN_KEY`. Credentials are saved securely to `~/.config/moul.json` for subsequent runs.
@@ -47,7 +47,13 @@ On first launch, enter your server URL (`http://localhost:8090` or remote URL) a
   <Tab value="Direct Connection Flags">
 ```bash
 # Connect directly by specifying server and admin key
-moul -server http://localhost:8090 -admin-key test-admin-key-1234
+moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
+```
+  </Tab>
+  <Tab value="Convenience Subcommand">
+```bash
+# Launch via moul convenience subcommand
+moul ctl
 ```
   </Tab>
 </Tabs>
@@ -56,11 +62,11 @@ moul -server http://localhost:8090 -admin-key test-admin-key-1234
 
 | Flag | Description | Example |
 | :--- | :--- | :--- |
-| `-server <url>` | `mould` server URL | `-server https://api.myapp.com` |
+| `-server <url>` | `moul` server URL | `-server https://api.myapp.com` |
 | `-admin-key <key>` | Master administrative key | `-admin-key my-secret-key` |
-| `update`, `-u`, `--update` | Self-update `moul` binary to the latest release | `moul update` |
-| `-f`, `--force` | Force update even if already at latest version | `moul update -f` |
-| `-v`, `--version` | Print version information and exit | `moul --version` |
+| `update`, `-u`, `--update` | Self-update `moul-ctl` binary to the latest release | `moul-ctl update` |
+| `-f`, `--force` | Force update even if already at latest version | `moul-ctl update -f` |
+| `-v`, `--version` | Print version information and exit | `moul-ctl --version` |
 
 ---
 

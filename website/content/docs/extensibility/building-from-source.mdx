@@ -41,13 +41,13 @@ make ui-install
 Moul compiles into two standalone single binaries with stripped debug symbols and all static assets embedded:
 
 ```bash
-# 1. Build the 'mould' server engine with embedded Web Admin UI
+# 1. Build the 'moul' server engine with embedded Web Admin UI
 make build
-# Output: ./bin/mould
-
-# 2. Build the 'moul' TUI console binary
-make build-tui
 # Output: ./bin/moul
+
+# 2. Build the 'moul-ctl' TUI console binary
+make build-ctl
+# Output: ./bin/moul-ctl
 ```
 
 ---
@@ -80,9 +80,11 @@ make ui-dev
 You can launch the Bubble Tea terminal UI directly from source against your running local server:
 
 ```bash
-make tui
+make ctl
 # Or run directly with Go:
-go run cmd/moul/main.go
+go run cmd/moul-ctl/main.go
+# Or via moul convenience command:
+./bin/moul ctl
 ```
 
 ### Seeding Fixtures & Type Generation

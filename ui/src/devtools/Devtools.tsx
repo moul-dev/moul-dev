@@ -19,8 +19,8 @@ export function AppDevtools() {
           render: <ReactQueryDevtoolsPanel />,
         },
         {
-          id: 'mould-inspector',
-          name: 'Mould Inspector',
+          id: 'moul-inspector',
+          name: 'Moul Inspector',
           render: <MoulDevtoolsPanel />,
         },
       ]}

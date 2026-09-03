@@ -11,13 +11,13 @@ import (
 )
 
 func main() {
-	// Initialize mould application using pkg/app
-	mouldApp := app.New(app.Config{
+	// Initialize moul application using pkg/app
+	moulApp := app.New(app.Config{
 		Version: "1.0.0-custom",
 	})
 
 	// Method 1: Register a custom job handler via helper method
-	mouldApp.RegisterWorker("GeneratePDF", func(ctx context.Context, job *worker.Job) error {
+	moulApp.RegisterWorker("GeneratePDF", func(ctx context.Context, job *worker.Job) error {
 		docID, _ := job.Args["document_id"].(string)
 		logger.Info("Executing custom GeneratePDF worker job", "document_id", docID)
 		// Perform custom background logic here...
@@ -25,7 +25,7 @@ func main() {
 	})
 
 	// Method 2: Register a custom job handler via OnWorkerInit lifecycle hook
-	mouldApp.OnWorkerInit(func(engine *worker.Engine) error {
+	moulApp.OnWorkerInit(func(engine *worker.Engine) error {
 		engine.Register("SyncExternalAnalytics", func(ctx context.Context, job *worker.Job) error {
 			logger.Info("Executing custom SyncExternalAnalytics job", "jobID", job.ID)
 			return nil
@@ -33,9 +33,9 @@ func main() {
 		return nil
 	})
 
-	fmt.Println("Starting custom Mould server with custom worker handlers...")
-	if err := mouldApp.Start(context.Background()); err != nil {
-		logger.Fatal("Failed to start custom mould application", "err", err)
+	fmt.Println("Starting custom Moul server with custom worker handlers...")
+	if err := moulApp.Start(context.Background()); err != nil {
+		logger.Fatal("Failed to start custom moul application", "err", err)
 		os.Exit(1)
 	}
 }
