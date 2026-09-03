@@ -1,8 +1,5 @@
 {
   "title": "API Reference",
   "root": true,
-  "pages": [
-    "overview",
-    "errors-and-responses"
-  ]
+  "pages": ["overview", "errors-and-responses"]
 }

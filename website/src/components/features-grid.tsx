@@ -45,7 +45,6 @@ function FeatureCard({
   };
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: spotlight hover effect
     <div
       ref={cardRef}
       onMouseMove={handleMouseMove}

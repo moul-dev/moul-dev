@@ -1,0 +1,4644 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Moul API Reference",
+    "version": "dev",
+    "description": "`moul` is a lightweight, self-contained dynamic database, authentication, and background job processing engine in Go, inspired by PocketBase and Elixir's Oban.\n\n### Authentication and Authorization\n- **Admin Endpoints**: Protected by `X-Admin-Key` header API authentication.\n- **User Endpoints**: Protected by Bearer tokens (`Authorization: Bearer <token>`) generated upon successful user authentication.\n- **Dynamic Record Operations**: Checked at runtime by the HCL-like expression rules defined on the parent collection (e.g. `createRule`, `listRule`).\n\n### Supported Authentication & Signup Flows\n- **Password Flow**:\n  - **Signup**: Create a record in an `auth` collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`. Passwords are validated for complexity and automatically hashed.\n  - **Login**: `POST /api/moul/{name}/auth-with-password` with `identity` (username or email) and `password`.\n  - **Password Reset**: Request reset via `POST /api/moul/{name}/request-password-reset` and confirm reset with token via `POST /api/moul/{name}/confirm-password-reset`.\n- **Session & Token Management**:\n  - **Refresh**: Issue a fresh JWT token using `POST /api/moul/{name}/refresh`.\n  - **Logout**: Revoke current JWT token using `POST /api/moul/{name}/logout`.\n- **Email OTP Flow**:\n  - **Signup & Login**: `POST /api/moul/{name}/otp/request` sends a 6-digit OTP code to the email (automatically creating a new user record if the email does not exist yet). Verify code with `POST /api/moul/{name}/auth-with-otp`.\n- **Passkey (WebAuthn) Flow**:\n  - **Signup**: `POST /api/moul/{name}/passkey/signup/options` and `POST /api/moul/{name}/passkey/signup/verify`.\n  - **Login**: `POST /api/moul/{name}/passkey/login/options` and `POST /api/moul/{name}/passkey/login/verify`.\n  - **Register Existing User**: `POST /api/moul/{name}/passkey/register/options` and `POST /api/moul/{name}/passkey/register/verify`.\n\n### Supported Email Delivery Providers\n- **Amazon SES**: AWS SES v2 REST API integration with automatic SigV4 signing.\n- **Resend**: Modern developer email delivery API.\n- **Mailgun**: Transactional email API supporting US & EU regions.\n- **SendGrid**: Transactional Mail Send API v3.\n- **Cloudflare Email Sending**: Cloudflare Email REST API and Worker HTTP endpoints.\n- **Console**: Local development fallback logging emails directly to the server console.\n\n### Programmatic Go API & Extensibility\n- **Server Embedding**: Embed the full server engine in Go apps via `pkg/app`.\n- **Custom HTTP Route Hooks**: Add custom endpoints using `RegisterRoute` or attach to the raw Echo router via `OnRouterInit`.\n- **Lifecycle Callbacks**: Run custom initialization logic after database setup using `OnBeforeStart`.\n- **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker`.\n\n### Built-in Model Context Protocol (MCP) Server\n- **Overview**: `moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This allows AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity) to inspect schema definitions, execute record CRUD, track background jobs, manage feature flags, and monitor host system metrics.\n- **Transport Modes**:\n  - **Stdio Transport Mode**: Executed via `moul mcp`. Communicates directly over standard input/output streams. Ideal for local IDE configuration without running a public HTTP daemon.\n  - **Streamable HTTP Transport Mode (MCP 2025 Spec)**: Served at `http://localhost:8090/api/mcp`. Natively accepts direct JSON-RPC POST requests, SSE stream GET requests, and DELETE session termination requests.\n  - **HTTP SSE Transport Mode (Legacy Spec)**: Served at `http://localhost:8090/api/mcp` (with client POST messages directed to `/api/mcp/message`).\n- **Authentication Options**:\n  - Header: `X-Admin-Key: <MOUL_ADMIN_KEY>`\n  - Header: `Authorization: Bearer <MOUL_ADMIN_KEY>`\n  - URL Query Parameter: `http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>`\n- **Client Setup & Configuration Examples**:\n  - **Claude Desktop Setup**:\n    - Config Path (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`\n    - Config Path (Windows): `%APPDATA%\\Claude\\claude_desktop_config.json`\n    - *Stdio Mode*:\n      ```json\n      {\n        \"mcpServers\": {\n          \"moul\": {\n            \"command\": \"/usr/local/bin/moul\",\n            \"args\": [\"mcp\"],\n            \"env\": {\n              \"MOUL_DB_PATH\": \"./moul-local.db\"\n            }\n          }\n        }\n      }\n      ```\n    - *Streamable HTTP / SSE Mode (Header Auth)*:\n      ```json\n      {\n        \"mcpServers\": {\n          \"moul-sse\": {\n            \"url\": \"http://localhost:8090/api/mcp\",\n            \"headers\": {\n              \"X-Admin-Key\": \"<MOUL_ADMIN_KEY>\"\n            }\n          }\n        }\n      }\n      ```\n    - *Streamable HTTP / SSE Mode (Query Param Auth)*:\n      ```json\n      {\n        \"mcpServers\": {\n          \"moul-sse\": {\n            \"url\": \"http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>\"\n          }\n        }\n      }\n      ```\n  - **Cursor / VS Code / Windsurf / Antigravity Setup**:\n    - Workspace Config: `.cursor/mcp.json` or `.vscode/mcp.json`\n    - *Configuration*:\n      ```json\n      {\n        \"mcpServers\": {\n          \"moul\": {\n            \"command\": \"moul\",\n            \"args\": [\"mcp\"]\n          }\n        }\n      }\n      ```\n  - **cURL Streamable HTTP Execution Example**:\n    - *1. Direct POST JSON-RPC Request*:\n      ```bash\n      curl -X POST \"http://localhost:8090/api/mcp\" \\\n        -H \"X-Admin-Key: <MOUL_ADMIN_KEY>\" \\\n        -H \"Content-Type: application/json\" \\\n        -d '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"initialize\", \"params\": {\"protocolVersion\": \"2024-11-05\", \"capabilities\": {}, \"clientInfo\": {\"name\": \"curl\", \"version\": \"1.0\"}}}'\n      ```\n    - *2. Query Param Auth Example*:\n      ```bash\n      curl -X POST \"http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>\" \\\n        -H \"Content-Type: application/json\" \\\n        -d '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"moul_list_collections\", \"arguments\": {}}}'\n      ```\n- **Built-in MCP Tools Summary (17 Native Tools)**:\n  - **Collections**: `moul_list_collections`, `moul_get_collection`, `moul_create_collection`, `moul_delete_collection`\n  - **Records CRUD**: `moul_list_records`, `moul_get_record`, `moul_create_record`, `moul_update_record`, `moul_delete_record`\n  - **Worker Queues**: `moul_list_worker_jobs`, `moul_enqueue_job`, `moul_cancel_job`\n  - **Feature Flags**: `moul_list_feature_flags`, `moul_set_feature_flag`\n  - **System & Observability**: `moul_get_system_metrics`, `moul_get_analytics_summary`, `moul_list_requests`\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8090",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Setup Management",
+      "description": "Endpoints for checking setup status and registering initial root admin users."
+    },
+    {
+      "name": "Moul Schema Management",
+      "description": "Endpoints for creating, listing, inspecting, updating, and deleting collection schemas and HCL rules."
+    },
+    {
+      "name": "User Authentication",
+      "description": "Complete end-user authentication and registration endpoints supporting three auth strategies:\n- **Password Auth**:\n  - **Signup**: Submit `username`, `email`, `password`, and `passwordConfirm` via `POST /api/moul/{name}/records`.\n  - **Login**: Authenticate with `identity` and `password` via `POST /api/moul/{name}/auth-with-password`.\n  - **Password Reset**: Request reset (`POST /api/moul/{name}/request-password-reset`) and confirm reset (`POST /api/moul/{name}/confirm-password-reset`).\n- **Token Refresh & Logout**:\n  - **Refresh**: Refresh JWT token (`POST /api/moul/{name}/refresh`).\n  - **Logout**: Revoke current JWT token (`POST /api/moul/{name}/logout`).\n- **Email OTP**:\n  - **Signup & Login**: Request OTP via `POST /api/moul/{name}/otp/request` (auto-registers new emails). Verify with `POST /api/moul/{name}/auth-with-otp`.\n- **Passkey (WebAuthn)**:\n  - **Signup**: Request options (`POST /api/moul/{name}/passkey/signup/options`) and verify assertion (`POST /api/moul/{name}/passkey/signup/verify`).\n  - **Login**: Request options (`POST /api/moul/{name}/passkey/login/options`) and verify assertion (`POST /api/moul/{name}/passkey/login/verify`).\n  - **Register Key**: Authenticated users add keys via `/passkey/register/options` and `/passkey/register/verify`.\n"
+    },
+    {
+      "name": "Dynamic Records CRUD",
+      "description": "Dynamic record operations (Create, List, Get, Update, Delete) governed by collection HCL rules."
+    },
+    {
+      "name": "OAuth2 Device Flow",
+      "description": "OAuth2 Device Authorization Grant flow for CLI, terminal apps, and constrained devices."
+    },
+    {
+      "name": "Admin Email Templates Management",
+      "description": "Admin endpoints to customize transactional email templates (OTP, Password Reset, Verification)."
+    },
+    {
+      "name": "Admin Settings Management",
+      "description": "Admin endpoints for global server settings configuration."
+    },
+    {
+      "name": "File Storage",
+      "description": "File upload handler endpoint supporting multipart storage uploads."
+    },
+    {
+      "name": "Analytics & Request Observability",
+      "description": "Administrative and tracking endpoints for HTTP requests and site visit analytics."
+    },
+    {
+      "name": "Model Context Protocol (MCP)",
+      "description": "Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `moul`.\n\n#### Connection Modes & Setup\n1. **Stdio Transport (`moul mcp`)**: Standard I/O bridge mode for local AI clients.\n2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.\n\n#### Authentication\nHTTP SSE requests require master key authentication:\n- Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.\n\n#### Configuration Examples\n- **Claude Desktop** (`claude_desktop_config.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": {\n        \"command\": \"/usr/local/bin/moul\",\n        \"args\": [\"mcp\"],\n        \"env\": { \"MOUL_DB_PATH\": \"./moul-local.db\" }\n      },\n      \"moul-sse\": {\n        \"url\": \"http://localhost:8090/api/mcp\",\n        \"headers\": { \"X-Admin-Key\": \"<MOUL_ADMIN_KEY>\" }\n      }\n    }\n  }\n  ```\n- **Cursor IDE** (`.cursor/mcp.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": { \"command\": \"moul\", \"args\": [\"mcp\"] }\n    }\n  }\n  ```\n\n#### Available MCP Tools (17 Tools)\n- `moul_list_collections`: List all dynamic database collections.\n- `moul_get_collection`: View collection definition and rules.\n- `moul_create_collection`: Register a new collection schema (base, auth, worker, analytic).\n- `moul_delete_collection`: Drop collection table and remove schema.\n- `moul_list_records`: List records with field filtering and limits.\n- `moul_get_record`: Fetch single record by ID.\n- `moul_create_record`: Create record in collection.\n- `moul_update_record`: Update record by ID.\n- `moul_delete_record`: Delete record by ID.\n- `moul_list_worker_jobs`: List background jobs from worker table by state.\n- `moul_enqueue_job`: Enqueue job with handler, args_json, and priority.\n- `moul_cancel_job`: Cancel worker job.\n- `moul_list_feature_flags`: List OpenFeature flags.\n- `moul_set_feature_flag`: Create/update feature flag.\n- `moul_get_system_metrics`: Query host CPU, RAM, Disk, Load metrics.\n- `moul_get_analytics_summary`: Get visit count and request metrics.\n- `moul_list_requests`: Query HTTP request telemetry log.\n"
+    }
+  ],
+  "paths": {
+    "/api/setup": {
+      "get": {
+        "summary": "Check Setup Status",
+        "description": "Returns whether a root user has been set up in the system.",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setup status checked successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "needsSetup": {
+                      "type": "boolean",
+                      "description": "True if no root users exist in the database."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Register Root User",
+        "description": "Sets up the initial root user for the application if none exist.",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Root user created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Root user created successfully"
+                    },
+                    "id": {
+                      "type": "string",
+                      "example": "usr-ABC123xyz"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (validation failed or root user already complete).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/admin/login": {
+      "post": {
+        "summary": "Admin Login",
+        "description": "Authenticates a root user with credentials and Master Admin Key to return a JWT token.",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identity",
+                  "password"
+                ],
+                "properties": {
+                  "identity": {
+                    "type": "string",
+                    "description": "Root user username or email.",
+                    "example": "root"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Root user password.",
+                    "example": "AdminPassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully authenticated as root user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/admin/password": {
+      "post": {
+        "summary": "Update Root User Password",
+        "description": "Updates the password of a root user. Requires valid Master Admin Key and verification of the user's current password.",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "password",
+                  "passwordConfirm"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "description": "Existing root user password.",
+                    "example": "OldPassword123"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "New root user password (minimum 8 characters, 1 uppercase, 1 lowercase, 1 digit).",
+                    "example": "NewPassword123"
+                  },
+                  "passwordConfirm": {
+                    "type": "string",
+                    "description": "Confirmation of the new root password (must match password).",
+                    "example": "NewPassword123"
+                  },
+                  "identity": {
+                    "type": "string",
+                    "description": "Optional username or email to target a specific root user.",
+                    "example": "root"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Root password updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Root password updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/admin/account": {
+      "get": {
+        "summary": "Get Root User Account Profile",
+        "description": "Returns root administrator profile information (username, name, email, created/updated timestamps).",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Root user account retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Root User Account Profile",
+        "description": "Updates root administrator username, display name, email address, and optionally password.",
+        "tags": [
+          "Setup Management"
+        ],
+        "security": [
+          {
+            "AdminKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "New unique username/handle."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name."
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Contact email address."
+                  },
+                  "currentPassword": {
+                    "type": "string",
+                    "description": "Existing password (required if updating password)."
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "New password (min 8 chars, 1 upper, 1 lower, 1 digit)."
+                  },
+                  "passwordConfirm": {
+                    "type": "string",
+                    "description": "New password confirmation."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Root account updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "type": "object"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul": {
+      "get": {
+        "summary": "List Moul",
+        "description": "Lists the metadata schemas of all registered collections.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of registered moul.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Moul"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Moul",
+        "description": "Creates a new database table and saves its schema metadata definition.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Unique ID of the collection (auto-generated if omitted)."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Unique name of the collection (must start with letter and contain only alphanumeric/underscores)."
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "base",
+                      "auth",
+                      "worker",
+                      "analytic"
+                    ],
+                    "default": "base"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/MoulField"
+                    }
+                  },
+                  "rules": {
+                    "$ref": "#/components/schemas/MoulRules"
+                  },
+                  "email_templates": {
+                    "$ref": "#/components/schemas/EmailTemplates"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Moul schema created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moul"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters or naming collisions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}": {
+      "get": {
+        "summary": "Get Moul by Name",
+        "description": "Retrieves the schema metadata definition for a single registered collection.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the collection schema to retrieve.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection schema metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moul"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Collection schema not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Moul",
+        "description": "Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\nIf the `name` property in the request body is different from `{name}`, the physical table will be renamed.\n",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Current name of the collection to update.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "New or current name of the collection."
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "base",
+                      "auth",
+                      "worker",
+                      "analytic"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/MoulField"
+                    }
+                  },
+                  "rules": {
+                    "$ref": "#/components/schemas/MoulRules"
+                  },
+                  "email_templates": {
+                    "$ref": "#/components/schemas/EmailTemplates"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moul schema updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moul"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters, empty name, or target name collision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace Moul",
+        "description": "Replaces or updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\n",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Current name of the collection to update.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "New or current name of the collection."
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "base",
+                      "auth",
+                      "worker",
+                      "analytic"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/MoulField"
+                    }
+                  },
+                  "rules": {
+                    "$ref": "#/components/schemas/MoulRules"
+                  },
+                  "email_templates": {
+                    "$ref": "#/components/schemas/EmailTemplates"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moul schema updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moul"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters, empty name, or target name collision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Moul",
+        "description": "Drops the physical SQLite table and removes its metadata record.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the collection to delete.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Moul deleted successfully."
+          },
+          "400": {
+            "description": "Name parameter is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/email-templates": {
+      "get": {
+        "summary": "Get Email Templates",
+        "description": "Retrieves custom email templates for an auth-type collection.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email templates config.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplates"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Collection is not an auth type."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Email Templates",
+        "description": "Updates custom email templates for an auth-type collection.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailTemplates"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Templates updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplates"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/email-templates/test": {
+      "post": {
+        "summary": "Send Test Email",
+        "description": "Triggers a mock/test email using the specified template configuration and enqueues a SendEmail background job.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "template"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Recipient email address."
+                  },
+                  "template": {
+                    "type": "string",
+                    "enum": [
+                      "verification",
+                      "password_reset",
+                      "confirm_email_change",
+                      "otp",
+                      "login_alert"
+                    ],
+                    "description": "Key of the email template to test."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test email queued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Test email sent/queued successfully (check server logs/console for details)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters or not an auth moul."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/webhooks": {
+      "get": {
+        "summary": "List Collection Webhooks",
+        "description": "Returns all configured webhooks for a collection.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhooks list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Webhook"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Collection Webhook",
+        "description": "Adds a new outbound HTTP webhook trigger to a collection.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Webhook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/webhooks/{id}": {
+      "get": {
+        "summary": "Get Webhook by ID",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook config.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Webhook by ID",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Webhook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Webhook by ID",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Webhook deleted."
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/webhooks/{id}/test": {
+      "post": {
+        "summary": "Test Webhook",
+        "description": "Triggers a ping test payload (event: ping) to the specified webhook target.",
+        "tags": [
+          "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test execution results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status_code": {
+                      "type": "integer"
+                    },
+                    "duration_ms": {
+                      "type": "integer"
+                    },
+                    "response": {
+                      "type": "string"
+                    },
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "summary": "Get Settings",
+        "description": "Returns all server settings (S3 config, Litestream, Rate Limiting, IPs, Email Delivery) as key-value pairs.",
+        "tags": [
+          "Settings & System Config"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server settings loaded successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Settings",
+        "description": "Modifies server settings and reloads runtime configurations (rate limits, allowed IPs, mailer providers) dynamically.",
+        "tags": [
+          "Settings & System Config"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Map of settings key-value strings to update.",
+                "example": {
+                  "email_enabled": "true",
+                  "email_provider": "resend",
+                  "email_from_address": "noreply@example.com",
+                  "email_from_name": "Moul App",
+                  "email_api_key": "re_123456789",
+                  "email_domain": "mg.example.com",
+                  "email_region": "us-east-1",
+                  "email_endpoint": "https://api.resend.com/emails",
+                  "file_s3_enabled": "true",
+                  "file_s3_bucket": "my-uploads-bucket",
+                  "rate_limiting_enabled": "true"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated successfully, returns full settings map.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/upload": {
+      "get": {
+        "summary": "List Uploaded Files",
+        "description": "Returns a list of all stored files and their metadata (including thumbnail maps and thumbhashes), sorted newest first.",
+        "tags": [
+          "File Storage"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of stored files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileInfo"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization failed (requires either a valid authenticated user or admin key)."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload File",
+        "description": "Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg).",
+        "tags": [
+          "File Storage"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File binary payload."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully. Returns a list containing the file metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileInfo"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing file in multipart form-data."
+          },
+          "401": {
+            "description": "Authorization failed (requires either a valid authenticated user or admin key)."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/upload/{path}": {
+      "delete": {
+        "summary": "Delete Uploaded File",
+        "description": "Deletes an uploaded file and all associated thumbnails and metadata by file ID or path.",
+        "tags": [
+          "File Storage"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "description": "File ID (e.g. `abc123xyz`) or key/path to delete.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid file identifier."
+          },
+          "401": {
+            "description": "Authorization failed."
+          },
+          "404": {
+            "description": "File not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/auth-with-password": {
+      "post": {
+        "summary": "Password Authentication",
+        "description": "Authenticates identity (username or email) against the designated auth moul collection and yields an authentication token.\nNote: New user signup for password authentication is performed by creating a record in the auth collection via `POST /api/moul/{name}/records` with `username`, `email`, `password`, and `passwordConfirm`.\n",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identity",
+                  "password"
+                ],
+                "properties": {
+                  "identity": {
+                    "type": "string",
+                    "description": "Email or username.",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Plain text password.",
+                    "example": "Password123"
+                  }
+                }
+              },
+              "example": {
+                "identity": "user@example.com",
+                "password": "Password123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid credentials or collection is not an auth collection."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/request-password-reset": {
+      "post": {
+        "summary": "Request Password Reset",
+        "description": "Generates a password reset token for the specified user email and sends a reset link using the collection's Password Reset email template.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Registered email address.",
+                    "example": "user@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset link dispatched if email exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "If the email exists, a password reset link has been sent."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing email or invalid collection type."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/confirm-password-reset": {
+      "post": {
+        "summary": "Confirm Password Reset",
+        "description": "Resets user password using a valid, unexpired reset token.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "Password reset token received via email."
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "New password.",
+                    "example": "NewPassword123"
+                  },
+                  "passwordConfirm": {
+                    "type": "string",
+                    "description": "Optional confirmation matching new password.",
+                    "example": "NewPassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password successfully reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password reset successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid/expired token or password complexity validation error."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/refresh": {
+      "post": {
+        "summary": "Refresh JWT Token",
+        "description": "Issues a fresh JWT token for an active authentication session, revoking the previous JWT token.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized or revoked token."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/logout": {
+      "post": {
+        "summary": "User Logout",
+        "description": "Revokes the current Bearer JWT token, preventing it from being used for future authenticated requests.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Logged out successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed Authorization header."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/otp/request": {
+      "post": {
+        "summary": "Request OTP",
+        "description": "Generates a 6-digit Email OTP valid for 10 minutes and outputs it to the server console.\nIf the email is not registered yet, an account is automatically created (Auto-Signup).\n",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  }
+                }
+              },
+              "example": {
+                "email": "user@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP code generated and printed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "OTP generated and sent successfully (check server logs/console for code)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or invalid collection."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/auth-with-otp": {
+      "post": {
+        "summary": "Verify OTP / Authenticate",
+        "description": "Verifies OTP code sent to user email and returns an authentication token on success.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "6-digit numeric OTP code.",
+                    "example": "123456"
+                  }
+                }
+              },
+              "example": {
+                "email": "user@example.com",
+                "code": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification successful, token generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP, expired OTP, or input errors."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/register/options": {
+      "post": {
+        "summary": "Request Passkey Registration Options",
+        "description": "Retrieves WebAuthn credential creation options for an authenticated user to register a new passkey.",
+        "tags": [
+          "User Authentication"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the auth collection.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registration options returned with session token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionToken": {
+                      "type": "string",
+                      "description": "Temporary token to link options verification."
+                    },
+                    "options": {
+                      "type": "object",
+                      "description": "WebAuthn registration options wrapper.",
+                      "properties": {
+                        "publicKey": {
+                          "type": "object",
+                          "description": "Standard WebAuthn CredentialCreationOptions payload."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/register/verify": {
+      "post": {
+        "summary": "Verify Passkey Registration",
+        "description": "Verifies client navigator assertion credentials response and completes credential registration.",
+        "tags": [
+          "User Authentication"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionToken",
+            "in": "query",
+            "required": false,
+            "description": "The session token returned by options endpoint (can also be passed via X-Session-Token header).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-Token",
+            "in": "header",
+            "required": false,
+            "description": "Alternative header to pass the session token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Raw navigator.credentials.create() response object."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Passkey registered successfully."
+          },
+          "400": {
+            "description": "Invalid credential verification payload."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/signup/options": {
+      "post": {
+        "summary": "Request Passkey Signup Options",
+        "description": "Returns credential creation options for registering a brand-new user via WebAuthn.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "newuser@example.com"
+                  }
+                }
+              },
+              "example": {
+                "email": "newuser@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Options and session token payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionToken": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "type": "object",
+                      "description": "WebAuthn signup options wrapper.",
+                      "properties": {
+                        "publicKey": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/signup/verify": {
+      "post": {
+        "summary": "Verify Passkey Signup",
+        "description": "Confirms client WebAuthn registration, auto-creates user record, and logs them in.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionToken",
+            "in": "query",
+            "required": false,
+            "description": "The session token returned by options endpoint (can also be passed via X-Session-Token header).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-Token",
+            "in": "header",
+            "required": false,
+            "description": "Alternative header to pass the session token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account created and logged in successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/login/options": {
+      "post": {
+        "summary": "Request Passkey Login Options",
+        "description": "Returns credential assertion options to challenge an existing user's registered WebAuthn key.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identity"
+                ],
+                "properties": {
+                  "identity": {
+                    "type": "string",
+                    "description": "Email or Username of the user.",
+                    "example": "user@example.com"
+                  }
+                }
+              },
+              "example": {
+                "identity": "user@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login request options payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionToken": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "type": "object",
+                      "description": "WebAuthn login options wrapper.",
+                      "properties": {
+                        "publicKey": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/passkey/login/verify": {
+      "post": {
+        "summary": "Verify Passkey Login",
+        "description": "Validates user assertion authentication, logging them in.",
+        "tags": [
+          "User Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionToken",
+            "in": "query",
+            "required": false,
+            "description": "The session token returned by options endpoint (can also be passed via X-Session-Token header).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-Token",
+            "in": "header",
+            "required": false,
+            "description": "Alternative header to pass the session token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/device/authorize": {
+      "post": {
+        "summary": "OAuth2 Device Authorization Endpoint",
+        "description": "Initiates device authorization code flow and returns code challenges.",
+        "tags": [
+          "OAuth2 Device Flow"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification codes generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "device_code": {
+                      "type": "string"
+                    },
+                    "user_code": {
+                      "type": "string"
+                    },
+                    "verification_uri": {
+                      "type": "string"
+                    },
+                    "verification_uri_complete": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    },
+                    "interval": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/device/token": {
+      "post": {
+        "summary": "OAuth2 Device Token Request",
+        "description": "Polling endpoint for client devices to acquire access token after authorization.",
+        "tags": [
+          "OAuth2 Device Flow"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "grant_type",
+                  "device_code",
+                  "client_id"
+                ],
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "example": "urn:ietf:params:oauth:grant-type:device_code"
+                  },
+                  "device_code": {
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "grant_type",
+                  "device_code",
+                  "client_id"
+                ],
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "example": "urn:ietf:params:oauth:grant-type:device_code"
+                  },
+                  "device_code": {
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device verified. Access token returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "example": "Bearer"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token flow errors (pending approval, expired, etc.).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unsupported_grant_type",
+                        "invalid_request",
+                        "expired_token",
+                        "authorization_pending"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/device": {
+      "get": {
+        "summary": "Render Device Verification Page",
+        "description": "Returns the HTML interactive form where users enter user_codes.",
+        "tags": [
+          "OAuth2 Device Flow"
+        ],
+        "parameters": [
+          {
+            "name": "user_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "auth_moul",
+            "in": "query",
+            "required": false,
+            "description": "Collection for device auth (defaults to _rootUsers; device flow is restricted to root account).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification form HTML page.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/device/verify": {
+      "post": {
+        "summary": "Verify Device Flow Request",
+        "description": "Processes verification form input, checking root user credentials, and marks the code as approved.",
+        "tags": [
+          "OAuth2 Device Flow"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_code",
+                  "identity",
+                  "password"
+                ],
+                "properties": {
+                  "user_code": {
+                    "type": "string"
+                  },
+                  "identity": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "auth_moul": {
+                    "type": "string",
+                    "description": "Collection for device auth (defaults to _rootUsers; device flow is restricted to root account)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns HTML verification success/failure page.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request, user validation failed."
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/records": {
+      "get": {
+        "summary": "List Records",
+        "description": "Queries the collection records. Query filters are applied dynamically based on collection HCL listRule config.",
+        "tags": [
+          "Dynamic Records CRUD"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number for pagination (default 1).",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "description": "Records per page (default 30, max 500).",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Field sort order (e.g. `title` or `-created_at`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "Dynamic filter expression (e.g. `price > 50 && active = true`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Substring search across text, username, and email fields.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated relational fields to expand inline.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Cursor record ID to fetch items after for cursor-based pagination.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of records matching listRule constraints.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rule evaluation error or bad request."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Record",
+        "description": "Creates a new record. Evaluates `createRule` against the auth context first.\n- **Auth Moul**: Creating a record signs up a new user when `username`, `email`, `password`, and `passwordConfirm` are provided. Passwords are validated for complexity and securely hashed into `passwordHash`.\n- **Worker Moul**: Creating a record enqueues a background job and wakes the worker thread.\n- **Analytic Moul**: Creating a record tracking an event; resolves browser, OS, GeoIP, and cookie sessions.\n",
+        "tags": [
+          "Dynamic Records CRUD"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Dynamic fields mapping matching the collection schema.",
+                "additionalProperties": true
+              },
+              "example": {
+                "username": "johndoe",
+                "email": "john@example.com",
+                "password": "Password123",
+                "passwordConfirm": "Password123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Record created successfully. Returns the populated row.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation errors or unique key constraint failure."
+          },
+          "401": {
+            "description": "Authentication required by collection rules."
+          },
+          "403": {
+            "description": "Forbidden by collection rules."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/records/{id}": {
+      "get": {
+        "summary": "Get Record",
+        "description": "Retrieves a single record by ID, restricted by `viewRule` constraints.",
+        "tags": [
+          "Dynamic Records CRUD"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rule evaluation error."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "Record or Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Record",
+        "description": "Updates record fields, validated by `updateRule` constraints.",
+        "tags": [
+          "Dynamic Records CRUD"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Input formatting error."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "Record or Not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Record",
+        "description": "Deletes record by ID, validated by `deleteRule` constraints.",
+        "tags": [
+          "Dynamic Records CRUD"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Record deleted successfully."
+          },
+          "400": {
+            "description": "Rule evaluation error."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "Record not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/subscribe": {
+      "get": {
+        "summary": "Subscribe to Real-time Record Changes (SSE)",
+        "description": "Establishes a Server-Sent Events (SSE) stream for real-time record creations, updates, and deletions on the target collection.\nGoverned by `subscribeRule` (or fallback to `listRule`).\n",
+        "tags": [
+          "Dynamic Records CRUD",
+          "Realtime Subscriptions"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated list of event actions to filter (create, update, delete, *)",
+            "schema": {
+              "type": "string",
+              "default": "*"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "description": "Filter events for a single record ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "description": "JWT Auth Token for browser SSE clients",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Real-time SSE event stream opened.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found."
+          }
+        }
+      }
+    },
+    "/api/moul/{name}/retry-jobs": {
+      "post": {
+        "summary": "Retry Failed or Discarded Background Jobs",
+        "description": "Resets discarded or failed jobs back to `available` state for immediate processing by the worker engine.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional specific list of job IDs to retry. If empty, all discarded/cancelled jobs are retried."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jobs retried successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "rows_affected": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a worker collection."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Collection not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/rules/test": {
+      "post": {
+        "summary": "Test and Evaluate Rule Expression",
+        "description": "Translates and evaluates a PocketBase-like rule expression against mock record, auth, and request context.",
+        "tags": [
+          "Rules Engine & Tooling"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rule"
+                ],
+                "properties": {
+                  "rule": {
+                    "type": "string",
+                    "example": "author_id = @request.auth.id"
+                  },
+                  "record": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "auth": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "request": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rule evaluation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean"
+                    },
+                    "matched": {
+                      "type": "boolean"
+                    },
+                    "translated": {
+                      "type": "string"
+                    },
+                    "duration_us": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/visits": {
+      "get": {
+        "summary": "List Visitor Sessions",
+        "description": "Returns visitor session records recorded by request tracking.",
+        "tags": [
+          "Analytics & Request Observability"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session logs list retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Visit"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/visits/{id}": {
+      "get": {
+        "summary": "Get Visitor Session Details",
+        "description": "Returns full details of a specific visit log by ID.",
+        "tags": [
+          "Analytics & Request Observability"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visit session metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Visit"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Visit session not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/requests": {
+      "get": {
+        "summary": "List Tracked HTTP Requests",
+        "description": "Paginated query list of all server requests tracked asynchronously.",
+        "tags": [
+          "Analytics & Request Observability"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of request logs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer"
+                    },
+                    "perPage": {
+                      "type": "integer"
+                    },
+                    "totalItems": {
+                      "type": "integer"
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RequestLog"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/requests/{id}": {
+      "get": {
+        "summary": "Get Tracked Request Details",
+        "description": "Returns details of a specific HTTP request log.",
+        "tags": [
+          "Analytics & Request Observability"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTTP Request Log.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestLog"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Log not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/feature-flags": {
+      "get": {
+        "summary": "List Feature Flags",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of feature flags.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureFlag"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Feature Flag",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feature flag created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlag"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/feature-flags/{key}": {
+      "get": {
+        "summary": "Get Feature Flag by Key",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feature flag detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlag"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Flag not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Feature Flag by Key",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feature flag updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlag"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Feature Flag by Key",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Feature flag deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/feature-flags/{key}/eval": {
+      "post": {
+        "summary": "Evaluate Feature Flag",
+        "tags": [
+          "Feature Flags Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "context": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagEvaluation"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/system/metrics": {
+      "get": {
+        "summary": "Get System Telemetry Metrics",
+        "tags": [
+          "System Metrics & Monitoring"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Host telemetry metrics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Push System Metrics",
+        "tags": [
+          "System Metrics & Monitoring"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metrics ingested."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/mcp": {
+      "get": {
+        "summary": "MCP SSE Stream Endpoint (Legacy & Streamable HTTP)",
+        "description": "Establishes a persistent Server-Sent Events (SSE) stream for Model Context Protocol (MCP) communication.\n\nAI tools connect to this endpoint to receive continuous JSON-RPC event updates and session message routing endpoints (`/api/mcp/message?sessionId=...`).\n\nRequires master key authentication via:\n- Header `X-Admin-Key: <MOUL_ADMIN_KEY>`\n- Header `Authorization: Bearer <MOUL_ADMIN_KEY>`\n- Query parameter `?adminKey=<MOUL_ADMIN_KEY>` (or `?token=...`, `?api_key=...`)\n",
+        "tags": [
+          "Model Context Protocol (MCP)"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "adminKey",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Master admin key passed in URL query parameter."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE event stream connection established.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "example": "event: endpoint\ndata: /api/mcp/message?sessionId=12345\n\n"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "503": {
+            "description": "MCP server not initialized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "MCP Streamable HTTP JSON-RPC Endpoint (MCP 2025 Spec)",
+        "description": "Direct JSON-RPC 2.0 endpoint for client requests (e.g. `initialize`, `tools/list`, `tools/call`).\n\nSupports both standard Streamable HTTP transport and message routing for active sessions.\n",
+        "tags": [
+          "Model Context Protocol (MCP)"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "adminKey",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Master admin key."
+          },
+          {
+            "in": "query",
+            "name": "sessionId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional active session ID."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ],
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "initialize"
+                  },
+                  "params": {
+                    "type": "object",
+                    "example": {
+                      "protocolVersion": "2024-11-05",
+                      "capabilities": {},
+                      "clientInfo": {
+                        "name": "antigravity",
+                        "version": "1.0"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response returned successfully."
+          },
+          "202": {
+            "description": "Request accepted for asynchronous processing."
+          },
+          "400": {
+            "description": "Invalid JSON-RPC payload or session ID."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "503": {
+            "description": "MCP server not initialized."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Terminate MCP Session Endpoint",
+        "description": "Terminates an active Streamable HTTP or SSE session ID and cleans up associated resources.\n",
+        "tags": [
+          "Model Context Protocol (MCP)"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Session ID to disconnect and terminate."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session terminated successfully."
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/mcp/message": {
+      "post": {
+        "summary": "MCP SSE Message Routing Endpoint (Legacy SSE Spec)",
+        "description": "Endpoint for sending JSON-RPC 2.0 requests to an active MCP session created via `/api/mcp`.\n\nSupports standard MCP methods including tool discovery (`tools/list`), tool invocation (`tools/call`), resource listing (`resources/list`), and prompt listing (`prompts/list`).\n",
+        "tags": [
+          "Model Context Protocol (MCP)"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sessionId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Active MCP SSE session ID returned during connection handshake."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ],
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/call"
+                  },
+                  "params": {
+                    "type": "object",
+                    "example": {
+                      "name": "moul_list_collections",
+                      "arguments": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message processed successfully."
+          },
+          "202": {
+            "description": "Message accepted by active SSE session."
+          },
+          "400": {
+            "description": "Invalid JSON-RPC request syntax or missing session ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AdminKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Admin-Key",
+        "description": "Shared API Key authentication for administration actions."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "User bearer token for authentication."
+      }
+    },
+    "responses": {
+      "401Unauthorized": {
+        "description": "Authentication required or invalid key provided.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HTTPError"
+            }
+          }
+        }
+      },
+      "500InternalError": {
+        "description": "Database error or internal processing server error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HTTPError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "HTTPError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Authentication required"
+          }
+        }
+      },
+      "MoulField": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "bool",
+              "date",
+              "datetime",
+              "json",
+              "url",
+              "file",
+              "select",
+              "relation"
+            ]
+          },
+          "relationConfig": {
+            "type": "object",
+            "properties": {
+              "targetMoul": {
+                "type": "string",
+                "description": "Target collection name referenced."
+              },
+              "cardinality": {
+                "type": "string",
+                "enum": [
+                  "1:1",
+                  "1:N",
+                  "M:N"
+                ],
+                "description": "Relationship cardinality. \"1:1\" and \"1:N\" store a single target record ID string. \"M:N\" stores a JSON array of target record ID strings (e.g. [\"id1\", \"id2\"]) in a single TEXT column (no separate physical SQL junction table is created; queries use SQLite json_each subqueries).\n"
+              },
+              "onDelete": {
+                "type": "string",
+                "enum": [
+                  "CASCADE",
+                  "SET_NULL",
+                  "RESTRICT"
+                ],
+                "description": "Action to take when a referenced target record is deleted."
+              }
+            }
+          }
+        }
+      },
+      "MoulRules": {
+        "type": "object",
+        "properties": {
+          "listRule": {
+            "type": "string",
+            "description": "Expression to authorize listing records (e.g. `@request.auth.id != \"\"`)."
+          },
+          "viewRule": {
+            "type": "string",
+            "description": "Expression to authorize viewing a single record."
+          },
+          "createRule": {
+            "type": "string",
+            "description": "Expression to authorize record creation."
+          },
+          "updateRule": {
+            "type": "string",
+            "description": "Expression to authorize record updates."
+          },
+          "deleteRule": {
+            "type": "string",
+            "description": "Expression to authorize record deletion."
+          }
+        }
+      },
+      "EmailTemplate": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "EmailTemplates": {
+        "type": "object",
+        "properties": {
+          "verification": {
+            "$ref": "#/components/schemas/EmailTemplate"
+          },
+          "password_reset": {
+            "$ref": "#/components/schemas/EmailTemplate"
+          },
+          "confirm_email_change": {
+            "$ref": "#/components/schemas/EmailTemplate"
+          },
+          "otp": {
+            "$ref": "#/components/schemas/EmailTemplate"
+          },
+          "login_alert": {
+            "$ref": "#/components/schemas/EmailTemplate"
+          }
+        }
+      },
+      "EmailConfig": {
+        "type": "object",
+        "description": "Server settings for multi-provider transactional email delivery.",
+        "properties": {
+          "email_enabled": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Master switch to enable or disable actual email dispatch."
+          },
+          "email_provider": {
+            "type": "string",
+            "enum": [
+              "console",
+              "ses",
+              "resend",
+              "mailgun",
+              "sendgrid",
+              "cloudflare"
+            ],
+            "description": "Active email delivery service driver."
+          },
+          "email_from_address": {
+            "type": "string",
+            "description": "Default sender email address (e.g. `noreply@example.com`)."
+          },
+          "email_from_name": {
+            "type": "string",
+            "description": "Default sender display name (e.g. `Moul App`)."
+          },
+          "email_api_key": {
+            "type": "string",
+            "description": "API key or AWS Access Key ID."
+          },
+          "email_api_secret": {
+            "type": "string",
+            "description": "API secret or AWS Secret Access Key."
+          },
+          "email_domain": {
+            "type": "string",
+            "description": "Domain name (for Mailgun) or Account ID (for Cloudflare)."
+          },
+          "email_region": {
+            "type": "string",
+            "description": "Region identifier (e.g. `us-east-1` for AWS SES or `us`/`eu` for Mailgun)."
+          },
+          "email_endpoint": {
+            "type": "string",
+            "description": "Custom API endpoint URL or Cloudflare Worker endpoint URL."
+          }
+        }
+      },
+      "Moul": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "base",
+              "auth",
+              "worker",
+              "analytic"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MoulField"
+            }
+          },
+          "rules": {
+            "$ref": "#/components/schemas/MoulRules"
+          },
+          "email_templates": {
+            "$ref": "#/components/schemas/EmailTemplates"
+          },
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Webhook"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique webhook identifier."
+          },
+          "url": {
+            "type": "string",
+            "description": "Target HTTP URL for webhook dispatch."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, `*`)."
+          },
+          "secret": {
+            "type": "string",
+            "description": "Optional HMAC-SHA256 secret key."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the webhook is enabled."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FileInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique file identifier prefix."
+          },
+          "filename": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "thumbhash": {
+            "type": "string"
+          },
+          "thumbs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Thumbnail resolutions dictionary mapping sizes (sm, md, lg) to URLs."
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "File size in bytes."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Upload timestamp."
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Authentication token."
+          },
+          "record": {
+            "type": "object",
+            "description": "Populated fields of the authenticated user record.",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "Visit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "visitor_token": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "referrer": {
+            "type": "string"
+          },
+          "referring_domain": {
+            "type": "string"
+          },
+          "landing_page": {
+            "type": "string"
+          },
+          "browser": {
+            "type": "string"
+          },
+          "os": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "utm_source": {
+            "type": "string"
+          },
+          "utm_medium": {
+            "type": "string"
+          },
+          "utm_term": {
+            "type": "string"
+          },
+          "utm_content": {
+            "type": "string"
+          },
+          "utm_campaign": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RequestLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "status_code": {
+            "type": "integer"
+          },
+          "response_time_ms": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeatureFlag": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "default_value": {
+            "type": "string"
+          },
+          "gates": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeatureFlagEvaluation": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "SystemStatusResponse": {
+        "type": "object",
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "uptime_seconds": {
+            "type": "integer"
+          },
+          "cpu_usage_pct": {
+            "type": "number"
+          },
+          "memory_used_bytes": {
+            "type": "integer"
+          },
+          "memory_total_bytes": {
+            "type": "integer"
+          },
+          "disk_used_bytes": {
+            "type": "integer"
+          },
+          "disk_total_bytes": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

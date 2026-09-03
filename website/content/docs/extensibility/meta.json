@@ -1,9 +1,5 @@
 {
   "title": "Extensibility & Go API",
   "root": true,
-  "pages": [
-    "custom-binary",
-    "programmatic-go",
-    "building-from-source"
-  ]
+  "pages": ["custom-binary", "programmatic-go", "building-from-source"]
 }

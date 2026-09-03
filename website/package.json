@@ -5,7 +5,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"dev": "waku dev",
-		"build": "waku build",
+		"build": "CLOUDFLARE=1 waku build",
 		"start": "waku start",
 		"types:check": "fumadocs-mdx && tsc --noEmit",
 		"postinstall": "fumadocs-mdx",

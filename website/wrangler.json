@@ -1,3 +1,26 @@
 {
-	"compatibility_flags": ["nodejs_als", "nodejs_compat"]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "moul-dev",
+	"main": "dist/server/index.js",
+	"compatibility_date": "2025-11-17",
+	"compatibility_flags": [
+		"nodejs_als",
+		"nodejs_compat"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "dist/public",
+		"html_handling": "drop-trailing-slash",
+		"not_found_handling": "404-page"
+	},
+	"rules": [
+		{
+			"type": "ESModule",
+			"globs": [
+				"**/*.js",
+				"**/*.mjs"
+			]
+		}
+	],
+	"no_bundle": true
 }

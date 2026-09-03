@@ -1,9 +1,5 @@
 {
   "title": "Getting Started",
   "root": true,
-  "pages": [
-    "quickstart",
-    "architecture",
-    "configuration"
-  ]
+  "pages": ["quickstart", "architecture", "configuration"]
 }

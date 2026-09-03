@@ -55,6 +55,8 @@ sync-docs:
 	cp -f docs/AGENTS.md website/public/AGENTS.md
 	cp -f docs/llms.txt website/public/llms.txt
 	cp -f docs/llms-full.txt website/public/llms-full.txt
+	cp -f docs/openapi.yml website/public/openapi.yml
+	cp -f docs/openapi.json website/public/openapi.json
 
 # Install Admin UI dependencies
 ui-install:

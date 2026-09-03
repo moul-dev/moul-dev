@@ -34,3 +34,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     </DocsLayout>
   );
 }
+
+export async function getConfig() {
+  return {
+    render: "static",
+  } as const;
+}
