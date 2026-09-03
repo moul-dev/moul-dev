@@ -4,6 +4,7 @@ import { esmExternalRequirePlugin, perEnvironmentPlugin } from "vite";
 import { defineConfig } from "waku/config";
 
 export default defineConfig({
+  unstable_adapter: "waku/adapters/node",
   vite: {
     resolve: {
       tsconfigPaths: true,

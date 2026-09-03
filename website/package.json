@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "waku dev",
 		"build": "waku build",
+		"postbuild": "rm -rf .wrangler dist/server/wrangler.json",
 		"deploy": "wrangler pages deploy",
 		"start": "waku start",
 		"types:check": "fumadocs-mdx && tsc --noEmit",
