@@ -2,7 +2,7 @@ import { devlog, docs } from "collections/server";
 import { loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { toFumadocsSource } from "fumadocs-mdx/runtime/server";
-import { docsContentRoute, docsImageRoute, docsRoute } from "./shared";
+import { docsContentRoute, docsRoute } from "./shared";
 
 export const source = loader({
   source: docs.toFumadocsSource(),
@@ -15,31 +15,63 @@ export const devlogSource = loader({
   baseUrl: "/devlog",
 });
 
-export function getPageImage(slugs: string[]) {
-  const segments = [...slugs, "image.webp"];
-
-  return {
-    segments,
-    url: `${docsImageRoute}/${segments.join("/")}`,
-  };
+export interface OgImageOptions {
+  target?: "x" | "facebook";
+  hideAuthor?: boolean;
+  authorName?: string;
+  authorRole?: string;
+  avatar?: string;
 }
 
 export function getDevlogPageImage(
   title: string,
   description?: string,
-  target?: "x" | "facebook",
+  targetOrOptions?: "x" | "facebook" | OgImageOptions,
+  hideAuthor = true,
 ) {
+  const options: OgImageOptions =
+    typeof targetOrOptions === "string"
+      ? { target: targetOrOptions, hideAuthor }
+      : { hideAuthor: true, ...targetOrOptions };
+
   const formattedTitle = title.replace(/\bMoul\b/g, "{Moul|00CEE1}");
   const url = new URL("https://og.moul.dev/devlog");
   url.searchParams.set("title", formattedTitle);
   if (description) {
     url.searchParams.set("subtitle", description);
   }
-  if (target) {
-    url.searchParams.set("target", target);
+  if (options.target) {
+    url.searchParams.set("target", options.target);
+  }
+  if (options.hideAuthor ?? true) {
+    url.searchParams.set("hide_author", "true");
+  } else {
+    if (options.authorName) {
+      url.searchParams.set("author_name", options.authorName);
+    }
+    if (options.authorRole) {
+      url.searchParams.set("author_role", options.authorRole);
+    }
+    if (options.avatar) {
+      url.searchParams.set("avatar", options.avatar);
+    }
   }
   return {
     url: url.toString(),
+  };
+}
+
+export function getPageImage(
+  slugs: string[],
+  targetOrOptions?: "x" | "facebook" | OgImageOptions,
+) {
+  const page = source.getPage(slugs);
+  const title = page?.data.title ?? "Moul Documentation";
+  const description = page?.data.description;
+
+  return {
+    segments: [...slugs, "image.webp"],
+    ...getDevlogPageImage(title, description, targetOrOptions, true),
   };
 }
 

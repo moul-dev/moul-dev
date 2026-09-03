@@ -7,7 +7,6 @@ export default defineConfig({
   vite: {
     resolve: {
       tsconfigPaths: true,
-      external: ["@takumi-rs/image-response"],
       dedupe: ["react", "react-dom", "waku"],
     },
     build: {

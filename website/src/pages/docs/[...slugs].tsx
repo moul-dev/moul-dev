@@ -21,7 +21,9 @@ export default function Page({ slugs }: PageProps<"/docs/[...slugs]">) {
   const markdownUrl = getPageMarkdownUrl(page).url;
   return (
     <DocsPage toc={page.data.toc}>
-      <meta property="og:image" content={getPageImage(slugs).url} />
+      <meta property="og:image" content={getPageImage(slugs, "facebook").url} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:image" content={getPageImage(slugs, "x").url} />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">
         {page.data.description}
