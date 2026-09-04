@@ -19,6 +19,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 
 // Feature Card Wrapper with Spotlight Hover effect
 function FeatureCard({
@@ -608,7 +609,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ម៉ាស៊ីន REST API និងទម្រង់ទិន្នន័យឌីណាមិក"
                 : "Dynamic REST API & Schema Engine"}
             </h3>
-            <p className="text-sm text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "បង្កើត និងរៀបចំទម្រង់បណ្ដុំទិន្នន័យ (Collections) ពេលកំពុងដំណើរការតាមរយៈ HTTP ឬ TUI។ ផ្ដល់ជូនភ្លាមៗនូវ Endpoints ប្រភេទ CRUD ប្រកបដោយសុវត្ថិភាពប្រភេទកូដ (Type-safe) ជាមួយវិធានកំណត់សិទ្ធិដូច HCL ទំនាក់ទំនងទិន្នន័យស្វ័យប្រវត្តិ និងឯកសារ OpenAPI រួមបញ្ចូលស្រេច។"
                 : "Define collections at runtime via HTTP or TUI. Instant type-safe CRUD endpoints with HCL-style authorization rules, automated relations, and built-in OpenAPI docs."}
@@ -633,7 +639,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ម៉ាស៊ីនដំណើរការការងារផ្ទៃខាងក្រោយ"
                 : "Background Worker Engine"}
             </h3>
-            <p className="text-sm text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "ជួរការងារអសមកាលកម្មសមត្ថភាពខ្ពស់លើ SQLite សុទ្ធ។ គ្រប់គ្រងជួរការងារតាមលំដាប់អាទិភាព ការសាកល្បងម្ដងទៀតតាម Exponential Backoff និងការបញ្ជូនការងារក្នុង Transaction ដោយមិនបាច់ពឹងផ្អែកលើ Redis។"
                 : "High-throughput async job queues in pure SQLite. Priority queues, exponential backoff retries, and transactional dispatch without Redis."}
@@ -658,7 +669,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ការផ្ទៀងផ្ទាត់ភាពត្រឹមត្រូវទំនើប & ពហុកត្តា"
                 : "Multi-Factor & Modern Auth"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "WebAuthn Passkeys, Email OTP, OAuth2 (GitHub, Google, Apple) និង Device Flow រួមជាមួយសម័យ JWT (JWT sessions)។"
                 : "WebAuthn Passkeys, Email OTP, OAuth2 (GitHub, Google, Apple), and Device Flow with JWT sessions."}
@@ -683,7 +699,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ប្រព័ន្ធតាមដាន និងវិភាគទិន្នន័យផ្ទាល់ខ្លួន"
                 : "First-Party Analytics & Tracking"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "ការបន្សុទ្ធសម័យទិន្នន័យ និងការប្រមូលរង្វាស់សំណើជាក្រុមបែបអសមកាលកម្ម ជាមួយការកំណត់ទីតាំង GeoIP និង UTM ដោយស្វ័យប្រវត្តិ។"
                 : "Session deduplication and async request metrics batching with automated GeoIP and UTM resolution."}
@@ -708,7 +729,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ការជាវទិន្នន័យពេលវេលាជាក់ស្ដែង"
                 : "Real-Time Record Subscriptions"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "បញ្ជូនបម្រែបម្រួលទិន្នន័យបន្តផ្ទាល់ទៅកាន់ផ្ទាំងខាងមុខ (Frontend) តាមរយៈ Server-Sent Events ប្រកបដោយការផ្ទៀងផ្ទាត់វិធានសុវត្ថិភាព។"
                 : "Stream live database mutations directly to frontends over Server-Sent Events with rule validation."}
@@ -733,7 +759,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "Feature Flags និងការដាក់ឱ្យប្រើជាដំណាក់កាល"
                 : "Feature Flags & Rollouts"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "OpenFeature Go SDK provider ជាមួយវិធានក្រុមឌីណាមិក ការដាក់ឱ្យប្រើតាមភាគរយ និងការគណនាដោយទាញពីឃ្លាំងសម្ងាត់ (Cache)។"
                 : "OpenFeature Go SDK provider with dynamic group rules, percentage rollouts, and cached evaluations."}
@@ -756,7 +787,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
             <h3 className="text-lg font-bold text-fd-foreground mb-1.5">
               {isKm ? "ម៉ាស៊ីនបម្រើ MCP រួមបញ្ចូលស្រេច" : "Native MCP Server"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "ម៉ាស៊ីនបម្រើ Model Context Protocol សម្រាប់ AI Assistants (Claude Desktop, Cursor) តាមរយៈ stdio និង HTTP SSE។"
                 : "Model Context Protocol server for AI assistants (Claude Desktop, Cursor) over stdio and HTTP SSE."}
@@ -781,7 +817,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ការចម្លងទិន្នន័យទៅកាន់ S3 ជាមួយ Litestream"
                 : "Litestream S3 Replication"}
             </h3>
-            <p className="text-xs text-fd-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground leading-relaxed",
+              )}
+            >
               {isKm
                 ? "ការចម្លង SQLite WAL ទៅកាន់ S3, Cloudflare R2, MinIO ឬ Tigris ជាបន្តបន្ទាប់រៀងរាល់វិនាទី។"
                 : "Continuous per-second SQLite WAL replication to S3, Cloudflare R2, MinIO, or Tigris."}
@@ -800,7 +841,12 @@ export function FeaturesGrid({ lang = "en" }: { lang?: string } = {}) {
                 ? "ត្រៀមខ្លួនគ្រប់គ្រង Backend របស់អ្នកដោយផ្ទាល់ហើយឬនៅ?"
                 : "Ready to take complete control of your backend?"}
             </h3>
-            <p className="text-sm text-fd-muted-foreground max-w-xl">
+            <p
+              className={cn(
+                isKm ? "text-base" : "text-sm",
+                "text-fd-muted-foreground max-w-xl",
+              )}
+            >
               {isKm
                 ? "ដំឡើង binary ដែលមានទម្ងន់ស្រាលលើម៉ាស៊ីនបម្រើ, VM ឬកុំព្យូទ័ររបស់អ្នកក្នុងរយៈពេលប៉ុន្មានវិនាទី។"
                 : "Install the lightweight binary on any server, VM, or local machine in seconds."}

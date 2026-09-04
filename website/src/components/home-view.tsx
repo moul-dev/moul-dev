@@ -2,6 +2,7 @@ import { CopyBlock } from "@/components/copy-block";
 import { DodecahedronLogo } from "@/components/dodecahedron-logo";
 import { FeaturesGrid } from "@/components/features-grid";
 import { InteractiveGrid } from "@/components/interactive-grid";
+import { cn } from "@/lib/cn";
 
 export function HomeView({ lang = "en" }: { lang?: string }) {
   const isKm = lang === "km";
@@ -67,7 +68,12 @@ export function HomeView({ lang = "en" }: { lang?: string }) {
             </div>
 
             {/* Heading */}
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-6xl max-w-3xl mx-auto lg:mx-0 leading-[1.15] mb-8">
+            <h1
+              className={cn(
+                "text-2xl font-extrabold tracking-tight sm:text-6xl max-w-3xl mx-auto lg:mx-0 mb-8",
+                isKm ? "leading-[1.5]" : "leading-[1.15]",
+              )}
+            >
               <span className="block text-fd-foreground mb-4 sm:mb-0">
                 {isKm ? "ប្រើប្រាស់ Compute ផ្ទាល់ខ្លួន" : "Bring Your Own Compute."}
               </span>
