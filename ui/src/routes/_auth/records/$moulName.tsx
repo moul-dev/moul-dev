@@ -25,6 +25,7 @@ import {
   CodeIcon,
   ListBulletsIcon,
   InfoIcon,
+  DownloadSimpleIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -65,6 +66,8 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
+import { ExportModal } from '../../../components/records/ExportModal';
+import { ImportModal } from '../../../components/records/ImportModal';
 
 const recordsSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -856,6 +859,8 @@ function RecordsPage() {
   const [recordToDelete, setRecordToDelete] = useState<any | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
 
@@ -1210,10 +1215,20 @@ function RecordsPage() {
             Explore records data grid, click any Record ID to view and modify details, or retry worker tasks.
           </span>
         </div>
-        <Button variant="primary" onPress={handleOpenCreate}>
-          <PlusIcon size={16} />
-          <span>New Record</span>
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+          <Button variant="outline" onPress={() => setIsExportOpen(true)}>
+            <DownloadSimpleIcon size={16} />
+            <span>Export</span>
+          </Button>
+          <Button variant="outline" onPress={() => setIsImportOpen(true)}>
+            <UploadSimpleIcon size={16} />
+            <span>Import</span>
+          </Button>
+          <Button variant="primary" onPress={handleOpenCreate}>
+            <PlusIcon size={16} />
+            <span>New Record</span>
+          </Button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -2046,6 +2061,26 @@ function RecordsPage() {
           </AlertDialog>
         </Modal>
       </ModalOverlay>
+
+      {/* EXPORT MODAL */}
+      <ExportModal
+        isOpen={isExportOpen}
+        onOpenChange={setIsExportOpen}
+        moulName={moulName}
+        activeFilter={search.filter}
+        activeSearch={search.search}
+        totalRecords={totalItems}
+      />
+
+      {/* IMPORT MODAL */}
+      <ImportModal
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        moulName={moulName}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+        }}
+      />
     </div>
   );
 }

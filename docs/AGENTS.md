@@ -203,6 +203,7 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 
 `moul` includes built-in commands for rapid local iteration, type safety, and testing:
 
+- **Data Import & Export**: `moul export <collection> [--format=csv|json] [--out=file]` and `moul import <collection> <file> [--mode=upsert|insert|replace]` for bulk CSV and JSON data transfers.
 - **Database Seeding**: `moul seed` (or `make seed`) populates demo collections, records, and feature flags.
 - **TypeScript Type Generation**: `moul typegen --out ui/src/types/schema.d.ts` (or `make typegen`) extracts schema definitions into strict TypeScript interfaces.
 - **Rule Expression Testing**: `moul test-rule --rule="<rule>" --record='{...}' --auth='{...}'` validates and benchmarks rules.

@@ -3,12 +3,14 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/moul-dev/moul-dev/internal/dataio"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -168,6 +170,16 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 				m.collectionActiveTab = 0
 				return m.fetchRecords()
 			}
+		case "x":
+			// Export collection records
+			m.initExportForm()
+			m.State = StateExportForm
+			return m.ExportForm.Init()
+		case "i":
+			// Import records into collection
+			m.initImportForm()
+			m.State = StateImportForm
+			return m.ImportForm.Init()
 		case "r":
 			// Refresh
 			return m.fetchRecords()
@@ -188,8 +200,27 @@ func (m *Model) updateRecordList(msg tea.Msg) tea.Cmd {
 		m.Records = msg.records
 		m.SelectedRecordIndex = 0
 		m.SuccessMsg = "Record deleted successfully!"
+	case exportSuccessMsg:
+		m.State = StateRecordList
+		m.SuccessMsg = fmt.Sprintf("Exported %s records to %s (%d bytes)", msg.collection, msg.path, msg.bytes)
+		return nil
+	case importSuccessMsg:
+		m.State = StateRecordList
+		m.SuccessMsg = fmt.Sprintf("Imported %d records! Inserted: %d, Updated: %d, Skipped: %d", msg.result.Total, msg.result.Inserted, msg.result.Updated, msg.result.Skipped)
+		return m.fetchRecords()
 	}
 	return nil
+}
+
+type exportSuccessMsg struct {
+	collection string
+	path       string
+	bytes      int
+}
+
+type importSuccessMsg struct {
+	collection string
+	result     *dataio.ImportResult
 }
 
 type recordDeletedMsg struct {
@@ -321,7 +352,7 @@ func (m *Model) viewRecordList() string {
 	}
 
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [>] Next  [<] Prev  [/] Search  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [r] Refresh  [Esc] Back"))
+	s.WriteString(HelpStyle.Render(" ↑/↓: Scroll  [>] Next  [<] Prev  [/] Search  [v/Enter] View  [n] New  [e] Edit  [d] Delete  [x] Export  [i] Import  [r] Refresh  [Esc] Back"))
 
 	return ContentStyle.Width(m.Width).Render(s.String())
 }
@@ -757,4 +788,135 @@ func (m *Model) getExpandFields(moul *schema.Moul) []string {
 		}
 	}
 	return expandList
+}
+
+func (m *Model) initExportForm() {
+	moul := m.currentMoul()
+	if moul == nil {
+		return
+	}
+	m.exportFormat = "json"
+	m.exportPath = fmt.Sprintf("%s-export.json", moul.Name)
+	m.exportSchema = true
+
+	m.ExportForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Export Format").
+				Options(
+					huh.NewOption("JSON (Structured records)", "json"),
+					huh.NewOption("CSV (RFC 4180 spreadsheet)", "csv"),
+				).
+				Value(&m.exportFormat),
+			huh.NewInput().
+				Title("Destination File Path").
+				Description("Local path where exported records will be saved").
+				Value(&m.exportPath),
+			huh.NewConfirm().
+				Title("Include Schema Definition Envelope").
+				Description("Only applies to JSON export format").
+				Value(&m.exportSchema),
+		),
+	).WithTheme(ThemeCustom)
+}
+
+func (m *Model) handleExportSubmit() tea.Cmd {
+	moul := m.currentMoul()
+	if moul == nil {
+		m.State = StateRecordList
+		return nil
+	}
+
+	targetPath := strings.TrimSpace(m.exportPath)
+	if targetPath == "" {
+		targetPath = fmt.Sprintf("%s-export.%s", moul.Name, m.exportFormat)
+	}
+
+	return func() tea.Msg {
+		data, err := m.Client.ExportRecords(moul.Name, m.exportFormat, m.exportSchema)
+		if err != nil {
+			return ErrMsg{err}
+		}
+		if err := os.WriteFile(targetPath, data, 0644); err != nil {
+			return ErrMsg{fmt.Errorf("failed to save file %s: %w", targetPath, err)}
+		}
+		return exportSuccessMsg{
+			collection: moul.Name,
+			path:       targetPath,
+			bytes:      len(data),
+		}
+	}
+}
+
+func (m *Model) initImportForm() {
+	moul := m.currentMoul()
+	if moul == nil {
+		return
+	}
+	m.importPath = ""
+	m.importFormat = "json"
+	m.importMode = "upsert"
+	m.importOnError = "atomic"
+
+	m.ImportForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Source File Path").
+				Description("Path to .csv or .json file to import").
+				Value(&m.importPath),
+			huh.NewSelect[string]().
+				Title("Format").
+				Options(
+					huh.NewOption("JSON", "json"),
+					huh.NewOption("CSV", "csv"),
+				).
+				Value(&m.importFormat),
+			huh.NewSelect[string]().
+				Title("Conflict Strategy (Mode)").
+				Options(
+					huh.NewOption("Upsert (Update matching ID, insert new)", "upsert"),
+					huh.NewOption("Insert Only (Error on duplicate ID)", "insert"),
+					huh.NewOption("Replace (Truncate collection first)", "replace"),
+				).
+				Value(&m.importMode),
+			huh.NewSelect[string]().
+				Title("Error Handling Strategy").
+				Options(
+					huh.NewOption("Atomic (Rollback entire batch on error)", "atomic"),
+					huh.NewOption("Continue (Skip invalid rows & report errors)", "continue"),
+				).
+				Value(&m.importOnError),
+		),
+	).WithTheme(ThemeCustom)
+}
+
+func (m *Model) handleImportSubmit() tea.Cmd {
+	moul := m.currentMoul()
+	if moul == nil {
+		m.State = StateRecordList
+		return nil
+	}
+
+	srcPath := strings.TrimSpace(m.importPath)
+	if srcPath == "" {
+		m.State = StateRecordList
+		return nil
+	}
+
+	return func() tea.Msg {
+		fileBytes, err := os.ReadFile(srcPath)
+		if err != nil {
+			return ErrMsg{fmt.Errorf("failed to read file %s: %w", srcPath, err)}
+		}
+
+		res, err := m.Client.ImportRecords(moul.Name, m.importFormat, m.importMode, m.importOnError, fileBytes)
+		if err != nil {
+			return ErrMsg{err}
+		}
+
+		return importSuccessMsg{
+			collection: moul.Name,
+			result:     res,
+		}
+	}
 }

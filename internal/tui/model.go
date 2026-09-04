@@ -40,6 +40,8 @@ const (
 	StateFeatureFlagEval
 	StateSystemMonitor
 	StateWebhookForm
+	StateExportForm
+	StateImportForm
 )
 
 // Model is the main state container for the moul TUI.
@@ -96,6 +98,16 @@ type Model struct {
 	AnalyticsLoginForm *huh.Form
 	MoulForm           *huh.Form
 	WebhookForm        *huh.Form
+	ExportForm         *huh.Form
+	ImportForm         *huh.Form
+
+	exportFormat  string
+	exportPath    string
+	exportSchema  bool
+	importPath    string
+	importFormat  string
+	importMode    string
+	importOnError string
 
 	// Analytics Login Data
 	analyticsEmail     string
@@ -754,6 +766,40 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.saveRecordForm()
 		}
 
+	case StateExportForm:
+		if kp, ok := msg.(tea.KeyPressMsg); ok && kp.String() == "esc" {
+			m.State = StateRecordList
+			return m, nil
+		}
+		if m.ExportForm != nil {
+			newForm, cmd := m.ExportForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.ExportForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.ExportForm.State == huh.StateCompleted {
+				return m, m.handleExportSubmit()
+			}
+		}
+
+	case StateImportForm:
+		if kp, ok := msg.(tea.KeyPressMsg); ok && kp.String() == "esc" {
+			m.State = StateRecordList
+			return m, nil
+		}
+		if m.ImportForm != nil {
+			newForm, cmd := m.ImportForm.Update(msg)
+			if f, ok := newForm.(*huh.Form); ok {
+				m.ImportForm = f
+			}
+			cmds = append(cmds, cmd)
+
+			if m.ImportForm.State == huh.StateCompleted {
+				return m, m.handleImportSubmit()
+			}
+		}
+
 	case StateMoulCreate:
 		switch m.moulWizardState {
 		case "metadata":
@@ -1286,6 +1332,16 @@ func (m *Model) renderBreadcrumbs() string {
 		}
 	case StateFeatureFlagEval:
 		crumbs = append(crumbs, "System", "Feature Flags", "Evaluate Flag")
+	case StateExportForm:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Export")
+		}
+	case StateImportForm:
+		crumbs = append(crumbs, "Collections")
+		if moul := m.currentMoul(); moul != nil {
+			crumbs = append(crumbs, moul.Name, "Import")
+		}
 	}
 
 	var formatted []string
@@ -1332,6 +1388,14 @@ func (m *Model) View() tea.View {
 	case StateWebhookForm:
 		if m.WebhookForm != nil {
 			content = m.WebhookForm.View()
+		}
+	case StateExportForm:
+		if m.ExportForm != nil {
+			content = m.ExportForm.View()
+		}
+	case StateImportForm:
+		if m.ImportForm != nil {
+			content = m.ImportForm.View()
 		}
 	case StateEmailTemplateEdit:
 		content = m.viewEmailTemplateEdit()

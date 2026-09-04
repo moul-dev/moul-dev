@@ -128,6 +128,8 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - `DELETE /api/moul/:name/records/:id`: Delete record by ID.
 - `GET /api/moul/:name/subscribe`: Real-time record subscription stream (SSE) for collection updates (`event`, `id`, `token` query params). Governed by `subscribeRule` / `listRule`.
 - `GET /api/moul/subscribe`: Global real-time record subscription stream (SSE) across collections (`?mouls=posts,comments`).
+- `GET /api/moul/:name/export`: Export records in CSV or JSON format (`?format=csv|json&schema=true`). Admin requests only (`X-Admin-Key` or root user JWT).
+- `POST /api/moul/:name/import`: Import records from CSV or JSON payload (`?mode=upsert|insert|replace&error_strategy=atomic|continue`). Supports multipart/form-data (`file` field) or direct payload (`Content-Type: text/csv` or `application/json`). Admin requests only.
 
 ### Authentication Endpoints (For `auth` type collections)
 - `POST /api/moul/:name/auth-with-password`: Login with username/email & password.
@@ -219,6 +221,44 @@ func main() {
 
 	moulApp.Start(context.Background())
 }
+```
+
+---
+
+## 9. Essential CLI Commands
+
+```bash
+# Start HTTP engine server (default port 8090)
+moul start
+
+# Seed database with realistic collections, demo records, and feature flags
+moul seed
+
+# Export collection records to CSV or JSON
+moul export posts --format=csv --out=posts.csv
+moul export posts --format=json --out=posts.json --schema
+
+# Import collection records from CSV or JSON
+moul import posts posts.csv --mode=upsert
+moul import posts posts.json --mode=replace --error-strategy=continue
+
+# Generate TypeScript type definitions from collection schemas
+moul typegen --out ui/src/types/schema.d.ts
+
+# Test and validate a rule expression against mock record/auth context
+moul test-rule --rule="author_id = @request.auth.id" --record='{"author_id": "usr_1"}' --auth='{"id": "usr_1"}'
+
+# Manage worker jobs / retry dead-letter queue (DLQ)
+moul worker retry tasks_queue [job_id]
+moul worker list-failed tasks_queue
+
+# Start built-in MCP server over stdio
+moul mcp
+
+# Launch Bubble Tea TUI Admin Console
+moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
+# Or via convenience subcommand in moul:
+moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 ```
 
 ---

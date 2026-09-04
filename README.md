@@ -15,6 +15,8 @@
   - [Environment Configuration](#environment-configuration)
   - [Run Local Server](#run-local-server)
   - [Live Reloading (Hot Reload)](#live-reloading-hot-reload)
+  - [Database Seeding & Mock Fixtures](#database-seeding--mock-fixtures)
+  - [Data Import & Export (CSV & JSON)](#data-import--export-csv--json)
   - [Local S3 Storage (MinIO)](#local-s3-storage-minio)
   - [Testing & Verification Flows](#testing--verification-flows)
 - [Documentation & API Specification (`/docs`)](#documentation--api-specification-docs)
@@ -63,6 +65,7 @@
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
 13. **Real-time SSE Record Subscriptions**: High-performance, lock-optimized Server-Sent Events (SSE) subscriptions via `GET /api/moul/:name/subscribe`. Frontend clients react instantly to record changes (`create`, `update`, `delete`) without polling, complete with event filtering, single-record targeting, and `subscribeRule` security checks.
 14. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`moul mcp`) and HTTP SSE (`/api/mcp`).
+15. **Data Import & Export (CSV & JSON)**: Full-fidelity per-collection data import and export supporting RFC 4180 CSV and JSON formats, schema envelopes, configurable conflict modes (`upsert`, `insert`, `replace`), atomic or continue-on-error strategies, and unified support across the CLI (`moul export` / `moul import`), Web Admin Console, and TUI (`moul-ctl`).
 
 ---
 
@@ -168,6 +171,26 @@ go run cmd/moul/main.go worker list-failed tasks_queue
 
 # Retry all failed jobs (or a specific job by ID)
 go run cmd/moul/main.go worker retry tasks_queue [optional_job_id]
+```
+
+### Data Import & Export (CSV & JSON)
+
+Export collection records or import new data directly via the CLI with support for CSV (RFC 4180) and JSON (with optional schema envelopes):
+
+```bash
+# Export collection records to CSV or JSON (local SQLite)
+moul export posts --format=csv --out=posts.csv
+moul export posts --format=json --out=posts.json --schema
+
+# Export from a remote moul server via Admin Key
+moul export posts --server=http://localhost:8090 --admin-key=test-admin-key-1234 --format=json --out=posts.json
+
+# Import records into a collection with conflict resolution
+moul import posts posts.csv --mode=upsert
+moul import posts posts.json --mode=replace --error-strategy=continue
+
+# Import into a remote moul server
+moul import posts posts.csv --server=http://localhost:8090 --admin-key=test-admin-key-1234 --mode=upsert
 ```
 
 ### Local S3 Storage (MinIO)
@@ -276,6 +299,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 - **Background Worker Engine & Jobs Queue Monitor**: Real-time worker jobs queue table with status filters (`available`, `executing`, `completed`, `retryable`, `discarded`), execution attempt metrics, job payload inspector drawer, and instant **Retry** and **Discard** actions.
 - **Visual Telemetry & Analytics Dashboard**: Built-in interactive **AreaChart** (requests over time categorized by success vs error) and **TopList** (top endpoints & referrers) powered by `@moul-dev/ui` alongside live server latency, throughput, and error rate stats.
 - **Real-Time Stream Viewer**: Server-Sent Events (SSE) listener integrated with `@moul-dev/ui`'s high-performance **`Logs` stream viewer** with syntax highlighting, search/level filters, drawer payload inspector, and auto-scroll follow.
+- **Data Import & Export Modals**: Accessible `@moul-dev/ui` modals for records with drag-and-drop file upload, CSV & JSON format auto-detection, schema envelope controls, conflict mode selectors (`upsert`, `insert`, `replace`), and atomic/continue error handling with detailed row error breakdown.
 - **Feature Flag Evaluation Playground**: Live evaluation sandbox to test flag targeting gates, percentage rollouts, and actor/group targeting rules against customizable JSON contexts with instant reason code breakdowns.
 - **Settings Unsaved State Protection**: Form divergence tracking (`isDirty`) with visual warning badges and `AlertDialog` confirmation guards protecting against accidental loss when configuring S3, Litestream, rate limits, OAuth, or email.
 - **Actionable Dashboard & Live Collection Metrics**: Engine overview with live record count badges per schema and quick "+ New Record" actions.
@@ -379,6 +403,8 @@ Credentials and connection state are securely saved to `~/.config/moul.json` (wi
 | | `>` / `<` (or `.` / `,`) | Next / Previous page |
 | | `/` | Activate live search & filter query |
 | | `Enter` / `v` | Inspect detailed JSON payload |
+| | `x` | Export collection records (CSV / JSON) |
+| | `i` | Import collection records (interactive form) |
 | | `n` | Create new record |
 | | `e` | Edit selected record |
 | | `d` | Delete selected record |

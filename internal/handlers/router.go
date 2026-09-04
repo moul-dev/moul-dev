@@ -108,6 +108,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	webhookHandler := NewWebhookHandler(dbConn)
 	realtimeHandler := NewRealtimeHandler(dbConn)
 	rulesTestHandler := NewRulesTestHandler(dbConn)
+	exportImportHandler := NewExportImportHandler(dbConn)
 
 	// Built-in MCP Server
 	mcpServer := moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
@@ -185,6 +186,8 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	adminGroup.DELETE("/:name/webhooks/:id", webhookHandler.DeleteWebhook)
 	adminGroup.POST("/:name/webhooks/:id/test", webhookHandler.TestWebhook)
 	adminGroup.POST("/:name/webhooks/test", webhookHandler.TestWebhook)
+	adminGroup.GET("/:name/export", exportImportHandler.ExportRecords)
+	adminGroup.POST("/:name/import", exportImportHandler.ImportRecords)
 
 	// Admin settings management (Admin-protected)
 	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAuthOrAdmin(adminKey))

@@ -21,6 +21,7 @@ Accessed at `http://localhost:8090/_moul_/` (or your production domain).
 - **Frontend Stack**: Built on **Moul UI (`@moul-dev/ui`)**, **React Aria Components**, and **StyleX** for atomic compile-time CSS-in-JS.
 - **Visual Schema Designer**: Drag-and-drop field modeling, real-time expression validator, and relationship configuration.
 - **Data Browser & Grid**: Full-screen paginated record explorer with dynamic filtering, sorting, and inline editing.
+- **Data Import & Export**: One-click CSV and JSON export modals (with schema envelope toggle) and drag-and-drop import modal with format auto-detection, conflict modes (`upsert`, `insert`, `replace`), and detailed error reporting.
 - **Live Worker Queue Monitor**: Inspect running jobs, retry failed items from DLQ, or discard pending tasks.
 - **Telemetry Charts**: Interactive request latency, throughput, and error rate graphs.
 - **Real-Time Stream Viewer**: Server-Sent Events (SSE) live logs viewer with syntax highlighting and auto-follow.
@@ -83,6 +84,8 @@ moul ctl
 | | `>` / `<` | Next / Previous page |
 | | `/` | Activate live search & filter query |
 | | `Enter` / `v` | Inspect JSON payload |
+| | `x` | Export collection records (CSV / JSON) |
+| | `i` | Import collection records (interactive form) |
 | | `n` | Create new record |
 | | `e` | Edit selected record |
 | | `d` | Delete selected record |

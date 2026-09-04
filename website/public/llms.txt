@@ -56,6 +56,13 @@ moul start
 # Seed database with realistic collections, demo records, and feature flags
 moul seed
 
+# Export collection records to CSV or JSON
+moul export posts --format=csv --out=posts.csv
+moul export posts --format=json --out=posts.json --schema
+
+# Import collection records from CSV or JSON
+moul import posts posts.csv --mode=upsert
+
 # Generate TypeScript type definitions from collection schemas
 moul typegen --out ui/src/types/schema.d.ts
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/dataio"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 )
@@ -529,4 +530,72 @@ func (c *Client) TestWebhook(moulName string, hookID string) (map[string]interfa
 	path := fmt.Sprintf("/api/moul/%s/webhooks/%s/test", moulName, hookID)
 	err := c.request("POST", path, nil, &res)
 	return res, err
+}
+
+// ExportRecords streams records from a collection as raw bytes (CSV or JSON).
+func (c *Client) ExportRecords(moulName, format string, includeSchema bool) ([]byte, error) {
+	path := fmt.Sprintf("/api/moul/%s/export?format=%s", url.PathEscape(moulName), url.QueryEscape(format))
+	if includeSchema {
+		path += "&includeSchema=true"
+	}
+	urlStr := fmt.Sprintf("%s%s", c.BaseURL, path)
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create export request: %w", err)
+	}
+	if c.AdminKey != "" {
+		req.Header.Set("X-Admin-Key", c.AdminKey)
+	}
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("export request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("export failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+	return io.ReadAll(resp.Body)
+}
+
+// ImportRecords uploads data payload (CSV or JSON) to import records into a collection.
+func (c *Client) ImportRecords(moulName, format, mode, onError string, data []byte) (*dataio.ImportResult, error) {
+	path := fmt.Sprintf("/api/moul/%s/import?mode=%s&onError=%s&format=%s",
+		url.PathEscape(moulName), url.QueryEscape(mode), url.QueryEscape(onError), url.QueryEscape(format))
+	urlStr := fmt.Sprintf("%s%s", c.BaseURL, path)
+	req, err := http.NewRequest("POST", urlStr, bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create import request: %w", err)
+	}
+	if format == "csv" {
+		req.Header.Set("Content-Type", "text/csv")
+	} else {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if c.AdminKey != "" {
+		req.Header.Set("X-Admin-Key", c.AdminKey)
+	}
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("import request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read import response: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("import failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+	var result dataio.ImportResult
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse import result: %w", err)
+	}
+	return &result, nil
 }

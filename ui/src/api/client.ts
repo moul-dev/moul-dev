@@ -270,6 +270,88 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ ids: ids || [] }),
     }),
+  exportRecords: async (
+    name: string,
+    options?: {
+      format?: 'csv' | 'json';
+      includeSchema?: boolean;
+      filter?: string;
+      sort?: string;
+    }
+  ) => {
+    const format = options?.format || 'json';
+    const query = new URLSearchParams();
+    query.set('format', format);
+    if (options?.includeSchema) query.set('includeSchema', 'true');
+    if (options?.filter) query.set('filter', options.filter);
+    if (options?.sort) query.set('sort', options.sort);
+
+    const url = `/api/moul/${name}/export?${query.toString()}`;
+    const token = getAuthToken();
+    const adminKey = getStoredAdminKey();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (adminKey) headers['X-Admin-Key'] = adminKey;
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Export failed with status ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    const timestamp = new Date().toISOString().slice(0, 10);
+    a.download = `${name}-records-${timestamp}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+  },
+  importRecords: async (
+    name: string,
+    file: File,
+    options?: {
+      mode?: 'upsert' | 'insert' | 'replace';
+      onError?: 'atomic' | 'continue';
+      format?: 'csv' | 'json';
+    }
+  ): Promise<{
+    success: boolean;
+    mode: string;
+    total: number;
+    inserted: number;
+    updated: number;
+    skipped: number;
+    errors?: Array<{ row: number; id?: string; message: string }>;
+  }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options?.mode) formData.append('mode', options.mode);
+    if (options?.onError) formData.append('onError', options.onError);
+    if (options?.format) formData.append('format', options.format);
+
+    const url = `/api/moul/${name}/import`;
+    const token = getAuthToken();
+    const adminKey = getStoredAdminKey();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (adminKey) headers['X-Admin-Key'] = adminKey;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || data.error || `Import failed with status ${res.status}`);
+    }
+    return data;
+  },
   uploadFile: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

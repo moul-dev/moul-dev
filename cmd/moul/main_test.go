@@ -189,3 +189,23 @@ func TestGetDBPath(t *testing.T) {
 		t.Errorf("Expected equal-test.db, got %s", p)
 	}
 }
+
+func TestParseFlagStringAndHasFlag(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	os.Args = []string{"moul", "export", "posts", "--format", "csv", "--schema", "--out=data.csv"}
+
+	if fmtVal := parseFlagString("--format"); fmtVal != "csv" {
+		t.Errorf("expected format to be csv, got %s", fmtVal)
+	}
+	if outVal := parseFlagString("--out"); outVal != "data.csv" {
+		t.Errorf("expected out to be data.csv, got %s", outVal)
+	}
+	if !hasFlag("--schema") {
+		t.Errorf("expected hasFlag(--schema) to be true")
+	}
+	if hasFlag("--missing") {
+		t.Errorf("expected hasFlag(--missing) to be false")
+	}
+}

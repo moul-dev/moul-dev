@@ -2,6 +2,8 @@ package tui
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -102,5 +104,54 @@ func TestConfigLoadSave(t *testing.T) {
 	}
 	if migratedKey != cfg.AdminKey {
 		t.Errorf("Expected migrated AdminKey %q, got %q", cfg.AdminKey, migratedKey)
+	}
+}
+
+func TestTUIClientExportImport(t *testing.T) {
+	mockExportData := `[{"id":"1","title":"Test Record"}]`
+	mockImportRes := `{"success":true,"total":1,"inserted":1,"updated":0,"skipped":0}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Admin-Key") != "secret-admin" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/moul/posts/export") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(mockExportData))
+			return
+		}
+
+		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/moul/posts/import") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(mockImportRes))
+			return
+		}
+
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "secret-admin")
+
+	// 1. Test Export
+	data, err := client.ExportRecords("posts", "json", false)
+	if err != nil {
+		t.Fatalf("ExportRecords failed: %v", err)
+	}
+	if string(data) != mockExportData {
+		t.Errorf("expected %s, got %s", mockExportData, string(data))
+	}
+
+	// 2. Test Import
+	res, err := client.ImportRecords("posts", "json", "upsert", "atomic", []byte(mockExportData))
+	if err != nil {
+		t.Fatalf("ImportRecords failed: %v", err)
+	}
+	if !res.Success || res.Inserted != 1 {
+		t.Errorf("unexpected import result: %+v", res)
 	}
 }
