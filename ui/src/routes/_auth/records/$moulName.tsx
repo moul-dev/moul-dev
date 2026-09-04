@@ -411,6 +411,17 @@ const styles = stylex.create({
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-all',
   },
+  toolbarSelectionActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+    flexWrap: 'wrap',
+  },
+  checkboxCell: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 function formatFileSize(bytes?: number): string {
@@ -864,6 +875,12 @@ function RecordsPage() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
 
+  // Selection states
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
+  const [isBatchRetrying, setIsBatchRetrying] = useState(false);
+
   // Copy feedback states
   const [copiedId, setCopiedId] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
@@ -935,6 +952,106 @@ function RecordsPage() {
       : 1;
   const currentPage = search.page || 1;
 
+  // Selection helpers
+  const isAllPageSelected =
+    records.length > 0 && records.every((r: any) => selectedIds.has(String(r.id)));
+  const isSomePageSelected =
+    records.some((r: any) => selectedIds.has(String(r.id))) && !isAllPageSelected;
+
+  const handleToggleSelectAll = (selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        records.forEach((r: any) => next.add(String(r.id)));
+      } else {
+        records.forEach((r: any) => next.delete(String(r.id)));
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectRecord = (id: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchDelete = async () => {
+    try {
+      setIsBatchDeleting(true);
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map((id) => api.deleteRecord(moulName, id)));
+      queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      toastQueue.add({
+        title: 'Records Deleted',
+        description: `Successfully deleted ${ids.length} record${ids.length > 1 ? 's' : ''}.`,
+        variant: 'info',
+      });
+      setSelectedIds(new Set());
+      setIsBatchDeleteConfirmOpen(false);
+    } catch (err: any) {
+      toastQueue.add({
+        title: 'Batch Delete Failed',
+        description: err.message || 'Failed to delete selected records.',
+        variant: 'error',
+      });
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
+  const handleBatchRetry = async () => {
+    try {
+      setIsBatchRetrying(true);
+      const ids = Array.from(selectedIds);
+      await api.retryJobs(moulName, ids);
+      queryClient.invalidateQueries({ queryKey: ['records', moulName] });
+      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
+      toastQueue.add({
+        title: 'Tasks Scheduled for Retry',
+        description: `Successfully scheduled ${ids.length} task${ids.length > 1 ? 's' : ''} for retry.`,
+        variant: 'success',
+      });
+      setSelectedIds(new Set());
+    } catch (err: any) {
+      toastQueue.add({
+        title: 'Batch Retry Failed',
+        description: err.message || 'Failed to retry selected worker tasks.',
+        variant: 'error',
+      });
+    } finally {
+      setIsBatchRetrying(false);
+    }
+  };
+
+  const handleExportSelected = () => {
+    const selectedRecords = records.filter((r: any) => selectedIds.has(String(r.id)));
+    const blob = new Blob([JSON.stringify(selectedRecords, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${moulName}-selected-${selectedIds.size}-records.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastQueue.add({
+      title: 'Exported Selected',
+      description: `Downloaded ${selectedIds.size} selected record${selectedIds.size > 1 ? 's' : ''} as JSON.`,
+      variant: 'success',
+    });
+  };
+
   // Schema field keys with filtering and inference
   const displayFields = useMemo(() => {
     const isAuth = moul?.type === 'auth';
@@ -998,6 +1115,15 @@ function RecordsPage() {
     return [];
   }, [moul, records]);
 
+  const totalColumns =
+    1 + // Select Checkbox
+    1 + // ID
+    (moul?.type === 'auth' ? 2 : 0) +
+    (moul?.type === 'worker' ? 4 : 0) +
+    displayFields.length +
+    1 + // Created At
+    1; // Actions
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: any) => api.createRecord(moulName, data),
@@ -1044,9 +1170,17 @@ function RecordsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteRecord(moulName, id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['records', moulName] });
       setIsDrawerOpen(false);
+      setSelectedIds((prev) => {
+        if (prev.has(String(id))) {
+          const next = new Set(prev);
+          next.delete(String(id));
+          return next;
+        }
+        return prev;
+      });
       toastQueue.add({
         title: 'Record Deleted',
         description: 'Record was deleted.',
@@ -1244,9 +1378,47 @@ function RecordsPage() {
                 onSubmit={handleSearchSubmit}
               />
             </div>
-            <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
-              Showing {records.length} of {totalItems} record{totalItems !== 1 ? 's' : ''}
-            </span>
+            {selectedIds.size > 0 ? (
+              <div {...stylex.props(styles.toolbarSelectionActions)}>
+                <Badge variant="primary">
+                  {selectedIds.size} selected
+                </Badge>
+                <Button
+                  variant="ghost"
+                  onPress={handleClearSelection}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="outline"
+                  onPress={handleExportSelected}
+                >
+                  <DownloadSimpleIcon size={14} />
+                  <span>Export</span>
+                </Button>
+                {moul?.type === 'worker' && (
+                  <Button
+                    variant="secondary"
+                    isPending={isBatchRetrying}
+                    onPress={handleBatchRetry}
+                  >
+                    <ArrowsCounterClockwiseIcon size={14} />
+                    <span>Retry</span>
+                  </Button>
+                )}
+                <Button
+                  variant="danger-soft"
+                  onPress={() => setIsBatchDeleteConfirmOpen(true)}
+                >
+                  <TrashIcon size={14} />
+                  <span>Delete ({selectedIds.size})</span>
+                </Button>
+              </div>
+            ) : (
+              <span style={{ fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                Showing {records.length} of {totalItems} record{totalItems !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </CardBody>
       </Card>
@@ -1255,6 +1427,16 @@ function RecordsPage() {
       <Table aria-label={`${moulName} records table`} dense stickyHeader hoverable>
         <TableHeader>
           <TableRow>
+            <TableHead width={44} minWidth={44} maxWidth={44}>
+              <div {...stylex.props(styles.checkboxCell)}>
+                <Checkbox
+                  aria-label="Select all rows on page"
+                  isSelected={isAllPageSelected}
+                  isIndeterminate={isSomePageSelected}
+                  onChange={handleToggleSelectAll}
+                />
+              </div>
+            </TableHead>
             <TableHead>ID</TableHead>
             {moul?.type === 'auth' && (
               <>
@@ -1281,10 +1463,10 @@ function RecordsPage() {
           {isLoading ? (
             <TableSkeleton
               rows={6}
-              columns={1 + (moul?.type === 'auth' ? 2 : 0) + (moul?.type === 'worker' ? 4 : 0) + displayFields.length + 2}
+              columns={totalColumns}
             />
           ) : records.length === 0 ? (
-            <TableEmpty colSpan={1 + (moul?.type === 'auth' ? 2 : 0) + (moul?.type === 'worker' ? 4 : 0) + displayFields.length + 2}>
+            <TableEmpty colSpan={totalColumns}>
               <EmptyState
                 variant="default"
                 title="No records found"
@@ -1303,6 +1485,7 @@ function RecordsPage() {
             </TableEmpty>
           ) : (
             records.map((rec: any) => {
+              const isSelected = selectedIds.has(String(rec.id));
               const workerState = String(rec.state || 'available').toLowerCase();
               const canRetry =
                 moul?.type === 'worker' &&
@@ -1312,7 +1495,16 @@ function RecordsPage() {
                   workerState === 'completed');
 
               return (
-                <TableRow key={rec.id}>
+                <TableRow key={rec.id} selected={isSelected} interactive>
+                  <TableCell width={44} minWidth={44} maxWidth={44}>
+                    <div {...stylex.props(styles.checkboxCell)}>
+                      <Checkbox
+                        aria-label={`Select record #${rec.id}`}
+                        isSelected={isSelected}
+                        onChange={(checked) => handleToggleSelectRecord(String(rec.id), checked)}
+                      />
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <button
                       type="button"
@@ -2056,6 +2248,43 @@ function RecordsPage() {
                 }}
               >
                 Delete Record
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
+
+      {/* CONFIRM BATCH DELETE ALERT DIALOG */}
+      <ModalOverlay
+        isOpen={isBatchDeleteConfirmOpen}
+        onOpenChange={(open: boolean) => !open && setIsBatchDeleteConfirmOpen(false)}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Delete {selectedIds.size} Records
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                Are you sure you want to delete <strong>{selectedIds.size} selected record{selectedIds.size > 1 ? 's' : ''}</strong> from &ldquo;{moulName}&rdquo;?
+                <br />
+                <br />
+                This action cannot be undone.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setIsBatchDeleteConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                isPending={isBatchDeleting}
+                onPress={handleBatchDelete}
+              >
+                Delete {selectedIds.size} Records
               </Button>
             </AlertDialogFooter>
           </AlertDialog>
