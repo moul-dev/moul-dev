@@ -11,9 +11,16 @@ import { cn } from "@/lib/cn";
 import { baseOptions } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
 
-export default function Layout({ children }: { children: ReactNode }) {
+export default function Layout({
+  children,
+  lang = "km",
+}: {
+  children: ReactNode;
+  lang?: string;
+}) {
+  const isKm = lang === "km";
   return (
-    <DocsLayout {...baseOptions("en")} tree={source.getPageTree("en")}>
+    <DocsLayout {...baseOptions(lang)} tree={source.getPageTree(lang)}>
       <AISearch>
         <AISearchPanel />
         <AISearchTrigger
@@ -26,7 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           )}
         >
           <MessageCircleIcon className="size-4.5" />
-          Ask AI
+          {isKm ? "សួរ AI" : "Ask AI"}
         </AISearchTrigger>
       </AISearch>
 

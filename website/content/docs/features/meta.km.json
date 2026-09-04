@@ -1,0 +1,13 @@
+{
+  "title": "លក្ខណៈពិសេស",
+  "root": true,
+  "pages": [
+    "authentication",
+    "workers-and-queues",
+    "realtime-sse",
+    "webhooks",
+    "mcp-server",
+    "admin-consoles",
+    "analytics"
+  ]
+}

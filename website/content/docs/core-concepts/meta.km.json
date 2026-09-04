@@ -1,0 +1,5 @@
+{
+  "title": "គោលគំនិតស្នូល",
+  "root": true,
+  "pages": ["collections", "records-and-crud", "relations", "access-rules"]
+}

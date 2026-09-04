@@ -13,8 +13,11 @@ import { getMDXComponents } from "@/components/mdx";
 import { gitConfig } from "@/lib/shared";
 import { getPageImage, getPageMarkdownUrl, source } from "@/lib/source";
 
-export default function Page({ slugs }: PageProps<"/docs/[...slugs]">) {
-  const page = source.getPage(slugs, "en");
+export default function LocalizedDocPage({
+  slugs,
+  lang,
+}: PageProps<"/[lang]/docs/[...slugs]">) {
+  const page = source.getPage(slugs, lang);
   if (!page) unstable_notFound();
 
   const MDX = page.data.body;
@@ -23,10 +26,10 @@ export default function Page({ slugs }: PageProps<"/docs/[...slugs]">) {
     <DocsPage toc={page.data.toc}>
       <meta
         property="og:image"
-        content={getPageImage(slugs, "en", "facebook").url}
+        content={getPageImage(slugs, lang, "facebook").url}
       />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:image" content={getPageImage(slugs, "en", "x").url} />
+      <meta name="twitter:image" content={getPageImage(slugs, lang, "x").url} />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">
         {page.data.description}
@@ -51,7 +54,7 @@ export default function Page({ slugs }: PageProps<"/docs/[...slugs]">) {
 }
 
 export async function getConfig() {
-  const pages = source.getPages("en").map((page) => page.slugs);
+  const pages = source.getPages("km").map((page) => ["km", ...page.slugs]);
 
   return {
     render: "static" as const,

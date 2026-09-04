@@ -1,0 +1,5 @@
+{
+  "title": "សមត្ថភាពពង្រីក (Extensibility)",
+  "root": true,
+  "pages": ["custom-binary", "programmatic-go", "building-from-source"]
+}

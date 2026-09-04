@@ -2,9 +2,11 @@ import { devlog, docs } from "collections/server";
 import { loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { toFumadocsSource } from "fumadocs-mdx/runtime/server";
+import { i18n } from "./i18n";
 import { docsContentRoute, docsRoute } from "./shared";
 
 export const source = loader({
+  i18n,
   source: docs.toFumadocsSource(),
   baseUrl: docsRoute,
   plugins: [lucideIconsPlugin()],
@@ -63,20 +65,43 @@ export function getDevlogPageImage(
 
 export function getPageImage(
   slugs: string[],
+  langOrTarget?: string | OgImageOptions,
   targetOrOptions?: "x" | "facebook" | OgImageOptions,
 ) {
-  const page = source.getPage(slugs);
+  let lang: string | undefined;
+  let target: "x" | "facebook" | OgImageOptions | undefined;
+
+  if (
+    langOrTarget === "x" ||
+    langOrTarget === "facebook" ||
+    (typeof langOrTarget === "object" && langOrTarget !== null)
+  ) {
+    target = langOrTarget;
+  } else {
+    lang = langOrTarget;
+    target = targetOrOptions;
+  }
+
+  const page = source.getPage(slugs, lang);
   const title = page?.data.title ?? "Moul Documentation";
   const description = page?.data.description;
 
+  const segments =
+    lang && lang !== i18n.defaultLanguage
+      ? [lang, ...slugs, "image.webp"]
+      : [...slugs, "image.webp"];
+
   return {
-    segments: [...slugs, "image.webp"],
-    ...getDevlogPageImage(title, description, targetOrOptions, true),
+    segments,
+    ...getDevlogPageImage(title, description, target, true),
   };
 }
 
 export function getPageMarkdownUrl(page: (typeof source)["$inferPage"]) {
-  const segments = [...page.slugs, "content.md"];
+  const segments =
+    page.locale && page.locale !== i18n.defaultLanguage
+      ? [page.locale, ...page.slugs, "content.md"]
+      : [...page.slugs, "content.md"];
 
   return {
     segments,
@@ -87,7 +112,5 @@ export function getPageMarkdownUrl(page: (typeof source)["$inferPage"]) {
 export async function getLLMText(page: (typeof source)["$inferPage"]) {
   const processed = await page.data.getText("processed");
 
-  return `# ${page.data.title} (${page.url})
-
-${processed}`;
+  return `# ${page.data.title} (${page.url})\n\n${processed}`;
 }

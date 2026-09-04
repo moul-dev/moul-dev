@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { baseOptions } from "@/lib/layout.shared";
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <HomeLayout {...baseOptions()}>{children}</HomeLayout>;
+  return <HomeLayout {...baseOptions("en")}>{children}</HomeLayout>;
 }
 
 export async function getConfig() {

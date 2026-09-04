@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
 @layer base, utilities, priority1, priority2, priority3, priority4, priority5;
 
@@ -10,7 +11,7 @@
   --color-fd-primary: oklch(
     0.6 calc(0.18 * var(--brand-chroma-multiplier, 1)) var(--brand-hue, 198)
   );
-  --font-sans: "Google Sans", "Inter", sans-serif;
+  --font-sans: "Google Sans", "Kantumruy Pro", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 

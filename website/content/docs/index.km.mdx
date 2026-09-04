@@ -1,0 +1,85 @@
+---
+title: សូមស្វាគមន៍មកកាន់ Moul
+description: ម៉ាស៊ីនដំណើរការមូលដ្ឋានទិន្នន័យឌីណាមិក ប្រព័ន្ធផ្ទៀងផ្ទាត់ភាពត្រឹមត្រូវ និងដំណើរការការងារផ្ទៃខាងក្រោយក្នុងឯកសារ Binary តែមួយ បង្កើតឡើងដោយ Go។
+---
+
+import { Card, Cards } from 'fumadocs-ui/components/card'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Database, ShieldCheck, Cpu, Radio, Network, Terminal, Code2, Server, Layers } from 'lucide-react'
+
+**Moul** គឺជាប្រព័ន្ធអេកូឡូស៊ី Backend ទំនើប និងស្រាលស្រឡះ បង្កើតឡើងដោយភាសា Go ដោយទទួលការបំផុសគំនិតពី PocketBase និង Oban របស់ Elixir។ Moul រួមបញ្ចូលគ្នានូវការគ្រប់គ្រងទម្រង់ទិន្នន័យឌីណាមិក (Dynamic Schema), ប្រព័ន្ធផ្ទៀងផ្ទាត់ភាពត្រឹមត្រូវពហុកត្តា, ជួរការងារផ្ទៃខាងក្រោយ និងព្រឹត្តិការណ៍ពេលវេលាជាក់ស្ដែង (Real-time Events) ឱ្យស្ថិតនៅក្នុងស្ថាបត្យកម្ម Binary តែមួយយ៉ាងប្រណីត និងមានប្រសិទ្ធភាពខ្ពស់។
+
+Moul រួមបញ្ចូលសមាសភាគស្នូលចំនួនបី៖
+1. **`moul`**៖ ម៉ាស៊ីន Daemon ផ្ទៃខាងក្រោយដែលដំណើរការមូលដ្ឋានទិន្នន័យ, REST API, Background Workers, SSE និងផ្ដល់ផ្ទាំងគ្រប់គ្រង Web Admin Console។
+2. **`moul-ctl`**៖ កម្មវិធីបញ្ជាតាមផ្ទាំងបញ្ជា Terminal (TUI) បញ្ជាតាមរយៈក្ដារចុច បង្កើតឡើងដោយ Bubble Tea សម្រាប់ការគ្រប់គ្រងយ៉ាងរហ័ស។
+3. **Web Admin Console**៖ ផ្ទាំងគ្រប់គ្រងលើកម្មវិធីរុករក (Browser Dashboard) ពេញលេញដំណើរការនៅ `/_moul_/` សម្រាប់ការរៀបចំគំរូទិន្នន័យ និងការគ្រប់គ្រងប្រព័ន្ធ។
+
+<Callout type="info">
+  **ទស្សនវិជ្ជា Binary តែមួយគត់**៖ មិនចាំបាច់រៀបចំ Docker ឬបំបែកសេវាកម្មតូចៗ (Microservices) ឱ្យស្មុគស្មាញឡើយ។ អ្នកអាចដំណើរការការគ្រប់គ្រងទិន្នន័យ SQLite បែបឌីណាមិក, ប្រព័ន្ធផ្ទៀងផ្ទាត់ភាពត្រឹមត្រូវ, ជួរការងារ worker, ការវិភាគទិន្នន័យ និង Server-Sent Events ពេលវេលាជាក់ស្ដែង ដោយពុំចាំបាច់ពឹងផ្អែកលើប្រព័ន្ធខាងក្រៅឡើយ។
+</Callout>
+
+---
+
+## គោលការណ៍គ្រឹះ
+
+<Cards>
+  <Card
+    icon={<Layers className="size-5 text-fd-primary" />}
+    title="ស្ថាបត្យកម្ម និងឧបករណ៍ប្រើប្រាស់"
+    href="/km/docs/getting-started/architecture"
+    description="ស្វែងយល់ពីទំនាក់ទំនងរវាងម៉ាស៊ីន moul, moul-ctl TUI និង Web Admin Console។"
+  />
+  <Card
+    icon={<Database className="size-5 text-fd-primary" />}
+    title="បណ្ដុំទិន្នន័យឌីណាមិក និង CRUD"
+    href="/km/docs/core-concepts/collections"
+    description="រៀបចំទម្រង់ទិន្នន័យលើប្រភេទវាលទិន្នន័យចំនួន ១០ ពេលកំពុងដំណើរការ ជាមួយវិធានគ្រប់គ្រងសិទ្ធិដូច HCL។"
+  />
+  <Card
+    icon={<ShieldCheck className="size-5 text-fd-primary" />}
+    title="ការផ្ទៀងផ្ទាត់ភាពត្រឹមត្រូវទំនើប"
+    href="/km/docs/features/authentication"
+    description="រួមបញ្ចូលស្រេចជាមួយ Password, Email OTP, WebAuthn Passkeys, Social OAuth2 និង Device Flow។"
+  />
+  <Card
+    icon={<Cpu className="size-5 text-fd-primary" />}
+    title="ម៉ាស៊ីនការងារផ្ទៃខាងក្រោយ"
+    href="/km/docs/features/workers-and-queues"
+    description="ជួរការងារបែប Oban ដំណើរការលើ SQLite ដោយផ្ទាល់ ជាមួយមុខងារសាកល្បងម្ដងទៀតដោយស្វ័យប្រវត្តិ និង DLQ។"
+  />
+  <Card
+    icon={<Radio className="size-5 text-fd-primary" />}
+    title="ការជាវព្រឹត្តិការណ៍ SSE ពេលវេលាជាក់ស្ដែង"
+    href="/km/docs/features/realtime-sse"
+    description="Server-Sent Events ល្បឿនលឿនសម្រាប់ធ្វើបច្ចុប្បន្នភាពលើផ្ទាំងខាងមុខភ្លាមៗ នៅពេលមានបម្រែបម្រួលទិន្នន័យ។"
+  />
+  <Card
+    icon={<Network className="size-5 text-fd-primary" />}
+    title="ម៉ាស៊ីនបម្រើ MCP រួមបញ្ចូលស្រេច"
+    href="/km/docs/features/mcp-server"
+    description="ម៉ាស៊ីនបម្រើ Model Context Protocol ក្នុងខ្លួនស្រាប់ ដែលអនុញ្ញាតឱ្យ AI Assistants ប្រើប្រាស់ CRUD មូលដ្ឋានទិន្នន័យ និងដំណើរការ Workers។"
+  />
+  <Card
+    icon={<Terminal className="size-5 text-fd-primary" />}
+    title="ផ្ទាំងបញ្ជាគ្រប់គ្រង (Web & TUI)"
+    href="/km/docs/features/admin-consoles"
+    description="ផ្ទាំងគ្រប់គ្រង Web Admin នៅ /_moul_/ រួមជាមួយ Bubble Tea Terminal UI (moul-ctl) ពេញលេញ។"
+  />
+  <Card
+    icon={<Code2 className="size-5 text-fd-primary" />}
+    title="សមត្ថភាពពង្រីកតាម Go (pkg/app)"
+    href="/km/docs/extensibility/custom-binary"
+    description="បង្កប់ម៉ាស៊ីនទាំងមូលក្នុង Go binary របស់អ្នក បង្កើត HTTP endpoints ផ្ទាល់ខ្លួន និងដំណើរការ Custom Workers។"
+  />
+</Cards>
+
+---
+
+## ជំហានបន្ទាប់
+
+អនុវត្តតាមការណែនាំខាងក្រោម ដើម្បីចាប់ផ្ដើមក្នុងរយៈពេលមិនដល់ពីរនាទី៖
+
+1. **[មគ្គុទ្ទេសក៍ចាប់ផ្ដើមរហ័ស](/km/docs/getting-started/quickstart)**៖ ដំឡើង Moul និងចាប់ផ្ដើមដំណើរការម៉ាស៊ីនក្នុងកុំព្យូទ័ររបស់អ្នក។
+2. **[ស្ថាបត្យកម្ម និងឧបករណ៍ប្រើប្រាស់](/km/docs/getting-started/architecture)**៖ ស្វែងយល់ពីរបៀបដែល `moul`, `moul-ctl` និង Web Admin ធ្វើការរួមគ្នា។
+3. **[ការគ្រប់គ្រងបណ្ដុំទិន្នន័យ (Collections) និងការរៀបចំគំរូទិន្នន័យ](/km/docs/core-concepts/collections)**៖ សិក្សាពីរបៀបដំណើរការរបស់ Collections និងប្រភេទវាលទិន្នន័យ។
+4. **[ឯកសារយោង API](/km/docs/api-reference/overview)**៖ ស្វែងយល់ពីបញ្ជី OpenAPI 3.0 និងបណ្ដុំ endpoints ទាំងអស់៕
