@@ -107,7 +107,7 @@ function LoginPage() {
     setLoading(true);
     try {
       await adminLogin(adminKey.trim(), identity.trim(), password);
-      navigate({ to: '/' });
+      navigate({ to: '/overview' });
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
     } finally {

@@ -45,13 +45,13 @@ export const Header: React.FC = () => {
   const currentTitle =
     segments.length > 0
       ? segments[segments.length - 1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-      : 'Dashboard';
+      : 'Overview';
 
   return (
     <header {...stylex.props(styles.header)}>
       <Breadcrumbs aria-label="Breadcrumbs">
         <BreadcrumbItem>
-          <RouterLink to="/" {...stylex.props(styles.homeLink)}>
+          <RouterLink to="/overview" {...stylex.props(styles.homeLink)}>
             <Link variant="primary">moul</Link>
           </RouterLink>
         </BreadcrumbItem>

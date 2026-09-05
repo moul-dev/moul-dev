@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
@@ -221,14 +221,112 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
   },
+  tabsNavContainer: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: '100%',
+  },
+  tabList: {
+    gap: tokens.spacing2,
+    marginBlockEnd: tokens.spacing1,
+  },
+  tab: {
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  },
+  tabContent: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+    whiteSpace: 'nowrap',
+  },
+  tabPanel: {
+    paddingInline: 0,
+    paddingBlock: tokens.spacing2,
+  },
+  scrollShadowLeft: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '40px',
+    pointerEvents: 'none',
+    backgroundImage: `linear-gradient(to right, ${tokens.colorBg}, transparent)`,
+    opacity: 0,
+    transitionProperty: 'opacity',
+    transitionDuration: '0.2s',
+    transitionTimingFunction: 'ease-in-out',
+    zIndex: 2,
+  },
+  scrollShadowRight: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '40px',
+    pointerEvents: 'none',
+    backgroundImage: `linear-gradient(to left, ${tokens.colorBg}, transparent)`,
+    opacity: 0,
+    transitionProperty: 'opacity',
+    transitionDuration: '0.2s',
+    transitionTimingFunction: 'ease-in-out',
+    zIndex: 2,
+  },
+  scrollShadowVisible: {
+    opacity: 1,
+  },
 });
 
 function SettingsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const search = Route.useSearch();
   const { user, updateUser, saveToken } = useAuth();
   const [selectedTab, setSelectedTab] = useState<string>(search?.tab || 's3');
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(null);
+
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll]);
+
+  useEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    checkScroll();
+    const activeTabEl = el.querySelector('[aria-selected="true"]') as HTMLElement | null;
+    if (activeTabEl) {
+      activeTabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [selectedTab, checkScroll]);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = tabListRef.current;
+    if (!el) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) {
+      el.scrollLeft += e.deltaY;
+    }
+  };
 
   useEffect(() => {
     if (search?.tab) {
@@ -769,20 +867,81 @@ function SettingsPage() {
         </div>
       </div>
 
-      <Tabs selectedKey={selectedTab} onSelectionChange={(k) => setSelectedTab(k as string)} variant='tertiary'>
-        <TabList aria-label="Engine Settings Navigation">
-          <Tab id="s3">S3 Storage</Tab>
-          <Tab id="litestream">Litestream Backups</Tab>
-          <Tab id="ratelimit">Rate Limiting</Tab>
-          <Tab id="rootips">Root User IPs</Tab>
-          <Tab id="email">Email Delivery</Tab>
-          <Tab id="oauth">OAuth2 Providers</Tab>
-          <Tab id="account">Root Account</Tab>
-        </TabList>
+      <Tabs
+        selectedKey={selectedTab}
+        onSelectionChange={(k) => {
+          const tabKey = k as string;
+          setSelectedTab(tabKey);
+          navigate({ to: '/settings', search: { tab: tabKey }, replace: true });
+        }}
+        variant="tertiary"
+      >
+        <div {...stylex.props(styles.tabsNavContainer)} onWheel={handleWheel}>
+          <div
+            {...stylex.props(
+              styles.scrollShadowLeft,
+              canScrollLeft && styles.scrollShadowVisible
+            )}
+          />
+          <TabList
+            ref={tabListRef}
+            style={styles.tabList}
+            aria-label="Engine Settings Navigation"
+          >
+            <Tab id="s3" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <CloudIcon size={16} />
+                <span>S3 Storage</span>
+              </span>
+            </Tab>
+            <Tab id="litestream" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <FloppyDiskIcon size={16} />
+                <span>Litestream Backups</span>
+              </span>
+            </Tab>
+            <Tab id="ratelimit" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <GaugeIcon size={16} />
+                <span>Rate Limiting</span>
+              </span>
+            </Tab>
+            <Tab id="rootips" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <GlobeHemisphereWestIcon size={16} />
+                <span>Root User IPs</span>
+              </span>
+            </Tab>
+            <Tab id="email" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <EnvelopeSimpleIcon size={16} />
+                <span>Email Delivery</span>
+              </span>
+            </Tab>
+            <Tab id="oauth" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <LockKeyIcon size={16} />
+                <span>OAuth2 Providers</span>
+              </span>
+            </Tab>
+            <Tab id="account" style={styles.tab}>
+              <span {...stylex.props(styles.tabContent)}>
+                <UserGearIcon size={16} />
+                <span>Root Account</span>
+              </span>
+            </Tab>
+          </TabList>
+          <div
+            {...stylex.props(
+              styles.scrollShadowRight,
+              canScrollRight && styles.scrollShadowVisible
+            )}
+          />
+        </div>
 
         <TabPanels>
           {/* TAB 1: S3 STORAGE */}
-          <TabPanel id="s3">
+          <TabPanel id="s3" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
@@ -829,7 +988,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 2: LITESTREAM BACKUPS */}
-          <TabPanel id="litestream">
+          <TabPanel id="litestream" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
@@ -876,7 +1035,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 3: RATE LIMITING */}
-          <TabPanel id="ratelimit">
+          <TabPanel id="ratelimit" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
@@ -977,7 +1136,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 4: ROOT USER IPS */}
-          <TabPanel id="rootips">
+          <TabPanel id="rootips" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
@@ -1022,7 +1181,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 5: EMAIL DELIVERY */}
-          <TabPanel id="email">
+          <TabPanel id="email" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>
@@ -1071,7 +1230,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 6: OAUTH2 PROVIDERS */}
-          <TabPanel id="oauth">
+          <TabPanel id="oauth" style={styles.tabPanel}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing4 }}>
               {/* GLOBAL CALLBACK CONFIG */}
               <Card elevation="sm">
@@ -1188,7 +1347,7 @@ function SettingsPage() {
           </TabPanel>
 
           {/* TAB 7: ROOT ACCOUNT */}
-          <TabPanel id="account">
+          <TabPanel id="account" style={styles.tabPanel}>
             <Card elevation="sm">
               <CardHeader>
                 <div {...stylex.props(styles.cardHeaderWithAction)}>

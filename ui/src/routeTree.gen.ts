@@ -16,6 +16,7 @@ import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthAnalyticsRouteImport } from './routes/_auth/analytics'
 import { Route as AuthDocsRouteImport } from './routes/_auth/docs'
 import { Route as AuthFlagsRouteImport } from './routes/_auth/flags'
+import { Route as AuthOverviewRouteImport } from './routes/_auth/overview'
 import { Route as AuthRealtimeRouteImport } from './routes/_auth/realtime'
 import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
 import { Route as AuthWorkersRouteImport } from './routes/_auth/workers'
@@ -57,6 +58,11 @@ const AuthFlagsRoute = AuthFlagsRouteImport.update({
   path: '/flags',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthOverviewRoute = AuthOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthRealtimeRoute = AuthRealtimeRouteImport.update({
   id: '/realtime',
   path: '/realtime',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AuthAnalyticsRoute
   '/docs': typeof AuthDocsRoute
   '/flags': typeof AuthFlagsRoute
+  '/overview': typeof AuthOverviewRoute
   '/realtime': typeof AuthRealtimeRoute
   '/settings': typeof AuthSettingsRoute
   '/workers': typeof AuthWorkersRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AuthAnalyticsRoute
   '/docs': typeof AuthDocsRoute
   '/flags': typeof AuthFlagsRoute
+  '/overview': typeof AuthOverviewRoute
   '/realtime': typeof AuthRealtimeRoute
   '/settings': typeof AuthSettingsRoute
   '/workers': typeof AuthWorkersRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/_auth/analytics': typeof AuthAnalyticsRoute
   '/_auth/docs': typeof AuthDocsRoute
   '/_auth/flags': typeof AuthFlagsRoute
+  '/_auth/overview': typeof AuthOverviewRoute
   '/_auth/realtime': typeof AuthRealtimeRoute
   '/_auth/settings': typeof AuthSettingsRoute
   '/_auth/workers': typeof AuthWorkersRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/docs'
     | '/flags'
+    | '/overview'
     | '/realtime'
     | '/settings'
     | '/workers'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/docs'
     | '/flags'
+    | '/overview'
     | '/realtime'
     | '/settings'
     | '/workers'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/_auth/analytics'
     | '/_auth/docs'
     | '/_auth/flags'
+    | '/_auth/overview'
     | '/_auth/realtime'
     | '/_auth/settings'
     | '/_auth/workers'
@@ -235,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthFlagsRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/overview': {
+      id: '/_auth/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AuthOverviewRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/realtime': {
       id: '/_auth/realtime'
       path: '/realtime'
@@ -284,6 +303,7 @@ interface AuthRouteChildren {
   AuthAnalyticsRoute: typeof AuthAnalyticsRoute
   AuthDocsRoute: typeof AuthDocsRoute
   AuthFlagsRoute: typeof AuthFlagsRoute
+  AuthOverviewRoute: typeof AuthOverviewRoute
   AuthRealtimeRoute: typeof AuthRealtimeRoute
   AuthSettingsRoute: typeof AuthSettingsRoute
   AuthWorkersRoute: typeof AuthWorkersRoute
@@ -297,6 +317,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthAnalyticsRoute: AuthAnalyticsRoute,
   AuthDocsRoute: AuthDocsRoute,
   AuthFlagsRoute: AuthFlagsRoute,
+  AuthOverviewRoute: AuthOverviewRoute,
   AuthRealtimeRoute: AuthRealtimeRoute,
   AuthSettingsRoute: AuthSettingsRoute,
   AuthWorkersRoute: AuthWorkersRoute,

@@ -254,7 +254,7 @@ interface NavLinkConfig {
 }
 
 const platformNavLinks: NavLinkConfig[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: <SquaresFourIcon size={18} /> },
+  { to: '/overview', label: 'Overview', icon: <SquaresFourIcon size={18} /> },
   { to: '/collections', label: 'Collections', icon: <DatabaseIcon size={18} /> },
   { to: '/realtime', label: 'Realtime Hub', icon: <BroadcastIcon size={18} /> },
   { to: '/analytics', label: 'Analytics', icon: <ChartLineUpIcon size={18} /> },
@@ -289,8 +289,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const currentSelectedKey =
     allNavLinks.find(
-      (link) => link.to !== '/' && currentPath.startsWith(link.to)
-    )?.to || '/';
+      (link) => currentPath.startsWith(link.to)
+    )?.to || '/overview';
 
   const effectiveUser = account || user;
   const hasCustomName = Boolean(
@@ -469,7 +469,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </SidebarGroup>
 
         <SidebarFooter showBorder>
-          <Link to="/" {...stylex.props(styles.brand)} aria-label="moul.dev">
+          <Link to="/overview" {...stylex.props(styles.brand)} aria-label="moul.dev">
             <LogoIcon size={32} color={tokens.colorFg} />
           </Link>
         </SidebarFooter>
