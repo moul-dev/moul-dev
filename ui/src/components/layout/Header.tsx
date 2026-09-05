@@ -4,6 +4,8 @@ import { useRouterState, Link as RouterLink } from '@tanstack/react-router';
 import { ShieldCheckIcon, CpuIcon } from '@phosphor-icons/react';
 import { Breadcrumbs, BreadcrumbItem, Badge, Link } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { LogoIcon } from './Logo';
 
 const styles = stylex.create({
   header: {
@@ -23,10 +25,35 @@ const styles = stylex.create({
     boxSizing: 'border-box',
     flexShrink: 0,
   },
+  headerMobile: {
+    paddingInline: tokens.spacing3,
+    marginInlineStart: tokens.spacing3,
+    marginInlineEnd: tokens.spacing3,
+  },
+  leftSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  mobileLogo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textDecoration: 'none',
+    color: tokens.colorFg,
+    flexShrink: 0,
+    marginRight: '2px',
+  },
   actions: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
+    flexShrink: 0,
+  },
+  actionsMobile: {
+    gap: '4px',
   },
   badgeContent: {
     display: 'inline-flex',
@@ -39,6 +66,7 @@ const styles = stylex.create({
 });
 
 export const Header: React.FC = () => {
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const routerState = useRouterState();
   const path = routerState.location.pathname;
   const segments = path.split('/').filter(Boolean);
@@ -48,33 +76,51 @@ export const Header: React.FC = () => {
       : 'Overview';
 
   return (
-    <header {...stylex.props(styles.header)}>
-      <Breadcrumbs aria-label="Breadcrumbs">
-        <BreadcrumbItem>
-          <RouterLink to="/overview" {...stylex.props(styles.homeLink)}>
-            <Link variant="primary">moul</Link>
-          </RouterLink>
-        </BreadcrumbItem>
-        <BreadcrumbItem isCurrent>{currentTitle}</BreadcrumbItem>
-      </Breadcrumbs>
+    <header {...stylex.props(styles.header, isMobile && styles.headerMobile)}>
+      <div {...stylex.props(styles.leftSection)}>
+        {isMobile && (() => {
+          const logoProps = stylex.props(styles.mobileLogo);
+          return (
+            <RouterLink
+              to="/overview"
+              {...logoProps}
+              className={`mobile-only ${logoProps.className || ''}`.trim()}
+              aria-label="moul.dev Home"
+            >
+              <LogoIcon size={24} color={tokens.colorFg} />
+            </RouterLink>
+          );
+        })()}
 
-      <div {...stylex.props(styles.actions)}>
+        <Breadcrumbs aria-label="Breadcrumbs">
+          <BreadcrumbItem>
+            <RouterLink to="/overview" {...stylex.props(styles.homeLink)}>
+              <Link variant="primary">moul</Link>
+            </RouterLink>
+          </BreadcrumbItem>
+          <BreadcrumbItem isCurrent>{currentTitle}</BreadcrumbItem>
+        </Breadcrumbs>
+      </div>
+
+      <div {...stylex.props(styles.actions, isMobile && styles.actionsMobile)}>
         <Badge variant="primary">
-          <span {...stylex.props(styles.badgeContent)}>
+          <span {...stylex.props(styles.badgeContent)} title="Engine Online">
             <CpuIcon size={13} />
-            <span>Engine Online</span>
+            {!isMobile && <span>Engine Online</span>}
           </span>
         </Badge>
         <Badge variant="success">
-          <span {...stylex.props(styles.badgeContent)}>
+          <span {...stylex.props(styles.badgeContent)} title="Root Auth">
             <ShieldCheckIcon size={13} weight="fill" />
-            <span>Root Auth</span>
+            {!isMobile && <span>Root Auth</span>}
           </span>
         </Badge>
       </div>
     </header>
   );
 };
+
+
 
 
 

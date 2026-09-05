@@ -1817,16 +1817,15 @@ function RecordsPage() {
               <DrawerHeader>
                 <DrawerTitle>
                   <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2, flexWrap: 'wrap' }}>
-                    <span>{isCreating ? `Create ${moulName} Record` : `Record #${activeRecord?.id}`}</span>
+                    <span>{isCreating ? `Create Record` : `Record #${activeRecord?.id}`}</span>
                     <Badge variant="primary">{moul?.type || 'base'}</Badge>
                     {!isCreating && activeRecord?.state && (
-                      <Badge variant={getWorkerStatusVariant(activeRecord.state)} size="sm">
+                      <Badge variant={getWorkerStatusVariant(activeRecord.state)}>
                         {activeRecord.state}
                       </Badge>
                     )}
                     {!isCreating && activeRecord?.id && (
                       <Button
-                        size="sm"
                         variant="ghost"
                         aria-label="Copy record ID"
                         onPress={() => handleCopyId(String(activeRecord.id))}
@@ -1968,7 +1967,7 @@ function RecordsPage() {
                   {/* Section Title for Form Fields */}
                   <div {...stylex.props(styles.sectionTitle)}>
                     <ListBulletsIcon size={16} color={tokens.colorPrimary500} />
-                    <span>{isCreating ? 'New Record Attributes' : 'Editable Record Attributes'}</span>
+                    <span>{isCreating ? 'New Record' : 'Edit Record'}</span>
                   </div>
 
                   {/* Auth Fields */}

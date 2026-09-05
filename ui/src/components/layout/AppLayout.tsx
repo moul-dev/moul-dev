@@ -36,9 +36,12 @@ import {
   ToggleButton,
 } from '@moul-dev/ui';
 import { Header } from './Header';
+import { BottomTabBar } from './BottomTabBar';
+import { MoreMenuDrawer } from './MoreMenuDrawer';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { api } from '../../api/client';
 import { LogoIcon } from './Logo';
 
@@ -245,6 +248,12 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
   },
+  contentMobile: {
+    paddingBlock: tokens.spacing2,
+    paddingInlineStart: tokens.spacing3,
+    paddingInlineEnd: tokens.spacing3,
+    paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+  },
 });
 
 interface NavLinkConfig {
@@ -277,6 +286,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { logout, user } = useAuth();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const routerState = useRouterState();
   const navigate = useNavigate();
   const currentPath = routerState.location.pathname;
@@ -319,7 +330,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       onSelectionChange={(key) => navigate({ to: key })}
       variant="solid"
     >
-      <SidebarAside showCollapseToggle>
+      <SidebarAside showCollapseToggle className="mobile-hide-sidebar">
         <SidebarHeader style={[styles.sidebarHeader, isCollapsed && styles.sidebarHeaderCollapsed]}>
           <PopoverTrigger>
             <Button
@@ -477,8 +488,32 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       <SidebarMain>
         <Header />
-        <main {...stylex.props(styles.content)}>{children}</main>
+        <main {...stylex.props(styles.content, isMobile && styles.contentMobile)}>{children}</main>
       </SidebarMain>
+
+      {isMobile && (
+        <>
+          <BottomTabBar
+            currentPath={currentPath}
+            onNavigate={(to) => navigate({ to })}
+            onOpenMore={() => setIsMoreOpen(true)}
+            isMoreOpen={isMoreOpen}
+          />
+
+          <MoreMenuDrawer
+            isOpen={isMoreOpen}
+            onOpenChange={setIsMoreOpen}
+            currentPath={currentPath}
+            displayName={displayName}
+            displayUsername={displayUsername}
+            displayEmail={displayEmail}
+            userInitials={userInitials}
+            hasCustomName={hasCustomName}
+            onNavigate={(to, search) => navigate({ to, search: search as any })}
+            onLogout={logout}
+          />
+        </>
+      )}
     </Sidebar>
   );
 };

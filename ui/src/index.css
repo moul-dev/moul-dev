@@ -59,3 +59,17 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: light-dark(oklch(68% 0.02 250), oklch(42% 0.04 250));
 }
+
+@media (min-width: 768px) {
+  .mobile-only,
+  .mobile-only-tabs {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-hide-sidebar,
+  .desktop-only {
+    display: none !important;
+  }
+}
