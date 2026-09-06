@@ -1,0 +1,65 @@
+---
+title: "Embedding the Web Console: Embedded Admin, Realtime Streams, and Data Portability"
+description: "How Moul brought a full web admin console directly into the Go binary, added real-time SSE subscriptions, and made collection data fully portable."
+date: 2026-09-06
+author: "thasophearak"
+---
+
+A backend runtime that only communicates through a terminal or raw JSON endpoints eventually forces an awkward trade-off. Either you spend your days writing ad-hoc curl scripts and terminal commands, or you bolt on third-party web dashboards that demand their own Node.js servers, reverse proxies, and deployment pipelines.
+
+When I first built the terminal console (`moul-ctl`), I wanted an unpretentious, keyboard-driven tool to inspect jobs, view telemetry, and tweak schemas directly from my local command line. It communicates with the engine over standard HTTP REST, it is fast, and it works. But managing large datasets, inspecting relations, or reviewing file uploads exclusively through a terminal grid has natural physical limits. Software should meet you where you are, not force you to sit at a desktop terminal just to review a single record on your phone.
+
+Yet standard web dashboards introduce massive operational debt. They bring hundreds of megabytes of external dependencies, complex build configurations, and separate runtime containers that break the single-binary promise. If running an admin console requires maintaining a second application container, the single-binary philosophy has broken down.
+
+Here is how the latest release embeds a complete Web Admin Console directly into `moul` without introducing runtime bloat or operational friction.
+
+## A Web Console Baked Directly into the Binary
+
+To preserve the single-binary guarantee, the administrative web console must live inside the executable itself.
+
+I built the web console (`ui/`) as a dedicated single-page application and embedded its compiled production assets directly into the Go binary using `embed.FS`[^1]. When you run `moul start`, the server automatically mounts the visual console at `/_moul_/` (with automatic redirects from `/admin`). No external web server, no Node.js runtime on the host, and no extra processes to monitor.
+
+- **Accessible Ergonomics with Moul UI:** Built with `@moul-dev/ui`—leveraging React Aria Components and StyleX—the interface provides keyboard navigation, accessible forms, and rich interactive data tables.
+- **Tri-State Theme System:** The console synchronizes directly with your operating system preferences via `AppThemeProvider`. You can cycle effortlessly between system, light, and dark themes, with your preference persisted in local storage.
+- **Drawers Over Modals:** Modals block page context and feel cramped on smaller screens. I replaced record creation and detail views with sliding right-hand drawers, allowing you to cross-reference table rows while editing individual record fields.
+- **Mobile-Responsive Ergonomics:** The console adapts to mobile viewports with collapsible navigation drawers, touch-friendly tap targets, and responsive tables that remain readable on handheld screens.
+- **Live Settings Management:** Manage S3 storage credentials, Litestream replication targets, rate-limiting rules, trusted IP ranges, and root administrative passwords with instant hot-reloading.
+
+## Real-Time Updates via Server-Sent Events
+
+Web applications crave live updates, but adding a separate Redis pub/sub broker or managing stateful WebSocket clusters adds unnecessary infrastructure weight to small deployments.
+
+To solve this, I added a lightweight, lock-optimized Server-Sent Events (SSE) hub directly into the core engine (`internal/realtime`).
+
+When records are inserted, modified, or deleted, the database engine dispatches the change event into an in-memory channel. Connected browsers maintain a standard HTTP GET connection via native `EventSource`. The server streams line-delimited events immediately:
+
+- **Collection Filtering:** Clients can listen to the global database stream (`/api/moul/subscribe`) or target individual collections (`/api/moul/:name/subscribe`).
+- **Rule-Bound Security:** The hub evaluates collection `subscribeRule` expressions against the client's authenticated JWT before forwarding events, preventing unprivileged listeners from intercepting protected data.
+- **Real-Time Event Inspector:** The Web Admin Console includes a dedicated streaming inspector (`/_moul_/realtime`). You can connect live to any collection, watch mutations as they occur, and inspect raw payloads in real time without polling.
+
+## Data Portability: Import and Export
+
+Locking your data inside an application stack is a fundamental design flaw. If you cannot extract your data into standard formats cleanly, you do not truly own your operational records.
+
+This release adds complete data import and export capabilities across CSV and JSON formats:
+
+- **Bidirectional Portability:** You can export entire collections—including schema metadata and records—into standard RFC 4180 CSV files or structured JSON envelopes.
+- **Flexible Conflict Resolution:** When importing datasets, you can select between `upsert` (update existing keys and insert new rows), strict `insert` (fail on duplicate keys), or `replace` (clean slate wipe and reload).
+- **Unified Interfaces:** The import and export engine is available everywhere: through the Web Admin Console, through the terminal TUI (`moul-ctl`), and as direct shell commands (`moul export` and `moul import`) for automated backup pipelines.
+
+## Clarifying the Binary Architecture
+
+As Moul grew, keeping the server daemon and the terminal console under confusing names caused friction. I took the opportunity to establish clear binary boundaries:
+
+- **`moul`**: The unified server daemon and API engine (`cmd/moul/main.go`). It runs your database, background workers, SSE hub, and embedded web console.
+- **`moul-ctl`**: The lightweight terminal management client (`cmd/moul-ctl/main.go`). It connects locally or over the network to `moul` via HTTP REST for terminal administration.
+
+I also stripped away unnecessary external monitoring dependencies. Moul no longer needs Telegraf; it samples CPU, memory, disk, and goroutine metrics through native Go runtime primitives.
+
+---
+
+Software craftsmanship is not about how many external systems you can wire together. It is about the discipline of keeping tooling simple—resisting the temptation to add microservices and cloud bloat while delivering a complete, dependable developer experience.
+
+Moul now gives you a dynamic database, background queue workers, token authentication, real-time push streams, and a refined web console inside a single executable that comfortably runs on a $5 virtual private server. That is the kind of quiet, durable software I want to keep building.
+
+[^1]: The web console bundle is compiled to a static asset directory and baked into the Go binary at compile time via `//go:embed`, adding less than 2MB of compressed assets.
