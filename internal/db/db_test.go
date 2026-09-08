@@ -312,7 +312,105 @@ func TestCleanupCompletedJobs(t *testing.T) {
 	var count int
 	_ = dbConn.Select("COUNT(*)").From("tasks").Where(dbx.HashExp{"id": "job-completed-recent"}).Row(&count)
 	if count != 1 {
-
 		t.Errorf("Expected job-completed-recent to remain in database, got count %d", count)
+	}
+}
+
+func TestEnsureSystemTables_FirstStartup(t *testing.T) {
+	// 1. Open a fresh raw in-memory SQLite database without tables
+	rawDB, err := dbx.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open memory db: %v", err)
+	}
+	defer rawDB.Close()
+
+	// 2. Ensure system tables on first startup
+	if err := EnsureSystemTables(rawDB); err != nil {
+		t.Fatalf("EnsureSystemTables failed: %v", err)
+	}
+
+	// 3. Query all tables starting with '_' from sqlite_master
+	var tableRows []struct {
+		Name string `db:"name"`
+	}
+	err = rawDB.NewQuery("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '\\_%' ESCAPE '\\' ORDER BY name ASC").All(&tableRows)
+	if err != nil {
+		t.Fatalf("Failed to query sqlite_master: %v", err)
+	}
+
+	createdTables := make(map[string]bool)
+	for _, row := range tableRows {
+		createdTables[row.Name] = true
+	}
+
+	for _, expectedTable := range SystemTables {
+		if !createdTables[expectedTable] {
+			t.Errorf("Expected system table %q to be created on first startup, but it was missing", expectedTable)
+		}
+		if !IsSystemTable(expectedTable) {
+			t.Errorf("Expected IsSystemTable(%q) to be true", expectedTable)
+		}
+	}
+
+	if IsSystemTable("users") || IsSystemTable("posts") {
+		t.Errorf("Expected IsSystemTable to be false for non-system tables")
+	}
+
+	// 4. Verify columns in _moul
+	var moulCols []struct {
+		Name string `db:"name"`
+	}
+	if err := rawDB.NewQuery("PRAGMA table_info(_moul);").All(&moulCols); err != nil {
+		t.Fatalf("PRAGMA table_info(_moul) failed: %v", err)
+	}
+	moulColMap := make(map[string]bool)
+	for _, c := range moulCols {
+		moulColMap[c.Name] = true
+	}
+	for _, reqCol := range []string{"id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at"} {
+		if !moulColMap[reqCol] {
+			t.Errorf("Expected column %q in _moul table", reqCol)
+		}
+	}
+
+	// 5. Verify columns in _rootUsers
+	var rootCols []struct {
+		Name string `db:"name"`
+	}
+	if err := rawDB.NewQuery("PRAGMA table_info(_rootUsers);").All(&rootCols); err != nil {
+		t.Fatalf("PRAGMA table_info(_rootUsers) failed: %v", err)
+	}
+	rootColMap := make(map[string]bool)
+	for _, c := range rootCols {
+		rootColMap[c.Name] = true
+	}
+	for _, reqCol := range []string{"id", "username", "email", "name", "passwordHash", "created_at", "updated_at"} {
+		if !rootColMap[reqCol] {
+			t.Errorf("Expected column %q in _rootUsers table", reqCol)
+		}
+	}
+
+	// 6. Verify default settings seeded
+	var settingsCount int
+	if err := rawDB.Select("COUNT(*)").From("_settings").Row(&settingsCount); err != nil {
+		t.Fatalf("Failed to count _settings: %v", err)
+	}
+	if settingsCount == 0 {
+		t.Errorf("Expected default settings to be seeded in _settings table")
+	}
+}
+
+func TestEnsureSystemTables_Idempotency(t *testing.T) {
+	dbConn, err := InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("InitDB failed: %v", err)
+	}
+	defer dbConn.Close()
+
+	// Calling EnsureSystemTables multiple times must succeed without error
+	for i := 0; i < 3; i++ {
+		if err := EnsureSystemTables(dbConn); err != nil {
+			t.Fatalf("EnsureSystemTables failed on iteration %d: %v", i+1, err)
+		}
 	}
 }

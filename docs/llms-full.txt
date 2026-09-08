@@ -39,14 +39,17 @@ The engine reads environment variables from `.env` in the current working direct
 
 ## 3. Database Architecture & Meta-Tables
 
-`moul` stores metadata and system states in reserved system tables prefixed with an underscore (`_`):
+`moul` stores metadata and system states in reserved system tables prefixed with an underscore (`_`), which are automatically and idempotently created on first startup:
 
 1. **`_moul`**: Stores schema metadata for all dynamic collections.
    - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `created_at` (TEXT), `updated_at` (TEXT).
 2. **`_visits`**: Stores deduplicated visitor session analytics.
 3. **`_requests`**: Log table storing HTTP request logs asynchronously.
-4. **`_settings`**: Key-value store for app settings (e.g. SMTP config).
-5. **`_feature_flags`**: Feature flag definitions and gate configs.
+4. **`_settings`**: Key-value store for app settings (e.g. SMTP, Litestream, S3, rate limiting config).
+5. **`_rootUsers`**: Master root administrator user credentials and accounts.
+6. **`_feature_flags`**: Feature flag definitions, rollouts, and gate configs.
+7. **`_certmagic`**: TLS certificate and lock storage for automatic HTTPS management.
+8. **`_revoked_tokens`**: Blacklist table for invalidated and revoked JWT authentication tokens.
 
 ---
 

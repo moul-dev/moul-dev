@@ -147,6 +147,14 @@ func (a *App) Router() *echo.Echo {
 	return a.router
 }
 
+// EnsureSystemTables ensures all system tables starting with "_*" are created in the database.
+func (a *App) EnsureSystemTables() error {
+	if a.dbConn == nil {
+		return fmt.Errorf("database connection is nil; call Bootstrap() first or initialize database")
+	}
+	return db.EnsureSystemTables(a.dbConn)
+}
+
 // Bootstrap initializes database, mailer, analytics, worker engine, hooks, and HTTP router.
 func (a *App) Bootstrap() error {
 	moulEnv := a.config.Env
@@ -189,6 +197,12 @@ func (a *App) Bootstrap() error {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
 	a.dbConn = dbConn
+
+	// Ensure system tables (_*) exist on first startup
+	if err := db.EnsureSystemTables(a.dbConn); err != nil {
+		return fmt.Errorf("failed to ensure system tables on startup: %w", err)
+	}
+	logger.Info("System tables (_*) verified and ready")
 
 	// Start Litestream replication
 	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)

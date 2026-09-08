@@ -10,6 +10,7 @@ import (
 
 	"github.com/gobuffalo/envy"
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
@@ -219,5 +220,51 @@ func TestAppHooksError(t *testing.T) {
 	})
 	if err := a2.Bootstrap(); err == nil {
 		t.Errorf("Expected error from failing OnBeforeStart hook")
+	}
+}
+
+func TestApp_EnsureSystemTables_OnStartup(t *testing.T) {
+	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
+	envy.Set("MOUL_ADMIN_KEY", "test-admin-key")
+
+	a := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	})
+
+	// Before bootstrap, EnsureSystemTables should return error (nil db)
+	if err := a.EnsureSystemTables(); err == nil {
+		t.Errorf("Expected EnsureSystemTables to fail before Bootstrap")
+	}
+
+	if err := a.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	// Verify all system tables starting with "_" were automatically created
+	var tableRows []struct {
+		Name string `db:"name"`
+	}
+	err := a.DB().NewQuery("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '\\_%' ESCAPE '\\' ORDER BY name ASC").All(&tableRows)
+	if err != nil {
+		t.Fatalf("Failed to query sqlite_master: %v", err)
+	}
+
+	createdTables := make(map[string]bool)
+	for _, row := range tableRows {
+		createdTables[row.Name] = true
+	}
+
+	for _, expectedTable := range db.SystemTables {
+		if !createdTables[expectedTable] {
+			t.Errorf("Expected system table %q to be created automatically on first startup", expectedTable)
+		}
+	}
+
+	// Idempotency check via App method
+	if err := a.EnsureSystemTables(); err != nil {
+		t.Errorf("Expected a.EnsureSystemTables() to be idempotent, got error: %v", err)
 	}
 }

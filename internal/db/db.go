@@ -18,37 +18,47 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// InitDB initializes the SQLite database and creates the _moul meta-table.
-func InitDB(dbPath string) (*dbx.DB, error) {
-	db, err := dbx.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
-	}
+// SystemTables defines all reserved internal engine tables starting with an underscore (_).
+var SystemTables = []string{
+	"_moul",
+	"_visits",
+	"_settings",
+	"_rootUsers",
+	"_feature_flags",
+	"_certmagic",
+	"_revoked_tokens",
+	"_requests",
+}
 
-	if os.Getenv("MOUL_DEBUG_SQL") == "true" || os.Getenv("MOUL_DEBUG") == "true" {
-		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, rows *sql.Rows, err error) {
-			logger.Debug("SQL Query", "duration", t.String(), "sql", sqlStr, "err", err)
-		}
-		db.ExecLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, result sql.Result, err error) {
-			logger.Debug("SQL Exec", "duration", t.String(), "sql", sqlStr, "err", err)
-		}
-	}
+// IsSystemTable returns true if the table name has the reserved system prefix "_".
+func IsSystemTable(name string) bool {
+	return strings.HasPrefix(name, "_")
+}
 
-	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
-	pragmas := []string{
-		"PRAGMA journal_mode=WAL;",
-		"PRAGMA busy_timeout=5000;",
-		"PRAGMA synchronous=NORMAL;",
-		"PRAGMA foreign_keys=ON;",
+func ensureColumnExists(db *dbx.DB, tableName, colName, colDef string) error {
+	var cols []struct {
+		Name string `db:"name"`
 	}
-	for _, pragma := range pragmas {
-		if _, err := db.NewQuery(pragma).Execute(); err != nil {
-			return nil, fmt.Errorf("failed to execute pragma (%s): %w", pragma, err)
+	query := fmt.Sprintf("PRAGMA table_info(%s);", QuoteIdentifier(tableName))
+	if err := db.NewQuery(query).All(&cols); err != nil {
+		return fmt.Errorf("failed to inspect columns for table %s: %w", tableName, err)
+	}
+	for _, col := range cols {
+		if strings.EqualFold(col.Name, colName) {
+			return nil
 		}
 	}
+	alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", QuoteIdentifier(tableName), QuoteIdentifier(colName), colDef)
+	if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
+		return fmt.Errorf("failed to add column %s to table %s: %w", colName, tableName, err)
+	}
+	return nil
+}
 
+// EnsureSystemTables automatically creates all system tables starting with "_*" and their indexes on first startup.
+func EnsureSystemTables(db *dbx.DB) error {
 	// Create meta-table _moul
-	_, err = db.NewQuery(`
+	_, err := db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _moul (
 			id TEXT PRIMARY KEY,
 			name TEXT UNIQUE NOT NULL,
@@ -60,13 +70,17 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _moul meta table: %w", err)
+		return fmt.Errorf("failed to create _moul meta table: %w", err)
 	}
 
 	// Ensure email_templates column exists in _moul for backwards compatibility
-	_, _ = db.NewQuery("ALTER TABLE _moul ADD COLUMN email_templates TEXT;").Execute()
+	if err := ensureColumnExists(db, "_moul", "email_templates", "TEXT"); err != nil {
+		return err
+	}
 	// Ensure webhooks column exists in _moul for backwards compatibility
-	_, _ = db.NewQuery("ALTER TABLE _moul ADD COLUMN webhooks TEXT;").Execute()
+	if err := ensureColumnExists(db, "_moul", "webhooks", "TEXT"); err != nil {
+		return err
+	}
 
 	// Create meta-table _visits
 	_, err = db.NewQuery(`
@@ -94,7 +108,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _visits table: %w", err)
+		return fmt.Errorf("failed to create _visits table: %w", err)
 	}
 
 	// Create meta-table _settings
@@ -105,7 +119,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _settings table: %w", err)
+		return fmt.Errorf("failed to create _settings table: %w", err)
 	}
 
 	// Create meta-table _rootUsers
@@ -121,11 +135,14 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _rootUsers table: %w", err)
+		return fmt.Errorf("failed to create _rootUsers table: %w", err)
 	}
 
 	// Ensure name column exists in _rootUsers for backwards compatibility
-	_, _ = db.NewQuery("ALTER TABLE _rootUsers ADD COLUMN name TEXT NOT NULL DEFAULT '';").Execute()
+	if err := ensureColumnExists(db, "_rootUsers", "name", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+
 	// Create meta-table _feature_flags
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _feature_flags (
@@ -141,7 +158,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON _feature_flags(key);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _feature_flags table: %w", err)
+		return fmt.Errorf("failed to create _feature_flags table: %w", err)
 	}
 
 	// Create meta-table _certmagic
@@ -154,7 +171,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _certmagic table: %w", err)
+		return fmt.Errorf("failed to create _certmagic table: %w", err)
 	}
 
 	// Create meta-table _revoked_tokens
@@ -166,7 +183,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON _revoked_tokens(expires_at);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _revoked_tokens table: %w", err)
+		return fmt.Errorf("failed to create _revoked_tokens table: %w", err)
 	}
 
 	// Seed default settings if they don't exist
@@ -223,7 +240,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		var exists int
 		err = db.Select("COUNT(*)").From("_settings").Where(dbx.HashExp{"key": k}).Row(&exists)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check setting %s: %w", k, err)
+			return fmt.Errorf("failed to check setting %s: %w", k, err)
 		}
 		if exists == 0 {
 			_, err = db.Insert("_settings", dbx.Params{
@@ -231,7 +248,7 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 				"value": v,
 			}).Execute()
 			if err != nil {
-				return nil, fmt.Errorf("failed to seed setting %s: %w", k, err)
+				return fmt.Errorf("failed to seed setting %s: %w", k, err)
 			}
 		}
 	}
@@ -239,15 +256,15 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 	// Create indexes on _visits
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_visitor ON _visits (visitor_token);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_visits_visitor index: %w", err)
+		return fmt.Errorf("failed to create idx_visits_visitor index: %w", err)
 	}
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_user ON _visits (user_id);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_visits_user index: %w", err)
+		return fmt.Errorf("failed to create idx_visits_user index: %w", err)
 	}
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_visits_started_at ON _visits (started_at);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_visits_started_at index: %w", err)
+		return fmt.Errorf("failed to create idx_visits_started_at index: %w", err)
 	}
 
 	// Create meta-table _requests
@@ -263,21 +280,57 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		);
 	`).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _requests table: %w", err)
+		return fmt.Errorf("failed to create _requests table: %w", err)
 	}
 
 	// Create indexes on _requests
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_visit_id ON _requests (visit_id);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_requests_visit_id index: %w", err)
+		return fmt.Errorf("failed to create idx_requests_visit_id index: %w", err)
 	}
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON _requests (created_at);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_requests_created_at index: %w", err)
+		return fmt.Errorf("failed to create idx_requests_created_at index: %w", err)
 	}
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_path ON _requests (path);").Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create idx_requests_path index: %w", err)
+		return fmt.Errorf("failed to create idx_requests_path index: %w", err)
+	}
+
+	return nil
+}
+
+// InitDB initializes the SQLite database, configures pragmas, and ensures all system tables exist.
+func InitDB(dbPath string) (*dbx.DB, error) {
+	db, err := dbx.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
+	}
+
+	if os.Getenv("MOUL_DEBUG_SQL") == "true" || os.Getenv("MOUL_DEBUG") == "true" {
+		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, rows *sql.Rows, err error) {
+			logger.Debug("SQL Query", "duration", t.String(), "sql", sqlStr, "err", err)
+		}
+		db.ExecLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, result sql.Result, err error) {
+			logger.Debug("SQL Exec", "duration", t.String(), "sql", sqlStr, "err", err)
+		}
+	}
+
+	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
+	pragmas := []string{
+		"PRAGMA journal_mode=WAL;",
+		"PRAGMA busy_timeout=5000;",
+		"PRAGMA synchronous=NORMAL;",
+		"PRAGMA foreign_keys=ON;",
+	}
+	for _, pragma := range pragmas {
+		if _, err := db.NewQuery(pragma).Execute(); err != nil {
+			return nil, fmt.Errorf("failed to execute pragma (%s): %w", pragma, err)
+		}
+	}
+
+	if err := EnsureSystemTables(db); err != nil {
+		return nil, fmt.Errorf("failed to initialize system tables: %w", err)
 	}
 
 	return db, nil
