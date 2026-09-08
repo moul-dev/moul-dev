@@ -8,7 +8,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 // RegisterBuiltinWorkers registers standard moul background workers like SendEmail and CleanupRevokedTokens.

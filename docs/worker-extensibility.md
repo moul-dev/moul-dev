@@ -19,11 +19,11 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
-	"github.com/moul-dev/moul-dev/internal/logger"
-	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/moul-dev/moul-dev/pkg/app"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func main() {
@@ -31,22 +31,22 @@ func main() {
 		Version: "1.0.0-custom",
 	})
 
-	// Register custom worker handler
+	// Register custom worker handler (supports *worker.Job or *app.Job alias)
 	moulApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.Job) error {
 		reportID, _ := job.Args["report_id"].(string)
-		logger.Info("Generating report background job", "report_id", reportID)
+		slog.Info("Generating report background job", "report_id", reportID)
 		return nil
 	})
 
 	// Register custom periodic task (runs every 30 minutes)
 	moulApp.RegisterPeriodicWorker(30*time.Minute, "SyncStripeCustomers", func(ctx context.Context, job *worker.Job) error {
-		logger.Info("Running periodic Stripe customer sync")
+		slog.Info("Running periodic Stripe customer sync")
 		return nil
 	})
 
 	// Start application
 	if err := moulApp.Start(context.Background()); err != nil {
-		logger.Fatal("Server failed", "err", err)
+		slog.Error("Server failed", "err", err)
 	}
 }
 ```

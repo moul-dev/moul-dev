@@ -18,7 +18,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func copyFile(src, dst string) error {

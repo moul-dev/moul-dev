@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gobuffalo/envy"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func TestAppE2EFlow(t *testing.T) {

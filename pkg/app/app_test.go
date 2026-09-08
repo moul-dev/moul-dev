@@ -10,7 +10,7 @@ import (
 
 	"github.com/gobuffalo/envy"
 	"github.com/labstack/echo/v5"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func TestAppWorkerExtensibility(t *testing.T) {

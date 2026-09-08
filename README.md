@@ -442,7 +442,7 @@ In addition to HTTP endpoints, backend processing and custom background worker t
 ```go
 import (
 	"context"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 // 1. Initialize worker engine

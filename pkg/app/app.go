@@ -22,8 +22,14 @@ import (
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
+
+// Job represents a background job instance.
+type Job = worker.Job
+
+// JobHandler is the function signature for worker jobs.
+type JobHandler = worker.JobHandler
 
 // Config holds configuration options for starting a Mould application.
 type Config struct {

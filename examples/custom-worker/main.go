@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 
-	"github.com/moul-dev/moul-dev/internal/logger"
-	"github.com/moul-dev/moul-dev/internal/worker"
 	"github.com/moul-dev/moul-dev/pkg/app"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func main() {
@@ -16,10 +16,10 @@ func main() {
 		Version: "1.0.0-custom",
 	})
 
-	// Method 1: Register a custom job handler via helper method
+	// Method 1: Register a custom job handler via helper method (using worker.Job or app.Job)
 	moulApp.RegisterWorker("GeneratePDF", func(ctx context.Context, job *worker.Job) error {
 		docID, _ := job.Args["document_id"].(string)
-		logger.Info("Executing custom GeneratePDF worker job", "document_id", docID)
+		slog.Info("Executing custom GeneratePDF worker job", "document_id", docID)
 		// Perform custom background logic here...
 		return nil
 	})
@@ -27,7 +27,7 @@ func main() {
 	// Method 2: Register a custom job handler via OnWorkerInit lifecycle hook
 	moulApp.OnWorkerInit(func(engine *worker.Engine) error {
 		engine.Register("SyncExternalAnalytics", func(ctx context.Context, job *worker.Job) error {
-			logger.Info("Executing custom SyncExternalAnalytics job", "jobID", job.ID)
+			slog.Info("Executing custom SyncExternalAnalytics job", "jobID", job.ID)
 			return nil
 		})
 		return nil
@@ -35,7 +35,7 @@ func main() {
 
 	fmt.Println("Starting custom Moul server with custom worker handlers...")
 	if err := moulApp.Start(context.Background()); err != nil {
-		logger.Fatal("Failed to start custom moul application", "err", err)
+		slog.Error("Failed to start custom moul application", "err", err)
 		os.Exit(1)
 	}
 }

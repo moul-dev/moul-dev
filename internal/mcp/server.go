@@ -4,7 +4,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 	"github.com/pocketbase/dbx"
 )
 

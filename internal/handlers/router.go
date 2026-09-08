@@ -15,7 +15,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
-	"github.com/moul-dev/moul-dev/internal/worker"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 	"github.com/pocketbase/dbx"
 )
 

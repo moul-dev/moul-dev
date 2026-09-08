@@ -19,10 +19,10 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
-	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/pkg/app"
 )
 
@@ -40,7 +40,7 @@ func main() {
 
 	// Start application
 	if err := moulApp.Start(context.Background()); err != nil {
-		logger.Fatal("Server failed", "err", err)
+		slog.Error("Server failed", "err", err)
 	}
 }
 ```
@@ -75,7 +75,7 @@ moulApp.OnRouterInit(func(router *echo.Echo) error {
 moulApp.OnBeforeStart(func(a *app.App) error {
     // Access database or services during startup
     dbConn := a.DB()
-    logger.Info("App bootstrapped with DB connection", "db", dbConn != nil)
+    slog.Info("App bootstrapped with DB connection", "db", dbConn != nil)
     return nil
 })
 ```

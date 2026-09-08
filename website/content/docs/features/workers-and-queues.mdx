@@ -91,7 +91,7 @@ const res = await fetch('http://localhost:8090/api/moul/tasks_queue/records', {
   </Tab>
   <Tab value="Go">
 ```go
-// Using internal worker package or pkg/app
+// Using pkg/worker or pkg/app
 job, err := workerEngine.Enqueue(ctx, "tasks_queue", map[string]any{
     "worker": "SendEmailNotification",
     "priority": 1,

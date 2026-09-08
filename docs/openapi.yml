@@ -37,7 +37,7 @@ info:
     - **Server Embedding**: Embed the full server engine in Go apps via `pkg/app`.
     - **Custom HTTP Route Hooks**: Add custom endpoints using `RegisterRoute` or attach to the raw Echo router via `OnRouterInit`.
     - **Lifecycle Callbacks**: Run custom initialization logic after database setup using `OnBeforeStart`.
-    - **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker`.
+    - **Custom Background Workers**: Register custom job handlers using `RegisterWorker` and `RegisterPeriodicWorker` via `pkg/app` and `pkg/worker`.
 
     ### Built-in Model Context Protocol (MCP) Server
     - **Overview**: `moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This allows AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity) to inspect schema definitions, execute record CRUD, track background jobs, manage feature flags, and monitor host system metrics.
