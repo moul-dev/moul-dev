@@ -600,15 +600,31 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 
 #### Streamable HTTP / SSE Mode (`http://localhost:8090/api/mcp`)
 
-**Header Authentication**:
+**Bearer Token Authentication (Recommended)**:
 ```json
 {
   "mcpServers": {
-    "moul-http": {
-      "url": "http://localhost:8090/api/mcp",
+    "moul": {
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+
+**Admin Key Header Authentication (`X-Admin-Key`)**:
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
       "headers": {
         "X-Admin-Key": "test-admin-key-1234"
-      }
+      },
+      "url": "http://localhost:8090/api/mcp"
     }
   }
 }
@@ -618,7 +634,8 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```json
 {
   "mcpServers": {
-    "moul-http": {
+    "moul": {
+      "type": "http",
       "url": "http://localhost:8090/api/mcp?adminKey=test-admin-key-1234"
     }
   }

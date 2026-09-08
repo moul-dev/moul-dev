@@ -16,13 +16,30 @@ import { Callout } from 'fumadocs-ui/components/callout'
 Communicates directly over standard input and output streams. Ideal for local IDEs without running a separate HTTP process.
 
 ### 2. Streamable HTTP & SSE Mode (`/api/mcp`)
-Enabled automatically when running `moul start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams.
+Enabled automatically when running `moul start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams. Authenticate using `Authorization: Bearer <ADMIN_SECRET_KEY>`, `X-Admin-Key: <ADMIN_SECRET_KEY>`, or URL query parameter `?adminKey=<ADMIN_SECRET_KEY>`.
 
 ---
 
 ## Assistant Configuration
 
-<Tabs items={['Claude Desktop', 'Cursor IDE', 'cURL Direct JSON-RPC']}>
+<Tabs items={['Cursor & HTTP Clients', 'Claude Desktop', 'Cursor (Stdio)', 'cURL Direct JSON-RPC']}>
+  <Tab value="Cursor & HTTP Clients">
+Configure remote Streamable HTTP MCP in `.cursor/mcp.json` or your MCP client settings (VS Code, Windsurf, Claude Code):
+
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+  </Tab>
   <Tab value="Claude Desktop">
 Add to `claude_desktop_config.json`:
 
@@ -40,8 +57,8 @@ Add to `claude_desktop_config.json`:
 }
 ```
   </Tab>
-  <Tab value="Cursor IDE">
-Add to `.cursor/mcp.json`:
+  <Tab value="Cursor (Stdio)">
+Add to `.cursor/mcp.json` to launch a local `moul` binary process over stdio:
 
 ```json
 {

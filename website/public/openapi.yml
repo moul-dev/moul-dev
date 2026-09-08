@@ -92,7 +92,21 @@ info:
           ```
       - **Cursor / VS Code / Windsurf / Antigravity Setup**:
         - Workspace Config: `.cursor/mcp.json` or `.vscode/mcp.json`
-        - *Configuration*:
+        - *Streamable HTTP Mode (Recommended)*:
+          ```json
+          {
+            "mcpServers": {
+              "moul": {
+                "type": "http",
+                "headers": {
+                  "Authorization": "Bearer ADMIN_SECRET_KEY"
+                },
+                "url": "http://localhost:8090/api/mcp"
+              }
+            }
+          }
+          ```
+        - *Stdio Mode*:
           ```json
           {
             "mcpServers": {
@@ -172,6 +186,20 @@ tags:
       - Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
 
       #### Configuration Examples
+      - **Streamable HTTP MCP Client / Cursor IDE** (`.cursor/mcp.json`):
+        ```json
+        {
+          "mcpServers": {
+            "moul": {
+              "type": "http",
+              "headers": {
+                "Authorization": "Bearer ADMIN_SECRET_KEY"
+              },
+              "url": "http://localhost:8090/api/mcp"
+            }
+          }
+        }
+        ```
       - **Claude Desktop** (`claude_desktop_config.json`):
         ```json
         {
@@ -188,7 +216,7 @@ tags:
           }
         }
         ```
-      - **Cursor IDE** (`.cursor/mcp.json`):
+      - **Cursor IDE (Stdio)** (`.cursor/mcp.json`):
         ```json
         {
           "mcpServers": {

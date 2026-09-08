@@ -47,6 +47,22 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 - `moul_get_analytics_summary`: Fetch visitor and request analytics totals.
 - `moul_list_requests`: Query recent HTTP request logs.
 
+## MCP Assistant Configuration (`.cursor/mcp.json` / `mcpServers`)
+
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+
 ## Essential CLI Commands
 
 ```bash

@@ -43,16 +43,31 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 
 2. **Streamable HTTP & SSE Transport (MCP 2025 Specification)**:
    - URL: `http://localhost:8090/api/mcp`
-   - Flexible Authentication: Pass via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query param `?adminKey=<MOUL_ADMIN_KEY>`.
-   - Header Auth Configuration:
+   - Flexible Authentication: Pass via `Authorization: Bearer <ADMIN_SECRET_KEY>`, `X-Admin-Key` header, or URL query param `?adminKey=<ADMIN_SECRET_KEY>`.
+   - Bearer Token Auth Configuration (Recommended):
      ```json
      {
        "mcpServers": {
-         "moul-http": {
-           "url": "http://localhost:8090/api/mcp",
+         "moul": {
+           "type": "http",
            "headers": {
-             "X-Admin-Key": "<MOUL_ADMIN_KEY>"
-           }
+             "Authorization": "Bearer ADMIN_SECRET_KEY"
+           },
+           "url": "http://localhost:8090/api/mcp"
+         }
+       }
+     }
+     ```
+   - Header Auth Configuration (`X-Admin-Key`):
+     ```json
+     {
+       "mcpServers": {
+         "moul": {
+           "type": "http",
+           "headers": {
+             "X-Admin-Key": "<ADMIN_SECRET_KEY>"
+           },
+           "url": "http://localhost:8090/api/mcp"
          }
        }
      }
@@ -61,8 +76,9 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
      ```json
      {
        "mcpServers": {
-         "moul-http": {
-           "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
+         "moul": {
+           "type": "http",
+           "url": "http://localhost:8090/api/mcp?adminKey=<ADMIN_SECRET_KEY>"
          }
        }
      }

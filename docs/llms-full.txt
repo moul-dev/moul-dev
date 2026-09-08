@@ -179,6 +179,21 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp`) or 
 16. `moul_get_analytics_summary`: Retrieve visitor and request totals.
 17. `moul_list_requests`: `{"limit": int}` - Query recent HTTP request logs.
 
+### MCP Client Configuration (`.cursor/mcp.json` / `mcpServers`)
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+
 ---
 
 ## 8. Programmatic Go Extensibility & HTTP Route Hooks (`pkg/app`)
