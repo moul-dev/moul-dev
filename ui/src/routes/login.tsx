@@ -9,6 +9,7 @@ import {
   TextField,
   Button,
   Alert,
+  Badge,
   Link,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
@@ -63,6 +64,16 @@ const styles = stylex.create({
     color: tokens.colorFgSubtle,
     fontFamily: tokens.fontFamilyBase,
   },
+  keyStatusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: `${tokens.spacing2} ${tokens.spacing3}`,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
+    border: `1px solid ${tokens.colorBorderSubtle}`,
+    width: '100%',
+  },
   form: {
     display: 'flex',
     flexDirection: 'column',
@@ -84,21 +95,42 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { adminLogin, adminKey: savedAdminKey, needsSetup } = useAuth();
-  const [adminKey, setAdminKey] = useState(savedAdminKey || '');
+  const { adminKey, verifyAndSetAdminKey, clearAdminKey, adminLogin, needsSetup } = useAuth();
+  const [masterKeyInput, setMasterKeyInput] = useState('');
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Context 1: Master Admin Key Verification
+  const handleVerifyKey = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!adminKey.trim()) {
+    const trimmed = masterKeyInput.trim();
+    if (!trimmed) {
       setError('Master Admin Key is required');
       return;
     }
+
+    setLoading(true);
+    try {
+      const res = await verifyAndSetAdminKey(trimmed);
+      if (res.needsSetup) {
+        navigate({ to: '/setup' });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid Master Admin Key (Unauthorized)');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Context 2: Root User Authentication
+  const handleUserLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
     if (!identity.trim() || !password) {
       setError('Username/Email and Password are required');
       return;
@@ -106,7 +138,7 @@ function LoginPage() {
 
     setLoading(true);
     try {
-      await adminLogin(adminKey.trim(), identity.trim(), password);
+      await adminLogin(identity.trim(), password);
       navigate({ to: '/overview' });
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
@@ -114,6 +146,14 @@ function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleClearKey = () => {
+    clearAdminKey();
+    setMasterKeyInput('');
+    setError(null);
+  };
+
+  const hasVerifiedKey = Boolean(adminKey);
 
   return (
     <div {...stylex.props(styles.container)}>
@@ -127,8 +167,14 @@ function LoginPage() {
               <div {...stylex.props(styles.icon)}>
                 <LogoIcon size={44} />
               </div>
-              <h1 {...stylex.props(styles.title)}>moul console</h1>
-              <p {...stylex.props(styles.subtitle)}>Sign in with your administrator credentials</p>
+              <h1 {...stylex.props(styles.title)}>
+                {hasVerifiedKey ? 'moul console' : 'Connect to moul'}
+              </h1>
+              <p {...stylex.props(styles.subtitle)}>
+                {hasVerifiedKey
+                  ? 'Sign in with your administrator credentials'
+                  : 'Enter your Master Admin Key to access the administration console'}
+              </p>
             </div>
           </CardHeader>
 
@@ -136,47 +182,90 @@ function LoginPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
               {error && <Alert variant="error" description={error} />}
 
-              <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
-                <TextField
-                  label="Master Admin Key"
-                  type="password"
-                  placeholder="Enter MOUL_ADMIN_KEY"
-                  value={adminKey}
-                  onChange={setAdminKey}
-                  isRequired
-                  description="Server administrative key configured via MOUL_ADMIN_KEY"
-                />
+              {!hasVerifiedKey ? (
+                /* ── Context 1: Master Admin Key Entry ── */
+                <form onSubmit={handleVerifyKey} {...stylex.props(styles.form)}>
+                  <TextField
+                    label="Master Admin Key"
+                    type="password"
+                    placeholder="Enter MOUL_ADMIN_KEY"
+                    value={masterKeyInput}
+                    onChange={setMasterKeyInput}
+                    isRequired
+                    description="Server administrative key configured via MOUL_ADMIN_KEY (step 1 of 2)"
+                  />
 
-                <TextField
-                  label="Root Username or Email"
-                  placeholder="admin@example.com"
-                  value={identity}
-                  onChange={setIdentity}
-                  isRequired
-                />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isDisabled={loading}
+                  >
+                    {loading ? 'Verifying Key...' : 'Connect & Continue'}
+                  </Button>
+                </form>
+              ) : needsSetup ? (
+                /* ── Prompt to Setup Root User if server requires it ── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                  <div {...stylex.props(styles.keyStatusRow)}>
+                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
+                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                      Change Key
+                    </Button>
+                  </div>
+                  <Alert
+                    variant="warning"
+                    description="Initial server setup is required. Please initialize the root administrator account to proceed."
+                  />
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onPress={() => navigate({ to: '/setup' })}
+                  >
+                    Initialize Root Administrator
+                  </Button>
+                </div>
+              ) : (
+                /* ── Context 2: Root Credentials Login ── */
+                <form onSubmit={handleUserLogin} {...stylex.props(styles.form)}>
+                  <div {...stylex.props(styles.keyStatusRow)}>
+                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
+                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                      Change Key
+                    </Button>
+                  </div>
 
-                <TextField
-                  label="Password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={setPassword}
-                  isRequired
-                />
+                  <TextField
+                    label="Root Username or Email"
+                    placeholder="admin@example.com"
+                    value={identity}
+                    onChange={setIdentity}
+                    isRequired
+                  />
 
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  isDisabled={loading}
-                >
-                  {loading ? 'Authenticating...' : 'Sign In to Admin Console'}
-                </Button>
-              </form>
+                  <TextField
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={setPassword}
+                    isRequired
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isDisabled={loading}
+                  >
+                    {loading ? 'Authenticating...' : 'Sign In to Admin Console'}
+                  </Button>
+                </form>
+              )}
             </div>
           </CardBody>
 
-          {needsSetup && (
+          {hasVerifiedKey && needsSetup && (
             <CardFooter>
               <div {...stylex.props(styles.footer)}>
                 First time running moul?{' '}
@@ -191,4 +280,3 @@ function LoginPage() {
     </div>
   );
 }
-

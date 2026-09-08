@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import * as stylex from '@stylexjs/stylex';
 import {
   Card,
   CardHeader,
   CardBody,
+  CardFooter,
   TextField,
   Button,
   Alert,
+  Badge,
+  Link,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
-import { api, setStoredAdminKey } from '../api/client';
+import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/layout/ThemeToggle';
 import { LogoIcon } from '../components/layout/Logo';
@@ -62,10 +65,27 @@ const styles = stylex.create({
     color: tokens.colorFgSubtle,
     fontFamily: tokens.fontFamilyBase,
   },
+  keyStatusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: `${tokens.spacing2} ${tokens.spacing3}`,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
+    border: `1px solid ${tokens.colorBorderSubtle}`,
+    width: '100%',
+  },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing3,
+    width: '100%',
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: '0.8125rem',
+    color: tokens.colorFgSubtle,
+    fontFamily: tokens.fontFamilyBase,
     width: '100%',
   },
 });
@@ -76,8 +96,8 @@ export const Route = createFileRoute('/setup')({
 
 function SetupPage() {
   const navigate = useNavigate();
-  const { adminKey: savedAdminKey, saveAdminKey } = useAuth();
-  const [adminKey, setAdminKey] = useState(savedAdminKey || '');
+  const { adminKey, verifyAndSetAdminKey, clearAdminKey, adminLogin, needsSetup } = useAuth();
+  const [masterKeyInput, setMasterKeyInput] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -85,14 +105,35 @@ function SetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Context 1: Master Admin Key Verification
+  const handleVerifyKey = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!adminKey.trim()) {
-      setError('Master Admin Key is required to authorize root user setup');
+    const trimmed = masterKeyInput.trim();
+    if (!trimmed) {
+      setError('Master Admin Key is required');
       return;
     }
+
+    setLoading(true);
+    try {
+      const res = await verifyAndSetAdminKey(trimmed);
+      if (!res.needsSetup) {
+        navigate({ to: '/login' });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid Master Admin Key (Unauthorized)');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Context 2: Root User Setup Submission
+  const handleSetupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
     if (password !== passwordConfirm) {
       setError('Passwords do not match');
       return;
@@ -104,18 +145,28 @@ function SetupPage() {
 
     setLoading(true);
     try {
-      // Save admin key so X-Admin-Key is attached
-      saveAdminKey(adminKey.trim());
-      setStoredAdminKey(adminKey.trim());
-
-      await api.setupRootUser({ username, email, password });
-      navigate({ to: '/login' });
+      await api.setupRootUser({ username: username.trim(), email: email.trim(), password });
+      // Auto-authenticate with the created credentials
+      try {
+        await adminLogin(username.trim(), password);
+        navigate({ to: '/overview' });
+      } catch {
+        navigate({ to: '/login' });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to setup root user');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleClearKey = () => {
+    clearAdminKey();
+    setMasterKeyInput('');
+    setError(null);
+  };
+
+  const hasVerifiedKey = Boolean(adminKey);
 
   return (
     <div {...stylex.props(styles.container)}>
@@ -129,9 +180,13 @@ function SetupPage() {
               <div {...stylex.props(styles.icon)}>
                 <LogoIcon size={44} />
               </div>
-              <h1 {...stylex.props(styles.title)}>Welcome to moul</h1>
+              <h1 {...stylex.props(styles.title)}>
+                {hasVerifiedKey ? 'Welcome to moul' : 'Connect to moul'}
+              </h1>
               <p {...stylex.props(styles.subtitle)}>
-                Create the primary root administrator account to initialize your database engine.
+                {hasVerifiedKey
+                  ? 'Create the primary root administrator account to initialize your database engine.'
+                  : 'Enter your Master Admin Key to authorize initial root user setup.'}
               </p>
             </div>
           </CardHeader>
@@ -140,67 +195,120 @@ function SetupPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
               {error && <Alert variant="error" description={error} />}
 
-              <form onSubmit={handleSubmit} {...stylex.props(styles.form)}>
-                <TextField
-                  label="Master Admin Key (MOUL_ADMIN_KEY)"
-                  type="password"
-                  placeholder="Enter server admin key"
-                  value={adminKey}
-                  onChange={setAdminKey}
-                  isRequired
-                  description="Required to authorize root administrator creation"
-                />
+              {!hasVerifiedKey ? (
+                /* ── Context 1: Master Admin Key Entry ── */
+                <form onSubmit={handleVerifyKey} {...stylex.props(styles.form)}>
+                  <TextField
+                    label="Master Admin Key"
+                    type="password"
+                    placeholder="Enter MOUL_ADMIN_KEY"
+                    value={masterKeyInput}
+                    onChange={setMasterKeyInput}
+                    isRequired
+                    description="Server administrative key configured via MOUL_ADMIN_KEY (step 1 of 2)"
+                  />
 
-                <TextField
-                  label="Root Username"
-                  placeholder="admin"
-                  value={username}
-                  onChange={setUsername}
-                  isRequired
-                />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isDisabled={loading}
+                  >
+                    {loading ? 'Verifying Key...' : 'Verify & Continue'}
+                  </Button>
+                </form>
+              ) : !needsSetup ? (
+                /* ── If setup is already complete, redirect to login ── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                  <div {...stylex.props(styles.keyStatusRow)}>
+                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
+                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                      Change Key
+                    </Button>
+                  </div>
+                  <Alert
+                    variant="info"
+                    description="Root administrator has already been created. Please sign in with your credentials."
+                  />
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onPress={() => navigate({ to: '/login' })}
+                  >
+                    Go to Sign In
+                  </Button>
+                </div>
+              ) : (
+                /* ── Context 2: Root User Account Creation ── */
+                <form onSubmit={handleSetupSubmit} {...stylex.props(styles.form)}>
+                  <div {...stylex.props(styles.keyStatusRow)}>
+                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
+                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                      Change Key
+                    </Button>
+                  </div>
 
-                <TextField
-                  label="Root Email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={setEmail}
-                  isRequired
-                />
+                  <TextField
+                    label="Root Username"
+                    placeholder="admin"
+                    value={username}
+                    onChange={setUsername}
+                    isRequired
+                  />
 
-                <TextField
-                  label="Password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={setPassword}
-                  isRequired
-                  description="Minimum 8 characters"
-                />
+                  <TextField
+                    label="Root Email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={setEmail}
+                    isRequired
+                  />
 
-                <TextField
-                  label="Confirm Password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={passwordConfirm}
-                  onChange={setPasswordConfirm}
-                  isRequired
-                />
+                  <TextField
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={setPassword}
+                    isRequired
+                    description="Minimum 8 characters"
+                  />
 
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  isDisabled={loading}
-                >
-                  {loading ? 'Creating Administrator...' : 'Initialize Administrator'}
-                </Button>
-              </form>
+                  <TextField
+                    label="Confirm Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={passwordConfirm}
+                    onChange={setPasswordConfirm}
+                    isRequired
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isDisabled={loading}
+                  >
+                    {loading ? 'Creating Administrator...' : 'Initialize Administrator'}
+                  </Button>
+                </form>
+              )}
             </div>
           </CardBody>
+
+          {hasVerifiedKey && (
+            <CardFooter>
+              <div {...stylex.props(styles.footer)}>
+                Already initialized?{' '}
+                <RouterLink to="/login" style={{ textDecoration: 'none' }}>
+                  <Link variant="primary">Sign In to Admin Console</Link>
+                </RouterLink>
+              </div>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>
   );
 }
-

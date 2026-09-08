@@ -20,7 +20,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   needsSetup: boolean;
   isLoading: boolean;
-  adminLogin: (adminKey: string, identity: string, password: string) => Promise<void>;
+  verifyAndSetAdminKey: (key: string) => Promise<{ needsSetup: boolean }>;
+  clearAdminKey: () => void;
+  adminLogin: (identityOrKey: string, passwordOrIdentity: string, password?: string) => Promise<void>;
   login: (adminKey: string, identity?: string, password?: string) => Promise<void>;
   saveAdminKey: (key: string) => void;
   saveToken: (token: string) => void;
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshUser = async () => {
-    if (!getAuthToken() && !getStoredAdminKey()) return;
+    if (!getAuthToken() || !getStoredAdminKey()) return;
     try {
       const acc = await api.getRootAccount();
       if (acc) {
@@ -86,12 +88,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const checkSetup = async (overrideKey?: string): Promise<boolean> => {
+    const keyToUse = overrideKey || adminKey || getStoredAdminKey();
+    if (!keyToUse) {
+      return false;
+    }
     if (overrideKey) {
       setStoredAdminKey(overrideKey);
       setAdminKey(overrideKey);
     }
     try {
-      const res = await api.getSetupStatus();
+      const res = overrideKey ? await api.verifyAdminKeyWithKey(overrideKey) : await api.getSetupStatus();
       setNeedsSetup(res.needsSetup);
       return res.needsSetup;
     } catch {
@@ -102,20 +108,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      await checkSetup();
-      await refreshUser();
+      const storedKey = getStoredAdminKey();
+      const storedToken = getAuthToken();
+
+      if (storedKey) {
+        try {
+          // Verify existing admin key
+          const res = await api.getSetupStatus();
+          setNeedsSetup(res.needsSetup);
+          if (storedToken) {
+            await refreshUser();
+          }
+        } catch {
+          // Stored admin key is invalid or rotated (401)
+          removeStoredAdminKey();
+          removeAuthToken();
+          localStorage.removeItem(USER_STORAGE_KEY);
+          localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
+          setAdminKey(null);
+          setToken(null);
+          setUser(null);
+          setNeedsSetup(false);
+        }
+      } else {
+        // No admin key yet: Do NOT query /api/setup unauthenticated
+        setNeedsSetup(false);
+      }
+
       setIsLoading(false);
       emitAuthChange({
-        isAuthenticated: Boolean(token || adminKey),
-        user,
-        adminKey: Boolean(adminKey),
+        isAuthenticated: Boolean(getAuthToken() && getStoredAdminKey()),
+        user: getStoredUser(),
+        adminKey: Boolean(getStoredAdminKey()),
       });
     };
     init();
   }, []);
 
-  const adminLogin = async (key: string, identity: string, password: string) => {
+  const verifyAndSetAdminKey = async (key: string): Promise<{ needsSetup: boolean }> => {
     const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      throw new Error('Master Admin Key is required');
+    }
+
+    const res = await api.verifyAdminKeyWithKey(trimmedKey);
+    setStoredAdminKey(trimmedKey);
+    setAdminKey(trimmedKey);
+    setNeedsSetup(res.needsSetup);
+
+    emitAuthChange({
+      isAuthenticated: Boolean(token && trimmedKey),
+      user,
+      adminKey: true,
+    });
+    emitAppAction({
+      action: 'auth:admin-key-verified',
+      category: 'auth',
+      details: { needsSetup: res.needsSetup },
+    });
+
+    return { needsSetup: res.needsSetup };
+  };
+
+  const clearAdminKey = () => {
+    removeStoredAdminKey();
+    removeAuthToken();
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
+    setAdminKey(null);
+    setToken(null);
+    setUser(null);
+    setNeedsSetup(false);
+
+    emitAuthChange({
+      isAuthenticated: false,
+      user: null,
+      adminKey: false,
+    });
+    emitAppAction({
+      action: 'auth:admin-key-cleared',
+      category: 'auth',
+    });
+  };
+
+  const adminLogin = async (
+    identityOrKey: string,
+    passwordOrIdentity: string,
+    passwordParam?: string
+  ) => {
+    let activeKey = adminKey || getStoredAdminKey() || '';
+    let identity = identityOrKey;
+    let password = passwordOrIdentity;
+
+    if (passwordParam !== undefined) {
+      // 3 arguments passed: (key, identity, password)
+      activeKey = identityOrKey;
+      identity = passwordOrIdentity;
+      password = passwordParam;
+    }
+
+    const trimmedKey = activeKey.trim();
     const trimmedIdentity = identity.trim();
 
     if (!trimmedKey) {
@@ -125,7 +217,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Username/Email and Password are required');
     }
 
-    // Set admin key in storage so request headers send X-Admin-Key
     setStoredAdminKey(trimmedKey);
     setAdminKey(trimmedKey);
 
@@ -168,14 +259,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       emitAuthChange({
         isAuthenticated: false,
         user: null,
-        adminKey: false,
+        adminKey: Boolean(trimmedKey),
       });
       emitAppAction({
         action: 'auth:login-failed',
         category: 'auth',
         details: { error: err.message },
       });
-      throw new Error(err.message || 'Invalid Admin Key or root credentials');
+      throw new Error(err.message || 'Invalid root credentials');
     }
   };
 
@@ -184,36 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return adminLogin(key, identity, password);
     }
 
-    // Admin key only
-    const trimmedKey = key.trim();
-    if (!trimmedKey) {
-      throw new Error('Master Admin Key is required');
-    }
-    setStoredAdminKey(trimmedKey);
-    setAdminKey(trimmedKey);
-    try {
-      const res = await api.verifyAdminKey();
-      setNeedsSetup(res.needsSetup);
-      emitAuthChange({
-        isAuthenticated: true,
-        user: { username: 'admin', name: 'admin', role: 'Admin' },
-        adminKey: true,
-      });
-      emitAppAction({
-        action: 'auth:admin-key-verified',
-        category: 'auth',
-        details: { needsSetup: res.needsSetup },
-      });
-    } catch (err: any) {
-      removeStoredAdminKey();
-      setAdminKey(null);
-      emitAuthChange({
-        isAuthenticated: false,
-        user: null,
-        adminKey: false,
-      });
-      throw new Error(err.message || 'Invalid Master Admin Key (Unauthorized)');
-    }
+    return verifyAndSetAdminKey(key).then(() => {});
   };
 
   const saveAdminKey = (key: string) => {
@@ -221,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setStoredAdminKey(trimmed);
     setAdminKey(trimmed);
     emitAuthChange({
-      isAuthenticated: true,
+      isAuthenticated: Boolean(token && trimmed),
       user,
       adminKey: true,
     });
@@ -231,7 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(jwtToken);
     setToken(jwtToken);
     emitAuthChange({
-      isAuthenticated: true,
+      isAuthenticated: Boolean(jwtToken && adminKey),
       user,
       adminKey: Boolean(adminKey),
     });
@@ -244,7 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : { username: 'admin', name: 'admin', role: 'Admin', ...updated };
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next));
       emitAuthChange({
-        isAuthenticated: Boolean(token || adminKey),
+        isAuthenticated: Boolean(token && adminKey),
         user: next,
         adminKey: Boolean(adminKey),
       });
@@ -254,17 +316,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     removeAuthToken();
-    removeStoredAdminKey();
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
     setUser(null);
     setToken(null);
-    setAdminKey(null);
 
     emitAuthChange({
       isAuthenticated: false,
       user: null,
-      adminKey: false,
+      adminKey: Boolean(adminKey),
     });
     emitAppAction({
       action: 'auth:logout',
@@ -272,7 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const isAuthenticated = Boolean(token || adminKey);
+  const isAuthenticated = Boolean(token && adminKey);
 
   return (
     <AuthContext.Provider
@@ -283,6 +343,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         needsSetup,
         isLoading,
+        verifyAndSetAdminKey,
+        clearAdminKey,
         adminLogin,
         login,
         saveAdminKey,

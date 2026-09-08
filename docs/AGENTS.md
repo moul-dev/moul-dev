@@ -178,6 +178,10 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 
 The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
 
+### Two-Context Console Authentication Architecture
+- **Master Admin Key Context (Step 1)**: The user establishes connectivity and authorization using their Master Admin Key (`MOUL_ADMIN_KEY`). Prevents unauthenticated `/api/setup` 401 calls and matches the terminal UX of `moul-ctl`.
+- **Root Account Context (Step 2)**: Once the Master Admin Key is verified, the user either initializes the first root administrator (`POST /api/setup`) if `needsSetup: true`, or signs in with root credentials (`POST /api/admin/login`) if `needsSetup: false`. The Master Admin Key is retained in context without redundant re-entry, and can be changed or disconnected at any time.
+
 ### Collection Creation & Schema Designer Capabilities
 - **Dual-Tab Drawer Workflow**: Create collections with tabs for "General & Fields" and "API Access Rules" without leaving the dashboard.
 - **Type-Based Templates**: Automatic preset field suggestions for `base`, `auth`, `worker`, and `analytic` collections.

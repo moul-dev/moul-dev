@@ -129,6 +129,12 @@ export const api = {
 
   // Auth
   verifyAdminKey: () => request<{ needsSetup: boolean }>('/api/setup'),
+  verifyAdminKeyWithKey: (key: string) =>
+    request<{ needsSetup: boolean }>('/api/setup', {
+      headers: {
+        'X-Admin-Key': key,
+      },
+    }),
   adminLogin: (identity: string, password: string) =>
     request<{ token: string; record: any }>('/api/admin/login', {
       method: 'POST',

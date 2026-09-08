@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_auth')({
   beforeLoad: async () => {
     const token = getAuthToken();
     const adminKey = getStoredAdminKey();
-    if (!token && !adminKey) {
+    if (!token || !adminKey) {
       throw redirect({
         to: '/login',
       });
