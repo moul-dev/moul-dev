@@ -19,15 +19,36 @@ import (
 	"github.com/pocketbase/dbx"
 )
 
-// NewRouter constructs and returns a fully configured Echo server instance with all routes and middleware.
+// RouterConfig holds optional configuration settings for creating an Echo router.
+type RouterConfig struct {
+	Version        string
+	AdminUIOptions AdminUIOptions
+	DisableAdminUI bool
+}
+
+// NewRouter constructs and returns a fully configured Echo server instance with default options.
 func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, tlsManager *tls.Manager, adminKey string, isDev bool, version ...string) *echo.Echo {
+	appVersion := "dev"
+	if len(version) > 0 && version[0] != "" {
+		appVersion = version[0]
+	}
+	return NewRouterWithOptions(dbConn, workerEngine, analyticsEngine, mailService, sysmonCollector, tlsManager, adminKey, isDev, RouterConfig{
+		Version: appVersion,
+		AdminUIOptions: AdminUIOptions{
+			Prefix: "/_moul_",
+		},
+	})
+}
+
+// NewRouterWithOptions constructs and returns a fully configured Echo server instance with custom configuration options.
+func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, tlsManager *tls.Manager, adminKey string, isDev bool, cfg RouterConfig) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
 	e.IPExtractor = echo.LegacyIPExtractor()
 
-	appVersion := "dev"
-	if len(version) > 0 && version[0] != "" {
-		appVersion = version[0]
+	appVersion := cfg.Version
+	if appVersion == "" {
+		appVersion = "dev"
 	}
 
 	if analyticsEngine == nil {
@@ -262,7 +283,9 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 	sysmonGroup.POST("", sysmonHandler.PushMetrics)
 
 	// 7. Embedded Web Admin Console
-	RegisterAdminUIRoutes(e, "/_moul_")
+	if !cfg.DisableAdminUI {
+		RegisterAdminUIWithOptions(e, cfg.AdminUIOptions)
+	}
 
 	return e
 }

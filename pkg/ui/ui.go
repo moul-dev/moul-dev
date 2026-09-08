@@ -2,22 +2,28 @@ package ui
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 )
 
-// distFS holds the embedded static assets compiled by Vite into internal/ui/dist.
+// distFS holds the embedded static assets compiled by Vite into pkg/ui/dist.
 //
 //go:embed all:dist
 var distFS embed.FS
 
-// DistDirFS returns the embedded dist filesystem stripped of the 'dist' prefix.
-func DistDirFS() http.FileSystem {
+// DistFS returns an io/fs.FS rooted inside the embedded dist directory.
+func DistFS() fs.FS {
 	sub, err := fs.Sub(distFS, "dist")
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to create sub filesystem from embedded dist: %w", err))
 	}
-	return http.FS(sub)
+	return sub
+}
+
+// DistDirFS returns the embedded dist filesystem as an http.FileSystem.
+func DistDirFS() http.FileSystem {
+	return http.FS(DistFS())
 }
 
 // HasCustomUI checks whether real UI build assets exist in dist/ (beyond just .gitkeep).

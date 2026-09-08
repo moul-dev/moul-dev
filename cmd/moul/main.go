@@ -381,7 +381,8 @@ func runRestore() {
 
 func runStart() {
 	moulApp := app.New(app.Config{
-		Version: Version,
+		Version:               Version,
+		RegisterAdminRedirect: true,
 	})
 
 	if err := moulApp.Start(context.Background()); err != nil {

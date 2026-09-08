@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/gobuffalo/envy"
@@ -266,5 +268,128 @@ func TestApp_EnsureSystemTables_OnStartup(t *testing.T) {
 	// Idempotency check via App method
 	if err := a.EnsureSystemTables(); err != nil {
 		t.Errorf("Expected a.EnsureSystemTables() to be idempotent, got error: %v", err)
+	}
+}
+
+func TestAppAdminUIEmbedding(t *testing.T) {
+	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
+	envy.Set("MOUL_ADMIN_KEY", "test-admin-key")
+
+	a := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	})
+
+	if err := a.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	router := a.Router()
+	if router == nil {
+		t.Fatal("expected non-nil router")
+	}
+
+	// 1. Verify default admin console is served at /_moul_/
+	req := httptest.NewRequest(http.MethodGet, "/_moul_/", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on /_moul_/, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "moul") {
+		t.Fatalf("expected html response from embedded admin UI, got: %s", rec.Body.String())
+	}
+
+	// 2. Verify /admin is NOT registered by default in embedded mode
+	req = httptest.NewRequest(http.MethodGet, "/admin", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 on /admin when embedded without RegisterAdminRedirect, got %d", rec.Code)
+	}
+
+	// 3. Verify DefaultAdminFS helper
+	dfs := DefaultAdminFS()
+	if dfs == nil {
+		t.Fatal("expected DefaultAdminFS() to return non-nil fs.FS")
+	}
+}
+
+func TestAppAdminUICustomization(t *testing.T) {
+	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
+	envy.Set("MOUL_ADMIN_KEY", "test-admin-key")
+
+	customFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{
+			Data: []byte("<!DOCTYPE html><html><body>My Custom Embedded App Console</body></html>"),
+		},
+	}
+
+	// Test custom prefix and custom FS via fluent setters
+	a := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	}).
+		WithAdminPrefix("/custom-console").
+		WithAdminUI(customFS).
+		WithAdminRedirect(true)
+
+	if err := a.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	router := a.Router()
+
+	// 1. Check custom console serves custom index.html
+	req := httptest.NewRequest(http.MethodGet, "/custom-console/", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "My Custom Embedded App Console") {
+		t.Fatalf("unexpected content: %s", rec.Body.String())
+	}
+
+	// 2. Check /admin redirects to /custom-console/ because WithAdminRedirect(true) was set
+	req = httptest.NewRequest(http.MethodGet, "/admin", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301 redirect for /admin, got %d", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/custom-console/" {
+		t.Fatalf("expected Location /custom-console/, got %s", loc)
+	}
+
+	// 3. Test DisableAdminUI
+	disabledApp := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	}).DisableAdminUI()
+
+	if err := disabledApp.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/_moul_/", nil)
+	rec = httptest.NewRecorder()
+	disabledApp.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 when admin UI is disabled, got %d", rec.Code)
 	}
 }

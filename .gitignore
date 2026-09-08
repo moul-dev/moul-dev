@@ -54,7 +54,5 @@ website/.env.local
 ui/node_modules/
 ui/dist/
 ui/.vite/
-internal/ui/dist/*
-!internal/ui/dist/.gitkeep
 storage/
 

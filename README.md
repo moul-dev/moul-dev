@@ -330,7 +330,7 @@ Open [http://localhost:5173/_moul_/](http://localhost:5173/_moul_/) in your brow
 
 ### Single-Binary Embedding in Production
 
-In production, the compiled SPA bundle is embedded directly into the Go binary at compile time via Go's `//go:embed all:dist` directive in [`internal/ui/ui.go`](internal/ui/ui.go).
+In production, the compiled SPA bundle is embedded directly into the Go binary at compile time via Go's `//go:embed all:dist` directive in [`pkg/ui/ui.go`](pkg/ui/ui.go).
 
 ```bash
 # Build standalone moul binary with embedded docs and Web Admin Console
@@ -480,9 +480,9 @@ jobOpts := map[string]interface{}{
 job, err := workerEngine.Enqueue(context.Background(), "background_tasks", jobOpts)
 ```
 
-### 3. Embedding `pkg/app` with Custom HTTP Routes and Workers
+### 3. Embedding `pkg/app` with Custom HTTP Routes, Workers, and Web Admin Console
 
-`pkg/app` allows embedding the complete `moul` server into custom Go binaries with tailored HTTP endpoints and background workers:
+`pkg/app` allows embedding the complete `moul` server into custom Go binaries with tailored HTTP endpoints, background workers, and the pre-built Web Admin Console:
 
 ```go
 package main
@@ -493,10 +493,20 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/pkg/app"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func main() {
-	moulApp := app.New(app.Config{Version: "1.0.0-custom"})
+	// The Web Admin Console is automatically bundled and served at "/_moul_/"
+	moulApp := app.New(app.Config{
+		Version: "1.0.0-custom",
+	})
+
+	// Optional: customize admin mount prefix, custom SPA filesystem, or disable
+	// moulApp.WithAdminPrefix("/dashboard")
+	// moulApp.WithAdminUI(myCustomFS)
+	// moulApp.DisableAdminUI()
+	// moulApp.WithAdminRedirect(true) // enables /admin -> /_moul_/ 301 redirect
 
 	// Register custom HTTP route
 	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
@@ -520,7 +530,8 @@ func main() {
 }
 ```
 
-Detailed guides:
+Detailed guides & runnable examples:
+- [Custom Binary Embedding Example](examples/custom-binary/README.md)
 - [Custom HTTP Route Extensibility Guide](docs/route-extensibility.md)
 - [Worker Handler Extensibility Guide](docs/worker-extensibility.md)
 

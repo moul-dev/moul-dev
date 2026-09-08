@@ -46,7 +46,7 @@ export default defineConfig({
   ],
   base: '/_moul_/',
   build: {
-    outDir: '../internal/ui/dist',
+    outDir: '../pkg/ui/dist',
     emptyOutDir: true,
   },
   server: {

@@ -3,7 +3,7 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build lint lint-fix install-hooks
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync lint lint-fix install-hooks
 
 # Run static analysis and lint checks
 lint:
@@ -66,9 +66,13 @@ ui-install:
 ui-dev:
 	bun --cwd ui dev
 
-# Build Admin UI bundle with TanStack Router and StyleX into internal/ui/dist
+# Build Admin UI bundle with TanStack Router and StyleX into pkg/ui/dist
 ui-build:
 	bun --cwd ui tsc && bun --cwd ui vite build
+
+# Verify that committed pkg/ui/dist matches a fresh build of ui
+ui-check-sync: ui-build
+	@git diff --exit-code pkg/ui/dist || (echo "ERROR: pkg/ui/dist is out of sync with ui/ source changes. Run 'make ui-build' and commit changes." && exit 1)
 
 # Build for production with stripped debug symbols, embedded docs, and embedded Web Admin Console
 build: sync-docs ui-build

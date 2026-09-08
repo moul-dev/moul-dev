@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
+	"github.com/moul-dev/moul-dev/pkg/ui"
 	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
@@ -33,12 +35,16 @@ type JobHandler = worker.JobHandler
 
 // Config holds configuration options for starting a Mould application.
 type Config struct {
-	Env       string
-	DBPath    string
-	Port      string
-	Version   string
-	JWTSecret string
-	AdminKey  string
+	Env                   string
+	DBPath                string
+	Port                  string
+	Version               string
+	JWTSecret             string
+	AdminKey              string
+	AdminUIFS             fs.FS
+	AdminUIPrefix         string
+	DisableAdminUI        bool
+	RegisterAdminRedirect bool
 }
 
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
@@ -72,9 +78,42 @@ func New(cfg Config) *App {
 	if cfg.Version == "" {
 		cfg.Version = "dev"
 	}
+	if cfg.AdminUIPrefix == "" {
+		cfg.AdminUIPrefix = "/_moul_"
+	}
 	return &App{
 		config: cfg,
 	}
+}
+
+// WithAdminUI sets or overrides the filesystem serving the Web Admin Console.
+func (a *App) WithAdminUI(uiFS fs.FS) *App {
+	a.config.AdminUIFS = uiFS
+	return a
+}
+
+// WithAdminPrefix configures the URL prefix where the Web Admin Console is mounted.
+func (a *App) WithAdminPrefix(prefix string) *App {
+	a.config.AdminUIPrefix = prefix
+	return a
+}
+
+// DisableAdminUI disables mounting the embedded Web Admin Console.
+func (a *App) DisableAdminUI() *App {
+	a.config.DisableAdminUI = true
+	return a
+}
+
+// WithAdminRedirect configures whether convenience redirects from /admin and /admin/*
+// to the Admin Console prefix are registered.
+func (a *App) WithAdminRedirect(enable bool) *App {
+	a.config.RegisterAdminRedirect = enable
+	return a
+}
+
+// DefaultAdminFS returns the default embedded Web Admin Console filesystem from pkg/ui.
+func DefaultAdminFS() fs.FS {
+	return ui.DistFS()
 }
 
 // OnWorkerInit registers a hook callback that executes when the worker engine is initialized.
@@ -252,7 +291,17 @@ func (a *App) Bootstrap() error {
 	}
 
 	// Echo Server / Router
-	a.router = handlers.NewRouter(
+	adminPrefix := a.config.AdminUIPrefix
+	if adminPrefix == "" {
+		adminPrefix = "/_moul_"
+	}
+
+	adminFS := a.config.AdminUIFS
+	if adminFS == nil {
+		adminFS = ui.DistFS()
+	}
+
+	a.router = handlers.NewRouterWithOptions(
 		a.dbConn,
 		a.workerEngine,
 		a.analyticsEngine,
@@ -261,7 +310,15 @@ func (a *App) Bootstrap() error {
 		a.tlsManager,
 		a.config.AdminKey,
 		a.isDev,
-		a.config.Version,
+		handlers.RouterConfig{
+			Version:        a.config.Version,
+			DisableAdminUI: a.config.DisableAdminUI,
+			AdminUIOptions: handlers.AdminUIOptions{
+				Prefix:                adminPrefix,
+				FileSystem:            adminFS,
+				RegisterAdminRedirect: a.config.RegisterAdminRedirect,
+			},
+		},
 	)
 
 	// Execute custom router init hooks

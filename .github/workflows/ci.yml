@@ -28,7 +28,7 @@ jobs:
           cache: true
 
       - name: Ensure Embedded UI Dist Exists
-        run: mkdir -p internal/ui/dist && touch internal/ui/dist/.gitkeep
+        run: mkdir -p pkg/ui/dist
 
       - name: Install golangci-lint
         run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -50,7 +50,7 @@ jobs:
           cache: true
 
       - name: Ensure Embedded UI Dist Exists
-        run: mkdir -p internal/ui/dist && touch internal/ui/dist/.gitkeep
+        run: mkdir -p pkg/ui/dist
 
       - name: Go Format & Vet Check
         run: |
@@ -99,6 +99,14 @@ jobs:
 
       - name: Build Admin UI
         run: bun --cwd ui vite build
+
+      - name: Verify UI Bundle in Sync
+        run: |
+          if ! git diff --exit-code pkg/ui/dist; then
+            echo "ERROR: pkg/ui/dist is out of sync with ui/ source changes."
+            echo "Please run 'make ui-build' locally and commit the updated dist assets."
+            exit 1
+          fi
 
   check-website:
     name: Website & Docs Build

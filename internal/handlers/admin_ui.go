@@ -3,11 +3,12 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v5"
-	"github.com/moul-dev/moul-dev/internal/ui"
+	"github.com/moul-dev/moul-dev/pkg/ui"
 )
 
 const fallbackHTML = `<!DOCTYPE html>
@@ -66,22 +67,60 @@ const fallbackHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// RegisterAdminUIRoutes mounts the embedded Web Admin Console onto the Echo router.
+// AdminUIOptions configures the Web Admin Console mounting and file serving.
+type AdminUIOptions struct {
+	// Prefix is the URL path prefix where the Admin Console is mounted (e.g. "/_moul_").
+	Prefix string
+
+	// FileSystem is an optional custom filesystem containing the SPA distribution.
+	// If nil, defaults to pkg/ui.DistFS().
+	FileSystem fs.FS
+
+	// RegisterAdminRedirect enables convenience 301 redirects from /admin and /admin/*
+	// to the Admin Console prefix. When false (recommended when embedding), host /admin routes
+	// remain untouched.
+	RegisterAdminRedirect bool
+}
+
+// RegisterAdminUIRoutes mounts the embedded Web Admin Console onto the Echo router with default options.
 func RegisterAdminUIRoutes(e *echo.Echo, prefix string) {
+	RegisterAdminUIWithOptions(e, AdminUIOptions{
+		Prefix: prefix,
+	})
+}
+
+// RegisterAdminUIWithOptions mounts the Web Admin Console onto the Echo router with custom options.
+func RegisterAdminUIWithOptions(e *echo.Echo, opts AdminUIOptions) {
+	prefix := opts.Prefix
 	if prefix == "" {
 		prefix = "/_moul_"
 	}
+	prefix = "/" + strings.Trim(prefix, "/")
 
-	distFS := ui.DistDirFS()
+	var distFS http.FileSystem
+	var hasCustomUI bool
 
-	// Redirect /admin and /admin/* to prefix/
-	e.GET("/admin", func(c *echo.Context) error {
-		return c.Redirect(http.StatusMovedPermanently, prefix+"/")
-	})
-	e.GET("/admin/*", func(c *echo.Context) error {
-		path := c.Param("*")
-		return c.Redirect(http.StatusMovedPermanently, prefix+"/"+path)
-	})
+	if opts.FileSystem != nil {
+		distFS = http.FS(opts.FileSystem)
+		if f, err := opts.FileSystem.Open("index.html"); err == nil {
+			_ = f.Close()
+			hasCustomUI = true
+		}
+	} else {
+		distFS = ui.DistDirFS()
+		hasCustomUI = ui.HasCustomUI()
+	}
+
+	// Optional convenience redirect /admin and /admin/* to prefix/
+	if opts.RegisterAdminRedirect && prefix != "/admin" {
+		e.GET("/admin", func(c *echo.Context) error {
+			return c.Redirect(http.StatusMovedPermanently, prefix+"/")
+		})
+		e.GET("/admin/*", func(c *echo.Context) error {
+			path := c.Param("*")
+			return c.Redirect(http.StatusMovedPermanently, prefix+"/"+path)
+		})
+	}
 
 	// Redirect prefix (without trailing slash) to prefix + "/"
 	e.GET(prefix, func(c *echo.Context) error {
@@ -92,7 +131,7 @@ func RegisterAdminUIRoutes(e *echo.Echo, prefix string) {
 	serveIndexHTML := func(c *echo.Context) error {
 		indexFile, err := distFS.Open("index.html")
 		if err != nil {
-			if !ui.HasCustomUI() {
+			if !hasCustomUI {
 				c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 				return c.HTML(http.StatusOK, fallbackHTML)
 			}

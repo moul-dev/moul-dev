@@ -23,6 +23,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build Web Admin UI
+        run: |
+          bun install --cwd ui
+          make ui-build
+
       - name: Run Tests
         run: make test-go
 

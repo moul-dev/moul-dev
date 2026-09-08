@@ -20,11 +20,11 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 - **Dynamic Record CRUD**: Instant CRUD on dynamic SQLite tables governed by expression-based access rules.
 - **Multi-Factor Auth**: Native support for Passwords, Email OTP, WebAuthn Passkeys, Social OAuth2 (GitHub, Google, Apple), and OAuth2 Device Authorization.
 - **Background Worker Engine**: SQLite-backed persistent queue processor with priority queues, retries, exponential backoffs, and immediate triggers.
-- **Programmatic Go Embedding & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks (`pkg/worker`) without forking core engine logic.
+- **Programmatic Go Embedding & HTTP Hooks**: Embed the server via `pkg/app` with pre-built Web Admin Console (`pkg/ui`), custom HTTP routes (`RegisterRoute`, `OnRouterInit`), custom workers (`pkg/worker`), and custom UI filesystem overrides without forking core engine logic.
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
-- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin`), built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with tri-state system/light/dark theme toggle, and unified TanStack DevTools embedded into the single binary.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin` in standalone CLI; isolated mount prefix in embedded mode), built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with tri-state system/light/dark theme toggle, embedded via public `pkg/ui` package.
 - **Built-in MCP Server**: Native MCP protocol server accessible via `moul mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
 ## Built-in MCP Server Tools Summary
