@@ -109,9 +109,24 @@ moulApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.J
 
 ---
 
-## Runnable Example
+## Web Admin Console Routing
 
-A complete runnable example is available at [examples/custom-routes/main.go](../examples/custom-routes/main.go).
+When embedding `pkg/app`, the full-featured Web Admin Console is automatically bundled and mounted at `/_moul_/` via `pkg/ui.DistFS()`.
+
+To prevent route collisions with your host application:
+- In embedded mode, `/admin` convenience redirects are disabled by default. Your application's `/admin` routes remain completely untouched.
+- You can customize the mount prefix: `moulApp.WithAdminPrefix("/dashboard")`.
+- You can replace the console with your own embedded frontend SPA: `moulApp.WithAdminUI(customFS)`.
+- You can disable the console entirely for headless API services: `moulApp.DisableAdminUI()`.
+- You can enable `/admin` redirects if desired: `moulApp.WithAdminRedirect(true)`.
+
+---
+
+## Runnable Examples
+
+Complete runnable examples are available in the repository:
+- [examples/custom-binary/main.go](../examples/custom-binary/main.go) - Full custom binary with Web Admin Console
+- [examples/custom-routes/main.go](../examples/custom-routes/main.go) - Custom route groupings and Echo middlewares
 
 ---
 

@@ -187,6 +187,12 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp`) or 
 
 ### Core API Methods & Hooks
 - `app.New(cfg app.Config) *app.App`: Creates a new Mould app instance.
+- `app.Config`: Holds engine configuration including `AdminUIFS fs.FS`, `AdminUIPrefix string` (default `/_moul_`), `DisableAdminUI bool`, and `RegisterAdminRedirect bool` (default `false` in embedded mode to avoid route collisions).
+- `app.WithAdminUI(fs fs.FS) *app.App`: Overrides the default embedded Web Admin Console with a custom frontend SPA distribution.
+- `app.WithAdminPrefix(prefix string) *app.App`: Sets the URL mount prefix for the Web Admin Console.
+- `app.DisableAdminUI() *app.App`: Disables mounting the Web Admin Console routes entirely for headless microservices.
+- `app.WithAdminRedirect(enable bool) *app.App`: Enables convenience 301 redirects from `/admin` and `/admin/*` to `AdminUIPrefix`.
+- `app.DefaultAdminFS() fs.FS`: Accesses the default embedded Web Admin Console filesystem from `pkg/ui`.
 - `app.RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc)`: Expressive shorthand method to register routes directly on the embedded Echo server.
 - `app.OnRouterInit(fn func(router *echo.Echo) error)`: Hook invoked during `Bootstrap()` right after the Echo router is constructed. Allows creating router groups, custom Echo middlewares, and specialized handlers.
 - `app.OnBeforeStart(fn func(app *app.App) error)`: Hook invoked at the end of `Bootstrap()` before listeners start. Gives full access to `app.DB()`, `app.Router()`, `app.WorkerEngine()`, `app.Mailer()`, and `app.AnalyticsEngine()`.
@@ -204,10 +210,20 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/pkg/app"
+	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
 func main() {
-	moulApp := app.New(app.Config{Version: "1.0.0-custom"})
+	// The Web Admin Console is automatically bundled and served at "/_moul_/"
+	moulApp := app.New(app.Config{
+		Version: "1.0.0-custom",
+	})
+
+	// Optional: customize mount prefix, supply custom SPA filesystem, or disable
+	// moulApp.WithAdminPrefix("/dashboard")
+	// moulApp.WithAdminUI(myCustomFS)
+	// moulApp.DisableAdminUI()
+	// moulApp.WithAdminRedirect(true)
 
 	// Register custom HTTP route
 	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
@@ -219,6 +235,11 @@ func main() {
 		router.GET("/api/custom/health", func(c *echo.Context) error {
 			return c.String(http.StatusOK, "OK")
 		})
+		return nil
+	})
+
+	// Register custom background worker
+	moulApp.RegisterWorker("CustomTask", func(ctx context.Context, job *worker.Job) error {
 		return nil
 	})
 
