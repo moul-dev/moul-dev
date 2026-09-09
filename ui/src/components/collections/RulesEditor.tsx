@@ -131,8 +131,8 @@ export function RulesEditor({
             listRule: '',
             viewRule: '',
             createRule: '@request.auth.id != ""',
-            updateRule: 'user_id = @request.auth.id',
-            deleteRule: 'user_id = @request.auth.id',
+            updateRule: 'userId = @request.auth.id',
+            deleteRule: 'userId = @request.auth.id',
           });
         }
         break;
@@ -241,7 +241,7 @@ export function RulesEditor({
 
         <TextField
           label="Update Record (PATCH /records/:id)"
-          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. user_id = @request.auth.id'}
+          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. userId = @request.auth.id'}
           value={rules.updateRule || ''}
           onChange={(val) => handleRuleChange('updateRule', val)}
           description={
@@ -253,7 +253,7 @@ export function RulesEditor({
 
         <TextField
           label="Delete Record (DELETE /records/:id)"
-          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. user_id = @request.auth.id'}
+          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. userId = @request.auth.id'}
           value={rules.deleteRule || ''}
           onChange={(val) => handleRuleChange('deleteRule', val)}
           description={

@@ -278,12 +278,18 @@ function CollectionsPage() {
 
     // Validate custom fields don't conflict with reserved names and follow camelCase
     for (const f of newMoulFields) {
-      if (f.name && isReservedFieldName(f.name, newMoulType)) {
-        setError(`"${f.name}" is a reserved built-in column name for ${newMoulType} collections. Please rename or remove it.`);
+      const trimmedName = (f.name || '').trim();
+      if (!trimmedName) {
+        setError('Field name cannot be empty.');
         setCreateTab('general');
         return;
       }
-      if (f.name && !isValidCamelCase(f.name.trim())) {
+      if (isReservedFieldName(trimmedName, newMoulType)) {
+        setError(`"${trimmedName}" is a reserved built-in column name for ${newMoulType} collections. Please rename or remove it.`);
+        setCreateTab('general');
+        return;
+      }
+      if (!isValidCamelCase(trimmedName)) {
         setError(`Field name "${f.name}" must be camelCase (e.g. "authorId", "viewsCount").`);
         setCreateTab('general');
         return;

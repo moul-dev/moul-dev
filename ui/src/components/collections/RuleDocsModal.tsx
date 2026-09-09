@@ -200,7 +200,7 @@ const PRESETS = [
   {
     title: 'Author / Owner Only',
     desc: 'Only the user who owns the record can view, edit, or delete it.',
-    code: 'user_id = @request.auth.id',
+    code: 'userId = @request.auth.id',
     badge: 'Ownership',
     badgeVariant: 'success' as const,
   },
@@ -221,14 +221,14 @@ const PRESETS = [
   {
     title: 'Published or Creator',
     desc: 'Visitors can view published items, while creators can view/edit their own drafts.',
-    code: 'status = "published" || author_id = @request.auth.id',
+    code: 'status = "published" || authorId = @request.auth.id',
     badge: 'Visibility',
     badgeVariant: 'primary' as const,
   },
   {
     title: 'Cross-Table Role Lookup',
     desc: 'Checks whether the requesting user has permission in another table.',
-    code: '@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = "admin"',
+    code: '@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = "admin"',
     badge: 'Relational Join',
     badgeVariant: 'warning' as const,
   },
@@ -445,7 +445,7 @@ export function RuleDocsModal({ isOpen, onOpenChange, onApplyPreset }: RuleDocsM
                           <code {...stylex.props(styles.codeTag)}>@collection.&lt;table&gt;.&lt;field&gt;</code>
                         </td>
                         <td {...stylex.props(styles.docTd)}>Look up relation in another table</td>
-                        <td {...stylex.props(styles.docTd)}><code>@collection.members.user_id = @request.auth.id</code></td>
+                        <td {...stylex.props(styles.docTd)}><code>@collection.members.userId = @request.auth.id</code></td>
                       </tr>
                       <tr>
                         <td {...stylex.props(styles.docTd)}>

@@ -121,7 +121,8 @@ const styles = stylex.create({
   fieldConflictWarning: {
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
+    flexWrap: 'wrap',
+    gap: tokens.spacing2,
     color: tokens.colorError500,
     fontSize: tokens.fontSizeXs,
     fontFamily: tokens.fontFamilyBase,
@@ -267,6 +268,55 @@ export function isValidCamelCase(name: string): boolean {
   return /^[a-z][a-zA-Z0-9]*$/.test(name);
 }
 
+export function toCamelCase(str: string): string {
+  const trimmed = str.trim();
+  if (!trimmed) return '';
+  const camel = trimmed
+    .replace(/[-_\s]+([a-zA-Z0-9])/g, (_, c) => c.toUpperCase())
+    .replace(/[-_\s]+/g, '');
+  if (!camel) return '';
+  return camel.charAt(0).toLowerCase() + camel.slice(1);
+}
+
+export function getNextDefaultFieldName(existingFields: MoulField[]): string {
+  const existingNames = new Set(existingFields.map((f) => (f.name || '').trim().toLowerCase()));
+  let idx = 1;
+  while (existingNames.has(`field${idx}`)) {
+    idx++;
+  }
+  return `field${idx}`;
+}
+
+export function getNextDefaultRelationName(
+  targetMoul: string,
+  currentMoul: string,
+  existingFields: MoulField[]
+): string {
+  const existingNames = new Set(existingFields.map((f) => (f.name || '').trim().toLowerCase()));
+  let baseName = 'parentId';
+
+  if (targetMoul && targetMoul !== currentMoul) {
+    let clean = targetMoul.replace(/[-_]([a-z0-9])/gi, (_, char) => char.toUpperCase());
+    if (clean.toLowerCase().endsWith('ies')) {
+      clean = clean.slice(0, -3) + 'y';
+    } else if (clean.toLowerCase().endsWith('s') && !clean.toLowerCase().endsWith('ss')) {
+      clean = clean.slice(0, -1);
+    }
+    clean = clean.charAt(0).toLowerCase() + clean.slice(1);
+    baseName = `${clean}Id`;
+  }
+
+  if (!existingNames.has(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  let counter = 2;
+  while (existingNames.has(`${baseName}${counter}`.toLowerCase())) {
+    counter++;
+  }
+  return `${baseName}${counter}`;
+}
+
 export function isReservedFieldName(name: string, collectionType: string = 'base'): boolean {
   const lower = name.trim().toLowerCase();
   const baseReserved = ['id', 'createdat', 'updatedat', 'created_at', 'updated_at'];
@@ -300,11 +350,11 @@ export function FieldsBuilder({
   const [newOptionInputs, setNewOptionInputs] = useState<Record<number, string>>({});
 
   const handleAddField = () => {
-    const nextIdx = fields.length;
+    const defaultName = getNextDefaultFieldName(fields);
     const next = [
       ...fields,
       {
-        name: `field_${nextIdx + 1}`,
+        name: defaultName,
         type: 'text',
         required: false,
       },
@@ -315,7 +365,7 @@ export function FieldsBuilder({
   const handleAddRelationField = () => {
     const nextIdx = fields.length;
     const otherMoul = allMouls?.find((m: any) => m.name !== currentMoulName)?.name || currentMoulName || 'users';
-    const defaultName = otherMoul === currentMoulName ? 'parent_id' : `${otherMoul.replace(/s$/, '')}_id`;
+    const defaultName = getNextDefaultRelationName(otherMoul, currentMoulName, fields);
 
     const next = [
       ...fields,
@@ -347,13 +397,16 @@ export function FieldsBuilder({
     const updated = { ...next[idx], [key]: val };
 
     if (key === 'type' && val === 'relation') {
+      const defaultTarget = allMouls?.find((m: any) => m.name !== currentMoulName)?.name || currentMoulName || 'users';
       if (!updated.relationConfig) {
-        const defaultTarget = allMouls?.find((m: any) => m.name !== currentMoulName)?.name || currentMoulName || 'users';
         updated.relationConfig = {
           targetMoul: defaultTarget,
           cardinality: '1:N',
           onDelete: 'SET_NULL',
         };
+      }
+      if (/^field\d+$/i.test(updated.name)) {
+        updated.name = getNextDefaultRelationName(defaultTarget, currentMoulName, fields.filter((_, i) => i !== idx));
       }
       setExpandedFields((prev) => ({ ...prev, [idx]: true }));
     }
@@ -546,9 +599,19 @@ export function FieldsBuilder({
             const isNumber = field.type === 'number';
             const isConfigurable = isRelation || isSelect || isNumber;
             const isExpanded = Boolean(expandedFields[idx]);
-            const isConflict = Boolean(field.name && isReservedFieldName(field.name, collectionType));
-            const isInvalidCamel = Boolean(field.name && !isValidCamelCase(field.name));
-            const isInvalid = isConflict || isInvalidCamel;
+            const trimmedName = (field.name || '').trim();
+            const isEmpty = !trimmedName;
+            const isConflict = Boolean(trimmedName && isReservedFieldName(trimmedName, collectionType));
+            const isInvalidCamel = Boolean(trimmedName && !isValidCamelCase(trimmedName));
+            const isInvalid = isEmpty || isConflict || isInvalidCamel;
+            const suggestedCamel = toCamelCase(trimmedName);
+            const canSuggestFix = Boolean(
+              isInvalidCamel &&
+              suggestedCamel &&
+              suggestedCamel !== trimmedName &&
+              isValidCamelCase(suggestedCamel) &&
+              !isReservedFieldName(suggestedCamel, collectionType)
+            );
 
             return (
               <div
@@ -639,6 +702,13 @@ export function FieldsBuilder({
                     </Button>
                   </div>
 
+                  {isEmpty && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>Field name is required.</span>
+                    </div>
+                  )}
+
                   {isConflict && (
                     <div {...stylex.props(styles.fieldConflictWarning)}>
                       <WarningCircleIcon size={14} color={tokens.colorError500} />
@@ -647,12 +717,21 @@ export function FieldsBuilder({
                       </span>
                     </div>
                   )}
-                  {!isConflict && isInvalidCamel && (
+                  {!isConflict && !isEmpty && isInvalidCamel && (
                     <div {...stylex.props(styles.fieldConflictWarning)}>
                       <WarningCircleIcon size={14} color={tokens.colorError500} />
                       <span>
                         Field name &ldquo;{field.name}&rdquo; must be camelCase (e.g. &ldquo;authorId&rdquo;, &ldquo;viewsCount&rdquo;).
                       </span>
+                      {canSuggestFix && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onPress={() => handleFieldChange(idx, 'name', suggestedCamel)}
+                        >
+                          Use &ldquo;{suggestedCamel}&rdquo;
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -189,15 +189,24 @@ function CollectionDetailPage() {
   const handleSave = () => {
     // Validate custom fields don't conflict with reserved names and follow camelCase
     for (const f of fields) {
-      if (f.name && isReservedFieldName(f.name, moul?.type || 'base')) {
+      const trimmedName = (f.name || '').trim();
+      if (!trimmedName) {
         toastQueue.add({
           title: 'Validation Error',
-          description: `"${f.name}" is a reserved built-in column name. Please rename or remove it.`,
+          description: 'Field name cannot be empty.',
           variant: 'error',
         });
         return;
       }
-      if (f.name && !isValidCamelCase(f.name.trim())) {
+      if (isReservedFieldName(trimmedName, moul?.type || 'base')) {
+        toastQueue.add({
+          title: 'Validation Error',
+          description: `"${trimmedName}" is a reserved built-in column name. Please rename or remove it.`,
+          variant: 'error',
+        });
+        return;
+      }
+      if (!isValidCamelCase(trimmedName)) {
         toastQueue.add({
           title: 'Validation Error',
           description: `Field name "${f.name}" must be camelCase (e.g. "authorId", "viewsCount").`,
