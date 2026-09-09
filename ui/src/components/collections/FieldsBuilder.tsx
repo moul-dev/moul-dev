@@ -7,6 +7,7 @@ import {
   Select,
   SelectItem,
   Checkbox,
+  Badge,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import {
@@ -18,6 +19,9 @@ import {
   CaretDownIcon,
   CaretUpIcon,
   InfoIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  WarningCircleIcon,
 } from '@phosphor-icons/react';
 
 const styles = stylex.create({
@@ -59,24 +63,33 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: tokens.spacing2,
   },
-  systemFieldsBanner: {
+  systemFieldsContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
+    padding: tokens.spacing3,
+    backgroundColor: tokens.colorBgSubtle,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorBorder,
+  },
+  systemFieldsHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: tokens.spacing2,
+  },
+  systemFieldGroup: {
     display: 'flex',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: tokens.spacing1,
-    padding: tokens.spacing2,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusSm,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    fontSize: tokens.fontSizeXs,
-    color: tokens.colorFgSubtle,
-    fontFamily: tokens.fontFamilyBase,
   },
   systemFieldPill: {
     backgroundColor: tokens.colorBgElevated,
-    paddingBlock: '1px',
+    paddingBlock: '2px',
     paddingInline: tokens.spacing2,
     borderRadius: tokens.radiusSm,
     borderWidth: 1,
@@ -85,6 +98,36 @@ const styles = stylex.create({
     fontFamily: 'var(--font-mono, monospace)',
     color: tokens.colorFg,
     fontSize: '0.6875rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  authFieldPill: {
+    backgroundColor: tokens.colorBgElevated,
+    paddingBlock: '2px',
+    paddingInline: tokens.spacing2,
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorPrimary500,
+    fontFamily: 'var(--font-mono, monospace)',
+    color: tokens.colorPrimary500,
+    fontSize: '0.6875rem',
+    fontWeight: 500,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  fieldConflictWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    color: tokens.colorError500,
+    fontSize: tokens.fontSizeXs,
+    fontFamily: tokens.fontFamilyBase,
+    gridColumn: '1 / -1',
+    marginTop: '-4px',
+    paddingTop: '2px',
   },
   fieldList: {
     display: 'flex',
@@ -102,6 +145,9 @@ const styles = stylex.create({
   },
   fieldCardRelation: {
     borderColor: tokens.colorPrimary500,
+  },
+  fieldCardConflict: {
+    borderColor: tokens.colorError500,
   },
   fieldMainRow: {
     display: 'grid',
@@ -214,6 +260,29 @@ export interface FieldsBuilderProps {
   onChange: (fields: MoulField[]) => void;
   currentMoulName?: string;
   allMouls?: any[];
+  collectionType?: string;
+}
+
+export function isReservedFieldName(name: string, collectionType: string = 'base'): boolean {
+  const lower = name.trim().toLowerCase();
+  const baseReserved = ['id', 'created_at', 'updated_at'];
+  if (baseReserved.includes(lower)) return true;
+  if (collectionType === 'auth') {
+    const authReserved = [
+      'username',
+      'email',
+      'passwordhash',
+      'password',
+      'otpcode',
+      'otpexpiresat',
+      'passkeys',
+      'resettoken',
+      'resettokenexpiresat',
+      'oauthproviders',
+    ];
+    return authReserved.includes(lower);
+  }
+  return false;
 }
 
 export function FieldsBuilder({
@@ -221,6 +290,7 @@ export function FieldsBuilder({
   onChange,
   currentMoulName = '',
   allMouls = [],
+  collectionType = 'base',
 }: FieldsBuilderProps) {
   const [expandedFields, setExpandedFields] = useState<Record<number, boolean>>({});
   const [newOptionInputs, setNewOptionInputs] = useState<Record<number, string>>({});
@@ -361,13 +431,102 @@ export function FieldsBuilder({
         </div>
       </div>
 
-      {/* Built-in System Fields Row */}
-      <div {...stylex.props(styles.systemFieldsBanner)}>
-        <InfoIcon size={14} color={tokens.colorPrimary500} />
-        <span>Built-in system columns:</span>
-        <span {...stylex.props(styles.systemFieldPill)}>id</span>
-        <span {...stylex.props(styles.systemFieldPill)}>created_at</span>
-        <span {...stylex.props(styles.systemFieldPill)}>updated_at</span>
+      {/* Built-in System & Default Fields Section */}
+      <div {...stylex.props(styles.systemFieldsContainer)}>
+        <div {...stylex.props(styles.systemFieldsHeader)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+            <InfoIcon size={15} color={tokens.colorPrimary500} />
+            <span style={{ fontWeight: 600, fontSize: tokens.fontSizeXs, color: tokens.colorFg }}>
+              {collectionType === 'auth' ? 'Built-in Auth & System Columns' : 'Built-in System Columns'}
+            </span>
+            <Badge size="sm" variant={collectionType === 'auth' ? 'primary' : 'neutral'}>
+              {collectionType === 'auth' ? '12 default columns' : '3 default columns'}
+            </Badge>
+          </div>
+          <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
+            {collectionType === 'auth'
+              ? 'Managed automatically: Identity, credentials, 2FA, and timestamps'
+              : 'Managed automatically: Primary key and audit timestamps'}
+          </span>
+        </div>
+
+        {collectionType === 'auth' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
+            {/* Core & Primary Auth Identity Fields */}
+            <div {...stylex.props(styles.systemFieldGroup)}>
+              <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontWeight: 500 }}>
+                Core & Identity:
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
+                <span>id</span>
+                <Badge size="sm" variant="neutral">PK</Badge>
+              </span>
+              <span {...stylex.props(styles.authFieldPill)} title="Required unique login username">
+                <UserIcon size={12} />
+                <span>username</span>
+                <Badge size="sm" variant="primary">unique</Badge>
+              </span>
+              <span {...stylex.props(styles.authFieldPill)} title="Required unique email address">
+                <UserIcon size={12} />
+                <span>email</span>
+                <Badge size="sm" variant="primary">unique</Badge>
+              </span>
+              <span {...stylex.props(styles.authFieldPill)} title="Bcrypt password hash (hidden from read APIs)">
+                <ShieldCheckIcon size={12} />
+                <span>passwordHash</span>
+                <Badge size="sm" variant="neutral">secure</Badge>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
+                <span>created_at</span>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
+                <span>updated_at</span>
+              </span>
+            </div>
+
+            {/* Extended Security Columns */}
+            <div {...stylex.props(styles.systemFieldGroup)}>
+              <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontWeight: 500 }}>
+                Security & 2FA:
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="One-time password login code">
+                <span>otpCode</span>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="OTP expiration timestamp">
+                <span>otpExpiresAt</span>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="WebAuthn credentials list">
+                <span>passkeys</span>
+                <Badge size="sm" variant="neutral">json</Badge>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Password reset token">
+                <span>resetToken</span>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Reset token expiration timestamp">
+                <span>resetTokenExpiresAt</span>
+              </span>
+              <span {...stylex.props(styles.systemFieldPill)} title="OAuth provider identities">
+                <span>oauthProviders</span>
+                <Badge size="sm" variant="neutral">json</Badge>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div {...stylex.props(styles.systemFieldGroup)}>
+            <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
+              <span>id</span>
+              <Badge size="sm" variant="neutral">PK</Badge>
+            </span>
+            <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
+              <span>created_at</span>
+              <Badge size="sm" variant="neutral">datetime</Badge>
+            </span>
+            <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
+              <span>updated_at</span>
+              <Badge size="sm" variant="neutral">datetime</Badge>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Field List */}
@@ -383,13 +542,15 @@ export function FieldsBuilder({
             const isNumber = field.type === 'number';
             const isConfigurable = isRelation || isSelect || isNumber;
             const isExpanded = Boolean(expandedFields[idx]);
+            const isConflict = Boolean(field.name && isReservedFieldName(field.name, collectionType));
 
             return (
               <div
                 key={idx}
                 {...stylex.props(
                   styles.fieldCard,
-                  isRelation && styles.fieldCardRelation
+                  isRelation && styles.fieldCardRelation,
+                  isConflict && styles.fieldCardConflict
                 )}
               >
                 {/* Main Row */}
@@ -398,6 +559,7 @@ export function FieldsBuilder({
                     placeholder="Field name"
                     value={field.name}
                     onChange={(val) => handleFieldChange(idx, 'name', val)}
+                    isInvalid={isConflict}
                   />
 
                   <Select
@@ -470,6 +632,15 @@ export function FieldsBuilder({
                       <TrashIcon size={18} color={tokens.colorError500} />
                     </Button>
                   </div>
+
+                  {isConflict && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>
+                        &ldquo;{field.name}&rdquo; is already a built-in default column for {collectionType} collections. Please rename or remove it.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Expandable Configuration Section */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createFileRoute, useParams } from '@tanstack/react-router';
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import {
@@ -8,6 +8,8 @@ import {
   LinkIcon,
   ShareNetworkIcon,
   ArrowRightIcon,
+  TrashIcon,
+  WarningCircleIcon,
 } from '@phosphor-icons/react';
 import {
   Card,
@@ -15,6 +17,12 @@ import {
   CardBody,
   Button,
   Badge,
+  ModalOverlay,
+  Modal,
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
   toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
@@ -103,7 +111,9 @@ export const Route = createFileRoute('/_auth/collections/$moulName')({
 
 function CollectionDetailPage() {
   const { moulName } = useParams({ from: '/_auth/collections/$moulName' });
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // 1. Load active collection
   const { data: moul, isLoading } = useQuery({
@@ -148,6 +158,29 @@ function CollectionDetailPage() {
       toastQueue.add({
         title: 'Save Failed',
         description: err.message || 'Failed to save collection schema.',
+        variant: 'error',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteMoul(moulName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mouls'] });
+      queryClient.invalidateQueries({ queryKey: ['moul', moulName] });
+      setIsDeleteModalOpen(false);
+      toastQueue.add({
+        title: 'Collection Deleted',
+        description: `Collection "${moulName}" was deleted successfully.`,
+        variant: 'success',
+      });
+      navigate({ to: '/collections' });
+    },
+    onError: (err: any) => {
+      setIsDeleteModalOpen(false);
+      toastQueue.add({
+        title: 'Delete Failed',
+        description: err.message || 'Failed to delete collection.',
         variant: 'error',
       });
     },
@@ -219,6 +252,14 @@ function CollectionDetailPage() {
           </span>
         </div>
         <div {...stylex.props(styles.headerActions)}>
+          <Button
+            variant="danger-soft"
+            onPress={() => setIsDeleteModalOpen(true)}
+            aria-label={`Delete collection ${moulName}`}
+          >
+            <TrashIcon size={16} />
+            <span>Delete</span>
+          </Button>
           <Button
             variant="primary"
             onPress={handleSave}
@@ -315,6 +356,7 @@ function CollectionDetailPage() {
             onChange={setFields}
             currentMoulName={moulName}
             allMouls={allMouls}
+            collectionType={moul?.type || 'base'}
           />
         </CardBody>
       </Card>
@@ -331,6 +373,74 @@ function CollectionDetailPage() {
           />
         </CardBody>
       </Card>
+
+      {/* Danger Zone */}
+      <Card variant="glass">
+        <CardHeader>
+          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+            <WarningCircleIcon size={20} color={tokens.colorError500} />
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: tokens.colorError500, margin: 0 }}>
+              Danger Zone
+            </h2>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: tokens.spacing3 }}>
+            <div>
+              <strong style={{ display: 'block', color: tokens.colorFg, fontSize: tokens.fontSizeSm }}>
+                Delete this collection
+              </strong>
+              <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeXs }}>
+                Permanently drop the SQLite table <code>{moulName}</code>, along with all stored records, fields, and access rules. This action cannot be undone.
+              </span>
+            </div>
+            <Button
+              variant="danger"
+              onPress={() => setIsDeleteModalOpen(true)}
+            >
+              <TrashIcon size={16} />
+              <span>Delete Collection</span>
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Confirm Delete Alert Dialog */}
+      <ModalOverlay
+        isOpen={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        isDismissable
+      >
+        <Modal size="sm">
+          <AlertDialog>
+            <AlertDialogHeader>
+              <h3 style={{ margin: 0, fontSize: tokens.fontSizeLg, fontWeight: 600, color: tokens.colorFg }}>
+                Delete Collection
+              </h3>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <p style={{ margin: 0, color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+                Are you sure you want to delete collection <strong>&ldquo;{moulName}&rdquo;</strong>?
+                <br />
+                <br />
+                This will permanently delete the collection, drop the physical database table, and remove all records and access rules. This action cannot be undone.
+              </p>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button variant="outline" onPress={() => setIsDeleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                isPending={deleteMutation.isPending}
+                onPress={() => deleteMutation.mutate()}
+              >
+                Delete Collection
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialog>
+        </Modal>
+      </ModalOverlay>
     </div>
   );
 }

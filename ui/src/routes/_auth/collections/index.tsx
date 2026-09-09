@@ -44,7 +44,7 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
-import { FieldsBuilder, MoulField } from '../../../components/collections/FieldsBuilder';
+import { FieldsBuilder, MoulField, isReservedFieldName } from '../../../components/collections/FieldsBuilder';
 import { RulesEditor, MoulRules } from '../../../components/collections/RulesEditor';
 
 const styles = stylex.create({
@@ -102,6 +102,17 @@ const styles = stylex.create({
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: tokens.colorBorderSubtle,
+  },
+  authFieldPill: {
+    backgroundColor: tokens.colorBgElevated,
+    paddingBlock: '2px',
+    paddingInline: tokens.spacing1,
+    borderRadius: tokens.radiusSm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: tokens.colorPrimary500,
+    color: tokens.colorPrimary500,
+    fontWeight: 500,
   },
   relationPill: {
     backgroundColor: tokens.colorBgElevated,
@@ -235,6 +246,15 @@ function CollectionsPage() {
 
   const handleTypeChange = (selectedType: string) => {
     setNewMoulType(selectedType);
+    if (selectedType === 'auth') {
+      setNewMoulRules((prev) => ({
+        listRule: prev.listRule || 'id = @request.auth.id',
+        viewRule: prev.viewRule || 'id = @request.auth.id',
+        createRule: prev.createRule || '',
+        updateRule: prev.updateRule || 'id = @request.auth.id',
+        deleteRule: prev.deleteRule || 'id = @request.auth.id',
+      }));
+    }
   };
 
   const handleCreate = (e: React.FormEvent) => {
@@ -246,6 +266,15 @@ function CollectionsPage() {
       setError('Collection name is required.');
       setCreateTab('general');
       return;
+    }
+
+    // Validate custom fields don't conflict with reserved names
+    for (const f of newMoulFields) {
+      if (f.name && isReservedFieldName(f.name, newMoulType)) {
+        setError(`"${f.name}" is a reserved built-in column name for ${newMoulType} collections. Please rename or remove it.`);
+        setCreateTab('general');
+        return;
+      }
     }
 
     // Clean up fields
@@ -330,6 +359,12 @@ function CollectionsPage() {
                   <span {...stylex.props(styles.fieldPill)}>id</span>
                   <span {...stylex.props(styles.fieldPill)}>created_at</span>
                   <span {...stylex.props(styles.fieldPill)}>updated_at</span>
+                  {moul.type === 'auth' && (
+                    <>
+                      <span {...stylex.props(styles.authFieldPill)}>username</span>
+                      <span {...stylex.props(styles.authFieldPill)}>email</span>
+                    </>
+                  )}
                   {moul.fields?.map((f: any) => {
                     if (f.type === 'relation' && f.relationConfig) {
                       return (
@@ -445,10 +480,8 @@ function CollectionsPage() {
                             selectedKey={newMoulType}
                             onSelectionChange={(key) => handleTypeChange(String(key))}
                           >
-                            <SelectItem id="base">Base — Standard data collection</SelectItem>
-                            <SelectItem id="auth">Auth — Users with authentication</SelectItem>
-                            <SelectItem id="worker">Worker — Background tasks & queue</SelectItem>
-                            <SelectItem id="analytic">Analytic — Event logging & tracking</SelectItem>
+                            <SelectItem id="base" textValue="Base — Standard data collection">Base — Standard data collection</SelectItem>
+                            <SelectItem id="auth" textValue="Auth — Users with authentication">Auth — Users with authentication</SelectItem>
                           </Select>
 
                           {/* Fields Builder */}
@@ -457,6 +490,7 @@ function CollectionsPage() {
                             onChange={setNewMoulFields}
                             currentMoulName={newMoulName}
                             allMouls={mouls}
+                            collectionType={newMoulType}
                           />
                         </div>
                       </TabPanel>

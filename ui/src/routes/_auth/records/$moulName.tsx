@@ -26,6 +26,7 @@ import {
   ListBulletsIcon,
   InfoIcon,
   DownloadSimpleIcon,
+  SlidersIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -1350,6 +1351,18 @@ function RecordsPage() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
+          <Button
+            variant="outline"
+            onPress={() =>
+              navigate({
+                to: '/collections/$moulName',
+                params: { moulName },
+              })
+            }
+          >
+            <SlidersIcon size={16} />
+            <span>Schema & Settings</span>
+          </Button>
           <Button variant="outline" onPress={() => setIsExportOpen(true)}>
             <DownloadSimpleIcon size={16} />
             <span>Export</span>
