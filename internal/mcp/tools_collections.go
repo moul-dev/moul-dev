@@ -111,6 +111,16 @@ func (s *Server) handleCreateCollection(ctx context.Context, req mcp.CallToolReq
 		Fields: fields,
 	}
 
+	if colType == "auth" {
+		m.Rules = schema.MoulRules{
+			ListRule:   "id = @request.auth.id",
+			ViewRule:   "id = @request.auth.id",
+			CreateRule: "",
+			UpdateRule: "id = @request.auth.id",
+			DeleteRule: "id = @request.auth.id",
+		}
+	}
+
 	if err := db.CreateMoulTable(s.dbConn, m); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create table: %v", err)), nil
 	}

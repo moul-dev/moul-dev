@@ -308,11 +308,26 @@ func TestTUIE2E(t *testing.T) {
 		t.Fatalf("Expected success message, got %q", m.SuccessMsg)
 	}
 
-	// Verify that the new collection "members" exists in the models slice
+	// Verify that the new collection "members" exists in the models slice with appropriate default rules
 	found := false
 	for _, moul := range m.Mouls {
 		if moul.Name == "members" && moul.Type == "auth" {
 			found = true
+			if moul.Rules.ListRule != "id = @request.auth.id" {
+				t.Fatalf("Expected ListRule 'id = @request.auth.id', got %q", moul.Rules.ListRule)
+			}
+			if moul.Rules.ViewRule != "id = @request.auth.id" {
+				t.Fatalf("Expected ViewRule 'id = @request.auth.id', got %q", moul.Rules.ViewRule)
+			}
+			if moul.Rules.CreateRule != "" {
+				t.Fatalf("Expected CreateRule '', got %q", moul.Rules.CreateRule)
+			}
+			if moul.Rules.UpdateRule != "id = @request.auth.id" {
+				t.Fatalf("Expected UpdateRule 'id = @request.auth.id', got %q", moul.Rules.UpdateRule)
+			}
+			if moul.Rules.DeleteRule != "id = @request.auth.id" {
+				t.Fatalf("Expected DeleteRule 'id = @request.auth.id', got %q", moul.Rules.DeleteRule)
+			}
 			break
 		}
 	}

@@ -94,6 +94,14 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 - Require authentication: `@request.auth.id != ""`
 - Owner restriction: `id = @request.auth.id` or `userId = @request.auth.id`
 
+### Auth Collection Default Access Rules
+When creating an `auth` collection, default access rules are automatically configured across the Web Admin Console, `moul-ctl`, and backend engine:
+- `list`: `id = @request.auth.id` (restricts querying/listing to the authenticated user)
+- `view`: `id = @request.auth.id` (users can only view their own record)
+- `create`: `""` (empty string; allows open user registration / sign-up via `POST /api/moul/{name}/records`)
+- `update`: `id = @request.auth.id` (users can only edit their own profile)
+- `delete`: `id = @request.auth.id` (users can only delete their own account)
+
 ---
 
 ## 6. Complete REST API Route Reference

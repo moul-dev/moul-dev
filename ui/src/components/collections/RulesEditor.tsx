@@ -190,7 +190,7 @@ export function RulesEditor({
             variant="outline"
             onPress={() => applyPresetToAll('owner')}
           >
-            Owner Managed
+            {isAuthCollection ? 'Auth Defaults (Owner)' : 'Owner Managed'}
           </Button>
           <Button
             variant="outline"
@@ -205,42 +205,62 @@ export function RulesEditor({
       <div {...stylex.props(styles.rulesList)}>
         <TextField
           label="List Records (GET /records)"
-          placeholder="e.g. status = 'published' || @request.auth.id != ''"
+          placeholder={isAuthCollection ? 'id = @request.auth.id' : "e.g. status = 'published' || @request.auth.id != ''"}
           value={rules.listRule || ''}
           onChange={(val) => handleRuleChange('listRule', val)}
-          description="Governs query and list endpoints. Empty allows public access."
+          description={
+            isAuthCollection
+              ? 'Restricts user listings. Default: id = @request.auth.id (users can only list their own record).'
+              : 'Governs query and list endpoints. Empty allows public access.'
+          }
         />
 
         <TextField
           label="View Single Record (GET /records/:id)"
-          placeholder="e.g. id = @request.auth.id"
+          placeholder="id = @request.auth.id"
           value={rules.viewRule || ''}
           onChange={(val) => handleRuleChange('viewRule', val)}
-          description="Governs viewing a single record by ID. Empty allows public access."
+          description={
+            isAuthCollection
+              ? 'Restricts profile viewing. Default: id = @request.auth.id (users can only view their own profile).'
+              : 'Governs viewing a single record by ID. Empty allows public access.'
+          }
         />
 
         <TextField
           label="Create Record (POST /records)"
-          placeholder="e.g. @request.auth.id != ''"
+          placeholder={isAuthCollection ? 'Leave empty for public sign-ups' : "e.g. @request.auth.id != ''"}
           value={rules.createRule || ''}
           onChange={(val) => handleRuleChange('createRule', val)}
-          description="Validates permissions before inserting a new record."
+          description={
+            isAuthCollection
+              ? 'Controls new user sign-up / registration. Leave empty to allow public registrations.'
+              : 'Validates permissions before inserting a new record.'
+          }
         />
 
         <TextField
           label="Update Record (PATCH /records/:id)"
-          placeholder="e.g. user_id = @request.auth.id"
+          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. user_id = @request.auth.id'}
           value={rules.updateRule || ''}
           onChange={(val) => handleRuleChange('updateRule', val)}
-          description="Validates permissions before updating an existing record."
+          description={
+            isAuthCollection
+              ? 'Restricts profile updates. Default: id = @request.auth.id (users can only edit their own profile).'
+              : 'Validates permissions before updating an existing record.'
+          }
         />
 
         <TextField
           label="Delete Record (DELETE /records/:id)"
-          placeholder="e.g. user_id = @request.auth.id"
+          placeholder={isAuthCollection ? 'id = @request.auth.id' : 'e.g. user_id = @request.auth.id'}
           value={rules.deleteRule || ''}
           onChange={(val) => handleRuleChange('deleteRule', val)}
-          description="Validates permissions before deleting a record."
+          description={
+            isAuthCollection
+              ? 'Restricts account deletions. Default: id = @request.auth.id (users can only delete their own profile).'
+              : 'Validates permissions before deleting a record.'
+          }
         />
       </div>
 

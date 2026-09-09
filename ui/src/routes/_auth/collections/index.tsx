@@ -248,11 +248,19 @@ function CollectionsPage() {
     setNewMoulType(selectedType);
     if (selectedType === 'auth') {
       setNewMoulRules((prev) => ({
-        listRule: prev.listRule || 'id = @request.auth.id',
-        viewRule: prev.viewRule || 'id = @request.auth.id',
+        listRule: prev.listRule === '' || prev.listRule === 'id = @request.auth.id' ? 'id = @request.auth.id' : prev.listRule,
+        viewRule: prev.viewRule === '' || prev.viewRule === 'id = @request.auth.id' ? 'id = @request.auth.id' : prev.viewRule,
         createRule: prev.createRule || '',
-        updateRule: prev.updateRule || 'id = @request.auth.id',
-        deleteRule: prev.deleteRule || 'id = @request.auth.id',
+        updateRule: prev.updateRule === '' || prev.updateRule === 'id = @request.auth.id' ? 'id = @request.auth.id' : prev.updateRule,
+        deleteRule: prev.deleteRule === '' || prev.deleteRule === 'id = @request.auth.id' ? 'id = @request.auth.id' : prev.deleteRule,
+      }));
+    } else {
+      setNewMoulRules((prev) => ({
+        listRule: prev.listRule === 'id = @request.auth.id' ? '' : prev.listRule,
+        viewRule: prev.viewRule === 'id = @request.auth.id' ? '' : prev.viewRule,
+        createRule: prev.createRule,
+        updateRule: prev.updateRule === 'id = @request.auth.id' ? '' : prev.updateRule,
+        deleteRule: prev.deleteRule === 'id = @request.auth.id' ? '' : prev.deleteRule,
       }));
     }
   };
@@ -297,11 +305,19 @@ function CollectionsPage() {
       return cleanField;
     });
 
+    const payloadRules: MoulRules = newMoulType === 'auth' ? {
+      listRule: newMoulRules.listRule || 'id = @request.auth.id',
+      viewRule: newMoulRules.viewRule || 'id = @request.auth.id',
+      createRule: newMoulRules.createRule || '',
+      updateRule: newMoulRules.updateRule || 'id = @request.auth.id',
+      deleteRule: newMoulRules.deleteRule || 'id = @request.auth.id',
+    } : newMoulRules;
+
     createMutation.mutate({
       name: trimmedName,
       type: newMoulType,
       fields: cleanedFields,
-      rules: newMoulRules,
+      rules: payloadRules,
     });
   };
 

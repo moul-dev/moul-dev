@@ -982,7 +982,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 
 			if m.MoulRulesForm.State == huh.StateCompleted {
-				return m, m.saveMoulForm()
+				m.initMoulActionForm()
+				m.moulWizardState = "fields"
+				cmds = append(cmds, m.MoulActionForm.Init())
 			} else if m.MoulRulesForm.State == huh.StateAborted {
 				m.initMoulActionForm()
 				m.moulWizardState = "fields"

@@ -461,31 +461,66 @@ func (m *Model) initMoulFieldSelectForm() {
 
 // initMoulRulesForm initializes the custom access rules form.
 func (m *Model) initMoulRulesForm() {
+	var listPlaceholder, viewPlaceholder, createPlaceholder, updatePlaceholder, deletePlaceholder string
+	var listTitle, viewTitle, createTitle, updateTitle, deleteTitle string
+
+	if m.newMoulType == "auth" {
+		listTitle = "List Access Rule (Default: id = @request.auth.id)"
+		listPlaceholder = `Default: id = @request.auth.id (self only)`
+
+		viewTitle = "View Access Rule (Default: id = @request.auth.id)"
+		viewPlaceholder = `Default: id = @request.auth.id (self only)`
+
+		createTitle = "Create Access Rule (empty for public sign-up)"
+		createPlaceholder = `Default: empty (allows public user registration)`
+
+		updateTitle = "Update Access Rule (Default: id = @request.auth.id)"
+		updatePlaceholder = `Default: id = @request.auth.id (self only)`
+
+		deleteTitle = "Delete Access Rule (Default: id = @request.auth.id)"
+		deletePlaceholder = `Default: id = @request.auth.id (self only)`
+	} else {
+		listTitle = "List Access Rule (empty for public)"
+		listPlaceholder = `e.g. @request.auth.id != ""`
+
+		viewTitle = "View Access Rule (empty for public)"
+		viewPlaceholder = `e.g. @request.auth.id != ""`
+
+		createTitle = "Create Access Rule (empty for public)"
+		createPlaceholder = `e.g. @request.auth.id != ""`
+
+		updateTitle = "Update Access Rule (empty for public)"
+		updatePlaceholder = `e.g. authorId = @request.auth.id`
+
+		deleteTitle = "Delete Access Rule (empty for public)"
+		deletePlaceholder = `e.g. authorId = @request.auth.id`
+	}
+
 	m.MoulRulesForm = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("List Access Rule (empty for public)").
-				Placeholder(`e.g. @request.auth.id != ""`).
+				Title(listTitle).
+				Placeholder(listPlaceholder).
 				Value(&m.newMoulListRule),
 
 			huh.NewInput().
-				Title("View Access Rule (empty for public)").
-				Placeholder(`e.g. @request.auth.id != ""`).
+				Title(viewTitle).
+				Placeholder(viewPlaceholder).
 				Value(&m.newMoulViewRule),
 
 			huh.NewInput().
-				Title("Create Access Rule (empty for public)").
-				Placeholder(`e.g. @request.auth.id != ""`).
+				Title(createTitle).
+				Placeholder(createPlaceholder).
 				Value(&m.newMoulCreateRule),
 
 			huh.NewInput().
-				Title("Update Access Rule (empty for public)").
-				Placeholder("e.g. authorId = @request.auth.id").
+				Title(updateTitle).
+				Placeholder(updatePlaceholder).
 				Value(&m.newMoulUpdateRule),
 
 			huh.NewInput().
-				Title("Delete Access Rule (empty for public)").
-				Placeholder("e.g. authorId = @request.auth.id").
+				Title(deleteTitle).
+				Placeholder(deletePlaceholder).
 				Value(&m.newMoulDeleteRule),
 		),
 	).WithTheme(ThemeCustom)
@@ -505,6 +540,21 @@ func (m *Model) saveMoulForm() tea.Cmd {
 	createRule := strings.TrimSpace(m.newMoulCreateRule)
 	updateRule := strings.TrimSpace(m.newMoulUpdateRule)
 	deleteRule := strings.TrimSpace(m.newMoulDeleteRule)
+
+	if m.newMoulType == "auth" && !m.isEditingMoul {
+		if listRule == "" {
+			listRule = "id = @request.auth.id"
+		}
+		if viewRule == "" {
+			viewRule = "id = @request.auth.id"
+		}
+		if updateRule == "" {
+			updateRule = "id = @request.auth.id"
+		}
+		if deleteRule == "" {
+			deleteRule = "id = @request.auth.id"
+		}
+	}
 
 	newMoul := &schema.Moul{
 		Name:   strings.TrimSpace(m.newMoulName),
@@ -592,6 +642,23 @@ func (m *Model) viewMoulCreate() string {
 				s.WriteString(fmt.Sprintf("  - %s (%s)\n", f.Name, f.Type))
 			}
 		}
+
+		s.WriteString("\n" + lipgloss.NewStyle().Bold(true).Render("Access Rules:") + "\n")
+		formatRule := func(name, r string) string {
+			if r == "" {
+				if m.newMoulType == "auth" && name == "Create" {
+					return fmt.Sprintf("  - %s: (public sign-up)\n", name)
+				}
+				return fmt.Sprintf("  - %s: (public)\n", name)
+			}
+			return fmt.Sprintf("  - %s: %s\n", name, r)
+		}
+		s.WriteString(formatRule("List", m.newMoulListRule))
+		s.WriteString(formatRule("View", m.newMoulViewRule))
+		s.WriteString(formatRule("Create", m.newMoulCreateRule))
+		s.WriteString(formatRule("Update", m.newMoulUpdateRule))
+		s.WriteString(formatRule("Delete", m.newMoulDeleteRule))
+
 		s.WriteString("\n")
 		s.WriteString(m.MoulActionForm.View())
 		innerView = formStyle.Render(s.String())
