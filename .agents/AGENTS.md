@@ -16,3 +16,9 @@
 - **React Aria Events**: Always use `onPress` instead of `onClick` on buttons and interactive triggers.
 - **State & Accessibility**: Use standard React Aria props (`isSelected`, `selectedKey`, `onSelectionChange`, `isOpen`, `onOpenChange`) and ensure all icon-only buttons have an `aria-label`.
 - **Compound Structure**: Follow compound component conventions for `Card`, `Modal`, `Drawer`, `AlertDialog`, `Tabs`, `Table`, and `Sidebar`.
+
+## Moul Schema & Naming Conventions
+- **Strict camelCase Field Naming**: All collection custom field names must follow strict `camelCase` (`^[a-z][a-zA-Z0-9]*$`). Snake_case, dashes, PascalCase, and reserved words (`id`, `createdAt`, `updatedAt`, `createdat`, `updatedat`, plus auth collection credentials) are forbidden.
+- **System Timestamps**: System timestamps are universally standardized as `createdAt` and `updatedAt`.
+- **JSON Field Tags**: All Go structs exposed via HTTP JSON APIs (such as `RateLimitRule`, `Moul`, `Webhook`, `FileInfo`) must use `camelCase` JSON tags (e.g. `maxRequests`, `targetedUsers`, `createdAt`, `updatedAt`).
+

@@ -26,7 +26,7 @@ Moul allows defining database schemas—called Mouls—dynamically via REST endp
 
 - **Non-Destructive Column Sync:** The engine now inspects SQLite `PRAGMA table_info` (`SyncMoulTableColumns`) on startup and schema modification, executing non-destructive `ALTER TABLE` statements when fields are added or modified.
 - **Strict Relation Enforcement:** Added validation rules for foreign key relations and introduced `Select/Enum` field types to keep data clean at the database boundary.
-- **Timestamp Standardization:** Every collection now automatically manages `created_at` and `updated_at` fields using standardized RFC3339 UTC timestamps.
+- **Timestamp Standardization:** Every collection now automatically manages `createdAt` and `updatedAt` fields using standardized RFC3339 UTC timestamps.
 
 It works without manual SQL migrations. The database adapts to your data definitions safely.
 

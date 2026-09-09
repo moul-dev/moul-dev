@@ -98,3 +98,9 @@ moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 ```
 
+## Schema & Naming Standards
+
+- **Strict camelCase Fields**: All collection custom fields must follow `camelCase` (regex `^[a-z][a-zA-Z0-9]*$`, e.g. `authorId`, `viewsCount`). Snake_case, PascalCase, or reserved words are rejected with HTTP 400.
+- **Universal System Timestamps**: Every table and record uses `createdAt` and `updatedAt` ISO 8601 strings.
+- **Rate Limit Config**: Rate limiting rules use camelCase properties: `{"label": "...", "maxRequests": 10, "interval": 3, "targetedUsers": "all"}`.
+

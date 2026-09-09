@@ -16,15 +16,15 @@ Moul supports three primary relationship types configured through the `relation`
 
 ### 1. Many-to-One / One-to-One (`1:N` / `1:1`)
 Stores a single target record ID string in the field.
-- **Example**: An `articles` record pointing to an `author_id` in the `users` collection.
+- **Example**: An `articles` record pointing to an `authorId` in the `users` collection.
 
 ### 2. Many-to-Many (`M:N`)
 Stores a JSON array of record ID strings (`["rec_01", "rec_02"]`) in the field (`options.maxSelect > 1` or `null`).
-- **Example**: An `articles` record associated with multiple `categories` (`tag_ids: ["cat_tech", "cat_go"]`).
+- **Example**: An `articles` record associated with multiple `categories` (`tagIds: ["cat_tech", "cat_go"]`).
 
 ### 3. Self-Referencing / Hierarchical Trees
 A relation field pointing back to its own parent collection.
-- **Example**: `comments.parent_id` pointing to `comments.id`, or `categories.parent_category_id`.
+- **Example**: `comments.parentId` pointing to `comments.id`, or `categories.parentCategoryId`.
 
 ---
 
@@ -44,7 +44,7 @@ When configuring a relation field in schema options, you can specify how deletio
 
 ```json
 {
-  "name": "author_id",
+  "name": "authorId",
   "type": "relation",
   "required": true,
   "options": {
@@ -63,10 +63,10 @@ Instead of performing multiple round-trip API queries, pass the `expand` query p
 
 ```bash
 # Expand single relation
-curl -s "http://localhost:8090/api/moul/posts/records?expand=author_id"
+curl -s "http://localhost:8090/api/moul/posts/records?expand=authorId"
 
 # Expand multiple relations
-curl -s "http://localhost:8090/api/moul/posts/records?expand=author_id,category_ids"
+curl -s "http://localhost:8090/api/moul/posts/records?expand=authorId,categoryIds"
 ```
 
 ### Response Payload with Expanded Relations
@@ -77,16 +77,16 @@ When expanded, referenced records are placed into a nested `expand` dictionary o
 {
   "id": "rec_post_001",
   "title": "Building Single-Binary Systems",
-  "author_id": "usr_9988",
-  "category_ids": ["cat_go", "cat_sqlite"],
+  "authorId": "usr_9988",
+  "categoryIds": ["cat_go", "cat_sqlite"],
   "expand": {
-    "author_id": {
+    "authorId": {
       "id": "usr_9988",
       "username": "alice",
       "email": "alice@example.com",
       "name": "Alice Developer"
     },
-    "category_ids": [
+    "categoryIds": [
       { "id": "cat_go", "name": "Go Programming" },
       { "id": "cat_sqlite", "name": "SQLite Architecture" }
     ]

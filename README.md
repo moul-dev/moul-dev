@@ -54,7 +54,7 @@
 1. **Dynamic Moul (Tables)**: Create, list, update, and delete database tables and schemas at runtime via HTTP API or TUI.
 2. **Dynamic Record CRUD**: Perform complete CRUD operations on any dynamic moul using raw JSON payloads governed by HCL-like authorization rules.
 3. **Multi-Factor & Modern Auth**: Built-in support for Password, Email OTP, WebAuthn Passkeys, Social OAuth2 (GitHub, Google, Apple), and OAuth2 Device Flow.
-4. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.user_roles.user_id = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
+4. **Rule Authorization Engine**: Enforce robust access rules (e.g. `@request.auth.id != ""` or `@collection.userRoles.userId = @request.auth.id`) dynamically, featuring datetime macros, field modifiers, wildcard matching, and database helper functions.
 5. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 6. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment. On first startup, all reserved system tables prefixed with `_*` (`_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`) are automatically created.
 7. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
@@ -788,10 +788,10 @@ Each Moul (table) supports five HCL-like expression rules evaluated on client AP
 
 - **Request Context Variables**: `@request.auth.id`, `@request.body.fieldName`, `@request.headers.header_name`, `@request.query.paramName`, `@request.method`
 - **Operators**: `=`, `!=`, `>`, `>=`, `<`, `<=`, `~` (LIKE/contains), `!~` (NOT LIKE)
-- **Wildcard Array Modifiers**: `?=` (e.g. `allowed_users.id ?= @request.auth.id`)
+- **Wildcard Array Modifiers**: `?=` (e.g. `allowedUsers.id ?= @request.auth.id`)
 - **Field Modifiers**: `:lower`, `:length`, `:isset`, `:changed`, `:each`
 - **Helper Functions**: `geoDistance(lonA, latA, lonB, latB)`, `strftime(format, timeVal)`
-- **Cross-Collection Join Queries**: `@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'`
+- **Cross-Collection Join Queries**: `@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = 'admin'`
 
 ---
 

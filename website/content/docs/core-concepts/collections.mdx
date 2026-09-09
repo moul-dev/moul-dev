@@ -44,6 +44,21 @@ Moul supports 10 dynamic field types with automatic SQLite column mapping, runti
 
 ---
 
+## Field Naming & System Timestamps
+
+### Strict `camelCase` Naming
+All custom field names in a collection must strictly follow **`camelCase`** (matching regex `^[a-z][a-zA-Z0-9]*$`, e.g. `authorId`, `viewsCount`, `isFeatured`).
+Field names containing underscores (e.g. `author_id`), dashes, spaces, uppercase initial letters, or reserved keywords are rejected with HTTP `400 Bad Request`.
+
+### Universal Timestamps
+Every collection table automatically creates and maintains **`createdAt`** and **`updatedAt`** ISO 8601 UTC timestamp columns. These system fields are automatically stamped on record creation and update:
+- `createdAt` — RFC 3339 UTC timestamp of initial record creation.
+- `updatedAt` — RFC 3339 UTC timestamp of most recent update.
+
+Reserved field names (`id`, `createdAt`, `updatedAt`, `createdat`, `updatedat`) cannot be used as custom field names.
+
+---
+
 ## Schema Management API
 
 ### Create a Collection (`POST /api/moul`)

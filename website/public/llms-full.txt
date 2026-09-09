@@ -46,7 +46,7 @@ The engine reads environment variables from `.env` in the current working direct
 2. **`_visits`**: Stores deduplicated visitor session analytics.
 3. **`_requests`**: Log table storing HTTP request logs asynchronously.
 4. **`_settings`**: Key-value store for app settings (e.g. SMTP, Litestream, S3, rate limiting config).
-5. **`_rootUsers`**: Master root administrator user credentials and accounts.
+5. **`_rootUsers`**: Master root administrator user credentials and accounts (columns: `id`, `username`, `email`, `name`, `passwordHash`, `createdAt`, `updatedAt`).
 6. **`_feature_flags`**: Feature flag definitions, rollouts, and gate configs.
 7. **`_certmagic`**: TLS certificate and lock storage for automatic HTTPS management.
 8. **`_revoked_tokens`**: Blacklist table for invalidated and revoked JWT authentication tokens.
@@ -72,6 +72,10 @@ Collections can be of four primary types:
   - `1:1` and `1:N` store a single foreign key string ID in a `TEXT` column.
   - `M:N` uses a **Document / JSON Array model**, storing a JSON array of target record string IDs (e.g. `["id1", "id2"]`) inside a single `TEXT` column. No physical SQL junction table is created; relational queries operate via SQLite `json_each()` subqueries.
 
+### Field Naming Constraints & Universal Timestamps
+- **Strict camelCase**: All custom field names must match regex `^[a-z][a-zA-Z0-9]*$` (e.g. `authorId`, `viewsCount`, `isFeatured`). Snake_case, PascalCase, dashes, and reserved words are rejected with HTTP 400.
+- **Universal Timestamps**: Every collection table automatically creates and maintains `createdAt` and `updatedAt` ISO 8601 UTC timestamp columns. Reserved field names (`id`, `createdAt`, `updatedAt`, `createdat`, `updatedat`) cannot be used for custom fields.
+
 ---
 
 ## 5. Authorization Rules Syntax
@@ -88,7 +92,7 @@ Collections enforce access rules for `List`, `View`, `Create`, `Update`, and `De
 ### Example Rules
 - Allow public read: `""` (empty string)
 - Require authentication: `@request.auth.id != ""`
-- Owner restriction: `id = @request.auth.id` or `user_id = @request.auth.id`
+- Owner restriction: `id = @request.auth.id` or `userId = @request.auth.id`
 
 ---
 

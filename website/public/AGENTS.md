@@ -147,14 +147,14 @@ AI Agents connected via MCP can invoke the following 17 built-in tools:
 ### Collection & Schema Tools
 - `moul_list_collections`: List all dynamic collection schemas and tables.
 - `moul_get_collection`: `{"name": "string"}` - Retrieve detailed schema fields and rules.
-- `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}` - Create table. `fields_json` accepts array of `MoulField` objects (`type`: `text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `file`, `select`, `relation`).
+- `moul_create_collection`: `{"name": "string", "type": "base|auth|worker|analytic", "fields_json": "string"}` - Create table. `fields_json` accepts array of `MoulField` objects (`type`: `text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `file`, `select`, `relation`). Field names must strictly follow `camelCase` (e.g. `authorId`, `viewsCount`).
 - `moul_delete_collection`: `{"name": "string"}` - Drop table and metadata.
 
 ### Record CRUD Tools
 - `moul_list_records`: `{"collection": "string", "page": int, "per_page": int}` - List paginated records.
 - `moul_get_record`: `{"collection": "string", "id": "string"}` - Get single record by ID.
-- `moul_create_record`: `{"collection": "string", "data_json": "string"}` - Insert record (auto-generates ID formatted as `<singular_collection>-<randomID>` if unspecified).
-- `moul_update_record`: `{"collection": "string", "id": "string", "data_json": "string"}` - Update record by ID.
+- `moul_create_record`: `{"collection": "string", "data_json": "string"}` - Insert record (auto-generates ID formatted as `<singular_collection>-<randomID>` if unspecified; automatically stamps `createdAt` and `updatedAt`).
+- `moul_update_record`: `{"collection": "string", "id": "string", "data_json": "string"}` - Update record by ID (automatically updates `updatedAt`).
 - `moul_delete_record`: `{"collection": "string", "id": "string"}` - Delete record by ID.
 
 ### Background Worker Tools
@@ -186,7 +186,7 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 ### Examples
 - Public read: `""` (empty)
 - Auth required: `@request.auth.id != ""`
-- Owner restriction: `id = @request.auth.id` or `user_id = @request.auth.id`
+- Owner restriction: `id = @request.auth.id` or `userId = @request.auth.id`
 
 ---
 
@@ -248,6 +248,16 @@ When developing or refactoring backend Go code:
 - **SQL & Data Access Safety**: Never construct raw SQL strings with dynamic variable concatenation. Always use `safesql` validation and parameterized PocketBase `dbx` builders (`dbx.Params`, `dbx.HashExp`, `dbx.NewExp`).
 - **Synchronous OpenAPI & API Documentation**: Whenever adding, modifying, or deleting HTTP endpoints in `internal/handlers/router.go`, synchronously update `docs/openapi.json` and `docs/openapi.yml`, then run `make sync-docs`.
 - **Concurrency & State Safety**: Stateful services, in-memory caches, and background workers must ensure thread safety with appropriate synchronization primitives (`sync.RWMutex` / `sync.Mutex`).
+
+---
+
+## 11. Moul Schema & Naming Conventions
+
+- **Strict camelCase Field Naming**: All collection custom field names must follow strict `camelCase` (`^[a-z][a-zA-Z0-9]*$`). Snake_case, dashes, PascalCase, and reserved words (`id`, `createdAt`, `updatedAt`, `createdat`, `updatedat`, plus auth collection credentials) are forbidden and rejected with HTTP 400.
+- **System Timestamps**: System timestamps are universally standardized as `createdAt` and `updatedAt` across all tables, models, handlers, and generated client types.
+- **JSON Field Tags**: All Go structs exposed via HTTP JSON APIs (such as `RateLimitRule` with `maxRequests` and `targetedUsers`, `Moul`, `Webhook`, `FileInfo`) must use `camelCase` JSON tags.
+- **System Tables**: Internal engine tables use reserved underscore naming: `_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`.
+
 
 
 

@@ -48,8 +48,8 @@ Every dynamic collection in Moul is guarded by five row-level access control rul
 | `<`, `<=` | Less than / Less than or equal | `age < 18` |
 | `~` | Contains / LIKE substring match | `title ~ 'tutorial'` |
 | `!~` | Does not contain substring | `email !~ '@spam.com'` |
-| `&&`, `\|\|` | Logical AND / Logical OR | `published = true \|\| author_id = @request.auth.id` |
-| `?=` | Array modifier (contains element) | `collaborator_ids.id ?= @request.auth.id` |
+| `&&`, `\|\|` | Logical AND / Logical OR | `published = true \|\| authorId = @request.auth.id` |
+| `?=` | Array modifier (contains element) | `collaboratorIds.id ?= @request.auth.id` |
 
 ### Field Modifiers
 
@@ -71,7 +71,7 @@ Every dynamic collection in Moul is guarded by five row-level access control rul
 Access rules can query other collections dynamically using `@collection` syntax:
 
 ```text
-@collection.user_roles.user_id = @request.auth.id && @collection.user_roles.role = 'admin'
+@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = 'admin'
 ```
 
 ---
@@ -83,17 +83,17 @@ Access rules can query other collections dynamically using `@collection` syntax:
 listRule:   ""
 viewRule:   ""
 createRule: "@request.auth.id != ''"
-updateRule: "author_id = @request.auth.id"
-deleteRule: "author_id = @request.auth.id"
+updateRule: "authorId = @request.auth.id"
+deleteRule: "authorId = @request.auth.id"
 ```
 
 ### 2. Multi-Tenant Organization Isolation
 ```text
-listRule:   "org_id = @request.auth.org_id"
-viewRule:   "org_id = @request.auth.org_id"
-createRule: "@request.body.org_id = @request.auth.org_id"
-updateRule: "org_id = @request.auth.org_id"
-deleteRule: "org_id = @request.auth.org_id && @request.auth.role = 'org_admin'"
+listRule:   "orgId = @request.auth.orgId"
+viewRule:   "orgId = @request.auth.orgId"
+createRule: "@request.body.orgId = @request.auth.orgId"
+updateRule: "orgId = @request.auth.orgId"
+deleteRule: "orgId = @request.auth.orgId && @request.auth.role = 'org_admin'"
 ```
 
 ---
@@ -104,7 +104,7 @@ You can test and benchmark rules locally without executing live HTTP requests:
 
 ```bash
 moul test-rule \
-  --rule="author_id = @request.auth.id && views > 100" \
-  --record='{"author_id": "usr_001", "views": 250}' \
+  --rule="authorId = @request.auth.id && views > 100" \
+  --record='{"authorId": "usr_001", "views": 250}' \
   --auth='{"id": "usr_001"}'
 ```
