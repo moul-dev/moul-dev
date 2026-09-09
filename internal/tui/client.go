@@ -442,8 +442,8 @@ type FeatureFlagItem struct {
 	Enabled      bool                   `json:"enabled"`
 	DefaultValue string                 `json:"default_value"`
 	Gates        map[string]interface{} `json:"gates"`
-	CreatedAt    string                 `json:"created_at"`
-	UpdatedAt    string                 `json:"updated_at"`
+	CreatedAt    string                 `json:"createdAt"`
+	UpdatedAt    string                 `json:"updatedAt"`
 }
 
 // ListFeatureFlags retrieves all feature flags from the API.

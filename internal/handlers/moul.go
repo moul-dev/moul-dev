@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/moul-dev/moul-dev/internal/db"
@@ -14,6 +15,8 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 )
+
+var camelCaseFieldRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
 type MoulHandler struct {
 	DB *dbx.DB
@@ -239,8 +242,49 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 }
 
 func validateMoulFields(m *schema.Moul) error {
+	seen := make(map[string]bool)
+	baseReserved := map[string]bool{
+		"id":        true,
+		"createdat": true,
+		"updatedat": true,
+	}
+	authReserved := map[string]bool{
+		"username":            true,
+		"email":               true,
+		"passwordhash":        true,
+		"password":            true,
+		"otpcode":             true,
+		"otpexpiresat":        true,
+		"passkeys":            true,
+		"resettoken":          true,
+		"resettokenexpiresat": true,
+		"oauthproviders":      true,
+	}
+
 	for i := range m.Fields {
 		f := &m.Fields[i]
+		f.Name = strings.TrimSpace(f.Name)
+		if f.Name == "" {
+			return fmt.Errorf("field name cannot be empty")
+		}
+
+		if !camelCaseFieldRegex.MatchString(f.Name) {
+			return fmt.Errorf("field name %q must be camelCase (e.g. \"authorId\")", f.Name)
+		}
+
+		lowerName := strings.ToLower(f.Name)
+		if seen[lowerName] {
+			return fmt.Errorf("duplicate field name %q", f.Name)
+		}
+		seen[lowerName] = true
+
+		if baseReserved[lowerName] {
+			return fmt.Errorf("field name %q is a reserved system column", f.Name)
+		}
+		if m.Type == "auth" && authReserved[lowerName] {
+			return fmt.Errorf("field name %q is a reserved column for auth collections", f.Name)
+		}
+
 		switch f.Type {
 		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
 			// standard types

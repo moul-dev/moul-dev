@@ -21,7 +21,7 @@ type ExportOptions struct {
 	Format        string   // "csv" or "json" (default: "json")
 	IncludeSchema bool     // If true, JSON export will include schema envelope
 	Filter        string   // Optional filter SQL or rule expression
-	Sort          string   // Optional ORDER BY clause (e.g. "created_at DESC")
+	Sort          string   // Optional ORDER BY clause (e.g. "createdAt DESC")
 	Fields        []string // Optional column subset to export
 }
 
@@ -80,7 +80,7 @@ func ExportCollection(dbConn *dbx.DB, moul *schema.Moul, opts ExportOptions, w i
 	if strings.TrimSpace(opts.Sort) != "" {
 		query.OrderBy(opts.Sort)
 	} else {
-		query.OrderBy("created_at DESC")
+		query.OrderBy("createdAt DESC")
 	}
 
 	var rawRecords []dbx.NullStringMap
@@ -286,9 +286,9 @@ func executeImport(dbExec dbExecutor, moul *schema.Moul, items []map[string]inte
 			}
 
 			// Update record (upsert or replace)
-			// Do not overwrite created_at on update unless explicitly provided
-			delete(recordData, "created_at")
-			recordData["updated_at"] = now
+			// Do not overwrite createdAt on update unless explicitly provided
+			delete(recordData, "createdAt")
+			recordData["updatedAt"] = now
 
 			_, updateErr := dbExec.Update(moul.Name, dbx.Params(recordData), dbx.HashExp{"id": recordID}).Execute()
 			if updateErr != nil {
@@ -331,16 +331,16 @@ func PrepareRecordForInsert(moul *schema.Moul, raw map[string]interface{}, times
 	out["id"] = id
 
 	// Timestamps
-	if ca, ok := raw["created_at"].(string); ok && strings.TrimSpace(ca) != "" {
-		out["created_at"] = ca
+	if ca, ok := raw["createdAt"].(string); ok && strings.TrimSpace(ca) != "" {
+		out["createdAt"] = ca
 	} else {
-		out["created_at"] = timestamp
+		out["createdAt"] = timestamp
 	}
 
-	if ua, ok := raw["updated_at"].(string); ok && strings.TrimSpace(ua) != "" {
-		out["updated_at"] = ua
+	if ua, ok := raw["updatedAt"].(string); ok && strings.TrimSpace(ua) != "" {
+		out["updatedAt"] = ua
 	} else {
-		out["updated_at"] = timestamp
+		out["updatedAt"] = timestamp
 	}
 
 	// Auth collection specific fields
@@ -618,7 +618,7 @@ func GetCollectionColumnNames(moul *schema.Moul) []string {
 		cols = append(cols, "passwordHash")
 	}
 
-	cols = append(cols, "created_at", "updated_at")
+	cols = append(cols, "createdAt", "updatedAt")
 	return cols
 }
 

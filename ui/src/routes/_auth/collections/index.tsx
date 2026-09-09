@@ -44,7 +44,7 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
-import { FieldsBuilder, MoulField, isReservedFieldName } from '../../../components/collections/FieldsBuilder';
+import { FieldsBuilder, MoulField, isReservedFieldName, isValidCamelCase } from '../../../components/collections/FieldsBuilder';
 import { RulesEditor, MoulRules } from '../../../components/collections/RulesEditor';
 
 const styles = stylex.create({
@@ -268,10 +268,15 @@ function CollectionsPage() {
       return;
     }
 
-    // Validate custom fields don't conflict with reserved names
+    // Validate custom fields don't conflict with reserved names and follow camelCase
     for (const f of newMoulFields) {
       if (f.name && isReservedFieldName(f.name, newMoulType)) {
         setError(`"${f.name}" is a reserved built-in column name for ${newMoulType} collections. Please rename or remove it.`);
+        setCreateTab('general');
+        return;
+      }
+      if (f.name && !isValidCamelCase(f.name.trim())) {
+        setError(`Field name "${f.name}" must be camelCase (e.g. "authorId", "viewsCount").`);
         setCreateTab('general');
         return;
       }
@@ -357,8 +362,8 @@ function CollectionsPage() {
                 <div {...stylex.props(styles.fieldsPreview)}>
                   <span style={{ color: tokens.colorFgSubtle }}>Fields:</span>
                   <span {...stylex.props(styles.fieldPill)}>id</span>
-                  <span {...stylex.props(styles.fieldPill)}>created_at</span>
-                  <span {...stylex.props(styles.fieldPill)}>updated_at</span>
+                  <span {...stylex.props(styles.fieldPill)}>createdAt</span>
+                  <span {...stylex.props(styles.fieldPill)}>updatedAt</span>
                   {moul.type === 'auth' && (
                     <>
                       <span {...stylex.props(styles.authFieldPill)}>username</span>

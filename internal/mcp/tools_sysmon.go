@@ -73,7 +73,7 @@ func (s *Server) handleListRequests(ctx context.Context, req mcp.CallToolRequest
 	var rows []dbx.NullStringMap
 	err := s.dbConn.Select("*").
 		From("_requests").
-		OrderBy("created_at DESC").
+		OrderBy("createdAt DESC").
 		Limit(int64(limit)).
 		All(&rows)
 

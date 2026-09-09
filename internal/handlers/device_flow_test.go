@@ -61,8 +61,8 @@ func TestDeviceFlowIntegration(t *testing.T) {
 		"username":     "admin",
 		"email":        "admin@example.com",
 		"passwordHash": string(hashedPassword),
-		"created_at":   "2026-06-28T00:00:00Z",
-		"updated_at":   "2026-06-28T00:00:00Z",
+		"createdAt":    "2026-06-28T00:00:00Z",
+		"updatedAt":    "2026-06-28T00:00:00Z",
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to seed root user: %v", err)
@@ -245,8 +245,8 @@ func TestDeviceFlowIPBlocking(t *testing.T) {
 		"username":     "admin",
 		"email":        "admin@example.com",
 		"passwordHash": string(hashedPassword),
-		"created_at":   "2026-06-28T00:00:00Z",
-		"updated_at":   "2026-06-28T00:00:00Z",
+		"createdAt":    "2026-06-28T00:00:00Z",
+		"updatedAt":    "2026-06-28T00:00:00Z",
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to seed root user: %v", err)

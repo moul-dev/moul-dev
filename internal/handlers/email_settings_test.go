@@ -122,10 +122,10 @@ func TestSendTestEmailHandler(t *testing.T) {
 		"id":         moul.ID,
 		"name":       moul.Name,
 		"type":       moul.Type,
-		"fields":     fieldsJSON,
-		"rules":      rulesJSON,
-		"created_at": moul.CreatedAt,
-		"updated_at": moul.UpdatedAt,
+		"fields":    fieldsJSON,
+		"rules":     rulesJSON,
+		"createdAt": moul.CreatedAt,
+		"updatedAt": moul.UpdatedAt,
 	}).Execute()
 
 	if err != nil {

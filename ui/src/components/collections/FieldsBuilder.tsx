@@ -263,9 +263,13 @@ export interface FieldsBuilderProps {
   collectionType?: string;
 }
 
+export function isValidCamelCase(name: string): boolean {
+  return /^[a-z][a-zA-Z0-9]*$/.test(name);
+}
+
 export function isReservedFieldName(name: string, collectionType: string = 'base'): boolean {
   const lower = name.trim().toLowerCase();
-  const baseReserved = ['id', 'created_at', 'updated_at'];
+  const baseReserved = ['id', 'createdat', 'updatedat', 'created_at', 'updated_at'];
   if (baseReserved.includes(lower)) return true;
   if (collectionType === 'auth') {
     const authReserved = [
@@ -439,7 +443,7 @@ export function FieldsBuilder({
             <span style={{ fontWeight: 600, fontSize: tokens.fontSizeXs, color: tokens.colorFg }}>
               {collectionType === 'auth' ? 'Built-in Auth & System Columns' : 'Built-in System Columns'}
             </span>
-            <Badge size="sm" variant={collectionType === 'auth' ? 'primary' : 'neutral'}>
+            <Badge variant={collectionType === 'auth' ? 'primary' : 'neutral'}>
               {collectionType === 'auth' ? '12 default columns' : '3 default columns'}
             </Badge>
           </div>
@@ -477,10 +481,10 @@ export function FieldsBuilder({
                 <Badge size="sm" variant="neutral">secure</Badge>
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
-                <span>created_at</span>
+                <span>createdAt</span>
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
-                <span>updated_at</span>
+                <span>updatedAt</span>
               </span>
             </div>
 
@@ -518,11 +522,11 @@ export function FieldsBuilder({
               <Badge size="sm" variant="neutral">PK</Badge>
             </span>
             <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
-              <span>created_at</span>
+              <span>createdAt</span>
               <Badge size="sm" variant="neutral">datetime</Badge>
             </span>
             <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
-              <span>updated_at</span>
+              <span>updatedAt</span>
               <Badge size="sm" variant="neutral">datetime</Badge>
             </span>
           </div>
@@ -543,6 +547,8 @@ export function FieldsBuilder({
             const isConfigurable = isRelation || isSelect || isNumber;
             const isExpanded = Boolean(expandedFields[idx]);
             const isConflict = Boolean(field.name && isReservedFieldName(field.name, collectionType));
+            const isInvalidCamel = Boolean(field.name && !isValidCamelCase(field.name));
+            const isInvalid = isConflict || isInvalidCamel;
 
             return (
               <div
@@ -550,16 +556,16 @@ export function FieldsBuilder({
                 {...stylex.props(
                   styles.fieldCard,
                   isRelation && styles.fieldCardRelation,
-                  isConflict && styles.fieldCardConflict
+                  isInvalid && styles.fieldCardConflict
                 )}
               >
                 {/* Main Row */}
                 <div {...stylex.props(styles.fieldMainRow)}>
                   <TextField
-                    placeholder="Field name"
+                    placeholder="fieldName (e.g. authorId)"
                     value={field.name}
                     onChange={(val) => handleFieldChange(idx, 'name', val)}
-                    isInvalid={isConflict}
+                    isInvalid={isInvalid}
                   />
 
                   <Select
@@ -638,6 +644,14 @@ export function FieldsBuilder({
                       <WarningCircleIcon size={14} color={tokens.colorError500} />
                       <span>
                         &ldquo;{field.name}&rdquo; is already a built-in default column for {collectionType} collections. Please rename or remove it.
+                      </span>
+                    </div>
+                  )}
+                  {!isConflict && isInvalidCamel && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>
+                        Field name &ldquo;{field.name}&rdquo; must be camelCase (e.g. &ldquo;authorId&rdquo;, &ldquo;viewsCount&rdquo;).
                       </span>
                     </div>
                   )}

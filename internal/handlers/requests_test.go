@@ -24,7 +24,7 @@ func seedTestRequests(t *testing.T, dbConn *dbx.DB, count int) {
 			"path":             "/api/test",
 			"status_code":      200,
 			"response_time_ms": 42,
-			"created_at":       time.Now().UTC().Format(time.RFC3339),
+			"createdAt":        time.Now().UTC().Format(time.RFC3339),
 		}).Execute()
 		if err != nil {
 			t.Fatalf("Failed to seed test request %d: %v", i, err)
@@ -155,7 +155,7 @@ func TestGetRequest_ReturnsRecord(t *testing.T) {
 		"path":             "/api/moul/users/records",
 		"status_code":      201,
 		"response_time_ms": 55,
-		"created_at":       now,
+		"createdAt":        now,
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to seed request: %v", err)

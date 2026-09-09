@@ -501,8 +501,8 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	insertData["id"] = recordID
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	insertData["created_at"] = now
-	insertData["updated_at"] = now
+	insertData["createdAt"] = now
+	insertData["updatedAt"] = now
 
 	// Auth collection specific fields
 	if moul.Type == "auth" {
@@ -1223,7 +1223,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	// Check if there's actually anything to update
 	if len(updateParams) > 0 {
-		updateParams["updated_at"] = time.Now().UTC().Format(time.RFC3339)
+		updateParams["updatedAt"] = time.Now().UTC().Format(time.RFC3339)
 
 		// Dispatch update:before webhook
 		if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
@@ -1758,7 +1758,7 @@ func (h *RecordHandler) RetryJobs(c *echo.Context) error {
 		"state":        "available",
 		"scheduled_at": nowStr,
 		"attempt":      0,
-		"updated_at":   nowStr,
+		"updatedAt":    nowStr,
 	}
 
 	var where dbx.Expression

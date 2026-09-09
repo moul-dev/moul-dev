@@ -24,8 +24,8 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
 			{Name: "price", Type: "text"},            // Stored as text initially ("99.99")
-			{Name: "in_stock", Type: "text"},         // Stored as text ("true")
-			{Name: "deprecated_notes", Type: "text"}, // Field to be removed
+			{Name: "inStock", Type: "text"},          // Stored as text ("true")
+			{Name: "deprecatedNotes", Type: "text"},  // Field to be removed
 		},
 	}
 
@@ -36,7 +36,7 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	// Insert test data
 	_, err = database.NewQuery(`
-		INSERT INTO products (id, created_at, updated_at, title, price, in_stock, deprecated_notes)
+		INSERT INTO products (id, createdAt, updatedAt, title, price, inStock, deprecatedNotes)
 		VALUES ('p1', {:now}, {:now}, 'Widget A', '99.99', 'true', 'old note');
 	`).Bind(dbx.Params{"now": now}).Execute()
 	if err != nil {
@@ -44,9 +44,9 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 	}
 
 	// 2. Updated schema:
-	// - Remove `deprecated_notes`
+	// - Remove `deprecatedNotes`
 	// - Change `price` type from "text" to "number" (NUMERIC)
-	// - Change `in_stock` type from "text" to "bool" (INTEGER)
+	// - Change `inStock` type from "text" to "bool" (INTEGER)
 	// - Add `category` field ("text")
 	updatedMoul := &schema.Moul{
 		ID:   "moul-test-migration",
@@ -55,7 +55,7 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
 			{Name: "price", Type: "number"},  // Type changed to number
-			{Name: "in_stock", Type: "bool"}, // Type changed to bool
+			{Name: "inStock", Type: "bool"},  // Type changed to bool
 			{Name: "category", Type: "text"}, // New field added
 		},
 	}
@@ -79,14 +79,20 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		colMap[strings.ToLower(c.Name)] = strings.ToUpper(c.Type)
 	}
 
-	// Verify deprecated_notes is gone
-	if _, exists := colMap["deprecated_notes"]; exists {
-		t.Errorf("Expected column 'deprecated_notes' to be removed from products table")
+	// Verify deprecatedNotes is gone
+	if _, exists := colMap["deprecatednotes"]; exists {
+		t.Errorf("Expected column 'deprecatedNotes' to be removed from products table")
 	}
 
 	// Verify system fields exist
 	if _, exists := colMap["id"]; !exists {
 		t.Errorf("Expected system column 'id' to exist")
+	}
+	if _, exists := colMap["createdat"]; !exists {
+		t.Errorf("Expected system column 'createdAt' to exist")
+	}
+	if _, exists := colMap["updatedat"]; !exists {
+		t.Errorf("Expected system column 'updatedAt' to exist")
 	}
 
 	// Verify price is NUMERIC
@@ -94,9 +100,9 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		t.Errorf("Expected column 'price' to have type NUMERIC, got %q", colMap["price"])
 	}
 
-	// Verify in_stock is INTEGER
-	if colMap["in_stock"] != "INTEGER" {
-		t.Errorf("Expected column 'in_stock' to have type INTEGER, got %q", colMap["in_stock"])
+	// Verify inStock is INTEGER
+	if colMap["instock"] != "INTEGER" {
+		t.Errorf("Expected column 'inStock' to have type INTEGER, got %q", colMap["instock"])
 	}
 
 	// Verify new column category exists
@@ -109,10 +115,10 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		ID      string  `db:"id"`
 		Title   string  `db:"title"`
 		Price   float64 `db:"price"`
-		InStock int     `db:"in_stock"`
+		InStock int     `db:"inStock"`
 	}
 
-	err = database.NewQuery("SELECT id, title, price, in_stock FROM products WHERE id = 'p1'").One(&row)
+	err = database.NewQuery("SELECT id, title, price, inStock FROM products WHERE id = 'p1'").One(&row)
 	if err != nil {
 		t.Fatalf("Failed to fetch migrated row: %v", err)
 	}
@@ -124,7 +130,7 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		t.Errorf("Expected price 99.99, got %v", row.Price)
 	}
 	if row.InStock != 1 {
-		t.Errorf("Expected in_stock 1, got %v", row.InStock)
+		t.Errorf("Expected inStock 1, got %v", row.InStock)
 	}
 }
 

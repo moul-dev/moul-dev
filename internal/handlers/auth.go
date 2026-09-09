@@ -113,8 +113,8 @@ func (h *AuthHandler) AuthWithPassword(c *echo.Context) error {
 				"username":   username,
 				"name":       name,
 				"moul":       "_rootUsers",
-				"created_at": recordMap["created_at"],
-				"updated_at": recordMap["updated_at"],
+				"createdAt":  recordMap["createdAt"],
+				"updatedAt":  recordMap["updatedAt"],
 			},
 		})
 	}
@@ -237,7 +237,7 @@ func (h *AuthHandler) RequestPasswordReset(c *echo.Context) error {
 	_, err = h.DB.Update(moulName, dbx.Params{
 		"resetToken":          resetToken,
 		"resetTokenExpiresAt": expiresAt,
-		"updated_at":          time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":           time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"email": email}).Execute()
 	if err != nil {
 		logger.Error("Failed to save password reset token", "moul", moulName, "err", err)
@@ -380,7 +380,7 @@ func (h *AuthHandler) ConfirmPasswordReset(c *echo.Context) error {
 		"passwordHash":        string(newHash),
 		"resetToken":          nil,
 		"resetTokenExpiresAt": nil,
-		"updated_at":          time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":           time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": recordMap["id"]}).Execute()
 	if err != nil {
 		logger.Error("Failed to update user password hash", "moul", moulName, "err", err)
@@ -476,8 +476,8 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 				"username":   username,
 				"name":       name,
 				"moul":       "_rootUsers",
-				"created_at": recordMap["created_at"],
-				"updated_at": recordMap["updated_at"],
+				"createdAt":  recordMap["createdAt"],
+				"updatedAt":  recordMap["updatedAt"],
 			},
 		})
 	}

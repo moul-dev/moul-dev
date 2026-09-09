@@ -52,8 +52,8 @@ type Webhook struct {
 	Events    []string `json:"events"`
 	Secret    string   `json:"secret,omitempty"`
 	Enabled   bool     `json:"enabled"`
-	CreatedAt string   `json:"created_at,omitempty"`
-	UpdatedAt string   `json:"updated_at,omitempty"`
+	CreatedAt string   `json:"createdAt,omitempty"`
+	UpdatedAt string   `json:"updatedAt,omitempty"`
 }
 
 type Moul struct {
@@ -62,10 +62,10 @@ type Moul struct {
 	Type           string          `json:"type"` // "base", "auth", "worker", or "analytic"
 	Fields         []MoulField     `json:"fields"`
 	Rules          MoulRules       `json:"rules"`
-	EmailTemplates *EmailTemplates `json:"email_templates,omitempty"`
+	EmailTemplates *EmailTemplates `json:"emailTemplates,omitempty"`
 	Webhooks       []Webhook       `json:"webhooks,omitempty"`
-	CreatedAt      string          `json:"created_at"`
-	UpdatedAt      string          `json:"updated_at"`
+	CreatedAt      string          `json:"createdAt"`
+	UpdatedAt      string          `json:"updatedAt"`
 }
 
 func GetDefaultEmailTemplates() EmailTemplates {
@@ -125,7 +125,7 @@ func (m *Moul) SerializeWebhooks() (string, error) {
 
 type RateLimitRule struct {
 	Label         string `json:"label"`
-	MaxRequests   int    `json:"max_requests"`
+	MaxRequests   int    `json:"maxRequests"`
 	Interval      int    `json:"interval"`
-	TargetedUsers string `json:"targeted_users"` // "all", "authenticated", "guest"
+	TargetedUsers string `json:"targetedUsers"` // "all", "authenticated", "guest"
 }

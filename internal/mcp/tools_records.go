@@ -95,7 +95,7 @@ func (s *Server) handleListRecords(ctx context.Context, req mcp.CallToolRequest)
 		From(db.QuoteIdentifier(moul.Name)).
 		Limit(int64(perPage)).
 		Offset(int64(offset)).
-		OrderBy("created_at DESC").
+		OrderBy("createdAt DESC").
 		All(&rows)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -189,13 +189,13 @@ func (s *Server) handleCreateRecord(ctx context.Context, req mcp.CallToolRequest
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	params := dbx.Params{
-		"id":         id,
-		"created_at": now,
-		"updated_at": now,
+		"id":        id,
+		"createdAt": now,
+		"updatedAt": now,
 	}
 
 	for k, v := range body {
-		if k == "id" || k == "created_at" || k == "updated_at" {
+		if k == "id" || k == "createdAt" || k == "updatedAt" || k == "created_at" || k == "updated_at" {
 			continue
 		}
 		if v == nil {
@@ -214,8 +214,8 @@ func (s *Server) handleCreateRecord(ctx context.Context, req mcp.CallToolRequest
 	}
 
 	params["id"] = id
-	params["created_at"] = now
-	params["updated_at"] = now
+	params["createdAt"] = now
+	params["updatedAt"] = now
 	out, _ := json.MarshalIndent(params, "", "  ")
 	return mcp.NewToolResultText(string(out)), nil
 }
@@ -240,11 +240,11 @@ func (s *Server) handleUpdateRecord(ctx context.Context, req mcp.CallToolRequest
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	params := dbx.Params{
-		"updated_at": now,
+		"updatedAt": now,
 	}
 
 	for k, v := range body {
-		if k == "id" || k == "created_at" || k == "updated_at" {
+		if k == "id" || k == "createdAt" || k == "updatedAt" || k == "created_at" || k == "updated_at" {
 			continue
 		}
 		if v == nil {

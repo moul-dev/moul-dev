@@ -113,7 +113,7 @@ func (s *Store) SaveFlag(flag *Flag) error {
 			"enabled":       flag.Enabled,
 			"default_value": flag.DefaultValue,
 			"gates":         flag.GatesJSON,
-			"updated_at":    flag.UpdatedAt,
+			"updatedAt":     flag.UpdatedAt,
 		}, dbx.HashExp{"key": flag.Key}).Execute()
 	} else {
 		if flag.ID == "" {
@@ -129,8 +129,8 @@ func (s *Store) SaveFlag(flag *Flag) error {
 			"enabled":       flag.Enabled,
 			"default_value": flag.DefaultValue,
 			"gates":         flag.GatesJSON,
-			"created_at":    flag.CreatedAt,
-			"updated_at":    flag.UpdatedAt,
+			"createdAt":     flag.CreatedAt,
+			"updatedAt":     flag.UpdatedAt,
 		}).Execute()
 	}
 

@@ -5,8 +5,8 @@
 
 export interface BaseSystemFields {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthSystemFields extends BaseSystemFields {
@@ -59,53 +59,38 @@ export interface CategoriesRecord extends BaseSystemFields {
   slug: string;
 }
 
-export interface CommentsRecord extends BaseSystemFields {
-  field_1?: string;
-}
-
 export interface EventsRecord extends AnalyticSystemFields {
 }
 
-export interface NewsRecord extends BaseSystemFields {
-  content?: string;
-  user_id?: string;
-  user_id_expand?: UsersRecord;
-}
-
 export interface PostsRecord extends BaseSystemFields {
-  author_id?: string;
-  author_id_expand?: UsersRecord;
-  category_id?: string;
-  category_id_expand?: CategoriesRecord;
+  authorId?: string;
+  authorId_expand?: UsersRecord;
+  categoryId?: string;
+  categoryId_expand?: CategoriesRecord;
   content?: string;
-  is_featured: boolean;
-  published_at?: string;
+  isFeatured: boolean;
+  publishedAt?: string;
   slug: string;
   status?: "draft" | "published" | "archived";
   tags?: Record<string, unknown> | unknown[] | unknown;
   title: string;
-  views_count?: number;
-}
-
-export interface ProductsRecord extends BaseSystemFields {
+  viewsCount?: number;
 }
 
 export interface TasksQueueRecord extends WorkerSystemFields {
 }
 
 export interface UsersRecord extends AuthSystemFields {
-  avatar?: string | string[];
+  avatar?: string;
   bio?: string;
   name?: string;
+  role?: "admin" | "editor" | "member";
 }
 
 export interface MoulSchema {
   "categories": CategoriesRecord;
-  "comments": CommentsRecord;
   "events": EventsRecord;
-  "news": NewsRecord;
   "posts": PostsRecord;
-  "products": ProductsRecord;
   "tasks_queue": TasksQueueRecord;
   "users": UsersRecord;
 }

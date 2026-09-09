@@ -104,9 +104,9 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 		"id":         userID,
 		"username":   "existingpasskeyuser",
 		"email":      "existing@example.com",
-		"passkeys":   mockCredsJSON,
-		"created_at": "2026-07-02T12:00:00Z",
-		"updated_at": "2026-07-02T12:00:00Z",
+		"passkeys":  mockCredsJSON,
+		"createdAt": "2026-07-02T12:00:00Z",
+		"updatedAt": "2026-07-02T12:00:00Z",
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to seed user with mock passkeys: %v", err)

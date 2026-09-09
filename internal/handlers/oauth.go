@@ -411,8 +411,8 @@ func (h *AuthHandler) processOAuthLoginOrSignup(moul *schema.Moul, providerName 
 			"username":       username,
 			"email":          email,
 			"oauthProviders": string(linkedJSON),
-			"created_at":     now,
-			"updated_at":     now,
+			"createdAt":      now,
+			"updatedAt":      now,
 		}
 
 		_, err := h.DB.Insert(moul.Name, insertParams).Execute()
@@ -453,7 +453,7 @@ func (h *AuthHandler) processOAuthLoginOrSignup(moul *schema.Moul, providerName 
 
 			_, _ = h.DB.Update(moul.Name, dbx.Params{
 				"oauthProviders": string(linkedJSON),
-				"updated_at":     now,
+				"updatedAt":      now,
 			}, dbx.HashExp{"id": recordMap["id"]}).Execute()
 
 			recordMap["oauthProviders"] = string(linkedJSON)

@@ -592,8 +592,8 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
               </span>
               <div {...stylex.props(styles.attachedMeta)}>
                 {fileSize && <span>{fileSize}</span>}
-                {value.created_at && (
-                  <span>{new Date(value.created_at).toLocaleDateString()}</span>
+                {(value.createdAt || value.created_at) && (
+                  <span>{new Date(value.createdAt || value.created_at).toLocaleDateString()}</span>
                 )}
               </div>
             </div>
@@ -1069,6 +1069,8 @@ function RecordsPage() {
     if (records.length > 0) {
       const ignoredKeys = new Set([
         'id',
+        'createdAt',
+        'updatedAt',
         'created_at',
         'updated_at',
         'username',
@@ -1736,7 +1738,7 @@ function RecordsPage() {
                   })}
                   <TableCell>
                     <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
-                      {rec.created_at || rec.inserted_at ? new Date(String(rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
+                      {rec.createdAt || rec.created_at || rec.inserted_at ? new Date(String(rec.createdAt || rec.created_at || rec.inserted_at)).toLocaleString() : '-'}
                     </span>
                   </TableCell>
                   <TableCell align="right">
@@ -2119,10 +2121,10 @@ function RecordsPage() {
                           <span>Record ID:</span>
                           <span style={{ color: tokens.colorFg, fontWeight: 600 }}>{activeRecord.id}</span>
                         </div>
-                        {activeRecord.created_at && (
+                        {(activeRecord.createdAt || activeRecord.created_at) && (
                           <div {...stylex.props(styles.metadataRow)}>
                             <span>Created At:</span>
-                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.created_at).toLocaleString()}</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.createdAt || activeRecord.created_at).toLocaleString()}</span>
                           </div>
                         )}
                         {activeRecord.inserted_at && (
@@ -2131,10 +2133,10 @@ function RecordsPage() {
                             <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.inserted_at).toLocaleString()}</span>
                           </div>
                         )}
-                        {activeRecord.updated_at && (
+                        {(activeRecord.updatedAt || activeRecord.updated_at) && (
                           <div {...stylex.props(styles.metadataRow)}>
                             <span>Updated At:</span>
-                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.updated_at).toLocaleString()}</span>
+                            <span style={{ color: tokens.colorFg }}>{new Date(activeRecord.updatedAt || activeRecord.updated_at).toLocaleString()}</span>
                           </div>
                         )}
                         {activeRecord.scheduled_at && (

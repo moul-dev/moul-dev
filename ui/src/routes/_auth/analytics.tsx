@@ -158,16 +158,16 @@ function AnalyticsPage() {
       ];
     }
 
-    // Sort requests by created_at ascending
+    // Sort requests by createdAt ascending
     const sorted = [...requests].sort(
-      (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      (a, b) => new Date(a.createdAt || a.created_at || 0).getTime() - new Date(b.createdAt || b.created_at || 0).getTime()
     );
 
     // Group into 10 minute intervals or chronological buckets
     const bucketMap = new Map<string, { time: string; success: number; error: number }>();
 
     sorted.forEach((r) => {
-      const date = r.created_at ? new Date(r.created_at) : new Date();
+      const date = (r.createdAt || r.created_at) ? new Date(r.createdAt || r.created_at) : new Date();
       // Format as HH:MM
       const timeKey = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const current = bucketMap.get(timeKey) || { time: timeKey, success: 0, error: 0 };
@@ -382,7 +382,7 @@ function AnalyticsPage() {
                         </TableCell>
                         <TableCell>
                           <span style={{ color: tokens.colorFgSubtle, fontSize: '0.8125rem' }}>
-                            {r.created_at ? new Date(r.created_at).toLocaleTimeString() : '-'}
+                            {r.createdAt || r.created_at ? new Date(r.createdAt || r.created_at).toLocaleTimeString() : '-'}
                           </span>
                         </TableCell>
                       </TableRow>
@@ -451,7 +451,7 @@ function AnalyticsPage() {
                         </TableCell>
                         <TableCell>
                           <span style={{ color: tokens.colorFgSubtle, fontSize: '0.8125rem' }}>
-                            {v.created_at ? new Date(v.created_at).toLocaleString() : '-'}
+                            {v.createdAt || v.created_at ? new Date(v.createdAt || v.created_at).toLocaleString() : '-'}
                           </span>
                         </TableCell>
                       </TableRow>

@@ -17,8 +17,8 @@ type Flag struct {
 	DefaultValue string      `json:"default_value" db:"default_value"`
 	Gates        GatesConfig `json:"gates" db:"-"`
 	GatesJSON    string      `json:"-" db:"gates"`
-	CreatedAt    string      `json:"created_at" db:"created_at"`
-	UpdatedAt    string      `json:"updated_at" db:"updated_at"`
+	CreatedAt    string      `json:"createdAt" db:"createdAt"`
+	UpdatedAt    string      `json:"updatedAt" db:"updatedAt"`
 }
 
 // GatesConfig represents gate rules for actor, group, and percentage targeting.

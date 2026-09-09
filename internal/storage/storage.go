@@ -38,7 +38,7 @@ type FileInfo struct {
 	ThumbHash string            `json:"thumbhash,omitempty"`
 	Thumbs    map[string]string `json:"thumbs,omitempty"`
 	Size      int64             `json:"size,omitempty"`
-	CreatedAt string            `json:"created_at,omitempty"`
+	CreatedAt string            `json:"createdAt,omitempty"`
 }
 
 // GetSettings loads settings from the dbx database connection.

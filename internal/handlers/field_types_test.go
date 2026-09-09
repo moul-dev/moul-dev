@@ -30,14 +30,14 @@ func TestExtendedFieldTypes(t *testing.T) {
 		Type: "base",
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text", Required: true, Min: floatPtr(3), Max: floatPtr(100)},
-			{Name: "view_count", Type: "number", Min: floatPtr(0)},
-			{Name: "is_published", Type: "bool"},
-			{Name: "publish_date", Type: "date"},
-			{Name: "published_at", Type: "datetime"},
+			{Name: "viewCount", Type: "number", Min: floatPtr(0)},
+			{Name: "isPublished", Type: "bool"},
+			{Name: "publishDate", Type: "date"},
+			{Name: "publishedAt", Type: "datetime"},
 			{Name: "metadata", Type: "json"},
-			{Name: "website_url", Type: "url"},
+			{Name: "websiteUrl", Type: "url"},
 			{Name: "status", Type: "select", Options: []string{"draft", "published", "archived"}},
-			{Name: "cover_file", Type: "file"},
+			{Name: "coverFile", Type: "file"},
 		},
 		Rules: schema.MoulRules{},
 	}
@@ -57,8 +57,8 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	// 1. Invalid Date format -> expect 400
 	badDatePayload := map[string]interface{}{
-		"title":        "Valid Article Title",
-		"publish_date": "2026/08/12", // bad format
+		"title":       "Valid Article Title",
+		"publishDate": "2026/08/12", // bad format
 	}
 	bodyBytes, _ := json.Marshal(badDatePayload)
 	req := httptest.NewRequest(http.MethodPost, "/api/moul/articles/records", bytes.NewReader(bodyBytes))
@@ -71,8 +71,8 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	// 2. Invalid DateTime format -> expect 400
 	badDateTimePayload := map[string]interface{}{
-		"title":        "Valid Article Title",
-		"published_at": "not-a-timestamp",
+		"title":       "Valid Article Title",
+		"publishedAt": "not-a-timestamp",
 	}
 	bodyBytes, _ = json.Marshal(badDateTimePayload)
 	req = httptest.NewRequest(http.MethodPost, "/api/moul/articles/records", bytes.NewReader(bodyBytes))
@@ -85,8 +85,8 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	// 3. Invalid URL -> expect 400
 	badURLPayload := map[string]interface{}{
-		"title":       "Valid Article Title",
-		"website_url": "ftp://not-http-url",
+		"title":      "Valid Article Title",
+		"websiteUrl": "ftp://not-http-url",
 	}
 	bodyBytes, _ = json.Marshal(badURLPayload)
 	req = httptest.NewRequest(http.MethodPost, "/api/moul/articles/records", bytes.NewReader(bodyBytes))
@@ -113,17 +113,17 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	// 5. Valid record creation with all extended field types -> expect 201
 	validPayload := map[string]interface{}{
-		"title":        "Exploring Go Engine Architecture",
-		"view_count":   1500,
-		"is_published": true,
-		"publish_date": "2026-08-12",
-		"published_at": "2026-08-12T10:15:44Z",
+		"title":       "Exploring Go Engine Architecture",
+		"viewCount":   1500,
+		"isPublished": true,
+		"publishDate": "2026-08-12",
+		"publishedAt": "2026-08-12T10:15:44Z",
 		"metadata": map[string]interface{}{
 			"category": "engineering",
 			"tags":     []interface{}{"go", "database", "moul"},
 		},
-		"website_url": "https://moul.dev",
-		"status":      "published",
+		"websiteUrl": "https://moul.dev",
+		"status":     "published",
 	}
 	bodyBytes, _ = json.Marshal(validPayload)
 	req = httptest.NewRequest(http.MethodPost, "/api/moul/articles/records", bytes.NewReader(bodyBytes))
@@ -141,20 +141,20 @@ func TestExtendedFieldTypes(t *testing.T) {
 	recID, _ := created["id"].(string)
 
 	// Verify types in response payload
-	if isPub, ok := created["is_published"].(bool); !ok || !isPub {
-		t.Errorf("Expected is_published to be bool true, got %v (%T)", created["is_published"], created["is_published"])
+	if isPub, ok := created["isPublished"].(bool); !ok || !isPub {
+		t.Errorf("Expected isPublished to be bool true, got %v (%T)", created["isPublished"], created["isPublished"])
 	}
-	if views, ok := created["view_count"].(float64); !ok || views != 1500 {
-		t.Errorf("Expected view_count to be float64 1500, got %v (%T)", created["view_count"], created["view_count"])
+	if views, ok := created["viewCount"].(float64); !ok || views != 1500 {
+		t.Errorf("Expected viewCount to be float64 1500, got %v (%T)", created["viewCount"], created["viewCount"])
 	}
-	if pDate, ok := created["publish_date"].(string); !ok || pDate != "2026-08-12" {
-		t.Errorf("Expected publish_date to be '2026-08-12', got %v", created["publish_date"])
+	if pDate, ok := created["publishDate"].(string); !ok || pDate != "2026-08-12" {
+		t.Errorf("Expected publishDate to be '2026-08-12', got %v", created["publishDate"])
 	}
-	if pAt, ok := created["published_at"].(string); !ok || pAt != "2026-08-12T10:15:44Z" {
-		t.Errorf("Expected published_at to be '2026-08-12T10:15:44Z', got %v", created["published_at"])
+	if pAt, ok := created["publishedAt"].(string); !ok || pAt != "2026-08-12T10:15:44Z" {
+		t.Errorf("Expected publishedAt to be '2026-08-12T10:15:44Z', got %v", created["publishedAt"])
 	}
-	if urlVal, ok := created["website_url"].(string); !ok || urlVal != "https://moul.dev" {
-		t.Errorf("Expected website_url to be 'https://moul.dev', got %v", created["website_url"])
+	if urlVal, ok := created["websiteUrl"].(string); !ok || urlVal != "https://moul.dev" {
+		t.Errorf("Expected websiteUrl to be 'https://moul.dev', got %v", created["websiteUrl"])
 	}
 	metaMap, ok := created["metadata"].(map[string]interface{})
 	if !ok {
@@ -174,14 +174,14 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	var fetched map[string]interface{}
 	_ = json.Unmarshal(rec.Body.Bytes(), &fetched)
-	if isPub, ok := fetched["is_published"].(bool); !ok || !isPub {
-		t.Errorf("Expected fetched is_published to be bool true, got %v", fetched["is_published"])
+	if isPub, ok := fetched["isPublished"].(bool); !ok || !isPub {
+		t.Errorf("Expected fetched isPublished to be bool true, got %v", fetched["isPublished"])
 	}
 
 	// 7. UpdateRecord -> expect 200
 	updatePayload := map[string]interface{}{
-		"is_published": false,
-		"view_count":   1501,
+		"isPublished": false,
+		"viewCount":   1501,
 	}
 	bodyBytes, _ = json.Marshal(updatePayload)
 	req = httptest.NewRequest(http.MethodPatch, "/api/moul/articles/records/"+recID, bytes.NewReader(bodyBytes))
@@ -194,7 +194,7 @@ func TestExtendedFieldTypes(t *testing.T) {
 
 	var updated map[string]interface{}
 	_ = json.Unmarshal(rec.Body.Bytes(), &updated)
-	if isPub, ok := updated["is_published"].(bool); !ok || isPub {
-		t.Errorf("Expected updated is_published to be false, got %v", updated["is_published"])
+	if isPub, ok := updated["isPublished"].(bool); !ok || isPub {
+		t.Errorf("Expected updated isPublished to be false, got %v", updated["isPublished"])
 	}
 }

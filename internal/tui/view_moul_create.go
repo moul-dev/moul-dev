@@ -480,12 +480,12 @@ func (m *Model) initMoulRulesForm() {
 
 			huh.NewInput().
 				Title("Update Access Rule (empty for public)").
-				Placeholder("e.g. author_id = @request.auth.id").
+				Placeholder("e.g. authorId = @request.auth.id").
 				Value(&m.newMoulUpdateRule),
 
 			huh.NewInput().
 				Title("Delete Access Rule (empty for public)").
-				Placeholder("e.g. author_id = @request.auth.id").
+				Placeholder("e.g. authorId = @request.auth.id").
 				Value(&m.newMoulDeleteRule),
 		),
 	).WithTheme(ThemeCustom)
@@ -562,25 +562,25 @@ func (m *Model) viewMoulCreate() string {
 		if m.newMoulType == "auth" {
 			s.WriteString("  - username (system, text)\n")
 			s.WriteString("  - email (system, text)\n")
-			s.WriteString("  - created_at (system, text)\n")
-			s.WriteString("  - updated_at (system, text)\n")
+			s.WriteString("  - createdAt (system, text)\n")
+			s.WriteString("  - updatedAt (system, text)\n")
 		} else if m.newMoulType == "worker" {
 			s.WriteString("  - state (system, text)\n")
 			s.WriteString("  - queue (system, text)\n")
 			s.WriteString("  - worker (system, text)\n")
 			s.WriteString("  - inserted_at (system, text)\n")
-			s.WriteString("  - created_at (system, text)\n")
-			s.WriteString("  - updated_at (system, text)\n")
+			s.WriteString("  - createdAt (system, text)\n")
+			s.WriteString("  - updatedAt (system, text)\n")
 		} else if m.newMoulType == "analytic" {
 			s.WriteString("  - visit_token (system, text)\n")
 			s.WriteString("  - visitor_token (system, text)\n")
 			s.WriteString("  - name (system, text)\n")
 			s.WriteString("  - time (system, text)\n")
-			s.WriteString("  - created_at (system, text)\n")
-			s.WriteString("  - updated_at (system, text)\n")
+			s.WriteString("  - createdAt (system, text)\n")
+			s.WriteString("  - updatedAt (system, text)\n")
 		} else {
-			s.WriteString("  - created_at (system, text)\n")
-			s.WriteString("  - updated_at (system, text)\n")
+			s.WriteString("  - createdAt (system, text)\n")
+			s.WriteString("  - updatedAt (system, text)\n")
 		}
 
 		for _, f := range m.newMoulFieldsList {

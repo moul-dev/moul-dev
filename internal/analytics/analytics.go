@@ -277,7 +277,7 @@ func (e *Engine) flushRequests(batch []RequestData) {
 			"path":             req.Path,
 			"status_code":      req.StatusCode,
 			"response_time_ms": req.ResponseTimeMs,
-			"created_at":       req.CreatedAt,
+			"createdAt":        req.CreatedAt,
 		}).Execute()
 		if err != nil {
 			e.logger.Error("Failed to insert request record", "path", req.Path, "err", err)
@@ -381,8 +381,8 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 
 	insertParams := dbx.Params{
 		"id":            eventID,
-		"created_at":    now,
-		"updated_at":    now,
+		"createdAt":     now,
+		"updatedAt":     now,
 		"visit_token":   visitToken,
 		"visitor_token": visitorToken,
 		"name":          params.Name,
@@ -399,7 +399,7 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 		if lowerName == "visit_token" || lowerName == "visitor_token" ||
 			lowerName == "user_id" || lowerName == "name" ||
 			lowerName == "properties" || lowerName == "time" || lowerName == "id" ||
-			lowerName == "created_at" || lowerName == "updated_at" {
+			lowerName == "createdat" || lowerName == "updatedat" {
 			continue
 		}
 		if val, ok := params.Properties[field.Name]; ok {

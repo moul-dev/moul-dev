@@ -111,7 +111,7 @@ test-flow:
 	curl -s -X POST http://localhost:8090/api/moul \
 		-H "X-Admin-Key: $(MOUL_ADMIN_KEY)" \
 		-H "Content-Type: application/json" \
-		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "author_id", "type": "text"}, {"name": "files", "type": "file"}], "rules": {"listRule": "", "viewRule": "", "createRule": "@request.auth.id != '\'''\'", "updateRule": "author_id = @request.auth.id", "deleteRule": "author_id = @request.auth.id"}}'
+		-d '{"name": "posts", "type": "base", "fields": [{"name": "title", "type": "text"}, {"name": "body", "type": "text"}, {"name": "authorId", "type": "text"}, {"name": "files", "type": "file"}], "rules": {"listRule": "", "viewRule": "", "createRule": "@request.auth.id != '\'''\''", "updateRule": "authorId = @request.auth.id", "deleteRule": "authorId = @request.auth.id"}}'
 	@echo "\n"
 
 	@echo "=== 3. Listing all registered moul ==="
@@ -138,7 +138,7 @@ test-flow:
 	echo "=== 6. Attempting to create a post without JWT (Should fail with 401) ==="; \
 	curl -i -s -X POST http://localhost:8090/api/moul/posts/records \
 		-H "Content-Type: application/json" \
-		-d '{"title": "Unauthenticated Post", "body": "This should fail", "author_id": "'$$USER_ID'"}'; \
+		-d '{"title": "Unauthenticated Post", "body": "This should fail", "authorId": "'$$USER_ID'"}'; \
 	echo "\n"; \
 	\
 	echo "=== 7. Uploading an attachment (Should succeed) ==="; \
@@ -153,7 +153,7 @@ test-flow:
 	POST_RESP=$$(curl -s -X POST http://localhost:8090/api/moul/posts/records \
 		-H "Authorization: Bearer $$TOKEN" \
 		-H "Content-Type: application/json" \
-		-d '{"title": "Hello Moul World!", "body": "Dynamic collections are awesome.", "author_id": "'$$USER_ID'", "files": '$$UPLOAD_RESP'}'); \
+		-d '{"title": "Hello Moul World!", "body": "Dynamic collections are awesome.", "authorId": "'$$USER_ID'", "files": '$$UPLOAD_RESP'}'); \
 	echo "$$POST_RESP"; \
 	POST_ID=$$(echo "$$POST_RESP" | grep -o '"id":"[^"]*' | cut -d'"' -f4); \
 	echo "Created Post ID: $$POST_ID\n"; \

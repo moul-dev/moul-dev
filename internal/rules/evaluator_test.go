@@ -43,19 +43,19 @@ func TestEvaluateRule_PocketBaseSyntax(t *testing.T) {
 		Type: "base",
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
-			{Name: "author_id", Type: "text"},
+			{Name: "authorId", Type: "text"},
 		},
 	}
 	fieldsJson, _ := postsMoul.SerializeFields()
 	rulesJson, _ := postsMoul.SerializeRules()
 	_, err = testDB.Insert("_moul", dbx.Params{
-		"id":         postsMoul.ID,
-		"name":       postsMoul.Name,
-		"type":       postsMoul.Type,
-		"fields":     fieldsJson,
-		"rules":      rulesJson,
-		"created_at": time.Now().Format(time.RFC3339),
-		"updated_at": time.Now().Format(time.RFC3339),
+		"id":        postsMoul.ID,
+		"name":      postsMoul.Name,
+		"type":      postsMoul.Type,
+		"fields":    fieldsJson,
+		"rules":     rulesJson,
+		"createdAt": time.Now().Format(time.RFC3339),
+		"updatedAt": time.Now().Format(time.RFC3339),
 	}).Execute()
 	if err != nil {
 		t.Fatalf("failed to register posts moul: %v", err)
@@ -138,9 +138,9 @@ func TestEvaluateRule_PocketBaseSyntax(t *testing.T) {
 		},
 		{
 			name: "Datetime macro @now comparison",
-			rule: "created_at < @now",
+			rule: "createdAt < @now",
 			record: map[string]interface{}{
-				"created_at": "2020-01-01 00:00:00Z",
+				"createdAt": "2020-01-01 00:00:00Z",
 			},
 			expected: true,
 		},

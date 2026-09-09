@@ -423,8 +423,10 @@ export const api = {
       name: string;
       email: string;
       moul: string;
-      created_at: string;
-      updated_at: string;
+      createdAt?: string;
+      updatedAt?: string;
+      created_at?: string;
+      updated_at?: string;
     }>('/api/admin/account'),
   updateRootAccount: (data: {
     username?: string;
@@ -445,8 +447,10 @@ export const api = {
         name: string;
         email: string;
         moul: string;
-        created_at: string;
-        updated_at: string;
+        createdAt?: string;
+        updatedAt?: string;
+        created_at?: string;
+        updated_at?: string;
       };
     }>('/api/admin/account', {
       method: 'PATCH',

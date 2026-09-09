@@ -173,7 +173,7 @@ func TestCleanupOldRequestsAndVisits(t *testing.T) {
 		"path":             "/old",
 		"status_code":      200,
 		"response_time_ms": 10,
-		"created_at":       oldTime,
+		"createdAt":        oldTime,
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to insert old request: %v", err)
@@ -186,7 +186,7 @@ func TestCleanupOldRequestsAndVisits(t *testing.T) {
 		"path":             "/recent",
 		"status_code":      200,
 		"response_time_ms": 10,
-		"created_at":       recentTime,
+		"createdAt":        recentTime,
 	}).Execute()
 	if err != nil {
 		t.Fatalf("Failed to insert recent request: %v", err)
@@ -257,8 +257,8 @@ func TestCleanupCompletedJobs(t *testing.T) {
 	// Old completed job (10 days old) -> should be deleted
 	_, err = dbConn.Insert("tasks", map[string]interface{}{
 		"id":           "job-completed-old",
-		"created_at":   oldTime,
-		"updated_at":   oldTime,
+		"createdAt":    oldTime,
+		"updatedAt":    oldTime,
 		"inserted_at":  oldTime,
 		"scheduled_at": oldTime,
 		"completed_at": oldTime,
@@ -272,8 +272,8 @@ func TestCleanupCompletedJobs(t *testing.T) {
 	// Recent completed job (1 day old) -> should be kept
 	_, err = dbConn.Insert("tasks", map[string]interface{}{
 		"id":           "job-completed-recent",
-		"created_at":   recentTime,
-		"updated_at":   recentTime,
+		"createdAt":    recentTime,
+		"updatedAt":    recentTime,
 		"inserted_at":  recentTime,
 		"scheduled_at": recentTime,
 		"completed_at": recentTime,
@@ -287,8 +287,8 @@ func TestCleanupCompletedJobs(t *testing.T) {
 	// Discarded job -> should be deleted immediately when discardedMaxAge <= 0
 	_, err = dbConn.Insert("tasks", map[string]interface{}{
 		"id":           "job-discarded",
-		"created_at":   nowStr,
-		"updated_at":   nowStr,
+		"createdAt":    nowStr,
+		"updatedAt":    nowStr,
 		"inserted_at":  nowStr,
 		"scheduled_at": nowStr,
 		"discarded_at": nowStr,
@@ -367,7 +367,7 @@ func TestEnsureSystemTables_FirstStartup(t *testing.T) {
 	for _, c := range moulCols {
 		moulColMap[c.Name] = true
 	}
-	for _, reqCol := range []string{"id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at"} {
+	for _, reqCol := range []string{"id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt"} {
 		if !moulColMap[reqCol] {
 			t.Errorf("Expected column %q in _moul table", reqCol)
 		}
@@ -384,7 +384,7 @@ func TestEnsureSystemTables_FirstStartup(t *testing.T) {
 	for _, c := range rootCols {
 		rootColMap[c.Name] = true
 	}
-	for _, reqCol := range []string{"id", "username", "email", "name", "passwordHash", "created_at", "updated_at"} {
+	for _, reqCol := range []string{"id", "username", "email", "name", "passwordHash", "createdAt", "updatedAt"} {
 		if !rootColMap[reqCol] {
 			t.Errorf("Expected column %q in _rootUsers table", reqCol)
 		}

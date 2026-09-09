@@ -211,7 +211,7 @@ function WorkersPage() {
     queryFn: () =>
       api.listRecords(selectedCollection, {
         perPage: 100,
-        sort: '-created_at',
+        sort: '-createdAt',
       }),
     enabled: Boolean(selectedCollection),
     refetchInterval: 5000,
@@ -410,8 +410,8 @@ function WorkersPage() {
                         <span style={{ color: tokens.colorFgSubtle, fontSize: '0.8125rem' }}>
                           {job.scheduled_at
                             ? new Date(job.scheduled_at).toLocaleTimeString()
-                            : job.created_at
-                              ? new Date(job.created_at).toLocaleTimeString()
+                            : (job.createdAt || job.created_at)
+                              ? new Date(job.createdAt || job.created_at).toLocaleTimeString()
                               : '-'}
                         </span>
                       </TableCell>
@@ -589,9 +589,9 @@ function WorkersPage() {
                   <div {...stylex.props(styles.detailRow)}>
                     <span {...stylex.props(styles.detailLabel)}>Timestamps</span>
                     <span {...stylex.props(styles.detailValue)} style={{ fontSize: '0.8125rem', color: tokens.colorFgSubtle }}>
-                      Created: {selectedJob.created_at ? new Date(selectedJob.created_at).toLocaleString() : 'N/A'}
+                      Created: {(selectedJob.createdAt || selectedJob.created_at) ? new Date(selectedJob.createdAt || selectedJob.created_at).toLocaleString() : 'N/A'}
                       <br />
-                      Updated: {selectedJob.updated_at ? new Date(selectedJob.updated_at).toLocaleString() : 'N/A'}
+                      Updated: {(selectedJob.updatedAt || selectedJob.updated_at) ? new Date(selectedJob.updatedAt || selectedJob.updated_at).toLocaleString() : 'N/A'}
                       <br />
                       Scheduled: {selectedJob.scheduled_at ? new Date(selectedJob.scheduled_at).toLocaleString() : 'N/A'}
                     </span>

@@ -111,8 +111,8 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 			"id":         id,
 			"username":   username,
 			"email":      email,
-			"created_at": now,
-			"updated_at": now,
+			"createdAt":  now,
+			"updatedAt":  now,
 		}).Execute()
 
 		if err != nil {
@@ -136,7 +136,7 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 	_, err = h.DB.Update(moulName, dbx.Params{
 		"otpCode":      otpCode,
 		"otpExpiresAt": otpExpiresAt,
-		"updated_at":   time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":    time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"email": email}).Execute()
 
 	if err != nil {
@@ -292,7 +292,7 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 	_, err = h.DB.Update(moulName, dbx.Params{
 		"otpCode":      nil,
 		"otpExpiresAt": nil,
-		"updated_at":   time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":    time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"email": email}).Execute()
 
 	if err != nil {

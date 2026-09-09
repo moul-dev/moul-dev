@@ -44,9 +44,9 @@ func TestExportRecordsAPI(t *testing.T) {
 		"id":         "p1",
 		"title":      "Hello World",
 		"score":      100,
-		"active":     1,
-		"created_at": "2026-09-04T10:00:00Z",
-		"updated_at": "2026-09-04T10:00:00Z",
+		"active":    1,
+		"createdAt": "2026-09-04T10:00:00Z",
+		"updatedAt": "2026-09-04T10:00:00Z",
 	}).Execute()
 	if err != nil {
 		t.Fatalf("failed to insert initial record: %v", err)

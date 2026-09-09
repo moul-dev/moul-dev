@@ -78,9 +78,9 @@ export const Route = createFileRoute('/_auth/settings')({
 
 interface RateLimitRule {
   label: string;
-  max_requests: number;
+  maxRequests: number;
   interval: number;
-  targeted_users: 'all' | 'authenticated' | 'guest' | string;
+  targetedUsers: 'all' | 'authenticated' | 'guest' | string;
 }
 
 type DrawerMode =
@@ -371,9 +371,9 @@ function SettingsPage() {
 
   const [rateLimitForm, setRateLimitForm] = useState<RateLimitRule>({
     label: '',
-    max_requests: 60,
+    maxRequests: 60,
     interval: 60,
-    targeted_users: 'all',
+    targetedUsers: 'all',
   });
   const [editingRuleIndex, setEditingRuleIndex] = useState<number | null>(null);
   const [ruleToDelete, setRuleToDelete] = useState<{ index: number; label: string } | null>(null);
@@ -491,9 +491,9 @@ function SettingsPage() {
       } else if (mode === 'ratelimit-add') {
         const initRate: RateLimitRule = {
           label: '',
-          max_requests: 60,
+          maxRequests: 60,
           interval: 60,
-          targeted_users: 'all',
+          targetedUsers: 'all',
         };
         setRateLimitForm(initRate);
         setEditingRuleIndex(null);
@@ -731,7 +731,7 @@ function SettingsPage() {
         });
         return;
       }
-      if (rateLimitForm.max_requests <= 0 || rateLimitForm.interval <= 0) {
+      if (rateLimitForm.maxRequests <= 0 || rateLimitForm.interval <= 0) {
         toastQueue.add({
           title: 'Validation Error',
           description: 'Max requests and interval must be greater than 0.',
@@ -743,9 +743,9 @@ function SettingsPage() {
       const updatedRules = [...rateLimitRules];
       const newRule: RateLimitRule = {
         label: rateLimitForm.label.trim(),
-        max_requests: Number(rateLimitForm.max_requests),
+        maxRequests: Number(rateLimitForm.maxRequests),
         interval: Number(rateLimitForm.interval),
-        targeted_users: rateLimitForm.targeted_users,
+        targetedUsers: rateLimitForm.targetedUsers,
       };
 
       if (drawerMode === 'ratelimit-edit' && editingRuleIndex !== null) {
@@ -1098,11 +1098,11 @@ function SettingsPage() {
                             <TableCell>
                               <span style={{ fontWeight: 600, color: tokens.colorFg }}>{rule.label}</span>
                             </TableCell>
-                            <TableCell align="numeric" tabular>{rule.max_requests} req</TableCell>
+                            <TableCell align="numeric" tabular>{rule.maxRequests} req</TableCell>
                             <TableCell align="numeric" tabular>{rule.interval}s</TableCell>
                             <TableCell>
-                              <Badge variant={rule.targeted_users === 'authenticated' ? 'primary' : rule.targeted_users === 'guest' ? 'warning' : 'neutral'}>
-                                {rule.targeted_users?.toUpperCase() || 'ALL'}
+                              <Badge variant={rule.targetedUsers === 'authenticated' ? 'primary' : rule.targetedUsers === 'guest' ? 'warning' : 'neutral'}>
+                                {rule.targetedUsers?.toUpperCase() || 'ALL'}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -1397,19 +1397,19 @@ function SettingsPage() {
                         Root Superadministrator (Full Access)
                       </span>
                     </div>
-                    {accountData?.created_at && (
+                    {(accountData?.createdAt || accountData?.created_at) && (
                       <div {...stylex.props(styles.infoItem)}>
                         <span {...stylex.props(styles.infoLabel)}>Account Created</span>
                         <span {...stylex.props(styles.infoValue)}>
-                          {new Date(accountData.created_at).toLocaleString()}
+                          {new Date(accountData.createdAt || accountData.created_at || '').toLocaleString()}
                         </span>
                       </div>
                     )}
-                    {accountData?.updated_at && (
+                    {(accountData?.updatedAt || accountData?.updated_at) && (
                       <div {...stylex.props(styles.infoItem)}>
                         <span {...stylex.props(styles.infoLabel)}>Last Updated</span>
                         <span {...stylex.props(styles.infoValue)}>
-                          {new Date(accountData.updated_at).toLocaleString()}
+                          {new Date(accountData.updatedAt || accountData.updated_at || '').toLocaleString()}
                         </span>
                       </div>
                     )}
@@ -1582,8 +1582,8 @@ function SettingsPage() {
                     label="Max Requests (per IP)"
                     type="number"
                     placeholder="10"
-                    value={String(rateLimitForm.max_requests)}
-                    onChange={(val) => setRateLimitForm({ ...rateLimitForm, max_requests: Number(val) })}
+                    value={String(rateLimitForm.maxRequests)}
+                    onChange={(val) => setRateLimitForm({ ...rateLimitForm, maxRequests: Number(val) })}
                     isRequired
                   />
                   <TextField
@@ -1596,9 +1596,9 @@ function SettingsPage() {
                   />
                   <Select
                     label="Target Audience"
-                    selectedKey={rateLimitForm.targeted_users}
+                    selectedKey={rateLimitForm.targetedUsers}
                     onSelectionChange={(key) =>
-                      setRateLimitForm({ ...rateLimitForm, targeted_users: String(key) })
+                      setRateLimitForm({ ...rateLimitForm, targetedUsers: String(key) })
                     }
                   >
                     <SelectItem id="all" textValue="All Users (all)">

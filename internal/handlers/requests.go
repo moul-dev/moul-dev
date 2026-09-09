@@ -53,7 +53,7 @@ func (h *RequestsHandler) ListRequests(c *echo.Context) error {
 	var rows []dbx.NullStringMap
 	err = h.DB.Select("*").
 		From("_requests").
-		OrderBy("created_at DESC").
+		OrderBy("createdAt DESC").
 		Limit(int64(perPage)).
 		Offset(int64(offset)).
 		All(&rows)

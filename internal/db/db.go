@@ -65,8 +65,8 @@ func EnsureSystemTables(db *dbx.DB) error {
 			type TEXT NOT NULL,
 			fields TEXT NOT NULL,
 			rules TEXT NOT NULL,
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL
 		);
 	`).Execute()
 	if err != nil {
@@ -130,8 +130,8 @@ func EnsureSystemTables(db *dbx.DB) error {
 			email TEXT UNIQUE NOT NULL,
 			name TEXT NOT NULL DEFAULT '',
 			passwordHash TEXT NOT NULL,
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL
 		);
 	`).Execute()
 	if err != nil {
@@ -152,8 +152,8 @@ func EnsureSystemTables(db *dbx.DB) error {
 			enabled INTEGER NOT NULL DEFAULT 1,
 			default_value TEXT NOT NULL DEFAULT 'false',
 			gates TEXT NOT NULL DEFAULT '{}',
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON _feature_flags(key);
 	`).Execute()
@@ -204,7 +204,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 		"litestream_s3_force_path_style": "false",
 		"litestream_replica_path":        "",
 		"rate_limiting_enabled":          "true",
-		"rate_limiting_rules":            `[{"label":"*:auth","max_requests":10,"interval":3,"targeted_users":"all"},{"label":"/","max_requests":300,"interval":5,"targeted_users":"all"}]`,
+		"rate_limiting_rules":            `[{"label":"*:auth","maxRequests":10,"interval":3,"targetedUsers":"all"},{"label":"/","maxRequests":300,"interval":5,"targetedUsers":"all"}]`,
 		"root_user_ip_enabled":           "false",
 		"root_user_allowed_ips":          "",
 		"email_enabled":                  "false",
@@ -276,7 +276,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 			path TEXT NOT NULL,
 			status_code INTEGER NOT NULL,
 			response_time_ms INTEGER NOT NULL,
-			created_at TEXT NOT NULL
+			createdAt TEXT NOT NULL
 		);
 	`).Execute()
 	if err != nil {
@@ -288,9 +288,9 @@ func EnsureSystemTables(db *dbx.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to create idx_requests_visit_id index: %w", err)
 	}
-	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON _requests (created_at);").Execute()
+	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_createdAt ON _requests (createdAt);").Execute()
 	if err != nil {
-		return fmt.Errorf("failed to create idx_requests_created_at index: %w", err)
+		return fmt.Errorf("failed to create idx_requests_createdAt index: %w", err)
 	}
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_path ON _requests (path);").Execute()
 	if err != nil {
@@ -371,8 +371,8 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
-				created_at TEXT NOT NULL,
-				updated_at TEXT NOT NULL,
+				createdAt TEXT NOT NULL,
+				updatedAt TEXT NOT NULL,
 				username TEXT UNIQUE NOT NULL,
 				email TEXT UNIQUE NOT NULL,
 				passwordHash TEXT,
@@ -389,8 +389,8 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
-				created_at TEXT NOT NULL,
-				updated_at TEXT NOT NULL,
+				createdAt TEXT NOT NULL,
+				updatedAt TEXT NOT NULL,
 				state TEXT NOT NULL DEFAULT 'available',
 				queue TEXT NOT NULL DEFAULT 'default',
 				worker TEXT NOT NULL,
@@ -415,8 +415,8 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
-				created_at TEXT NOT NULL,
-				updated_at TEXT NOT NULL,
+				createdAt TEXT NOT NULL,
+				updatedAt TEXT NOT NULL,
 				visit_token TEXT NOT NULL,
 				visitor_token TEXT NOT NULL,
 				user_id TEXT,
@@ -430,8 +430,8 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 		return fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s (
 				id TEXT PRIMARY KEY,
-				created_at TEXT NOT NULL,
-				updated_at TEXT NOT NULL
+				createdAt TEXT NOT NULL,
+				updatedAt TEXT NOT NULL
 				%s
 			);
 		`, quotedName, columnsSQL)
@@ -507,8 +507,8 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 		"rules":           rulesJSON,
 		"email_templates": templatesJSON,
 		"webhooks":        webhooksJSON,
-		"created_at":      m.CreatedAt,
-		"updated_at":      m.UpdatedAt,
+		"createdAt":       m.CreatedAt,
+		"updatedAt":       m.UpdatedAt,
 	}).Execute()
 
 	if err != nil {
@@ -528,11 +528,11 @@ func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
 		Rules          string         `db:"rules"`
 		EmailTemplates sql.NullString `db:"email_templates"`
 		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"created_at"`
-		UpdatedAt      string         `db:"updated_at"`
+		CreatedAt      string         `db:"createdAt"`
+		UpdatedAt      string         `db:"updatedAt"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
 		From("_moul").
 		All(&rows)
 	if err != nil && err != sql.ErrNoRows {
@@ -593,11 +593,11 @@ func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
 		Rules          string         `db:"rules"`
 		EmailTemplates sql.NullString `db:"email_templates"`
 		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"created_at"`
-		UpdatedAt      string         `db:"updated_at"`
+		CreatedAt      string         `db:"createdAt"`
+		UpdatedAt      string         `db:"updatedAt"`
 	}
 
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "created_at", "updated_at").
+	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
 		From("_moul").
 		Where(dbx.HashExp{"name": name}).
 		One(&row)
@@ -653,7 +653,7 @@ func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.Email
 
 	_, err = db.Update("_moul", dbx.Params{
 		"email_templates": string(bytes),
-		"updated_at":      time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":      time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": moulID}).Execute()
 
 	if err != nil {
@@ -885,9 +885,9 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 func systemColumnsForType(moulType string) map[string]bool {
 	// Base columns present in every moul type.
 	cols := map[string]bool{
-		"id":         true,
-		"created_at": true,
-		"updated_at": true,
+		"id":        true,
+		"createdat": true,
+		"updatedat": true,
 	}
 	switch moulType {
 	case "auth":
@@ -956,7 +956,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 		"rules":           rulesJSON,
 		"email_templates": templatesJSON,
 		"webhooks":        webhooksJSON,
-		"updated_at":      m.UpdatedAt,
+		"updatedAt":      m.UpdatedAt,
 	}
 
 	_, err = db.Update("_moul", params, dbx.HashExp{"name": origName}).Execute()
@@ -1038,7 +1038,7 @@ func CleanupOldRequests(dbConn *dbx.DB, maxAge time.Duration) (int64, error) {
 		return 0, nil
 	}
 	cutoffStr := time.Now().UTC().Add(-maxAge).Format(time.RFC3339)
-	res, err := dbConn.NewQuery("DELETE FROM _requests WHERE created_at <= {:cutoff}").
+	res, err := dbConn.NewQuery("DELETE FROM _requests WHERE createdAt <= {:cutoff}").
 		Bind(dbx.Params{"cutoff": cutoffStr}).
 		Execute()
 	if err != nil {
@@ -1085,7 +1085,7 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 
 		// Delete completed jobs older than completedMaxAge
 		resCompleted, err := dbConn.NewQuery(fmt.Sprintf(
-			"DELETE FROM %s WHERE state = 'completed' AND (completed_at <= {:completed_cutoff} OR (completed_at IS NULL AND updated_at <= {:completed_cutoff}))",
+			"DELETE FROM %s WHERE state = 'completed' AND (completed_at <= {:completed_cutoff} OR (completed_at IS NULL AND updatedAt <= {:completed_cutoff}))",
 			quotedName,
 		)).Bind(dbx.Params{"completed_cutoff": completedCutoffStr}).Execute()
 		if err != nil {
@@ -1110,7 +1110,7 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 		} else {
 			discardedCutoffStr := time.Now().UTC().Add(-discardedMaxAge).Format(time.RFC3339)
 			resDiscarded, err := dbConn.NewQuery(fmt.Sprintf(
-				"DELETE FROM %s WHERE state = 'discarded' AND (discarded_at <= {:discarded_cutoff} OR (discarded_at IS NULL AND updated_at <= {:discarded_cutoff}))",
+				"DELETE FROM %s WHERE state = 'discarded' AND (discarded_at <= {:discarded_cutoff} OR (discarded_at IS NULL AND updatedAt <= {:discarded_cutoff}))",
 				quotedName,
 			)).Bind(dbx.Params{"discarded_cutoff": discardedCutoffStr}).Execute()
 			if err != nil {

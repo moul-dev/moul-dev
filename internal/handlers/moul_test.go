@@ -70,14 +70,14 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
 			{Name: "body", Type: "text"},
-			{Name: "author_id", Type: "text"},
+			{Name: "authorId", Type: "text"},
 		},
 		Rules: schema.MoulRules{
 			ListRule:   "",
 			ViewRule:   "",
 			CreateRule: "@request.auth.id != ''",
-			UpdateRule: "author_id = @request.auth.id",
-			DeleteRule: "author_id = @request.auth.id",
+			UpdateRule: "authorId = @request.auth.id",
+			DeleteRule: "authorId = @request.auth.id",
 		},
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul", createPostsPayload, "")
@@ -116,9 +116,9 @@ func TestMoulAuthAndRecordCRUD(t *testing.T) {
 
 	// --- STEP 5: Create Post (No Authentication) -> Should Fail ---
 	postPayload := map[string]interface{}{
-		"title":     "My First Post",
-		"body":      "Hello World!",
-		"author_id": userAID,
+		"title":    "My First Post",
+		"body":     "Hello World!",
+		"authorId": userAID,
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, "")
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -252,14 +252,14 @@ func TestHandlersEdgeCases(t *testing.T) {
 			{Name: "price", Type: "number"},
 			{Name: "active", Type: "bool"},
 			{Name: "tags", Type: "json"},
-			{Name: "author_id", Type: "text"},
+			{Name: "authorId", Type: "text"},
 		},
 		Rules: schema.MoulRules{
 			ListRule:   "price > 50",
 			ViewRule:   "",
 			CreateRule: "@request.auth.id != ''",
-			UpdateRule: "author_id = @request.auth.id",
-			DeleteRule: "author_id = @request.auth.id",
+			UpdateRule: "authorId = @request.auth.id",
+			DeleteRule: "authorId = @request.auth.id",
 		},
 	}
 	postJSON(t, client, server.URL+"/api/moul", postsMoul, "")
@@ -384,11 +384,11 @@ func TestHandlersEdgeCases(t *testing.T) {
 
 	// Create post (no auth) -> 401
 	postPayload := map[string]interface{}{
-		"title":     "Cheap Post",
-		"price":     10,
-		"active":    true,
-		"tags":      []string{"low", "price"},
-		"author_id": userID,
+		"title":    "Cheap Post",
+		"price":    10,
+		"active":   true,
+		"tags":     []string{"low", "price"},
+		"authorId": userID,
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", postPayload, "")
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -405,11 +405,11 @@ func TestHandlersEdgeCases(t *testing.T) {
 	cheapPostID := cheapPost["id"].(string)
 
 	expensivePayload := map[string]interface{}{
-		"title":     "Expensive Post",
-		"price":     100,
-		"active":    false,
-		"tags":      []string{"high", "value"},
-		"author_id": userID,
+		"title":    "Expensive Post",
+		"price":    100,
+		"active":   false,
+		"tags":     []string{"high", "value"},
+		"authorId": userID,
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", expensivePayload, token)
 	if resp.StatusCode != http.StatusCreated {
@@ -450,11 +450,11 @@ func TestHandlersEdgeCases(t *testing.T) {
 	// --- 6b. Server-side Filtering, Sorting, and Pagination ---
 	// Create another post matching ListRule (price > 50)
 	midPostPayload := map[string]interface{}{
-		"title":     "Mid Post",
-		"price":     75,
-		"active":    true,
-		"tags":      []string{"mid"},
-		"author_id": userID,
+		"title":    "Mid Post",
+		"price":    75,
+		"active":   true,
+		"tags":     []string{"mid"},
+		"authorId": userID,
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul/posts/records", midPostPayload, token)
 	if resp.StatusCode != http.StatusCreated {
@@ -613,7 +613,7 @@ func TestHandlersEdgeCases(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for nonexistent record delete, got %d", resp.StatusCode)
 	}
-	// Unauthorized: delete post without token (delete rule is `author_id = @request.auth.id`)
+	// Unauthorized: delete post without token (delete rule is `authorId = @request.auth.id`)
 	resp = deleteJSON(t, client, server.URL+"/api/moul/posts/records/"+cheapPostID, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for unauthorized DeleteRecord, got %d", resp.StatusCode)
@@ -1170,7 +1170,7 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 	var createdMoul schema.Moul
 	parseJSON(t, resp, &createdMoul)
 	if createdMoul.CreatedAt == "" || createdMoul.UpdatedAt == "" {
-		t.Fatalf("Expected created_at and updated_at to be populated, got created_at=%q, updated_at=%q", createdMoul.CreatedAt, createdMoul.UpdatedAt)
+		t.Fatalf("Expected createdAt and updatedAt to be populated, got createdAt=%q, updatedAt=%q", createdMoul.CreatedAt, createdMoul.UpdatedAt)
 	}
 
 	// 2. Update collection schema
@@ -1185,13 +1185,13 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 	var updatedMoul schema.Moul
 	parseJSON(t, resp, &updatedMoul)
 	if updatedMoul.CreatedAt != createdMoul.CreatedAt {
-		t.Fatalf("Expected created_at to be preserved (%q), got %q", createdMoul.CreatedAt, updatedMoul.CreatedAt)
+		t.Fatalf("Expected createdAt to be preserved (%q), got %q", createdMoul.CreatedAt, updatedMoul.CreatedAt)
 	}
 	if updatedMoul.UpdatedAt == "" {
-		t.Fatalf("Expected updated_at to be set on update")
+		t.Fatalf("Expected updatedAt to be set on update")
 	}
 
-	// 3. Create a record in worker and analytic collections to ensure created_at/updated_at columns work
+	// 3. Create a record in worker and analytic collections to ensure createdAt/updatedAt columns work
 	workerMoul := schema.Moul{Name: "jobs", Type: "worker"}
 	bodyBytes, _ = json.Marshal(workerMoul)
 	resp, err = client.Post(server.URL+"/api/moul", "application/json", bytes.NewReader(bodyBytes))
@@ -1207,8 +1207,8 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 	}
 	var createdJob map[string]interface{}
 	parseJSON(t, resp, &createdJob)
-	if createdJob["created_at"] == nil || createdJob["updated_at"] == nil {
-		t.Fatalf("Expected created_at and updated_at on worker record, got %+v", createdJob)
+	if createdJob["createdAt"] == nil || createdJob["updatedAt"] == nil {
+		t.Fatalf("Expected createdAt and updatedAt on worker record, got %+v", createdJob)
 	}
 
 	analyticMoul := schema.Moul{Name: "page_views", Type: "analytic"}
@@ -1231,8 +1231,8 @@ func TestMoulCreatedAtAndUpdateAt(t *testing.T) {
 	}
 	var createdEvent map[string]interface{}
 	parseJSON(t, resp, &createdEvent)
-	if createdEvent["created_at"] == nil || createdEvent["updated_at"] == nil {
-		t.Fatalf("Expected created_at and updated_at on analytic record, got %+v", createdEvent)
+	if createdEvent["createdAt"] == nil || createdEvent["updatedAt"] == nil {
+		t.Fatalf("Expected createdAt and updatedAt on analytic record, got %+v", createdEvent)
 	}
 }
 
@@ -1394,6 +1394,85 @@ func TestListRecordsAdminKeyBypassAndSearch(t *testing.T) {
 	parseJSON(t, resp, &singleRec)
 	if singleRec["id"] != createdIDs[0] || singleRec["username"] != "alice" {
 		t.Errorf("Unexpected single record: %v", singleRec)
+	}
+}
+
+func TestValidateMoulFieldsCamelCase(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+	e := echo.New()
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Valid camelCase field names should succeed
+	validMoul := schema.Moul{
+		Name: "articles",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "authorId", Type: "text"},
+			{Name: "viewsCount", Type: "number"},
+			{Name: "isFeatured", Type: "bool"},
+			{Name: "customField1", Type: "text"},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", validMoul, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for valid camelCase fields, got %d", resp.StatusCode)
+	}
+
+	// 2. Invalid snake_case field name should be rejected
+	snakeMoul := schema.Moul{
+		Name: "snake_collection",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "first_name", Type: "text"},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", snakeMoul, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for snake_case field name, got %d", resp.StatusCode)
+	}
+
+	// 3. PascalCase field name should be rejected
+	pascalMoul := schema.Moul{
+		Name: "pascal_collection",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "FirstName", Type: "text"},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", pascalMoul, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for PascalCase field name, got %d", resp.StatusCode)
+	}
+
+	// 4. Reserved field name 'createdAt' should be rejected
+	reservedMoul := schema.Moul{
+		Name: "reserved_collection",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "createdAt", Type: "text"},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", reservedMoul, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for reserved field name createdAt, got %d", resp.StatusCode)
+	}
+
+	// 5. Reserved field name 'updatedAt' should be rejected
+	reservedUpdatedMoul := schema.Moul{
+		Name: "reserved_updated_collection",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "updatedAt", Type: "text"},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", reservedUpdatedMoul, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for reserved field name updatedAt, got %d", resp.StatusCode)
 	}
 }
 

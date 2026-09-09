@@ -42,7 +42,7 @@ The engine reads environment variables from `.env` in the current working direct
 `moul` stores metadata and system states in reserved system tables prefixed with an underscore (`_`), which are automatically and idempotently created on first startup:
 
 1. **`_moul`**: Stores schema metadata for all dynamic collections.
-   - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `created_at` (TEXT), `updated_at` (TEXT).
+   - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `createdAt` (TEXT), `updatedAt` (TEXT).
 2. **`_visits`**: Stores deduplicated visitor session analytics.
 3. **`_requests`**: Log table storing HTTP request logs asynchronously.
 4. **`_settings`**: Key-value store for app settings (e.g. SMTP, Litestream, S3, rate limiting config).
@@ -285,7 +285,7 @@ moul import posts posts.json --mode=replace --error-strategy=continue
 moul typegen --out ui/src/types/schema.d.ts
 
 # Test and validate a rule expression against mock record/auth context
-moul test-rule --rule="author_id = @request.auth.id" --record='{"author_id": "usr_1"}' --auth='{"id": "usr_1"}'
+moul test-rule --rule="authorId = @request.auth.id" --record='{"authorId": "usr_1"}' --auth='{"id": "usr_1"}'
 
 # Manage worker jobs / retry dead-letter queue (DLQ)
 moul worker retry tasks_queue [job_id]

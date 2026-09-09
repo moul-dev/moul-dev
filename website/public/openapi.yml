@@ -443,9 +443,9 @@ paths:
                         type: string
                       email:
                         type: string
-                      created_at:
+                      createdAt:
                         type: string
-                      updated_at:
+                      updatedAt:
                         type: string
         '401':
           $ref: '#/components/responses/401Unauthorized'
@@ -1966,7 +1966,7 @@ paths:
         - name: sort
           in: query
           required: false
-          description: Field sort order (e.g. `title` or `-created_at`).
+          description: Field sort order (e.g. `title` or `-createdAt`).
           schema:
             type: string
         - name: filter
@@ -2462,7 +2462,7 @@ paths:
               properties:
                 rule:
                   type: string
-                  example: "author_id = @request.auth.id"
+                  example: "authorId = @request.auth.id"
                 record:
                   type: object
                   additionalProperties: true
@@ -3151,10 +3151,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Webhook'
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
     Webhook:
@@ -3179,10 +3179,10 @@ components:
         enabled:
           type: boolean
           description: Whether the webhook is enabled.
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
     FileInfo:
@@ -3206,7 +3206,7 @@ components:
           type: integer
           format: int64
           description: File size in bytes.
-        created_at:
+        createdAt:
           type: string
           format: date-time
           description: Upload timestamp.
@@ -3223,9 +3223,9 @@ components:
           properties:
             id:
               type: string
-            created_at:
+            createdAt:
               type: string
-            updated_at:
+            updatedAt:
               type: string
             username:
               type: string
@@ -3291,7 +3291,7 @@ components:
           type: integer
         response_time_ms:
           type: integer
-        created_at:
+        createdAt:
           type: string
           format: date-time
     FeatureFlag:
@@ -3311,10 +3311,10 @@ components:
           type: string
         gates:
           type: object
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
     FeatureFlagEvaluation:

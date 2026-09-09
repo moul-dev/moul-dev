@@ -68,14 +68,14 @@ func TestAppE2EFlow(t *testing.T) {
 		"fields": []map[string]interface{}{
 			{"name": "title", "type": "text"},
 			{"name": "body", "type": "text"},
-			{"name": "author_id", "type": "text"},
+			{"name": "authorId", "type": "text"},
 		},
 		"rules": map[string]string{
 			"listRule":   "",
 			"viewRule":   "",
 			"createRule": "@request.auth.id != ''",
-			"updateRule": "author_id = @request.auth.id",
-			"deleteRule": "author_id = @request.auth.id",
+			"updateRule": "authorId = @request.auth.id",
+			"deleteRule": "authorId = @request.auth.id",
 		},
 	}
 	res = doJSON(t, client, "POST", ts.URL+"/api/moul", postsMoulPayload, map[string]string{
@@ -145,9 +145,9 @@ func TestAppE2EFlow(t *testing.T) {
 
 	// 7. Unauthenticated post creation (must fail with 401/403)
 	unauthPost := map[string]interface{}{
-		"title":     "Unauthorized Post",
-		"body":      "This should fail",
-		"author_id": userID,
+		"title":    "Unauthorized Post",
+		"body":     "This should fail",
+		"authorId": userID,
 	}
 	res = doJSON(t, client, "POST", ts.URL+"/api/moul/posts/records", unauthPost, nil)
 	if res.StatusCode != http.StatusUnauthorized && res.StatusCode != http.StatusForbidden {
@@ -156,9 +156,9 @@ func TestAppE2EFlow(t *testing.T) {
 
 	// 8. Authenticated post creation (should succeed)
 	authPost := map[string]interface{}{
-		"title":     "Hello E2E Moul World",
-		"body":      "End-to-end testing with in-process server is awesome.",
-		"author_id": userID,
+		"title":    "Hello E2E Moul World",
+		"body":     "End-to-end testing with in-process server is awesome.",
+		"authorId": userID,
 	}
 	res = doJSON(t, client, "POST", ts.URL+"/api/moul/posts/records", authPost, map[string]string{
 		"Authorization": "Bearer " + token,

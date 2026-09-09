@@ -24,8 +24,8 @@ func TestRulesTestHandler(t *testing.T) {
 	// 1. Test Valid matching rule
 	t.Run("Valid Matching Rule", func(t *testing.T) {
 		payload := RuleTestRequest{
-			Rule:   "author_id = @request.auth.id",
-			Record: map[string]interface{}{"author_id": "usr_123"},
+			Rule:   "authorId = @request.auth.id",
+			Record: map[string]interface{}{"authorId": "usr_123"},
 			Auth:   map[string]interface{}{"id": "usr_123"},
 		}
 		body, _ := json.Marshal(payload)
@@ -52,8 +52,8 @@ func TestRulesTestHandler(t *testing.T) {
 	// 2. Test Valid Non-matching rule
 	t.Run("Valid Non-Matching Rule", func(t *testing.T) {
 		payload := RuleTestRequest{
-			Rule:   "author_id = @request.auth.id",
-			Record: map[string]interface{}{"author_id": "usr_123"},
+			Rule:   "authorId = @request.auth.id",
+			Record: map[string]interface{}{"authorId": "usr_123"},
 			Auth:   map[string]interface{}{"id": "usr_456"},
 		}
 		body, _ := json.Marshal(payload)

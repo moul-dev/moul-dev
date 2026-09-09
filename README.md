@@ -156,8 +156,8 @@ Test, validate, and benchmark rule expressions against mock JSON payloads:
 
 ```bash
 go run cmd/moul/main.go test-rule \
-  --rule="author_id = @request.auth.id && views_count > 100" \
-  --record='{"author_id": "usr_admin_001", "views_count": 1420}' \
+  --rule="authorId = @request.auth.id && viewsCount > 100" \
+  --record='{"authorId": "usr_admin_001", "viewsCount": 1420}' \
   --auth='{"id": "usr_admin_001"}'
 ```
 

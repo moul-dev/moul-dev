@@ -97,8 +97,8 @@ func (h *SetupHandler) SetupRootUser(c *echo.Context) error {
 		"name":         name,
 		"email":        email,
 		"passwordHash": string(hashedPassword),
-		"created_at":   now,
-		"updated_at":   now,
+		"createdAt":    now,
+		"updatedAt":    now,
 	}).Execute()
 
 	if err != nil {
@@ -189,8 +189,8 @@ func (h *SetupHandler) AdminLogin(c *echo.Context) error {
 			"username":   username,
 			"name":       name,
 			"moul":       "_rootUsers",
-			"created_at": recordMap["created_at"],
-			"updated_at": recordMap["updated_at"],
+			"createdAt":  recordMap["createdAt"],
+			"updatedAt":  recordMap["updatedAt"],
 		},
 	})
 }
@@ -252,7 +252,7 @@ func (h *SetupHandler) UpdateRootPassword(c *echo.Context) error {
 			One(&record)
 	} else {
 		err = h.DB.Select("*").From("_rootUsers").
-			OrderBy("created_at ASC").
+			OrderBy("createdAt ASC").
 			Limit(1).
 			One(&record)
 	}
@@ -289,7 +289,7 @@ func (h *SetupHandler) UpdateRootPassword(c *echo.Context) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err = h.DB.Update("_rootUsers", dbx.Params{
 		"passwordHash": string(hashedPassword),
-		"updated_at":   now,
+		"updatedAt":    now,
 	}, dbx.HashExp{"id": recordMap["id"]}).Execute()
 
 	if err != nil {
@@ -320,7 +320,7 @@ func (h *SetupHandler) GetRootAccount(c *echo.Context) error {
 			One(&record)
 	} else {
 		err = h.DB.Select("*").From("_rootUsers").
-			OrderBy("created_at ASC").
+			OrderBy("createdAt ASC").
 			Limit(1).
 			One(&record)
 	}
@@ -348,8 +348,8 @@ func (h *SetupHandler) GetRootAccount(c *echo.Context) error {
 		"username":   username,
 		"name":       name,
 		"moul":       "_rootUsers",
-		"created_at": recordMap["created_at"],
-		"updated_at": recordMap["updated_at"],
+		"createdAt":  recordMap["createdAt"],
+		"updatedAt":  recordMap["updatedAt"],
 	})
 }
 
@@ -390,7 +390,7 @@ func (h *SetupHandler) UpdateRootAccount(c *echo.Context) error {
 			One(&record)
 	} else {
 		err = h.DB.Select("*").From("_rootUsers").
-			OrderBy("created_at ASC").
+			OrderBy("createdAt ASC").
 			Limit(1).
 			One(&record)
 	}
@@ -509,9 +509,9 @@ func (h *SetupHandler) UpdateRootAccount(c *echo.Context) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	updateParams["updated_at"] = now
+	updateParams["updatedAt"] = now
 
-	if len(updateParams) > 1 { // More than just updated_at
+	if len(updateParams) > 1 { // More than just updatedAt
 		_, err = h.DB.Update("_rootUsers", updateParams, dbx.HashExp{"id": recordID}).Execute()
 		if err != nil {
 			logger.Error("Failed to update root account in _rootUsers", "err", err)
@@ -533,8 +533,8 @@ func (h *SetupHandler) UpdateRootAccount(c *echo.Context) error {
 			"username":   targetUsername,
 			"name":       targetName,
 			"moul":       "_rootUsers",
-			"created_at": recordMap["created_at"],
-			"updated_at": now,
+			"createdAt":  recordMap["createdAt"],
+			"updatedAt":  now,
 		},
 	})
 }

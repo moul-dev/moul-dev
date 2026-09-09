@@ -105,7 +105,7 @@ func TestDynamicRateLimiter(t *testing.T) {
 		t.Errorf("Expected 429 Too Many Requests, got %d (body: %s)", code, body)
 	}
 
-	// Test case 3: targeted_users (authenticated rule)
+	// Test case 3: targetedUsers (authenticated rule)
 	// Request on users:list (GET /api/moul/users/records) without auth -> matches fallback "/" rule (limit 5) instead of "users:list"
 	for i := 0; i < 3; i++ {
 		code, _ = runMiddleware(http.MethodGet, "/api/moul/users/records", "/api/moul/:name/records", "name", "users", nil, nil)
@@ -159,7 +159,7 @@ func TestLimiterCleanup(t *testing.T) {
 }
 
 func TestJsonRulesValidation(t *testing.T) {
-	rulesStr := `[{"label":"*:auth","max_requests":10,"interval":3,"targeted_users":"all"}]`
+	rulesStr := `[{"label":"*:auth","maxRequests":10,"interval":3,"targetedUsers":"all"}]`
 	var rules []schema.RateLimitRule
 	err := json.Unmarshal([]byte(rulesStr), &rules)
 	if err != nil {

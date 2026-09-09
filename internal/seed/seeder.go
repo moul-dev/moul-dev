@@ -47,16 +47,16 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 	}
 
 	if _, err := dbConn.NewQuery(`
-		INSERT OR REPLACE INTO _rootUsers (id, username, email, name, passwordHash, created_at, updated_at)
-		VALUES ({:id}, {:username}, {:email}, {:name}, {:passwordHash}, {:created_at}, {:updated_at})
+		INSERT OR REPLACE INTO _rootUsers (id, username, email, name, passwordHash, createdAt, updatedAt)
+		VALUES ({:id}, {:username}, {:email}, {:name}, {:passwordHash}, {:createdAt}, {:updatedAt})
 	`).Bind(dbx.Params{
 		"id":           "root_admin_01",
 		"username":     "admin",
 		"email":        opt.AdminEmail,
 		"name":         "Super Administrator",
 		"passwordHash": string(adminHash),
-		"created_at":   nowStr,
-		"updated_at":   nowStr,
+		"createdAt":    nowStr,
+		"updatedAt":    nowStr,
 	}).Execute(); err != nil {
 		return fmt.Errorf("failed to seed root admin user: %w", err)
 	}
@@ -104,8 +104,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"name":         "Alex Administrator",
 				"role":         "admin",
 				"bio":          "Platform administrator and lead engineer.",
-				"created_at":   now.Add(-30 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"createdAt":    now.Add(-30 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":    nowStr,
 			},
 			{
 				"id":           "usr_jane_002",
@@ -115,8 +115,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"name":         "Jane Doe",
 				"role":         "editor",
 				"bio":          "Content strategist and technical writer.",
-				"created_at":   now.Add(-20 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"createdAt":    now.Add(-20 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":    nowStr,
 			},
 			{
 				"id":           "usr_john_003",
@@ -126,8 +126,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"name":         "John Smith",
 				"role":         "member",
 				"bio":          "Open source contributor and community builder.",
-				"created_at":   now.Add(-10 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"createdAt":    now.Add(-10 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":    nowStr,
 			},
 		}
 
@@ -169,10 +169,10 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		}
 
 		demoCats := []map[string]interface{}{
-			{"id": "cat_eng_001", "name": "Engineering", "slug": "engineering", "description": "Architecture, performance, and distributed systems", "color": "#3B82F6", "created_at": nowStr, "updated_at": nowStr},
-			{"id": "cat_prod_002", "name": "Product Updates", "slug": "product", "description": "Latest feature releases and roadmap highlights", "color": "#10B981", "created_at": nowStr, "updated_at": nowStr},
-			{"id": "cat_des_003", "name": "Design & UX", "slug": "design", "description": "Design tokens, accessibility, and micro-interactions", "color": "#8B5CF6", "created_at": nowStr, "updated_at": nowStr},
-			{"id": "cat_tut_004", "name": "Tutorials & Guides", "slug": "tutorials", "description": "Step-by-step developer walkthroughs", "color": "#F59E0B", "created_at": nowStr, "updated_at": nowStr},
+			{"id": "cat_eng_001", "name": "Engineering", "slug": "engineering", "description": "Architecture, performance, and distributed systems", "color": "#3B82F6", "createdAt": nowStr, "updatedAt": nowStr},
+			{"id": "cat_prod_002", "name": "Product Updates", "slug": "product", "description": "Latest feature releases and roadmap highlights", "color": "#10B981", "createdAt": nowStr, "updatedAt": nowStr},
+			{"id": "cat_des_003", "name": "Design & UX", "slug": "design", "description": "Design tokens, accessibility, and micro-interactions", "color": "#8B5CF6", "createdAt": nowStr, "updatedAt": nowStr},
+			{"id": "cat_tut_004", "name": "Tutorials & Guides", "slug": "tutorials", "description": "Step-by-step developer walkthroughs", "color": "#F59E0B", "createdAt": nowStr, "updatedAt": nowStr},
 		}
 		for _, c := range demoCats {
 			if _, err := dbConn.Insert("categories", dbx.Params(c)).Execute(); err != nil {
@@ -192,20 +192,20 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				{Name: "title", Type: "text", Required: true},
 				{Name: "slug", Type: "text", Required: true},
 				{Name: "content", Type: "text"},
-				{Name: "author_id", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "users", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
-				{Name: "category_id", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "categories", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
+				{Name: "authorId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "users", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
+				{Name: "categoryId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "categories", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
 				{Name: "status", Type: "select", Options: []string{"draft", "published", "archived"}},
-				{Name: "views_count", Type: "number"},
-				{Name: "is_featured", Type: "bool"},
+				{Name: "viewsCount", Type: "number"},
+				{Name: "isFeatured", Type: "bool"},
 				{Name: "tags", Type: "json"},
-				{Name: "published_at", Type: "datetime"},
+				{Name: "publishedAt", Type: "datetime"},
 			},
 			Rules: schema.MoulRules{
 				ListRule:   "",
 				ViewRule:   "",
 				CreateRule: "@request.auth.id != ''",
-				UpdateRule: "author_id = @request.auth.id",
-				DeleteRule: "author_id = @request.auth.id",
+				UpdateRule: "authorId = @request.auth.id",
+				DeleteRule: "authorId = @request.auth.id",
 			},
 			CreatedAt: nowStr,
 			UpdatedAt: nowStr,
@@ -219,49 +219,49 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 
 		demoPosts := []map[string]interface{}{
 			{
-				"id":           "pst_001",
-				"title":        "Building High-Performance SQLite Backends with Go",
-				"slug":         "building-high-performance-sqlite-backends-with-go",
-				"content":      "Exploring WAL mode, busy timeouts, and in-memory caches to handle thousands of requests per second.",
-				"author_id":    "usr_admin_001",
-				"category_id":  "cat_eng_001",
-				"status":       "published",
-				"views_count":  1420,
-				"is_featured":  true,
-				"tags":         `["sqlite", "golang", "database", "performance"]`,
-				"published_at": now.Add(-12 * 24 * time.Hour).Format(time.RFC3339),
-				"created_at":   now.Add(-12 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"id":          "pst_001",
+				"title":       "Building High-Performance SQLite Backends with Go",
+				"slug":        "building-high-performance-sqlite-backends-with-go",
+				"content":     "Exploring WAL mode, busy timeouts, and in-memory caches to handle thousands of requests per second.",
+				"authorId":    "usr_admin_001",
+				"categoryId":  "cat_eng_001",
+				"status":      "published",
+				"viewsCount":  1420,
+				"isFeatured":  true,
+				"tags":        `["sqlite", "golang", "database", "performance"]`,
+				"publishedAt": now.Add(-12 * 24 * time.Hour).Format(time.RFC3339),
+				"createdAt":   now.Add(-12 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":   nowStr,
 			},
 			{
-				"id":           "pst_002",
-				"title":        "Zero-Runtime Styling with StyleX and React Aria",
-				"slug":         "zero-runtime-styling-with-stylex-and-react-aria",
-				"content":      "How to achieve deterministic, accessible, and fast design systems in modern React applications.",
-				"author_id":    "usr_jane_002",
-				"category_id":  "cat_des_003",
-				"status":       "published",
-				"views_count":  985,
-				"is_featured":  false,
-				"tags":         `["react", "stylex", "a11y", "design-systems"]`,
-				"published_at": now.Add(-6 * 24 * time.Hour).Format(time.RFC3339),
-				"created_at":   now.Add(-6 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"id":          "pst_002",
+				"title":       "Zero-Runtime Styling with StyleX and React Aria",
+				"slug":        "zero-runtime-styling-with-stylex-and-react-aria",
+				"content":     "How to achieve deterministic, accessible, and fast design systems in modern React applications.",
+				"authorId":    "usr_jane_002",
+				"categoryId":  "cat_des_003",
+				"status":      "published",
+				"viewsCount":  985,
+				"isFeatured":  false,
+				"tags":        `["react", "stylex", "a11y", "design-systems"]`,
+				"publishedAt": now.Add(-6 * 24 * time.Hour).Format(time.RFC3339),
+				"createdAt":   now.Add(-6 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":   nowStr,
 			},
 			{
-				"id":           "pst_003",
-				"title":        "Announcing Moul 2026.08: Realtime Subscriptions & MCP Engine",
-				"slug":         "announcing-moul-2026-08",
-				"content":      "Introducing native Server-Sent Events, Model Context Protocol integration, and multi-actor feature flags.",
-				"author_id":    "usr_admin_001",
-				"category_id":  "cat_prod_002",
-				"status":       "published",
-				"views_count":  2840,
-				"is_featured":  true,
-				"tags":         `["release", "mcp", "realtime", "openfeature"]`,
-				"published_at": now.Add(-2 * 24 * time.Hour).Format(time.RFC3339),
-				"created_at":   now.Add(-2 * 24 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"id":          "pst_003",
+				"title":       "Announcing Moul 2026.08: Realtime Subscriptions & MCP Engine",
+				"slug":        "announcing-moul-2026-08",
+				"content":     "Introducing native Server-Sent Events, Model Context Protocol integration, and multi-actor feature flags.",
+				"authorId":    "usr_admin_001",
+				"categoryId":  "cat_prod_002",
+				"status":      "published",
+				"viewsCount":  2840,
+				"isFeatured":  true,
+				"tags":        `["release", "mcp", "realtime", "openfeature"]`,
+				"publishedAt": now.Add(-2 * 24 * time.Hour).Format(time.RFC3339),
+				"createdAt":   now.Add(-2 * 24 * time.Hour).Format(time.RFC3339),
+				"updatedAt":   nowStr,
 			},
 		}
 		for _, p := range demoPosts {
@@ -304,8 +304,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"inserted_at":  now.Add(-5 * time.Hour).Format(time.RFC3339),
 				"scheduled_at": now.Add(-5 * time.Hour).Format(time.RFC3339),
 				"completed_at": now.Add(-5 * time.Hour).Add(120 * time.Millisecond).Format(time.RFC3339),
-				"created_at":   now.Add(-5 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"createdAt":   now.Add(-5 * time.Hour).Format(time.RFC3339),
+				"updatedAt":   nowStr,
 			},
 			{
 				"id":           "job_cleanup_002",
@@ -321,8 +321,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"priority":     2,
 				"inserted_at":  nowStr,
 				"scheduled_at": nowStr,
-				"created_at":   nowStr,
-				"updated_at":   nowStr,
+				"createdAt":   nowStr,
+				"updatedAt":   nowStr,
 			},
 			{
 				"id":           "job_webhook_003",
@@ -339,8 +339,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"inserted_at":  now.Add(-2 * time.Hour).Format(time.RFC3339),
 				"scheduled_at": now.Add(-2 * time.Hour).Format(time.RFC3339),
 				"discarded_at": now.Add(-1 * time.Hour).Format(time.RFC3339),
-				"created_at":   now.Add(-2 * time.Hour).Format(time.RFC3339),
-				"updated_at":   nowStr,
+				"createdAt":   now.Add(-2 * time.Hour).Format(time.RFC3339),
+				"updatedAt":   nowStr,
 			},
 		}
 		for _, j := range demoJobs {
@@ -410,8 +410,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 		demoEvents := []map[string]interface{}{
 			{
 				"id":            "evt_001",
-				"created_at":    now.Add(-2 * time.Hour).Format(time.RFC3339),
-				"updated_at":    now.Add(-2 * time.Hour).Format(time.RFC3339),
+				"createdAt":     now.Add(-2 * time.Hour).Format(time.RFC3339),
+				"updatedAt":     now.Add(-2 * time.Hour).Format(time.RFC3339),
 				"visit_token":   "vst_001",
 				"visitor_token": "tok_visitor_alpha",
 				"user_id":       "usr_admin_001",
@@ -421,8 +421,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 			},
 			{
 				"id":            "evt_002",
-				"created_at":    now.Add(-1 * time.Hour).Format(time.RFC3339),
-				"updated_at":    now.Add(-1 * time.Hour).Format(time.RFC3339),
+				"createdAt":     now.Add(-1 * time.Hour).Format(time.RFC3339),
+				"updatedAt":     now.Add(-1 * time.Hour).Format(time.RFC3339),
 				"visit_token":   "vst_002",
 				"visitor_token": "tok_visitor_beta",
 				"user_id":       "usr_jane_002",
@@ -459,8 +459,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				return fmt.Errorf("failed to marshal feature flag gates for %s: %w", f.Key, err)
 			}
 			if _, err := dbConn.NewQuery(`
-				INSERT OR REPLACE INTO _feature_flags (id, key, description, enabled, default_value, gates, created_at, updated_at)
-				VALUES ({:id}, {:key}, {:description}, {:enabled}, {:default_value}, {:gates}, {:created_at}, {:updated_at})
+				INSERT OR REPLACE INTO _feature_flags (id, key, description, enabled, default_value, gates, createdAt, updatedAt)
+				VALUES ({:id}, {:key}, {:description}, {:enabled}, {:default_value}, {:gates}, {:createdAt}, {:updatedAt})
 			`).Bind(dbx.Params{
 				"id":            f.ID,
 				"key":           f.Key,
@@ -468,8 +468,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"enabled":       f.Enabled,
 				"default_value": f.DefaultValue,
 				"gates":         string(gatesJSON),
-				"created_at":    nowStr,
-				"updated_at":    nowStr,
+				"createdAt":     nowStr,
+				"updatedAt":     nowStr,
 			}).Execute(); err != nil {
 				return fmt.Errorf("failed to seed feature flag %s: %w", f.Key, err)
 			}

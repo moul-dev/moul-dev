@@ -229,8 +229,8 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 	insertData["attempt"] = 0
 	insertData["errors"] = "[]"
 	insertData["inserted_at"] = now
-	insertData["created_at"] = now
-	insertData["updated_at"] = now
+	insertData["createdAt"] = now
+	insertData["updatedAt"] = now
 
 	queueVal, _ := jobOpts["queue"].(string)
 	if queueVal == "" {
@@ -565,7 +565,7 @@ func (e *Engine) RetryFailedJobs(tableName string, jobIDs ...string) (int64, err
 		"state":        "available",
 		"scheduled_at": nowStr,
 		"attempt":      0,
-		"updated_at":   nowStr,
+		"updatedAt":    nowStr,
 	}
 
 	var where dbx.Expression

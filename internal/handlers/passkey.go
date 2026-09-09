@@ -233,8 +233,8 @@ func (h *AuthHandler) PasskeyRegisterVerify(c *echo.Context) error {
 	}
 
 	_, err = h.DB.Update(moulName, dbx.Params{
-		"passkeys":   string(passkeysJSON),
-		"updated_at": time.Now().UTC().Format(time.RFC3339),
+		"passkeys":  string(passkeysJSON),
+		"updatedAt": time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": state.User.ID}).Execute()
 
 	if err != nil {
@@ -384,8 +384,8 @@ func (h *AuthHandler) PasskeySignupVerify(c *echo.Context) error {
 		"username":   state.User.Username,
 		"email":      state.User.Email,
 		"passkeys":   string(passkeysJSON),
-		"created_at": now,
-		"updated_at": now,
+		"createdAt":  now,
+		"updatedAt":  now,
 	}).Execute()
 
 	if err != nil {
@@ -519,8 +519,8 @@ func (h *AuthHandler) PasskeyLoginVerify(c *echo.Context) error {
 	}
 
 	_, err = h.DB.Update(moulName, dbx.Params{
-		"passkeys":   string(passkeysJSON),
-		"updated_at": time.Now().UTC().Format(time.RFC3339),
+		"passkeys":  string(passkeysJSON),
+		"updatedAt": time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": state.User.ID}).Execute()
 
 	if err != nil {

@@ -33,8 +33,8 @@ func GenerateTypeScript(mouls []*schema.Moul) string {
 	// Base Interfaces
 	buf.WriteString("export interface BaseSystemFields {\n")
 	buf.WriteString("  id: string;\n")
-	buf.WriteString("  created_at: string;\n")
-	buf.WriteString("  updated_at: string;\n")
+	buf.WriteString("  createdAt: string;\n")
+	buf.WriteString("  updatedAt: string;\n")
 	buf.WriteString("}\n\n")
 
 	buf.WriteString("export interface AuthSystemFields extends BaseSystemFields {\n")

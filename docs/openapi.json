@@ -351,10 +351,10 @@
                         "email": {
                           "type": "string"
                         },
-                        "created_at": {
+                        "createdAt": {
                           "type": "string"
                         },
-                        "updated_at": {
+                        "updatedAt": {
                           "type": "string"
                         }
                       }
@@ -2774,7 +2774,7 @@
             "name": "sort",
             "in": "query",
             "required": false,
-            "description": "Field sort order (e.g. `title` or `-created_at`).",
+            "description": "Field sort order (e.g. `title` or `-createdAt`).",
             "schema": {
               "type": "string"
             }
@@ -3538,7 +3538,7 @@
                 "properties": {
                   "rule": {
                     "type": "string",
-                    "example": "author_id = @request.auth.id"
+                    "example": "authorId = @request.auth.id"
                   },
                   "record": {
                     "type": "object",
@@ -4639,11 +4639,11 @@
               "$ref": "#/components/schemas/Webhook"
             }
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           },
-          "updated_at": {
+          "updatedAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -4678,11 +4678,11 @@
             "type": "boolean",
             "description": "Whether the webhook is enabled."
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           },
-          "updated_at": {
+          "updatedAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -4716,7 +4716,7 @@
             "format": "int64",
             "description": "File size in bytes."
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time",
             "description": "Upload timestamp."
@@ -4737,10 +4737,10 @@
               "id": {
                 "type": "string"
               },
-              "created_at": {
+              "createdAt": {
                 "type": "string"
               },
-              "updated_at": {
+              "updatedAt": {
                 "type": "string"
               },
               "username": {
@@ -4841,7 +4841,7 @@
           "response_time_ms": {
             "type": "integer"
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -4871,11 +4871,11 @@
           "gates": {
             "type": "object"
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           },
-          "updated_at": {
+          "updatedAt": {
             "type": "string",
             "format": "date-time"
           }
