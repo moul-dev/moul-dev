@@ -108,11 +108,11 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 		id := fmt.Sprintf("%s-%s", util.Singularize(moulName), util.RandomID())
 		now := time.Now().UTC().Format(time.RFC3339)
 		_, err = h.DB.Insert(moulName, dbx.Params{
-			"id":         id,
-			"username":   username,
-			"email":      email,
-			"createdAt":  now,
-			"updatedAt":  now,
+			"id":        id,
+			"username":  username,
+			"email":     email,
+			"createdAt": now,
+			"updatedAt": now,
 		}).Execute()
 
 		if err != nil {

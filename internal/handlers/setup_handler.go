@@ -184,13 +184,13 @@ func (h *SetupHandler) AdminLogin(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"token": token,
 		"record": map[string]interface{}{
-			"id":         id,
-			"email":      email,
-			"username":   username,
-			"name":       name,
-			"moul":       "_rootUsers",
-			"createdAt":  recordMap["createdAt"],
-			"updatedAt":  recordMap["updatedAt"],
+			"id":        id,
+			"email":     email,
+			"username":  username,
+			"name":      name,
+			"moul":      "_rootUsers",
+			"createdAt": recordMap["createdAt"],
+			"updatedAt": recordMap["updatedAt"],
 		},
 	})
 }
@@ -343,13 +343,13 @@ func (h *SetupHandler) GetRootAccount(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"id":         id,
-		"email":      email,
-		"username":   username,
-		"name":       name,
-		"moul":       "_rootUsers",
-		"createdAt":  recordMap["createdAt"],
-		"updatedAt":  recordMap["updatedAt"],
+		"id":        id,
+		"email":     email,
+		"username":  username,
+		"name":      name,
+		"moul":      "_rootUsers",
+		"createdAt": recordMap["createdAt"],
+		"updatedAt": recordMap["updatedAt"],
 	})
 }
 
@@ -528,13 +528,13 @@ func (h *SetupHandler) UpdateRootAccount(c *echo.Context) error {
 		"message": "Root account updated successfully",
 		"token":   token,
 		"record": map[string]interface{}{
-			"id":         recordID,
-			"email":      targetEmail,
-			"username":   targetUsername,
-			"name":       targetName,
-			"moul":       "_rootUsers",
-			"createdAt":  recordMap["createdAt"],
-			"updatedAt":  now,
+			"id":        recordID,
+			"email":     targetEmail,
+			"username":  targetUsername,
+			"name":      targetName,
+			"moul":      "_rootUsers",
+			"createdAt": recordMap["createdAt"],
+			"updatedAt": now,
 		},
 	})
 }

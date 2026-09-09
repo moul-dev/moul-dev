@@ -653,7 +653,7 @@ func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.Email
 
 	_, err = db.Update("_moul", dbx.Params{
 		"email_templates": string(bytes),
-		"updatedAt":      time.Now().UTC().Format(time.RFC3339),
+		"updatedAt":       time.Now().UTC().Format(time.RFC3339),
 	}, dbx.HashExp{"id": moulID}).Execute()
 
 	if err != nil {
@@ -956,7 +956,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 		"rules":           rulesJSON,
 		"email_templates": templatesJSON,
 		"webhooks":        webhooksJSON,
-		"updatedAt":      m.UpdatedAt,
+		"updatedAt":       m.UpdatedAt,
 	}
 
 	_, err = db.Update("_moul", params, dbx.HashExp{"name": origName}).Execute()

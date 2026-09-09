@@ -41,9 +41,9 @@ func TestExportRecordsAPI(t *testing.T) {
 
 	// Pre-insert some records
 	_, err := ts.DB.Insert("posts", map[string]interface{}{
-		"id":         "p1",
-		"title":      "Hello World",
-		"score":      100,
+		"id":        "p1",
+		"title":     "Hello World",
+		"score":     100,
 		"active":    1,
 		"createdAt": "2026-09-04T10:00:00Z",
 		"updatedAt": "2026-09-04T10:00:00Z",

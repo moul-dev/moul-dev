@@ -380,12 +380,12 @@ func (h *AuthHandler) PasskeySignupVerify(c *echo.Context) error {
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err = h.DB.Insert(moulName, dbx.Params{
-		"id":         state.User.ID,
-		"username":   state.User.Username,
-		"email":      state.User.Email,
-		"passkeys":   string(passkeysJSON),
-		"createdAt":  now,
-		"updatedAt":  now,
+		"id":        state.User.ID,
+		"username":  state.User.Username,
+		"email":     state.User.Email,
+		"passkeys":  string(passkeysJSON),
+		"createdAt": now,
+		"updatedAt": now,
 	}).Execute()
 
 	if err != nil {

@@ -119,9 +119,9 @@ func TestSendTestEmailHandler(t *testing.T) {
 	rulesJSON, _ := moul.SerializeRules()
 
 	_, err = dbConn.Insert("_moul", map[string]interface{}{
-		"id":         moul.ID,
-		"name":       moul.Name,
-		"type":       moul.Type,
+		"id":        moul.ID,
+		"name":      moul.Name,
+		"type":      moul.Type,
 		"fields":    fieldsJSON,
 		"rules":     rulesJSON,
 		"createdAt": moul.CreatedAt,

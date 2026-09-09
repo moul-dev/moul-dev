@@ -23,9 +23,9 @@ func TestSyncMoulTableColumns_ColumnRemovalAndTypeChange(t *testing.T) {
 		Type: "base",
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text"},
-			{Name: "price", Type: "text"},            // Stored as text initially ("99.99")
-			{Name: "inStock", Type: "text"},          // Stored as text ("true")
-			{Name: "deprecatedNotes", Type: "text"},  // Field to be removed
+			{Name: "price", Type: "text"},           // Stored as text initially ("99.99")
+			{Name: "inStock", Type: "text"},         // Stored as text ("true")
+			{Name: "deprecatedNotes", Type: "text"}, // Field to be removed
 		},
 	}
 

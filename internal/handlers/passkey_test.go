@@ -101,9 +101,9 @@ func TestPasskeyFlowsOptions(t *testing.T) {
 	mockCredsJSON := `[{"id":"Y3JlZDE","publicKey":"cHVia2V5MQ==","attestationType":"none","authenticator":{"aaguid":"","signCount":1}}]`
 	userID := "users-123456"
 	_, err = dbConn.Insert("users", dbx.Params{
-		"id":         userID,
-		"username":   "existingpasskeyuser",
-		"email":      "existing@example.com",
+		"id":        userID,
+		"username":  "existingpasskeyuser",
+		"email":     "existing@example.com",
 		"passkeys":  mockCredsJSON,
 		"createdAt": "2026-07-02T12:00:00Z",
 		"updatedAt": "2026-07-02T12:00:00Z",

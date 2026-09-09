@@ -304,8 +304,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"inserted_at":  now.Add(-5 * time.Hour).Format(time.RFC3339),
 				"scheduled_at": now.Add(-5 * time.Hour).Format(time.RFC3339),
 				"completed_at": now.Add(-5 * time.Hour).Add(120 * time.Millisecond).Format(time.RFC3339),
-				"createdAt":   now.Add(-5 * time.Hour).Format(time.RFC3339),
-				"updatedAt":   nowStr,
+				"createdAt":    now.Add(-5 * time.Hour).Format(time.RFC3339),
+				"updatedAt":    nowStr,
 			},
 			{
 				"id":           "job_cleanup_002",
@@ -321,8 +321,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"priority":     2,
 				"inserted_at":  nowStr,
 				"scheduled_at": nowStr,
-				"createdAt":   nowStr,
-				"updatedAt":   nowStr,
+				"createdAt":    nowStr,
+				"updatedAt":    nowStr,
 			},
 			{
 				"id":           "job_webhook_003",
@@ -339,8 +339,8 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				"inserted_at":  now.Add(-2 * time.Hour).Format(time.RFC3339),
 				"scheduled_at": now.Add(-2 * time.Hour).Format(time.RFC3339),
 				"discarded_at": now.Add(-1 * time.Hour).Format(time.RFC3339),
-				"createdAt":   now.Add(-2 * time.Hour).Format(time.RFC3339),
-				"updatedAt":   nowStr,
+				"createdAt":    now.Add(-2 * time.Hour).Format(time.RFC3339),
+				"updatedAt":    nowStr,
 			},
 		}
 		for _, j := range demoJobs {
