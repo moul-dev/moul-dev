@@ -404,7 +404,7 @@ func (h *AuthHandler) processOAuthLoginOrSignup(moul *schema.Moul, providerName 
 		}
 		linkedJSON, _ := json.Marshal(linked)
 
-		id := fmt.Sprintf("%s-%s", util.Singularize(moul.Name), util.RandomID())
+		id := util.RecordID(moul.Name)
 
 		insertParams := dbx.Params{
 			"id":             id,

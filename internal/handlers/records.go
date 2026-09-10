@@ -494,7 +494,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	}
 
 	// Add system fields
-	recordID := fmt.Sprintf("%s-%s", util.Singularize(moulName), util.RandomID())
+	recordID := util.RecordID(moulName)
 	if customID, ok := body["id"].(string); ok && customID != "" {
 		recordID = customID
 	}

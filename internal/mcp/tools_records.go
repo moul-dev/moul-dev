@@ -184,7 +184,7 @@ func (s *Server) handleCreateRecord(ctx context.Context, req mcp.CallToolRequest
 
 	id, ok := body["id"].(string)
 	if !ok || strings.TrimSpace(id) == "" {
-		id = fmt.Sprintf("%s-%s", util.Singularize(moul.Name), util.RandomID())
+		id = util.RecordID(moul.Name)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)

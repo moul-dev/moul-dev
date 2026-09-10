@@ -305,7 +305,7 @@ func (h *AuthHandler) PasskeySignupOptions(c *echo.Context) error {
 
 	// Create temporary uncommitted user
 	user := &WebAuthnUser{
-		ID:          fmt.Sprintf("%s-%s", util.Singularize(moulName), util.RandomID()),
+		ID:          util.RecordID(moulName),
 		Username:    username,
 		Email:       email,
 		Credentials: []webauthn.Credential{},

@@ -217,7 +217,7 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 		}
 	}
 
-	recordID := fmt.Sprintf("%s-%s", util.Singularize(tableName), util.RandomID())
+	recordID := util.RecordID(tableName)
 	if customID, ok := jobOpts["id"].(string); ok && customID != "" {
 		recordID = customID
 	}

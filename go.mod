@@ -17,6 +17,7 @@ require (
 	github.com/charmbracelet/log v1.0.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/expr-lang/expr v1.17.8
+	github.com/gertd/go-pluralize v0.2.1
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/gobuffalo/envy v1.10.2
 	github.com/golang-jwt/jwt/v5 v5.3.1

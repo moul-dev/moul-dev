@@ -105,7 +105,7 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 		}
 
 		// Insert user with null passwordHash
-		id := fmt.Sprintf("%s-%s", util.Singularize(moulName), util.RandomID())
+		id := util.RecordID(moulName)
 		now := time.Now().UTC().Format(time.RFC3339)
 		_, err = h.DB.Insert(moulName, dbx.Params{
 			"id":        id,

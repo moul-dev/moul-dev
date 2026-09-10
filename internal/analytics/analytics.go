@@ -368,7 +368,7 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 	}
 
 	// Insert event into dynamic table
-	eventID := fmt.Sprintf("%s-%s", util.Singularize(tableName), util.RandomID())
+	eventID := util.RecordID(tableName)
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	propsJSON := "{}"

@@ -326,7 +326,11 @@ func PrepareRecordForInsert(moul *schema.Moul, raw map[string]interface{}, times
 	id, _ := raw["id"].(string)
 	id = strings.TrimSpace(id)
 	if id == "" {
-		id = util.RandomID()
+		collectionName := ""
+		if moul != nil {
+			collectionName = moul.Name
+		}
+		id = util.RecordID(collectionName)
 	}
 	out["id"] = id
 

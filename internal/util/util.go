@@ -9,9 +9,20 @@ import (
 	"strings"
 
 	"github.com/gobuffalo/envy"
+	pluralize "github.com/gertd/go-pluralize"
 )
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var pluralClient = pluralize.NewClient()
+
+func init() {
+	// Add domain-specific uncountables so database words remain intact
+	pluralClient.AddUncountableRule("data")
+	pluralClient.AddUncountableRule("metadata")
+	pluralClient.AddUncountableRule("analytics")
+	pluralClient.AddUncountableRule("media")
+}
 
 // GetPublicURL returns the configured public base URL via MOUL_PUBLIC_URL environment variable,
 // defaulting to http://localhost:<MOUL_PORT> (or http://localhost:8090).
@@ -43,29 +54,29 @@ func RandomID() string {
 	return string(b)
 }
 
-// Singularize converts a plural table name to its singular form.
+// Singularize converts a collection or table name to its lowercase singular form.
+// If the collection name is plural, it is singularized using an English language dictionary
+// and irregular noun inflection rules (e.g. "Users" -> "user", "people" -> "person", "posts" -> "post").
+// If the collection name is already singular, it is returned in lowercase without modification.
 func Singularize(name string) string {
-	name = strings.ToLower(name)
-	if len(name) <= 3 {
-		return name
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
 	}
-	if strings.HasSuffix(name, "ies") {
-		return name[:len(name)-3] + "y"
-	}
-	if strings.HasSuffix(name, "sses") {
-		return name[:len(name)-2] // e.g. classes -> class, passes -> pass, addresses -> address
-	}
-	if strings.HasSuffix(name, "ches") || strings.HasSuffix(name, "shes") || strings.HasSuffix(name, "xes") || strings.HasSuffix(name, "zes") || strings.HasSuffix(name, "oes") {
-		return name[:len(name)-2] // e.g. matches -> match, dishes -> dish, boxes -> box, heroes -> hero
-	}
-	if strings.HasSuffix(name, "s") {
-		if strings.HasSuffix(name, "ss") {
-			return name // e.g. glass -> glass, pass -> pass
-		}
-		return name[:len(name)-1] // e.g. users -> user, posts -> post, articles -> article, pages -> page, rules -> rule
-	}
-	return name
+	s := pluralClient.Singular(name)
+	return strings.ToLower(s)
 }
+
+// RecordID generates a record ID formatted as <singular_collection>-<randomID>.
+// If collectionName is empty, it returns a random alphanumeric ID.
+func RecordID(collectionName string) string {
+	prefix := Singularize(collectionName)
+	if prefix == "" {
+		return RandomID()
+	}
+	return fmt.Sprintf("%s-%s", prefix, RandomID())
+}
+
 
 // SlugifyFilename converts a filename into a clean, URL- and filesystem-friendly slug.
 // E.g., "My Profile Photo (2026) & Info!.PNG" -> "my-profile-photo-2026-info.png"
