@@ -3,7 +3,11 @@ export MOUL_JWT_SECRET ?= test-secret-key-for-unit-tests-1234
 export MOUL_ADMIN_KEY ?= test-admin-key-1234
 VERSION ?= dev
 
-.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync lint lint-fix install-hooks
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync fmt lint lint-fix install-hooks
+
+# Format Go source files
+fmt:
+	gofmt -w .
 
 # Run static analysis and lint checks
 lint:

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gobuffalo/envy"
 	pluralize "github.com/gertd/go-pluralize"
+	"github.com/gobuffalo/envy"
 )
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -76,7 +76,6 @@ func RecordID(collectionName string) string {
 	}
 	return fmt.Sprintf("%s-%s", prefix, RandomID())
 }
-
 
 // SlugifyFilename converts a filename into a clean, URL- and filesystem-friendly slug.
 // E.g., "My Profile Photo (2026) & Info!.PNG" -> "my-profile-photo-2026-info.png"

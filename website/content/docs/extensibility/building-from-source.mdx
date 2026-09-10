@@ -127,9 +127,15 @@ make test-coverage
 ## Code Quality & Linting
 
 ```bash
+# Format Go source files
+make fmt
+
 # Run golangci-lint
 make lint
 
 # Automatically format code and apply lint fixes
 make lint-fix
+
+# Install local git hooks (pre-commit auto-formatting and docs sync)
+make install-hooks
 ```

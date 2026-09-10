@@ -1,7 +1,29 @@
 #!/bin/sh
 set -e
 
-# Synchronize documentation files from docs/ to website/public/
+# 1. Auto-format Go files
+# Format any staged Go files with gofmt and automatically re-stage them
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+if [ -n "$STAGED_GO_FILES" ]; then
+    for file in $STAGED_GO_FILES; do
+        if [ -f "$file" ]; then
+            if [ -n "$(gofmt -l "$file")" ]; then
+                echo "\033[0;34m[INFO] Auto-formatting staged $file with gofmt...\033[0m"
+                gofmt -w "$file"
+                git add "$file"
+            fi
+        fi
+    done
+fi
+
+# Ensure any remaining Go files in the repository are properly formatted
+UNFORMATTED_GO_FILES=$(gofmt -l .)
+if [ -n "$UNFORMATTED_GO_FILES" ]; then
+    echo "\033[0;33m[INFO] Auto-formatting unformatted Go files in workspace...\033[0m"
+    gofmt -w .
+fi
+
+# 2. Synchronize documentation files from docs/ to website/public/
 make sync-docs
 
 # If make sync-docs modified any files in website/public, reject the commit
