@@ -24,6 +24,7 @@ type RouterConfig struct {
 	Version        string
 	AdminUIOptions AdminUIOptions
 	DisableAdminUI bool
+	MCPServer      *moulmcp.Server
 }
 
 // NewRouter constructs and returns a fully configured Echo server instance with default options.
@@ -132,7 +133,10 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	exportImportHandler := NewExportImportHandler(dbConn)
 
 	// Built-in MCP Server
-	mcpServer := moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
+	mcpServer := cfg.MCPServer
+	if mcpServer == nil {
+		mcpServer = moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
+	}
 	mcpHandler := NewMCPHandler(mcpServer)
 
 	// ── API Routes ──────────────────────────────────────────────────

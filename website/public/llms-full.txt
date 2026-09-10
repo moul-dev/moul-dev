@@ -171,7 +171,7 @@ When creating an `auth` collection, default access rules are automatically confi
 
 ## 7. Built-in MCP Server Tool Specifications
 
-The built-in MCP server provides 17 tools accessible over stdio (`moul mcp`) or Streamable HTTP & SSE (`/api/mcp`):
+The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `<custom-binary> mcp`) or Streamable HTTP & SSE (`/api/mcp`):
 
 1. `moul_list_collections`: List all dynamic collection schemas and tables.
 2. `moul_get_collection`: `{"name": "string"}` - Retrieve schema details.
@@ -226,6 +226,9 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp`) or 
 - `app.RegisterWorker(name string, handler worker.JobHandler)`: Registers a custom background job worker (from `pkg/worker` or `app.JobHandler`).
 - `app.RegisterPeriodicWorker(interval time.Duration, name string, handler worker.JobHandler)`: Registers a periodic background task.
 - `app.OnWorkerInit(fn func(engine *worker.Engine) error)`: Hook executed when worker engine initializes (`pkg/worker.Engine`).
+- `app.MCPServer() *moulmcp.Server`: Accesses the built-in MCP server instance to inspect or attach custom MCP tools.
+- `app.ServeMCP(ctx context.Context) error`: Starts the built-in MCP server over stdio (auto-dispatched on `mcp` command without requiring HTTP secrets).
+- `app.IsMCP() bool`: Utility reporting whether the binary was invoked in MCP mode.
 
 ### Code Example
 ```go

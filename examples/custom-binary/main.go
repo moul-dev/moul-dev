@@ -58,11 +58,14 @@ func main() {
 		return nil
 	})
 
-	fmt.Println("==========================================================")
-	fmt.Println("🚀 Custom Moul Server running at http://localhost:8090")
-	fmt.Println("🛠️  Web Admin Console at       http://localhost:8090/_moul_/")
-	fmt.Println("📡 Custom API Route at         http://localhost:8090/api/custom/hello")
-	fmt.Println("==========================================================")
+	// Only print banners in HTTP mode (never in MCP stdio mode where stdout is reserved for JSON-RPC)
+	if !app.IsMCP() {
+		fmt.Println("==========================================================")
+		fmt.Println("🚀 Custom Moul Server running at http://localhost:8090")
+		fmt.Println("🛠️  Web Admin Console at       http://localhost:8090/_moul_/")
+		fmt.Println("📡 Custom API Route at         http://localhost:8090/api/custom/hello")
+		fmt.Println("==========================================================")
+	}
 
 	if err := moulApp.Start(context.Background()); err != nil {
 		slog.Error("Failed to start custom Moul server", "err", err)

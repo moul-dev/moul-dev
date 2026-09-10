@@ -563,8 +563,8 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 
 ### Transport Modes
 
-1. **Stdio Transport Mode (`moul mcp`)**: Runs directly as a CLI subcommand over standard input/output.
-2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `moul start`. Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
+1. **Stdio Transport Mode (`moul mcp` or `<custom-binary> mcp`)**: Runs directly as a CLI subcommand over standard input/output. Seamlessly supported in standalone `moul` and any custom binary extending `pkg/app`.
+2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `moul start` (or `<custom-binary>`). Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
 3. **Flexible Authentication**: Pass key via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query parameter `?adminKey=<MOUL_ADMIN_KEY>`.
 
 ### Integration Examples

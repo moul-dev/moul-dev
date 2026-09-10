@@ -2,11 +2,14 @@ package app
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,6 +24,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
+	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/pkg/ui"
@@ -45,6 +49,7 @@ type Config struct {
 	AdminUIPrefix         string
 	DisableAdminUI        bool
 	RegisterAdminRedirect bool
+	DisableCLIParsing     bool
 }
 
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
@@ -66,6 +71,7 @@ type App struct {
 	sysmonCollector *sysmon.Collector
 	tlsManager      *tls.Manager
 	router          *echo.Echo
+	mcpServer       *moulmcp.Server
 	onWorkerInit    []WorkerInitFunc
 	onRouterInit    []RouterInitFunc
 	onBeforeStart   []BeforeStartFunc
@@ -186,6 +192,30 @@ func (a *App) Router() *echo.Echo {
 	return a.router
 }
 
+// MCPServer returns the underlying MCP server instance, if initialized.
+func (a *App) MCPServer() *moulmcp.Server {
+	return a.mcpServer
+}
+
+// IsMCP returns true if the application invocation is in MCP mode.
+func (a *App) IsMCP() bool {
+	return IsMCP()
+}
+
+// IsMCP returns true if the application invocation is in MCP mode
+// (via "mcp" command, "--mcp" flag, or "MOUL_MCP=true"/"MCP=true" env vars).
+func IsMCP() bool {
+	if envy.Get("MOUL_MCP", "") == "true" || envy.Get("MOUL_MCP", "") == "1" || envy.Get("MCP", "") == "true" || envy.Get("MCP", "") == "1" {
+		return true
+	}
+	for _, arg := range os.Args[1:] {
+		if arg == "mcp" || arg == "--mcp" || strings.HasPrefix(arg, "--mcp=") {
+			return true
+		}
+	}
+	return false
+}
+
 // EnsureSystemTables ensures all system tables starting with "_*" are created in the database.
 func (a *App) EnsureSystemTables() error {
 	if a.dbConn == nil {
@@ -301,6 +331,11 @@ func (a *App) Bootstrap() error {
 		adminFS = ui.DistFS()
 	}
 
+	// Built-in MCP Server
+	if a.mcpServer == nil {
+		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+	}
+
 	a.router = handlers.NewRouterWithOptions(
 		a.dbConn,
 		a.workerEngine,
@@ -313,6 +348,7 @@ func (a *App) Bootstrap() error {
 		handlers.RouterConfig{
 			Version:        a.config.Version,
 			DisableAdminUI: a.config.DisableAdminUI,
+			MCPServer:      a.mcpServer,
 			AdminUIOptions: handlers.AdminUIOptions{
 				Prefix:                adminPrefix,
 				FileSystem:            adminFS,
@@ -338,8 +374,85 @@ func (a *App) Bootstrap() error {
 	return nil
 }
 
-// Start boots the server listeners and worker engines, blocking until context is cancelled or SIGINT/SIGTERM is received.
+// ServeMCP starts the built-in MCP server in stdio transport mode.
+// Unlike Bootstrap() and StartServer(), ServeMCP does not require MOUL_JWT_SECRET or MOUL_ADMIN_KEY
+// as stdio mode operates locally as the executing user over standard input/output.
+func (a *App) ServeMCP(ctx context.Context) error {
+	dbPath := a.config.DBPath
+	if dbPath == "" {
+		dbPath = GetDBPath()
+		a.config.DBPath = dbPath
+	}
+
+	if a.dbConn == nil {
+		dbConn, err := db.InitDB(dbPath)
+		if err != nil {
+			return fmt.Errorf("database initialization failed: %w", err)
+		}
+		a.dbConn = dbConn
+	}
+	defer func() {
+		if a.dbConn != nil {
+			_ = a.dbConn.Close()
+		}
+	}()
+
+	if err := db.EnsureSystemTables(a.dbConn); err != nil {
+		return fmt.Errorf("failed to ensure system tables for MCP: %w", err)
+	}
+
+	if a.workerEngine == nil {
+		a.workerEngine = worker.NewEngine(a.dbConn)
+		a.RegisterBuiltinWorkers()
+		for _, hook := range a.onWorkerInit {
+			if err := hook(a.workerEngine); err != nil {
+				return fmt.Errorf("worker init hook failed: %w", err)
+			}
+		}
+	}
+
+	if a.analyticsEngine == nil {
+		geoIPPath := envy.Get("GEOIP_DB_PATH", "")
+		analyticsEngine, err := analytics.NewEngine(a.dbConn, geoIPPath)
+		if err == nil {
+			a.analyticsEngine = analyticsEngine
+		}
+	}
+
+	if a.sysmonCollector == nil {
+		a.sysmonCollector = sysmon.NewCollector()
+	}
+
+	for _, hook := range a.onBeforeStart {
+		if err := hook(a); err != nil {
+			return fmt.Errorf("before start hook failed: %w", err)
+		}
+	}
+
+	srv := moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+	a.mcpServer = srv
+
+	return srv.ServeStdio()
+}
+
+// Start executes the application. If CLI arguments or flags are present (e.g. "mcp", "worker", "seed", etc.)
+// and CLI parsing is not disabled, Start dispatches to the matching subcommand.
+// Otherwise, it starts the HTTP server engine via StartServer.
 func (a *App) Start(ctx context.Context) error {
+	if !a.config.DisableCLIParsing && !isTesting() {
+		cmd, handled, err := a.dispatchCLI(ctx)
+		if handled {
+			return err
+		}
+		if cmd != "" && cmd != "start" {
+			return fmt.Errorf("unknown command: %s", cmd)
+		}
+	}
+	return a.StartServer(ctx)
+}
+
+// StartServer boots the HTTP server listeners and worker engines, blocking until context is cancelled or SIGINT/SIGTERM is received.
+func (a *App) StartServer(ctx context.Context) error {
 	if a.dbConn == nil {
 		if err := a.Bootstrap(); err != nil {
 			return err
@@ -416,4 +529,22 @@ func (a *App) Start(ctx context.Context) error {
 
 	logger.Info("Server stopped gracefully")
 	return nil
+}
+
+func isTesting() bool {
+	if flag.Lookup("test.v") != nil {
+		return true
+	}
+	if len(os.Args) > 0 {
+		base := filepath.Base(os.Args[0])
+		if strings.HasSuffix(base, ".test") || strings.HasSuffix(base, ".test.exe") {
+			return true
+		}
+	}
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.") {
+			return true
+		}
+	}
+	return envy.Get("MOUL_TEST_ENV", "") == "true"
 }

@@ -81,9 +81,11 @@ func main() {
 		return nil
 	})
 
-	// 6. Start the server (blocks until SIGINT / SIGTERM)
-	fmt.Println("🚀 Custom Moul server running at http://localhost:8090")
-	fmt.Println("🛠️  Web Admin Console at       http://localhost:8090/_moul_/")
+	// 6. Start the server (supports CLI subcommands such as "mcp", "worker", "seed", "start")
+	if !app.IsMCP() {
+		fmt.Println("🚀 Custom Moul server running at http://localhost:8090")
+		fmt.Println("🛠️  Web Admin Console at       http://localhost:8090/_moul_/")
+	}
 	if err := moulApp.Start(context.Background()); err != nil {
 		slog.Error("Server failed", "err", err)
 		os.Exit(1)
@@ -166,6 +168,37 @@ moulApp.WithAdminRedirect(true)
 | `AdminUIPrefix` | `string` | `"/_moul_"` | URL path prefix where the Web Admin Console is mounted. |
 | `DisableAdminUI` | `bool` | `false` | When `true`, completely disables registering the Web Admin Console routes. |
 | `RegisterAdminRedirect` | `bool` | `false` | When `true`, registers 301 redirects from `/admin` and `/admin/*` to `AdminUIPrefix`. |
+| `DisableCLIParsing` | `bool` | `false` | When `true`, disables automatic CLI argument dispatching so `Start()` always boots the HTTP server. |
+
+---
+
+## Model Context Protocol (MCP) in Custom Binaries
+
+Custom binaries built with `pkg/app` natively support the built-in MCP server over stdio (`my-binary mcp`) and Streamable HTTP / SSE (`/api/mcp`).
+
+### Stdio Transport Mode (`my-binary mcp`)
+
+Configure your custom binary directly in your AI assistant's MCP configuration (Claude Desktop, Cursor, Gemini, Antigravity):
+
+```json
+{
+  "mcpServers": {
+    "my-app": {
+      "command": "/path/to/my-binary",
+      "args": ["mcp"],
+      "env": {
+        "MOUL_DB_PATH": "./moul-local.db"
+      }
+    }
+  }
+}
+```
+
+Key features of stdio mode in embedded custom binaries:
+- **Clean Stdio Channel**: Stdio mode reserves `stdout` exclusively for JSON-RPC messages. Always guard terminal banners or raw `fmt.Println` output with `if !app.IsMCP() { ... }` or write diagnostic logs to `stderr` using `logger.Info` / `slog.Info`.
+- **Integrated Worker Queues**: Custom background workers registered with `moulApp.RegisterWorker` are immediately accessible to MCP tools (such as `moul_list_worker_jobs` and `moul_enqueue_job`).
+- **No Secrets Required**: Stdio mode runs locally with the user's execution privileges and operates directly on SQLite without requiring `MOUL_JWT_SECRET` or `MOUL_ADMIN_KEY`.
+- **Programmatic Control**: Access `moulApp.MCPServer()` to inspect or register custom MCP tools, or call `moulApp.ServeMCP(ctx)` directly.
 
 ---
 
