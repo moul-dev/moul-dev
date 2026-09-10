@@ -27,8 +27,9 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
-import { FieldsBuilder, MoulField, isReservedFieldName, isValidCamelCase } from '../../../components/collections/FieldsBuilder';
+import { FieldsBuilder, MoulField } from '../../../components/collections/FieldsBuilder';
 import { RulesEditor, MoulRules } from '../../../components/collections/RulesEditor';
+import { validateSchemaFields } from '../../../utils/fieldValidation';
 
 const styles = stylex.create({
   container: {
@@ -192,33 +193,15 @@ function CollectionDetailPage() {
   });
 
   const handleSave = () => {
-    // Validate custom fields don't conflict with reserved names and follow camelCase
-    for (const f of fields) {
-      const trimmedName = (f.name || '').trim();
-      if (!trimmedName) {
-        toastQueue.add({
-          title: 'Validation Error',
-          description: 'Field name cannot be empty.',
-          variant: 'error',
-        });
-        return;
-      }
-      if (isReservedFieldName(trimmedName, moul?.type || 'base')) {
-        toastQueue.add({
-          title: 'Validation Error',
-          description: `"${trimmedName}" is a reserved built-in column name. Please rename or remove it.`,
-          variant: 'error',
-        });
-        return;
-      }
-      if (!isValidCamelCase(trimmedName)) {
-        toastQueue.add({
-          title: 'Validation Error',
-          description: `Field name "${f.name}" must be camelCase (e.g. "authorId", "viewsCount").`,
-          variant: 'error',
-        });
-        return;
-      }
+    // Validate custom fields using schema validation rules
+    const schemaValidation = validateSchemaFields(fields, moul?.type || 'base');
+    if (!schemaValidation.isValid) {
+      toastQueue.add({
+        title: 'Schema Validation Error',
+        description: schemaValidation.summaryErrors[0] || 'Please fix invalid field configurations.',
+        variant: 'error',
+      });
+      return;
     }
 
     // Clean up fields before saving

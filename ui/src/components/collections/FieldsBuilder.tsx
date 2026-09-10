@@ -9,6 +9,8 @@ import {
   Checkbox,
   Badge,
   EmptyState,
+  TagGroup,
+  Tag,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import {
@@ -196,38 +198,6 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing2,
-  },
-  tagGroup: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: tokens.spacing1,
-    alignItems: 'center',
-  },
-  tagItem: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    paddingBlock: '3px',
-    paddingInline: tokens.spacing2,
-    backgroundColor: tokens.colorBgElevated,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    borderRadius: tokens.radiusSm,
-    fontSize: tokens.fontSizeXs,
-    color: tokens.colorFg,
-    fontFamily: tokens.fontFamilyBase,
-  },
-  tagDeleteBtn: {
-    cursor: 'pointer',
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    color: tokens.colorFgSubtle,
-    display: 'flex',
-    alignItems: 'center',
-    fontSize: '14px',
-    lineHeight: 1,
   },
 });
 
@@ -588,13 +558,28 @@ export function FieldsBuilder({
             const isRelation = field.type === 'relation';
             const isSelect = field.type === 'select';
             const isNumber = field.type === 'number';
-            const isConfigurable = isRelation || isSelect || isNumber;
+            const isText = field.type === 'text' || field.type === 'editor';
+            const isConfigurable = isRelation || isSelect || isNumber || isText;
             const isExpanded = Boolean(expandedFields[idx]);
             const trimmedName = (field.name || '').trim();
             const isEmpty = !trimmedName;
             const isConflict = Boolean(trimmedName && isReservedFieldName(trimmedName, collectionType));
             const isInvalidCamel = Boolean(trimmedName && !isValidCamelCase(trimmedName));
-            const isInvalid = isEmpty || isConflict || isInvalidCamel;
+            const isDuplicate = Boolean(
+              trimmedName &&
+              fields.some((f, i) => i !== idx && (f.name || '').trim().toLowerCase() === trimmedName.toLowerCase())
+            );
+            const hasMinMaxConflict = Boolean(
+              field.min !== undefined &&
+              field.min !== null &&
+              field.max !== undefined &&
+              field.max !== null &&
+              field.min > field.max
+            );
+            const hasSelectError = Boolean(
+              isSelect && (!field.options || field.options.length === 0)
+            );
+            const isInvalid = isEmpty || isConflict || isInvalidCamel || isDuplicate || hasMinMaxConflict || hasSelectError;
             const suggestedCamel = toCamelCase(trimmedName);
             const canSuggestFix = Boolean(
               isInvalidCamel &&
@@ -674,9 +659,24 @@ export function FieldsBuilder({
                             </span>
                             {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
                           </>
+                        ) : isText ? (
+                          <>
+                            <SlidersIcon size={14} />
+                            <span>
+                              {field.min !== undefined || field.max !== undefined
+                                ? `${field.min ?? 0}..${field.max ?? '∞'} chars`
+                                : 'Length'}
+                            </span>
+                            {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
+                          </>
                         ) : (
                           <>
                             <SlidersIcon size={14} />
+                            <span>
+                              {field.min !== undefined || field.max !== undefined
+                                ? `${field.min ?? '-∞'}..${field.max ?? '+∞'}`
+                                : 'Min/Max'}
+                            </span>
                             {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
                           </>
                         )}
@@ -722,6 +722,30 @@ export function FieldsBuilder({
                           Use &ldquo;{suggestedCamel}&rdquo;
                         </Button>
                       )}
+                    </div>
+                  )}
+                  {isDuplicate && !isConflict && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>
+                        Field name &ldquo;{field.name}&rdquo; is already used in another field. Field names must be unique.
+                      </span>
+                    </div>
+                  )}
+                  {hasMinMaxConflict && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>
+                        Minimum ({field.min}) cannot be greater than maximum ({field.max}).
+                      </span>
+                    </div>
+                  )}
+                  {hasSelectError && (
+                    <div {...stylex.props(styles.fieldConflictWarning)}>
+                      <WarningCircleIcon size={14} color={tokens.colorError500} />
+                      <span>
+                        Select field requires at least one allowed option.
+                      </span>
                     </div>
                   )}
                 </div>
@@ -781,24 +805,30 @@ export function FieldsBuilder({
                     {/* 2. Select Options Configurator */}
                     {isSelect && (
                       <div {...stylex.props(styles.optionsGrid)}>
-                        <span style={{ fontSize: tokens.fontSizeXs, fontWeight: 500, color: tokens.colorFg }}>
-                          Allowed Options:
-                        </span>
-                        <div {...stylex.props(styles.tagGroup)}>
-                          {(field.options || []).map((opt: string) => (
-                            <span key={opt} {...stylex.props(styles.tagItem)}>
-                              <span>{opt}</span>
-                              <button
-                                type="button"
-                                {...stylex.props(styles.tagDeleteBtn)}
-                                onClick={() => handleRemoveOption(idx, opt)}
-                                aria-label={`Remove option ${opt}`}
-                              >
-                                &times;
-                              </button>
+                        <TagGroup
+                          label="Allowed Options"
+                          size="sm"
+                          isInvalid={!field.options || field.options.length === 0}
+                          errorMessage={
+                            !field.options || field.options.length === 0
+                              ? 'Select field requires at least one allowed option.'
+                              : undefined
+                          }
+                          renderEmptyState={() => (
+                            <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontStyle: 'italic' }}>
+                              No options added yet. Type an option name below and press Add.
                             </span>
+                          )}
+                          onRemove={(keys) => {
+                            Array.from(keys).forEach((k) => handleRemoveOption(idx, String(k)));
+                          }}
+                        >
+                          {(field.options || []).map((opt: string) => (
+                            <Tag key={opt} id={opt} variant="secondary" size="sm">
+                              {opt}
+                            </Tag>
                           ))}
-                        </div>
+                        </TagGroup>
                         <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '360px' }}>
                           <TextField
                             aria-label="New option name"
@@ -819,19 +849,47 @@ export function FieldsBuilder({
                       </div>
                     )}
 
-                    {/* 3. Number Min/Max Constraints */}
+                    {/* 3. Text Length Constraints */}
+                    {isText && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
+                        <span style={{ fontSize: tokens.fontSizeXs, fontWeight: 500, color: tokens.colorFg }}>
+                          Character Length Limits (optional):
+                        </span>
+                        <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '380px' }}>
+                          <NumberField
+                            label="Min Characters"
+                            minValue={0}
+                            value={field.min ?? undefined}
+                            onChange={(val) => handleFieldChange(idx, 'min', val)}
+                          />
+                          <NumberField
+                            label="Max Characters"
+                            minValue={0}
+                            value={field.max ?? undefined}
+                            onChange={(val) => handleFieldChange(idx, 'max', val)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 4. Number Min/Max Constraints */}
                     {isNumber && (
-                      <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '380px' }}>
-                        <NumberField
-                          label="Minimum Value"
-                          value={field.min ?? undefined}
-                          onChange={(val) => handleFieldChange(idx, 'min', val)}
-                        />
-                        <NumberField
-                          label="Maximum Value"
-                          value={field.max ?? undefined}
-                          onChange={(val) => handleFieldChange(idx, 'max', val)}
-                        />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
+                        <span style={{ fontSize: tokens.fontSizeXs, fontWeight: 500, color: tokens.colorFg }}>
+                          Numeric Range Limits (optional):
+                        </span>
+                        <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '380px' }}>
+                          <NumberField
+                            label="Minimum Value"
+                            value={field.min ?? undefined}
+                            onChange={(val) => handleFieldChange(idx, 'min', val)}
+                          />
+                          <NumberField
+                            label="Maximum Value"
+                            value={field.max ?? undefined}
+                            onChange={(val) => handleFieldChange(idx, 'max', val)}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

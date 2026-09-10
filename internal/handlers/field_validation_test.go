@@ -29,6 +29,8 @@ func TestFieldValidationConstraints(t *testing.T) {
 		Fields: []schema.MoulField{
 			{Name: "title", Type: "text", Required: true, Min: floatPtr(3), Max: floatPtr(20)},
 			{Name: "price", Type: "number", Required: true, Min: floatPtr(10), Max: floatPtr(1000)},
+			{Name: "status", Type: "select", Options: []string{"active", "discontinued"}},
+			{Name: "contactEmail", Type: "email"},
 		},
 		Rules: schema.MoulRules{
 			CreateRule: "",
@@ -81,22 +83,49 @@ func TestFieldValidationConstraints(t *testing.T) {
 		t.Errorf("Expected 400 when price < min, got %d", rec.Code)
 	}
 
-	// 4. CreateRecord valid -> expect 201
-	payloadValid := map[string]interface{}{"title": "Valid Title", "price": 100}
+	// 4. CreateRecord invalid select option -> expect 400
+	payloadBadSelect := map[string]interface{}{"title": "Valid Title", "price": 50, "status": "unknown"}
+	bodyBytes, _ = json.Marshal(payloadBadSelect)
+	req = httptest.NewRequest(http.MethodPost, "/api/moul/products/records", bytes.NewReader(bodyBytes))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 when select option is not allowed, got %d", rec.Code)
+	}
+
+	// 5. CreateRecord invalid email format -> expect 400
+	payloadBadEmail := map[string]interface{}{"title": "Valid Title", "price": 50, "contactEmail": "notanemail"}
+	bodyBytes, _ = json.Marshal(payloadBadEmail)
+	req = httptest.NewRequest(http.MethodPost, "/api/moul/products/records", bytes.NewReader(bodyBytes))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 when email format is invalid, got %d", rec.Code)
+	}
+
+	// 6. CreateRecord valid -> expect 201
+	payloadValid := map[string]interface{}{
+		"title":        "Valid Title",
+		"price":        100,
+		"status":       "active",
+		"contactEmail": "support@moul.dev",
+	}
 	bodyBytes, _ = json.Marshal(payloadValid)
 	req = httptest.NewRequest(http.MethodPost, "/api/moul/products/records", bytes.NewReader(bodyBytes))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("Expected 201 for valid record create, got %d", rec.Code)
+		t.Fatalf("Expected 201 for valid record create, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	var createdRecord map[string]interface{}
 	_ = json.Unmarshal(rec.Body.Bytes(), &createdRecord)
 	recordID, _ := createdRecord["id"].(string)
 
-	// 5. UpdateRecord price exceeding max (2000 > 1000) -> expect 400
+	// 7. UpdateRecord price exceeding max (2000 > 1000) -> expect 400
 	payloadPriceTooHigh := map[string]interface{}{"price": 2000}
 	bodyBytes, _ = json.Marshal(payloadPriceTooHigh)
 	req = httptest.NewRequest(http.MethodPatch, "/api/moul/products/records/"+recordID, bytes.NewReader(bodyBytes))
@@ -107,8 +136,19 @@ func TestFieldValidationConstraints(t *testing.T) {
 		t.Errorf("Expected 400 when update price > max, got %d", rec.Code)
 	}
 
-	// 6. UpdateRecord valid price -> expect 200
-	payloadValidUpdate := map[string]interface{}{"price": 250}
+	// 8. UpdateRecord invalid select option -> expect 400
+	payloadBadUpdateSelect := map[string]interface{}{"status": "invalid_status"}
+	bodyBytes, _ = json.Marshal(payloadBadUpdateSelect)
+	req = httptest.NewRequest(http.MethodPatch, "/api/moul/products/records/"+recordID, bytes.NewReader(bodyBytes))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 when update select option is invalid, got %d", rec.Code)
+	}
+
+	// 9. UpdateRecord valid price & status -> expect 200
+	payloadValidUpdate := map[string]interface{}{"price": 250, "status": "discontinued"}
 	bodyBytes, _ = json.Marshal(payloadValidUpdate)
 	req = httptest.NewRequest(http.MethodPatch, "/api/moul/products/records/"+recordID, bytes.NewReader(bodyBytes))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

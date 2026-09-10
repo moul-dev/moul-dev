@@ -198,6 +198,35 @@ func validateFieldConstraints(field schema.MoulField, val interface{}, isUpdate 
 				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid HTTP/HTTPS URL", field.Name))
 			}
 		}
+	case "email":
+		strVal, ok := val.(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be an email string", field.Name))
+		}
+		if strVal != "" {
+			if !strings.Contains(strVal, "@") || !strings.Contains(strVal, ".") {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid email address", field.Name))
+			}
+		}
+	case "select":
+		if len(field.Options) > 0 {
+			strVal, ok := val.(string)
+			if !ok && val != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be a valid option string", field.Name))
+			}
+			if strVal != "" {
+				valid := false
+				for _, opt := range field.Options {
+					if opt == strVal {
+						valid = true
+						break
+					}
+				}
+				if !valid {
+					return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q must be one of: %s", field.Name, strings.Join(field.Options, ", ")))
+				}
+			}
+		}
 	}
 
 	return nil

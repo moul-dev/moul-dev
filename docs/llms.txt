@@ -24,7 +24,7 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
 - **Outbound Webhooks**: Event-driven webhooks with HMAC-SHA256 payload signatures (`X-Moul-Signature`).
-- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin` in standalone CLI; isolated mount prefix in embedded mode), built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with tri-state system/light/dark theme toggle, embedded via public `pkg/ui` package.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin` in standalone CLI; isolated mount prefix in embedded mode), built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with real-time field validation across all data types, tri-state system/light/dark theme toggle, embedded via public `pkg/ui` package.
 - **Built-in MCP Server**: Native MCP protocol server accessible via `moul mcp` (stdio) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
 ## Built-in MCP Server Tools Summary

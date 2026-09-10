@@ -44,6 +44,7 @@ import {
   CardBody,
   SearchField,
   TextField,
+  NumberField,
   TextArea,
   Select,
   SelectItem,
@@ -69,6 +70,12 @@ import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
 import { ExportModal } from '../../../components/records/ExportModal';
 import { ImportModal } from '../../../components/records/ImportModal';
+import {
+  validateFieldValue,
+  validateAuthFields,
+  validateRecordForm,
+  formatFormDataForSubmit,
+} from '../../../utils/fieldValidation';
 
 const recordsSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -173,6 +180,10 @@ const styles = stylex.create({
   dropzoneDragging: {
     borderColor: tokens.colorPrimary500,
     backgroundColor: tokens.colorBgElevated,
+  },
+  dropzoneInvalid: {
+    borderColor: tokens.colorError500,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   dropzoneText: {
     fontSize: tokens.fontSizeXs,
@@ -499,9 +510,11 @@ interface FileFieldInputProps {
   required?: boolean;
   value: any;
   onChange: (val: any) => void;
+  isInvalid?: boolean;
+  errorMessage?: string;
 }
 
-function FileFieldInput({ label, required, value, onChange }: FileFieldInputProps) {
+function FileFieldInput({ label, required, value, onChange, isInvalid, errorMessage }: FileFieldInputProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -634,7 +647,11 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
         </div>
       ) : (
         <div
-          {...stylex.props(styles.dropzone, isDragging && styles.dropzoneDragging)}
+          {...stylex.props(
+            styles.dropzone,
+            isDragging && styles.dropzoneDragging,
+            isInvalid && styles.dropzoneInvalid
+          )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -651,13 +668,19 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
             </div>
           ) : (
             <>
-              <CloudArrowUpIcon size={28} color={tokens.colorPrimary500} />
+              <CloudArrowUpIcon size={28} color={isInvalid ? tokens.colorError500 : tokens.colorPrimary500} />
               <div {...stylex.props(styles.dropzoneText)}>
                 <span>Drag & drop a file here, or </span>
                 <span style={{ color: tokens.colorPrimary500, fontWeight: 500 }}>browse</span>
               </div>
             </>
           )}
+        </div>
+      )}
+      {isInvalid && errorMessage && (
+        <div style={{ color: tokens.colorError500, fontSize: tokens.fontSizeXs, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+          <WarningCircleIcon size={14} />
+          <span>{errorMessage}</span>
         </div>
       )}
     </div>
@@ -674,9 +697,11 @@ interface RelationFieldInputProps {
   };
   value: any;
   onChange: (val: any) => void;
+  isInvalid?: boolean;
+  errorMessage?: string;
 }
 
-function RelationFieldInput({ label, required, relationConfig, value, onChange }: RelationFieldInputProps) {
+function RelationFieldInput({ label, required, relationConfig, value, onChange, isInvalid, errorMessage }: RelationFieldInputProps) {
   const targetMoul = relationConfig?.targetMoul || '';
   const card = relationConfig?.cardinality || '1:N';
 
@@ -815,6 +840,12 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange }
               </SelectItem>
             ))}
         </Select>
+        {isInvalid && errorMessage && (
+          <div style={{ color: tokens.colorError500, fontSize: tokens.fontSizeXs, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+            <WarningCircleIcon size={14} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -849,6 +880,8 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange }
         selectedKey={currentVal}
         onSelectionChange={(key) => onChange(key === '__none__' ? '' : String(key))}
         isRequired={required}
+        isInvalid={isInvalid}
+        errorMessage={errorMessage}
       >
         <SelectItem id="__none__" textValue="(None / Clear)">
           <em>(None / Clear)</em>
@@ -876,6 +909,8 @@ function RecordsPage() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [searchVal, setSearchVal] = useState(search.search || '');
 
   // Selection states
@@ -1278,6 +1313,8 @@ function RecordsPage() {
 
   const handleOpenCreate = () => {
     setFormData({});
+    setFormErrors({});
+    setTouchedFields({});
     setIsCreating(true);
     setActiveRecord(null);
     setShowRawJson(false);
@@ -1286,18 +1323,108 @@ function RecordsPage() {
 
   const handleOpenDetail = (rec: any) => {
     setFormData({ ...rec });
+    setFormErrors({});
+    setTouchedFields({});
     setIsCreating(false);
     setActiveRecord(rec);
     setShowRawJson(false);
     setIsDrawerOpen(true);
   };
 
+  const validateSingleField = (
+    fieldName: string,
+    val: any,
+    currentForm: Record<string, any>
+  ) => {
+    let errorMsg: string | null = null;
+
+    if (
+      moul?.type === 'auth' &&
+      (fieldName === 'username' ||
+        fieldName === 'email' ||
+        fieldName === 'password' ||
+        fieldName === 'passwordConfirm')
+    ) {
+      const authErrors = validateAuthFields(currentForm, isCreating);
+      errorMsg = authErrors[fieldName] || null;
+
+      if (fieldName === 'password' && touchedFields.passwordConfirm) {
+        setFormErrors((prev) => {
+          const next = { ...prev };
+          if (authErrors.passwordConfirm) {
+            next.passwordConfirm = authErrors.passwordConfirm;
+          } else {
+            delete next.passwordConfirm;
+          }
+          return next;
+        });
+      }
+    } else {
+      const fieldDef = (moul?.fields || []).find((f: any) => f.name === fieldName);
+      if (fieldDef) {
+        errorMsg = validateFieldValue(fieldDef, val, !isCreating);
+      }
+    }
+
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      if (errorMsg) {
+        next[fieldName] = errorMsg;
+      } else {
+        delete next[fieldName];
+      }
+      return next;
+    });
+  };
+
+  const handleFieldChange = (fieldName: string, val: any) => {
+    const nextForm = { ...formData, [fieldName]: val };
+    setFormData(nextForm);
+
+    if (touchedFields[fieldName]) {
+      validateSingleField(fieldName, val, nextForm);
+    }
+  };
+
+  const handleFieldBlur = (fieldName: string) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
+    validateSingleField(fieldName, formData[fieldName], formData);
+  };
+
   const handleSaveRecord = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isAuth = moul?.type === 'auth';
+    const validation = validateRecordForm(
+      moul?.fields || [],
+      formData,
+      isAuth,
+      isCreating
+    );
+
+    if (!validation.isValid) {
+      setFormErrors(validation.errors);
+      const allTouched: Record<string, boolean> = {};
+      Object.keys(validation.errors).forEach((k) => {
+        allTouched[k] = true;
+      });
+      setTouchedFields((prev) => ({ ...prev, ...allTouched }));
+
+      const firstErr = Object.values(validation.errors)[0];
+      toastQueue.add({
+        title: 'Validation Error',
+        description: firstErr || 'Please resolve the highlighted field errors before saving.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    const cleaned = formatFormDataForSubmit(moul?.fields || [], formData);
+
     if (isCreating) {
-      createMutation.mutate(formData);
+      createMutation.mutate(cleaned);
     } else if (activeRecord) {
-      updateMutation.mutate({ id: activeRecord.id, data: formData });
+      updateMutation.mutate({ id: activeRecord.id, data: cleaned });
     }
   };
 
@@ -1986,15 +2113,21 @@ function RecordsPage() {
                       <TextField
                         label="Username"
                         value={formData.username || ''}
-                        onChange={(val) => setFormData({ ...formData, username: val })}
+                        onChange={(val) => handleFieldChange('username', val)}
+                        onBlur={() => handleFieldBlur('username')}
                         isRequired={isCreating}
+                        isInvalid={Boolean(formErrors.username)}
+                        errorMessage={formErrors.username}
                       />
                       <TextField
                         label="Email"
                         type="email"
                         value={formData.email || ''}
-                        onChange={(val) => setFormData({ ...formData, email: val })}
+                        onChange={(val) => handleFieldChange('email', val)}
+                        onBlur={() => handleFieldBlur('email')}
                         isRequired={isCreating}
+                        isInvalid={Boolean(formErrors.email)}
+                        errorMessage={formErrors.email}
                       />
                       {isCreating && (
                         <>
@@ -2002,15 +2135,22 @@ function RecordsPage() {
                             label="Password"
                             type="password"
                             value={formData.password || ''}
-                            onChange={(val) => setFormData({ ...formData, password: val })}
+                            onChange={(val) => handleFieldChange('password', val)}
+                            onBlur={() => handleFieldBlur('password')}
                             isRequired
+                            isInvalid={Boolean(formErrors.password)}
+                            errorMessage={formErrors.password}
+                            description="Minimum 8 characters"
                           />
                           <TextField
                             label="Confirm Password"
                             type="password"
                             value={formData.passwordConfirm || ''}
-                            onChange={(val) => setFormData({ ...formData, passwordConfirm: val })}
+                            onChange={(val) => handleFieldChange('passwordConfirm', val)}
+                            onBlur={() => handleFieldBlur('passwordConfirm')}
                             isRequired
+                            isInvalid={Boolean(formErrors.passwordConfirm)}
+                            errorMessage={formErrors.passwordConfirm}
                           />
                         </>
                       )}
@@ -2023,7 +2163,7 @@ function RecordsPage() {
                       {f.type === 'bool' ? (
                         <Checkbox
                           isSelected={Boolean(formData[f.name])}
-                          onChange={(checked) => setFormData({ ...formData, [f.name]: checked })}
+                          onChange={(checked) => handleFieldChange(f.name, checked)}
                         >
                           {f.name}
                         </Checkbox>
@@ -2032,7 +2172,12 @@ function RecordsPage() {
                           label={f.name}
                           required={Boolean(f.required)}
                           value={formData[f.name]}
-                          onChange={(val) => setFormData({ ...formData, [f.name]: val })}
+                          onChange={(val) => {
+                            handleFieldChange(f.name, val);
+                            handleFieldBlur(f.name);
+                          }}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
                         />
                       ) : f.type === 'relation' ? (
                         <RelationFieldInput
@@ -2040,15 +2185,26 @@ function RecordsPage() {
                           required={Boolean(f.required)}
                           relationConfig={f.relationConfig}
                           value={formData[f.name]}
-                          onChange={(val) => setFormData({ ...formData, [f.name]: val })}
+                          onChange={(val) => {
+                            handleFieldChange(f.name, val);
+                            handleFieldBlur(f.name);
+                          }}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
                         />
                       ) : f.type === 'select' && f.options && f.options.length > 0 ? (
                         <Select
                           label={f.name}
                           placeholder={`Select ${f.name}`}
                           selectedKey={formData[f.name] || ''}
-                          onSelectionChange={(key) => setFormData({ ...formData, [f.name]: String(key) })}
+                          onSelectionChange={(key) => {
+                            const val = String(key);
+                            handleFieldChange(f.name, val);
+                            handleFieldBlur(f.name);
+                          }}
                           isRequired={Boolean(f.required)}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
                         >
                           {f.options.map((opt: string) => (
                             <SelectItem key={opt} id={opt} textValue={opt}>
@@ -2068,36 +2224,74 @@ function RecordsPage() {
                           onChange={(val) => {
                             try {
                               const parsed = JSON.parse(val);
-                              setFormData({ ...formData, [f.name]: parsed });
+                              handleFieldChange(f.name, parsed);
                             } catch {
-                              setFormData({ ...formData, [f.name]: val });
+                              handleFieldChange(f.name, val);
                             }
                           }}
+                          onBlur={() => handleFieldBlur(f.name)}
                           rows={4}
                           isRequired={Boolean(f.required)}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
+                          description="Valid JSON object or array"
+                        />
+                      ) : f.type === 'number' ? (
+                        <NumberField
+                          label={f.name}
+                          value={
+                            typeof formData[f.name] === 'number'
+                              ? formData[f.name]
+                              : formData[f.name] !== undefined && formData[f.name] !== null && formData[f.name] !== ''
+                                ? Number(formData[f.name])
+                                : undefined
+                          }
+                          onChange={(val) => handleFieldChange(f.name, Number.isNaN(val) ? null : val)}
+                          onBlur={() => handleFieldBlur(f.name)}
+                          minValue={f.min ?? undefined}
+                          maxValue={f.max ?? undefined}
+                          isRequired={Boolean(f.required)}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
+                          description={
+                            f.min !== undefined || f.max !== undefined
+                              ? `Value range: ${f.min ?? '-∞'}..${f.max ?? '+∞'}`
+                              : undefined
+                          }
                         />
                       ) : (
                         <TextField
                           label={f.name}
                           type={
-                            f.type === 'number'
-                              ? 'number'
-                              : f.type === 'date'
-                                ? 'date'
-                                : f.type === 'datetime'
-                                  ? 'datetime-local'
-                                  : f.type === 'url'
-                                    ? 'url'
+                            f.type === 'date'
+                              ? 'date'
+                              : f.type === 'datetime'
+                                ? 'datetime-local'
+                                : f.type === 'url'
+                                  ? 'url'
+                                  : f.type === 'email'
+                                    ? 'email'
                                     : 'text'
                           }
                           value={String(formData[f.name] ?? '')}
-                          onChange={(val) =>
-                            setFormData({
-                              ...formData,
-                              [f.name]: f.type === 'number' ? Number(val) : val,
-                            })
-                          }
+                          onChange={(val) => handleFieldChange(f.name, val)}
+                          onBlur={() => handleFieldBlur(f.name)}
                           isRequired={Boolean(f.required)}
+                          isInvalid={Boolean(formErrors[f.name])}
+                          errorMessage={formErrors[f.name]}
+                          description={
+                            f.type === 'text' || f.type === 'editor'
+                              ? f.min !== undefined || f.max !== undefined
+                                ? `Length: ${f.min ?? 0}..${f.max ?? '∞'} characters`
+                                : undefined
+                              : f.type === 'url'
+                                ? 'Must start with http:// or https://'
+                                : f.type === 'date'
+                                  ? 'Date in YYYY-MM-DD format'
+                                  : f.type === 'datetime'
+                                    ? 'Local or ISO 8601 date & time'
+                                    : undefined
+                          }
                         />
                       )}
                     </div>

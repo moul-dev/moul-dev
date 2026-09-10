@@ -45,8 +45,9 @@ import {
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../../api/client';
-import { FieldsBuilder, MoulField, isReservedFieldName, isValidCamelCase } from '../../../components/collections/FieldsBuilder';
+import { FieldsBuilder, MoulField } from '../../../components/collections/FieldsBuilder';
 import { RulesEditor, MoulRules } from '../../../components/collections/RulesEditor';
+import { validateSchemaFields } from '../../../utils/fieldValidation';
 
 const styles = stylex.create({
   container: {
@@ -271,24 +272,12 @@ function CollectionsPage() {
       return;
     }
 
-    // Validate custom fields don't conflict with reserved names and follow camelCase
-    for (const f of newMoulFields) {
-      const trimmedName = (f.name || '').trim();
-      if (!trimmedName) {
-        setError('Field name cannot be empty.');
-        setCreateTab('general');
-        return;
-      }
-      if (isReservedFieldName(trimmedName, newMoulType)) {
-        setError(`"${trimmedName}" is a reserved built-in column name for ${newMoulType} collections. Please rename or remove it.`);
-        setCreateTab('general');
-        return;
-      }
-      if (!isValidCamelCase(trimmedName)) {
-        setError(`Field name "${f.name}" must be camelCase (e.g. "authorId", "viewsCount").`);
-        setCreateTab('general');
-        return;
-      }
+    // Validate custom fields using schema validation rules
+    const schemaValidation = validateSchemaFields(newMoulFields, newMoulType);
+    if (!schemaValidation.isValid) {
+      setError(schemaValidation.summaryErrors[0] || 'Please fix invalid field configurations.');
+      setCreateTab('general');
+      return;
     }
 
     // Clean up fields

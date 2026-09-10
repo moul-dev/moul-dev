@@ -210,10 +210,12 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 - **Dual-Tab Drawer Workflow**: Create collections with tabs for "General & Fields" and "API Access Rules" without leaving the dashboard.
 - **Type-Based Templates**: Automatic preset field suggestions for `base`, `auth`, `worker`, and `analytic` collections.
 - **Rule Autocomplete & Syntax Help**: Smart suggestions for `@request.*`, `@collection.*`, schema fields, and operators with keyboard navigation, one-click preset chips, and a full Rule Reference Modal Dialog.
+- **Schema Field Validation**: Real-time validation in `FieldsBuilder` enforcing unique camelCase field names, non-reserved columns, min <= max sanity checks (both text character length and numeric values), and option requirements for select/relation fields.
 
 ### Records Data Grid & Detail Drawer Capabilities
 - **Record ID Interactive Inspection**: Clicking any record ID opens a slide-over `Drawer` displaying full field attributes, relation associations, and system timestamps.
 - **In-Drawer Record Modification**: Supports direct live editing of schema fields, relations (1:1, 1:N, M:N), file attachments, JSON attributes, and auth fields with instant persistence.
+- **Comprehensive Field Validation**: Pre-submission and live blur validation for all field types (`text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `email`, `select`, `relation`, `file`, auth credentials) with inline error messages (`isInvalid`, `errorMessage`), constraint guidance, and payload sanitization (preventing empty numbers from coercing to 0).
 - **Worker Task Inspector & Retry Actions**: For worker job collections, the drawer features execution health cards (attempt count, queue, worker handler, priority, timestamps), an error trace box with one-click copy, and immediate task retry (`POST /api/moul/:name/retry-jobs`) and discard actions.
 
 ### DevTools Architecture & Capabilities
