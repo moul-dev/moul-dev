@@ -11,10 +11,11 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     height: 'calc(100vh - 120px)',
-    maxWidth: '1200px',
+    maxWidth: 'var(--content-max-width, 1200px)',
     width: '100%',
     marginInline: 'auto',
     boxSizing: 'border-box',
+    transition: 'max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   },
   header: {
     display: 'flex',

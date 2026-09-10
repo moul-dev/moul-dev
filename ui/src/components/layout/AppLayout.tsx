@@ -297,7 +297,19 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { logout, user } = useAuth();
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('moul_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const handleCollapseChange = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('moul_sidebar_collapsed', String(collapsed));
+    }
+  };
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
   const routerState = useRouterState();
@@ -337,10 +349,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
     <Sidebar
       isCollapsed={isCollapsed}
-      onCollapseChange={setIsCollapsed}
+      onCollapseChange={handleCollapseChange}
       selectedKey={currentSelectedKey}
       onSelectionChange={(key) => navigate({ to: key })}
       variant="solid"
+      className={isCollapsed ? 'sidebar-collapsed' : undefined}
     >
       <SidebarAside showCollapseToggle className="mobile-hide-sidebar">
         <SidebarHeader style={[styles.sidebarHeader, isCollapsed && styles.sidebarHeaderCollapsed]}>
@@ -498,7 +511,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </SidebarFooter>
       </SidebarAside>
 
-      <SidebarMain>
+      <SidebarMain className={isCollapsed ? 'sidebar-collapsed' : undefined}>
         <div {...stylex.props(styles.headerContainer, isMobile && styles.headerContainerMobile)}>
           <Header />
         </div>

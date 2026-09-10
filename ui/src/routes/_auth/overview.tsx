@@ -26,10 +26,11 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing6,
-    maxWidth: '1200px',
+    maxWidth: 'var(--content-max-width, 1200px)',
     width: '100%',
     marginInline: 'auto',
     boxSizing: 'border-box',
+    transition: 'max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   },
   header: {
     display: 'flex',
@@ -158,7 +159,7 @@ function CollectionCardItem({ moul }: { moul: any }) {
             >
               <div {...stylex.props(styles.collectionName)}>
                 <DatabaseIcon size={18} color={tokens.colorPrimary500} />
-                <span>{moul.name}</span>
+                <span style={{ textTransform: 'capitalize' }}>{moul.name}</span>
               </div>
             </RouterLink>
 

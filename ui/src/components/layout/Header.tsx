@@ -11,7 +11,8 @@ const styles = stylex.create({
   header: {
     height: '48px',
     width: '100%',
-    maxWidth: '1200px',
+    maxWidth: 'var(--content-max-width, 1200px)',
+    transition: 'max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
     backgroundColor: tokens.colorBgSubtle,
     borderWidth: 1,
     borderStyle: 'solid',

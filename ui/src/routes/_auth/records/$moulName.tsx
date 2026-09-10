@@ -90,10 +90,11 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing4,
-    maxWidth: '1200px',
+    maxWidth: 'var(--content-max-width, 1200px)',
     width: '100%',
     marginInline: 'auto',
     boxSizing: 'border-box',
+    transition: 'max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   },
   header: {
     display: 'flex',
@@ -1345,11 +1346,11 @@ function RecordsPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>
             <DatabaseIcon size={24} color={tokens.colorPrimary500} />
-            <span>{moulName} Records</span>
+            <span style={{ textTransform: 'capitalize' }}>{moulName} Records</span>
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Explore records data grid, click any Record ID to view and modify details, or retry worker tasks.
+            Explore records data grid
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
