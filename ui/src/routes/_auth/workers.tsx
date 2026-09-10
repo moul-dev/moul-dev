@@ -49,6 +49,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing6,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -285,9 +288,9 @@ function WorkersPage() {
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
         <div>
-          <h1 {...stylex.props(styles.title)}>Background Worker Engine</h1>
+          <h1 {...stylex.props(styles.title)}>Worker Queue</h1>
           <span {...stylex.props(styles.subtitle)}>
-            Inspect active asynchronous jobs, retry failed tasks, and monitor queues.
+            Monitor background jobs, queues, and retries.
           </span>
         </div>
         <Badge variant="success">
@@ -304,7 +307,7 @@ function WorkersPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div {...stylex.props(styles.cardTitle)}>
               <QueueIcon size={20} color={tokens.colorPrimary500} />
-              <span>Jobs Queue Monitor ({jobs.length})</span>
+              <span>Queue ({jobs.length})</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
               {workerMouls.length > 1 && (
@@ -322,7 +325,7 @@ function WorkersPage() {
                   </Select>
                 </div>
               )}
-              <Button size="sm" variant="secondary" onPress={() => refetchJobs()}>
+              <Button variant="secondary" onPress={() => refetchJobs()}>
                 <ArrowsClockwiseIcon size={14} />
                 <span>Refresh</span>
               </Button>
@@ -337,7 +340,6 @@ function WorkersPage() {
                 (filter) => (
                   <Button
                     key={filter}
-                    size="sm"
                     variant={statusFilter === filter ? 'primary' : 'outline'}
                     onPress={() => setStatusFilter(filter)}
                   >
@@ -369,8 +371,13 @@ function WorkersPage() {
                 <TableEmpty colSpan={7}>
                   <EmptyState
                     variant="default"
-                    title="No jobs matching filter"
-                    description={`No background tasks currently in "${statusFilter}" state for ${selectedCollection}.`}
+                    icon={<QueueIcon size={32} color={tokens.colorFgSubtle} />}
+                    title="No jobs found"
+                    description={
+                      statusFilter === 'all'
+                        ? `No background jobs in ${selectedCollection}.`
+                        : `No jobs currently marked as ${statusFilter}.`
+                    }
                   />
                 </TableEmpty>
               ) : (
@@ -397,7 +404,7 @@ function WorkersPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(stateStr)} size="sm">
+                        <Badge variant={getStatusBadgeVariant(stateStr)}>
                           {stateStr}
                         </Badge>
                       </TableCell>
@@ -418,7 +425,6 @@ function WorkersPage() {
                       <TableCell align="right">
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: tokens.spacing1 }}>
                           <Button
-                            size="sm"
                             variant="ghost"
                             aria-label={`Inspect job ${job.id}`}
                             onPress={() => {
@@ -430,7 +436,6 @@ function WorkersPage() {
                           </Button>
                           {canRetry && (
                             <Button
-                              size="sm"
                               variant="secondary"
                               aria-label={`Retry job ${job.id}`}
                               isPending={retryMutation.isPending && retryMutation.variables?.id === job.id}
@@ -442,7 +447,6 @@ function WorkersPage() {
                           )}
                           {canDiscard && (
                             <Button
-                              size="sm"
                               variant="danger-soft"
                               aria-label={`Discard job ${job.id}`}
                               isPending={discardMutation.isPending && discardMutation.variables?.id === job.id}
@@ -504,7 +508,7 @@ function WorkersPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
                   <span>Job Inspector</span>
                   {selectedJob && (
-                    <Badge variant={getStatusBadgeVariant(String(selectedJob.state || '').toLowerCase())} size="sm">
+                    <Badge variant={getStatusBadgeVariant(String(selectedJob.state || '').toLowerCase())}>
                       {selectedJob.state}
                     </Badge>
                   )}
@@ -565,7 +569,6 @@ function WorkersPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span {...stylex.props(styles.detailLabel)}>Job Payload JSON</span>
                       <Button
-                        size="sm"
                         variant="ghost"
                         onPress={() => handleCopyPayload(selectedJob.payload || selectedJob)}
                       >

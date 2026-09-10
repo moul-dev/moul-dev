@@ -22,6 +22,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -143,15 +146,15 @@ function RealtimePage() {
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
         <div>
-          <h1 {...stylex.props(styles.title)}>Realtime SSE Event Stream</h1>
+          <h1 {...stylex.props(styles.title)}>Realtime Hub</h1>
           <span {...stylex.props(styles.subtitle)}>
-            Live record mutations and events streamed over Server-Sent Events (SSE).
+            Live record events and mutation stream.
           </span>
         </div>
         <Badge variant={isConnected ? 'success' : 'error'}>
           <span {...stylex.props(styles.badgeContent)}>
             <BroadcastIcon size={14} weight="bold" />
-            <span>{isConnected ? 'Stream Connected' : 'Disconnected'}</span>
+            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
           </span>
         </Badge>
       </div>
@@ -166,7 +169,7 @@ function RealtimePage() {
                   selectedKey={selectedMoul}
                   onSelectionChange={(key) => setSelectedMoul(String(key))}
                 >
-                  <SelectItem id="*">All Collections (Global Stream)</SelectItem>
+                  <SelectItem id="*">All collections</SelectItem>
                   {mouls?.map((m: any) => (
                     <SelectItem key={m.name} id={m.name}>
                       {m.name}
@@ -175,7 +178,6 @@ function RealtimePage() {
                 </Select>
               </div>
               <Button
-                size="sm"
                 variant={isConnected ? 'danger' : 'primary'}
                 onPress={() => setIsConnected(!isConnected)}
               >
@@ -185,13 +187,12 @@ function RealtimePage() {
             </div>
 
             <Button
-              size="sm"
               variant="ghost"
               onPress={() => setEvents([])}
               aria-label="Clear Stream Logs"
             >
               <TrashIcon size={14} />
-              <span>Clear Buffer ({events.length})</span>
+              <span>Clear ({events.length})</span>
             </Button>
           </div>
         </CardBody>
@@ -200,7 +201,7 @@ function RealtimePage() {
       {/* Logs Component Stream Viewer */}
       <Logs
         data={events}
-        title="Live Server-Sent Events Stream"
+        title="Event Stream"
         showToolbar={true}
         showLineNumbers={true}
         showTimestamps={true}
@@ -212,7 +213,7 @@ function RealtimePage() {
         follow={true}
         onClear={() => setEvents([])}
         maxHeight="640px"
-        searchPlaceholder="Filter realtime mutations or record IDs..."
+        searchPlaceholder="Filter events or record ID..."
       />
     </div>
   );

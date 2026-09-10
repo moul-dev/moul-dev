@@ -11,6 +11,10 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     height: 'calc(100vh - 120px)',
+    maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -47,16 +51,16 @@ function DocsPage() {
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
         <div>
-          <h1 {...stylex.props(styles.title)}>Interactive API Reference</h1>
+          <h1 {...stylex.props(styles.title)}>API Reference</h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Live OpenAPI / Scalar reference reflecting all active collections and endpoints.
+            Explore and test endpoints generated from your schema.
           </span>
         </div>
         <Button
           variant="outline"
           onPress={() => window.open('/docs', '_blank')}
         >
-          <span>Open Fullscreen</span>
+          <span>Open in new tab</span>
           <ArrowSquareOutIcon size={16} />
         </Button>
       </div>

@@ -237,21 +237,33 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: tokens.spacing2,
   },
+  headerContainer: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    paddingInline: tokens.spacing6,
+    paddingTop: tokens.spacing3,
+    boxSizing: 'border-box',
+    flexShrink: 0,
+  },
+  headerContainerMobile: {
+    paddingInline: tokens.spacing3,
+    paddingTop: tokens.spacing2,
+  },
   content: {
     flex: 1,
     paddingBlock: tokens.spacing4,
-    paddingInlineStart: tokens.spacing2,
-    paddingInlineEnd: tokens.spacing4,
+    paddingInline: tokens.spacing6,
     overflowY: 'auto',
     backgroundColor: tokens.colorBg,
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
   },
   contentMobile: {
     paddingBlock: tokens.spacing2,
-    paddingInlineStart: tokens.spacing3,
-    paddingInlineEnd: tokens.spacing3,
+    paddingInline: tokens.spacing3,
     paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
   },
 });
@@ -357,7 +369,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       <div {...stylex.props(styles.menuHeaderMeta)}>
                         <div {...stylex.props(styles.menuHeaderNameRow)}>
                           <span {...stylex.props(styles.menuHeaderName)}>{displayName}</span>
-                          <Badge variant="primary" size="sm">ROOT</Badge>
+                          <Badge variant="primary">ROOT</Badge>
                         </div>
                         <span {...stylex.props(styles.menuHeaderSub)}>
                           {hasCustomName
@@ -487,7 +499,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </SidebarAside>
 
       <SidebarMain>
-        <Header />
+        <div {...stylex.props(styles.headerContainer, isMobile && styles.headerContainerMobile)}>
+          <Header />
+        </div>
         <main {...stylex.props(styles.content, isMobile && styles.contentMobile)}>{children}</main>
       </SidebarMain>
 

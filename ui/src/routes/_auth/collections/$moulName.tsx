@@ -35,7 +35,10 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing6,
-    maxWidth: '1100px',
+    maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -277,7 +280,7 @@ function CollectionDetailPage() {
             <Badge variant="primary">{moul?.type || 'base'}</Badge>
           </h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Configure relational associations, schema constraints, and CEL security access rules.
+            Configure fields, associations, and access rules.
           </span>
         </div>
         <div {...stylex.props(styles.headerActions)}>
@@ -334,12 +337,12 @@ function CollectionDetailPage() {
                       <span style={{ color: tokens.colorFgSubtle }}>➔</span>
                       <strong style={{ color: tokens.colorPrimary400 }}>{f.relationConfig?.targetMoul}</strong>
                       {f.relationConfig?.targetMoul === moulName && (
-                        <Badge size="sm" variant="neutral">self</Badge>
+                        <Badge variant="neutral">self</Badge>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Badge size="sm" variant="primary">{f.relationConfig?.cardinality || '1:N'}</Badge>
-                      <Badge size="sm" variant="neutral">{f.relationConfig?.onDelete || 'SET_NULL'}</Badge>
+                      <Badge variant="primary">{f.relationConfig?.cardinality || '1:N'}</Badge>
+                      <Badge variant="neutral">{f.relationConfig?.onDelete || 'SET_NULL'}</Badge>
                     </div>
                   </div>
                 ))
@@ -366,8 +369,8 @@ function CollectionDetailPage() {
                       <strong style={{ color: tokens.colorFg }}>{moulName}</strong>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Badge size="sm" variant="success">{inc.cardinality}</Badge>
-                      <Badge size="sm" variant="neutral">{inc.onDelete}</Badge>
+                      <Badge variant="success">{inc.cardinality}</Badge>
+                      <Badge variant="neutral">{inc.onDelete}</Badge>
                     </div>
                   </div>
                 ))
@@ -420,7 +423,7 @@ function CollectionDetailPage() {
                 Delete this collection
               </strong>
               <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeXs }}>
-                Permanently drop the SQLite table <code>{moulName}</code>, along with all stored records, fields, and access rules. This action cannot be undone.
+                Permanently delete <code>{moulName}</code> and all of its records. This action cannot be undone.
               </span>
             </div>
             <Button
@@ -452,7 +455,7 @@ function CollectionDetailPage() {
                 Are you sure you want to delete collection <strong>&ldquo;{moulName}&rdquo;</strong>?
                 <br />
                 <br />
-                This will permanently delete the collection, drop the physical database table, and remove all records and access rules. This action cannot be undone.
+                This will permanently delete the collection and all of its records. This action cannot be undone.
               </p>
             </AlertDialogBody>
             <AlertDialogFooter>

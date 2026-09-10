@@ -358,7 +358,6 @@ export function MoulDevtoolsPanel() {
         <div {...stylex.props(styles.headerActions)}>
           <Button
             variant="secondary"
-            size="sm"
             onPress={handleEmitTestAction}
             aria-label="Emit test action"
           >
@@ -368,7 +367,6 @@ export function MoulDevtoolsPanel() {
 
           <Button
             variant="secondary"
-            size="sm"
             onPress={handleEmitPing}
             aria-label="Send ping event"
           >
@@ -378,7 +376,6 @@ export function MoulDevtoolsPanel() {
 
           <Button
             variant="ghost"
-            size="sm"
             onPress={handleClear}
             aria-label="Clear event log"
           >

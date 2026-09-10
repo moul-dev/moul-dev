@@ -334,7 +334,7 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({
                 <div {...stylex.props(styles.userMeta)}>
                   <div {...stylex.props(styles.userNameRow)}>
                     <span {...stylex.props(styles.userName)}>{displayName}</span>
-                    <Badge variant="primary" size="sm">ROOT</Badge>
+                    <Badge variant="primary">ROOT</Badge>
                   </div>
                   <span {...stylex.props(styles.userSub)}>
                     {hasCustomName
@@ -345,7 +345,6 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({
               </div>
               <Button
                 variant="ghost"
-                size="sm"
                 aria-label="Account Settings"
                 onPress={() => {
                   onOpenChange(false);

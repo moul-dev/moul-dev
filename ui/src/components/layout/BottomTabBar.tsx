@@ -26,7 +26,7 @@ const styles = stylex.create({
     justifyContent: 'space-around',
     paddingInline: tokens.spacing2,
     backgroundColor: {
-      default: 'light-dark(rgba(255, 255, 255, 0.88), rgba(11, 13, 19, 0.88))',
+      default: tokens.colorBgGlass,
     },
     backdropFilter: 'blur(16px)',
     WebkitBackdropFilter: 'blur(16px)',
@@ -34,7 +34,7 @@ const styles = stylex.create({
     borderTopStyle: 'solid',
     borderTopColor: tokens.colorBorderSubtle,
     boxSizing: 'border-box',
-    boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
+    boxShadow: tokens.shadowSm,
   },
   tabItem: {
     display: 'flex',

@@ -258,7 +258,7 @@ export function RuleDocsModal({ isOpen, onOpenChange, onApplyPreset }: RuleDocsM
             <div {...stylex.props(styles.header)}>
               <h2 {...stylex.props(styles.headerTitle)}>
                 <BookOpenIcon size={20} color={tokens.colorPrimary500} />
-                <span>API Access Rules Reference</span>
+                <span>Access Rules Reference</span>
               </h2>
             </div>
           </ModalHeader>
@@ -266,8 +266,7 @@ export function RuleDocsModal({ isOpen, onOpenChange, onApplyPreset }: RuleDocsM
           <ModalBody>
             <div {...stylex.props(styles.content)}>
               <p {...stylex.props(styles.introText)}>
-                Access rules determine who can read, create, update, and delete records through the API.
-                Leave any rule <strong>empty</strong> for open public access, or use the expressions below to restrict access.
+                Rules control who can access records. Leave a rule empty for public access, or use expressions to restrict it.
               </p>
 
               {/* 1. Common Presets */}
@@ -463,7 +462,7 @@ export function RuleDocsModal({ isOpen, onOpenChange, onApplyPreset }: RuleDocsM
 
           <ModalFooter>
             <Button variant="primary" onPress={() => onOpenChange(false)}>
-              Close Reference
+              Close
             </Button>
           </ModalFooter>
         </ModalDialog>

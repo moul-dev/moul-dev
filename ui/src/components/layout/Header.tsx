@@ -10,6 +10,8 @@ import { LogoIcon } from './Logo';
 const styles = stylex.create({
   header: {
     height: '48px',
+    width: '100%',
+    maxWidth: '1200px',
     backgroundColor: tokens.colorBgSubtle,
     borderWidth: 1,
     borderStyle: 'solid',
@@ -19,16 +21,13 @@ const styles = stylex.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingInline: tokens.spacing4,
-    marginInlineStart: tokens.spacing2,
-    marginInlineEnd: tokens.spacing4,
+    marginInline: 'auto',
     marginBlockEnd: 0,
     boxSizing: 'border-box',
     flexShrink: 0,
   },
   headerMobile: {
     paddingInline: tokens.spacing3,
-    marginInlineStart: tokens.spacing3,
-    marginInlineEnd: tokens.spacing3,
   },
   leftSection: {
     display: 'flex',

@@ -41,10 +41,6 @@
     padding: var(--x1xsmz2k);
   }
 
-  .xqxshca {
-    padding: var(--x3461u0);
-  }
-
   .x1cj8ai {
     padding: var(--x9epbqz) var(--x1fim08e);
   }
@@ -57,10 +53,6 @@
 @layer priority2 {
   .x17gyrn8 {
     border-color: #1e293b;
-  }
-
-  .xi5lzy {
-    border-color: #ef44444d;
   }
 
   .x9r1u3d {
@@ -195,6 +187,10 @@
     margin-inline: 0;
   }
 
+  .xvueqy4 {
+    margin-inline: auto;
+  }
+
   .x1a2a7pz {
     outline: none;
   }
@@ -253,6 +249,10 @@
 
   .xg4im6c {
     padding-inline: var(--x1jforli);
+  }
+
+  .xfhvs4l {
+    padding-inline: var(--x1xsmz2k);
   }
 
   .x1hezl7l {
@@ -345,14 +345,6 @@
     background-color: #1e293b;
   }
 
-  .x1i1ro4x {
-    background-color: var(--lightningcss-light, #ffffffe0) var(--lightningcss-dark, #0b0d13e0);
-  }
-
-  .xam5rx4 {
-    background-color: #ef444414;
-  }
-
   .xjbqb8w {
     background-color: #0000;
   }
@@ -381,6 +373,10 @@
     background-color: var(--x1u4wyvx);
   }
 
+  .x1ts685x {
+    background-color: var(--x7we1u4);
+  }
+
   .x5fgr2n {
     background-color: var(--xg2wbmg);
   }
@@ -401,8 +397,8 @@
     border-collapse: collapse;
   }
 
-  .x6cz4zd {
-    box-shadow: 0 -2px 10px #0000000d;
+  .x8358to {
+    box-shadow: var(--x1nbpjwp);
   }
 
   .x9f619 {
@@ -685,22 +681,6 @@
     line-height: 1;
   }
 
-  .x17hsw5u {
-    margin-inline-end: var(--x1djehx3);
-  }
-
-  .xwx0qce {
-    margin-inline-end: var(--x1fim08e);
-  }
-
-  .x1dy3sbh {
-    margin-inline-start: var(--x1fim08e);
-  }
-
-  .x188iqw {
-    margin-inline-start: var(--x9epbqz);
-  }
-
   .xl1xv1r {
     object-fit: cover;
   }
@@ -711,22 +691,6 @@
 
   .x1hc1fzr {
     opacity: 1;
-  }
-
-  .x11y7u58 {
-    padding-inline-end: var(--x1djehx3);
-  }
-
-  .x146cmiw {
-    padding-inline-end: var(--x1fim08e);
-  }
-
-  .xv9jdb2 {
-    padding-inline-start: var(--x1fim08e);
-  }
-
-  .xm5th60 {
-    padding-inline-start: var(--x9epbqz);
   }
 
   .x47corl {
@@ -1041,14 +1005,6 @@
     max-width: 100%;
   }
 
-  .xted6l9 {
-    max-width: 1000px;
-  }
-
-  .x1wmrhtn {
-    max-width: 1100px;
-  }
-
   .x1ikqzku {
     max-width: 1200px;
   }
@@ -1127,6 +1083,10 @@
 
   .x1nn3v0j {
     padding-top: 2px;
+  }
+
+  .x2opew6 {
+    padding-top: var(--x1fim08e);
   }
 
   .xz3ynei {

@@ -406,7 +406,6 @@ export function ImportModal({
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
                         aria-label="Remove selected file"
                         onPress={() => setFile(null)}
                         isDisabled={isUploading}

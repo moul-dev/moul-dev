@@ -38,7 +38,6 @@ export const ThemeToggle: React.FC = () => {
     <TooltipTrigger delay={250}>
       <Button
         variant="outline"
-        size="sm"
         onPress={cycleTheme}
         aria-label={ariaLabel}
         isIcon={true}

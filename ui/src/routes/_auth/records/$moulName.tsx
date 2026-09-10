@@ -91,6 +91,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -329,10 +332,10 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing2,
     padding: tokens.spacing3,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    backgroundColor: tokens.colorAlertBgError,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: tokens.colorAlertBorderError,
     borderRadius: tokens.radiusMd,
   },
   errorTraceHeader: {
@@ -601,7 +604,6 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
           <div {...stylex.props(styles.attachedActions)}>
             {fileUrl && (
               <Button
-                size="sm"
                 variant="ghost"
                 aria-label="View file"
                 onPress={() => window.open(fileUrl, '_blank')}
@@ -610,7 +612,6 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
               </Button>
             )}
             <Button
-              size="sm"
               variant="outline"
               aria-label="Replace file"
               isDisabled={isUploading}
@@ -620,7 +621,6 @@ function FileFieldInput({ label, required, value, onChange }: FileFieldInputProp
               <span>Replace</span>
             </Button>
             <Button
-              size="sm"
               variant="ghost"
               aria-label="Remove file"
               isDisabled={isUploading}
@@ -722,7 +722,7 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange }
           >
             <LinkIcon size={14} color={tokens.colorPrimary500} />
             <span>{label}</span>
-            <Badge size="sm" variant="primary">
+            <Badge variant="primary">
               M:N ➔ {targetMoul}
             </Badge>
             {required && <span style={{ color: tokens.colorError500 }}>*</span>}
@@ -835,7 +835,7 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange }
         >
           <LinkIcon size={14} color={tokens.colorPrimary500} />
           <span>{label}</span>
-          <Badge size="sm" variant="primary">
+          <Badge variant="primary">
             {card} ➔ {targetMoul}
           </Badge>
           {required && <span style={{ color: tokens.colorError500 }}>*</span>}
@@ -1484,14 +1484,15 @@ function RecordsPage() {
             <TableEmpty colSpan={totalColumns}>
               <EmptyState
                 variant="default"
+                icon={<DatabaseIcon size={32} color={tokens.colorFgSubtle} />}
                 title="No records found"
                 description={
                   search.search?.trim()
                     ? `No records matching "${search.search}".`
-                    : `No data records in "${moulName}". Click "New Record" to insert one.`
+                    : `No records in "${moulName}" yet.`
                 }
                 action={
-                  <Button size="sm" variant="primary" onPress={handleOpenCreate}>
+                  <Button variant="primary" onPress={handleOpenCreate}>
                     <PlusIcon size={14} />
                     <span>New Record</span>
                   </Button>
@@ -1542,7 +1543,7 @@ function RecordsPage() {
                         <span style={{ fontWeight: 600 }}>{rec.worker || '-'}</span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getWorkerStatusVariant(rec.state)} size="sm">
+                        <Badge variant={getWorkerStatusVariant(rec.state)}>
                           {rec.state || 'available'}
                         </Badge>
                       </TableCell>
@@ -1745,7 +1746,6 @@ function RecordsPage() {
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                       {canRetry && (
                         <Button
-                          size="sm"
                           variant="secondary"
                           aria-label={`Retry task ${rec.id}`}
                           isPending={retryTaskMutation.isPending && retryTaskMutation.variables?.id === rec.id}
@@ -1756,7 +1756,6 @@ function RecordsPage() {
                         </Button>
                       )}
                       <Button
-                        size="sm"
                         variant="ghost"
                         aria-label={`View and edit record ${rec.id}`}
                         onPress={() => handleOpenDetail(rec)}
@@ -1764,7 +1763,6 @@ function RecordsPage() {
                         <PencilSimpleIcon size={14} />
                       </Button>
                       <Button
-                        size="sm"
                         variant="ghost"
                         aria-label={`Delete record ${rec.id}`}
                         onPress={() => setRecordToDelete(rec)}
@@ -1787,7 +1785,6 @@ function RecordsPage() {
         </span>
         <div {...stylex.props(styles.paginationButtons)}>
           <Button
-            size="sm"
             variant="secondary"
             isDisabled={currentPage <= 1}
             onPress={() =>
@@ -1803,7 +1800,6 @@ function RecordsPage() {
             <span>Previous</span>
           </Button>
           <Button
-            size="sm"
             variant="secondary"
             isDisabled={currentPage >= totalPages}
             onPress={() =>
@@ -1866,7 +1862,6 @@ function RecordsPage() {
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing1 }}>
                           <Button
-                            size="sm"
                             variant="secondary"
                             aria-label="Retry task immediately"
                             isPending={retryTaskMutation.isPending}
@@ -1876,7 +1871,6 @@ function RecordsPage() {
                             <span>Retry Task</span>
                           </Button>
                           <Button
-                            size="sm"
                             variant="danger-soft"
                             aria-label="Discard task"
                             isDisabled={activeRecord.state === 'discarded'}
@@ -1930,7 +1924,6 @@ function RecordsPage() {
                               <span>Error Trace</span>
                             </span>
                             <Button
-                              size="sm"
                               variant="ghost"
                               aria-label="Copy error trace"
                               onPress={() => handleCopyError(workerErrors)}
@@ -2149,7 +2142,6 @@ function RecordsPage() {
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Button
-                          size="sm"
                           variant="outline"
                           onPress={() => setShowRawJson(!showRawJson)}
                         >
@@ -2157,7 +2149,6 @@ function RecordsPage() {
                           <span>{showRawJson ? 'Hide Raw JSON' : 'Inspect Raw JSON'}</span>
                         </Button>
                         <Button
-                          size="sm"
                           variant="ghost"
                           aria-label="Copy full record JSON"
                           onPress={() => handleCopyJson(activeRecord)}

@@ -16,6 +16,7 @@ import {
   CardBody,
   Badge,
   Button,
+  EmptyState,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import { api } from '../../api/client';
@@ -26,6 +27,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing6,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -114,17 +118,6 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: tokens.spacing2,
   },
-  emptyBox: {
-    padding: tokens.spacing6,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    textAlign: 'center',
-    color: tokens.colorFgSubtle,
-    fontFamily: tokens.fontFamilyBase,
-  },
 });
 
 export const Route = createFileRoute('/_auth/overview')({
@@ -170,10 +163,10 @@ function CollectionCardItem({ moul }: { moul: any }) {
             </RouterLink>
 
             <div {...stylex.props(styles.badgesGroup)}>
-              <Badge variant={typeVariant} size="sm">
+              <Badge variant={typeVariant}>
                 {moul.type}
               </Badge>
-              <Badge variant="neutral" size="sm">
+              <Badge variant="neutral">
                 {isLoading ? '...' : `${totalCount} records`}
               </Badge>
             </div>
@@ -181,7 +174,6 @@ function CollectionCardItem({ moul }: { moul: any }) {
 
           <div {...stylex.props(styles.cardBottomRow)}>
             <Button
-              size="sm"
               variant="outline"
               aria-label={`Create new record in ${moul.name}`}
               onPress={() =>
@@ -197,7 +189,6 @@ function CollectionCardItem({ moul }: { moul: any }) {
             </Button>
 
             <Button
-              size="sm"
               variant="ghost"
               aria-label={`Browse ${moul.name} records`}
               onPress={() =>
@@ -242,7 +233,7 @@ function OverviewPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>Overview</h1>
           <span {...stylex.props(styles.subtitle)}>
-            System overview and database collection metrics
+            System status and collections at a glance.
           </span>
         </div>
         <Button
@@ -258,52 +249,66 @@ function OverviewPage() {
       <div {...stylex.props(styles.grid)}>
         <Stat
           variant="glass"
-          label="COLLECTIONS"
+          label="Collections"
           value={moulsLoading ? '...' : collectionCount}
           icon={<DatabaseIcon size={20} color={tokens.colorPrimary500} />}
-          description="Dynamic schema tables defined"
+          description="Active schema tables"
         />
 
         <Stat
           variant="glass"
-          label="MEMORY ALLOCATED"
+          label="Memory"
           value={memoryAlloc}
           icon={<CpuIcon size={20} color={tokens.colorSuccess500} />}
-          description="Go runtime heap allocations"
+          description="Go runtime heap"
         />
 
         <Stat
           variant="glass"
-          label="GOROUTINES"
+          label="Goroutines"
           value={goroutines}
           icon={<PulseIcon size={20} color={tokens.colorWarning500} />}
-          description="Active concurrent worker routines"
+          description="Active concurrent routines"
         />
 
         <Stat
           variant="glass"
-          label="STORAGE ENGINE"
+          label="Storage Engine"
           value={dbStatus}
           icon={<HardDrivesIcon size={20} color={tokens.colorPrimary500} />}
-          description="Litestream Continuous Backup Ready"
+          description="SQLite with WAL mode"
         />
       </div>
 
       {/* Collections Overview */}
       <div {...stylex.props(styles.section)}>
         <div {...stylex.props(styles.sectionHeader)}>
-          <h2 {...stylex.props(styles.sectionTitle)}>Defined Collections</h2>
-          <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            {collectionCount} schema tables
-          </span>
+          <h2 {...stylex.props(styles.sectionTitle)}>Collections</h2>
+          {collectionCount > 2 && (
+            <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
+              {collectionCount} collections
+            </span>
+          )}
         </div>
 
         {moulsLoading ? (
           <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
         ) : !mouls || mouls.length === 0 ? (
-          <div {...stylex.props(styles.emptyBox)}>
-            No custom collections created yet. Click "Manage Collections" to design your first schema.
-          </div>
+          <EmptyState
+            variant="dashed"
+            icon={<DatabaseIcon size={32} color={tokens.colorPrimary500} />}
+            title="No collections yet"
+            description="Create your first collection to define your schema and store data."
+            action={
+              <Button
+                variant="primary"
+                onPress={() => navigate({ to: '/collections' })}
+              >
+                <PlusIcon size={14} />
+                <span>Create Collection</span>
+              </Button>
+            }
+          />
         ) : (
           <div {...stylex.props(styles.collectionList)}>
             {mouls.map((moul: any) => (

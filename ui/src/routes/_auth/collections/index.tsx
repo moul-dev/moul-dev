@@ -40,6 +40,7 @@ import {
   Tab,
   TabPanels,
   TabPanel,
+  EmptyState,
   toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
@@ -53,6 +54,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -148,17 +152,6 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing4,
     paddingBlock: tokens.spacing3,
-  },
-  emptyState: {
-    padding: tokens.spacing8,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    textAlign: 'center',
-    color: tokens.colorFgSubtle,
-    fontFamily: tokens.fontFamilyBase,
   },
 });
 
@@ -333,7 +326,7 @@ function CollectionsPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>Collections Schema</h1>
           <span style={{ color: tokens.colorFgSubtle, fontSize: tokens.fontSizeSm }}>
-            Design dynamic tables, configure field validations, and enforce access rules.
+            Manage schemas, fields, and access rules.
           </span>
         </div>
         <Button
@@ -351,9 +344,21 @@ function CollectionsPage() {
       {isLoading ? (
         <div style={{ color: tokens.colorFgSubtle }}>Loading collections...</div>
       ) : !mouls || mouls.length === 0 ? (
-        <div {...stylex.props(styles.emptyState)}>
-          No collections created yet. Click &quot;New Collection&quot; to get started.
-        </div>
+        <EmptyState
+          variant="dashed"
+          icon={<DatabaseIcon size={32} color={tokens.colorPrimary500} />}
+          title="No collections yet"
+          description="Create your first collection to define your schema and store data."
+          action={
+            <Button
+              variant="primary"
+              onPress={() => setIsCreateOpen(true)}
+            >
+              <PlusIcon size={14} />
+              <span>New Collection</span>
+            </Button>
+          }
+        />
       ) : (
         <div {...stylex.props(styles.grid)}>
           {mouls.map((moul: any) => (
@@ -485,7 +490,7 @@ function CollectionsPage() {
                   >
                     <TabList aria-label="Collection Settings Tabs">
                       <Tab id="general">General & Fields</Tab>
-                      <Tab id="rules">Access Rules</Tab>
+                      <Tab id="rules">Rules</Tab>
                     </TabList>
 
                     <TabPanels>
@@ -498,7 +503,7 @@ function CollectionsPage() {
                             value={newMoulName}
                             onChange={setNewMoulName}
                             isRequired
-                            description="Unique table identifier used in API routes and database queries."
+                            description="Unique table name for this collection."
                           />
 
                           <Select
@@ -570,7 +575,7 @@ function CollectionsPage() {
                 Are you sure you want to delete collection <strong>&ldquo;{collectionToDelete?.name}&rdquo;</strong>?
                 <br />
                 <br />
-                This will permanently delete the collection, all of its records, schema fields, and access rules. This action cannot be undone.
+                This will permanently delete the collection and all of its records. This action cannot be undone.
               </p>
             </AlertDialogBody>
             <AlertDialogFooter>

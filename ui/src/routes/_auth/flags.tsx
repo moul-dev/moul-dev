@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  EmptyState,
   toastQueue,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
@@ -47,7 +48,10 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing4,
-    maxWidth: '1000px',
+    maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -102,17 +106,6 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
-  },
-  emptyState: {
-    padding: tokens.spacing8,
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: tokens.colorBorder,
-    textAlign: 'center',
-    color: tokens.colorFgSubtle,
-    fontFamily: tokens.fontFamilyBase,
   },
   drawerForm: {
     display: 'flex',
@@ -297,17 +290,17 @@ function FeatureFlagsPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>Feature Flags</h1>
           <span {...stylex.props(styles.subtitle)}>
-            Toggle features dynamically, configure gradual rollouts, and evaluate targeting rules.
+            Feature toggles and gradual rollouts.
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
           <Button variant="secondary" onPress={() => openEvalDrawer()}>
             <FlaskIcon size={16} />
-            <span>Eval Playground</span>
+            <span>Playground</span>
           </Button>
           <Button variant="primary" onPress={() => setIsCreateOpen(true)}>
             <PlusIcon size={16} />
-            <span>New Feature Flag</span>
+            <span>New Flag</span>
           </Button>
         </div>
       </div>
@@ -316,9 +309,18 @@ function FeatureFlagsPage() {
         {isLoading ? (
           <div style={{ color: tokens.colorFgSubtle }}>Loading feature flags...</div>
         ) : !flags || flags.length === 0 ? (
-          <div {...stylex.props(styles.emptyState)}>
-            No feature flags configured. Click "New Feature Flag" to create one.
-          </div>
+          <EmptyState
+            variant="dashed"
+            icon={<FlagIcon size={32} color={tokens.colorPrimary500} />}
+            title="No feature flags"
+            description="Add flags to safely toggle features and manage rollouts."
+            action={
+              <Button variant="primary" onPress={() => setIsCreateOpen(true)}>
+                <PlusIcon size={14} />
+                <span>New Flag</span>
+              </Button>
+            }
+          />
         ) : (
           flags.map((flag: any) => (
             <Card key={flag.key} variant="glass">
@@ -328,7 +330,7 @@ function FeatureFlagsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <FlagIcon size={18} color={tokens.colorPrimary500} />
                       <span {...stylex.props(styles.flagKey)}>{flag.key}</span>
-                      <Badge variant={flag.enabled ? 'success' : 'neutral'} size="sm">
+                      <Badge variant={flag.enabled ? 'success' : 'neutral'}>
                         {flag.enabled ? 'Enabled' : 'Disabled'}
                       </Badge>
                     </div>
@@ -337,7 +339,6 @@ function FeatureFlagsPage() {
 
                   <div {...stylex.props(styles.flagActions)}>
                     <Button
-                      size="sm"
                       variant="outline"
                       aria-label={`Test evaluate flag ${flag.key}`}
                       onPress={() => openEvalDrawer(flag.key)}
@@ -355,7 +356,6 @@ function FeatureFlagsPage() {
                     </Switch>
 
                     <Button
-                      size="sm"
                       variant="ghost"
                       aria-label={`Delete flag ${flag.key}`}
                       onPress={() => setFlagToDelete(flag)}
@@ -407,16 +407,16 @@ function FeatureFlagsPage() {
                     Quick Context Presets
                   </label>
                   <div {...stylex.props(styles.presetGroup)}>
-                    <Button size="sm" variant="outline" onPress={() => applyPreset('user')}>
+                    <Button variant="outline" onPress={() => applyPreset('user')}>
                       Standard User
                     </Button>
-                    <Button size="sm" variant="outline" onPress={() => applyPreset('beta')}>
+                    <Button variant="outline" onPress={() => applyPreset('beta')}>
                       Beta Tester
                     </Button>
-                    <Button size="sm" variant="outline" onPress={() => applyPreset('staff')}>
+                    <Button variant="outline" onPress={() => applyPreset('staff')}>
                       Internal Staff
                     </Button>
-                    <Button size="sm" variant="outline" onPress={() => applyPreset('rollout')}>
+                    <Button variant="outline" onPress={() => applyPreset('rollout')}>
                       Rollout Target
                     </Button>
                   </div>
@@ -446,7 +446,6 @@ function FeatureFlagsPage() {
                       </span>
                       <Badge
                         variant={evalResult.value ? 'success' : 'error'}
-                        size="md"
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: tokens.spacing1, fontWeight: 700 }}>
                           {evalResult.value ? <CheckCircleIcon size={15} weight="bold" /> : <XCircleIcon size={15} weight="bold" />}

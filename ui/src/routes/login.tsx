@@ -192,7 +192,7 @@ function LoginPage() {
                     value={masterKeyInput}
                     onChange={setMasterKeyInput}
                     isRequired
-                    description="Server administrative key configured via MOUL_ADMIN_KEY (step 1 of 2)"
+                    description="Configured via MOUL_ADMIN_KEY"
                   />
 
                   <Button
@@ -201,42 +201,42 @@ function LoginPage() {
                     size="lg"
                     isDisabled={loading}
                   >
-                    {loading ? 'Verifying Key...' : 'Connect & Continue'}
+                    {loading ? 'Verifying...' : 'Continue'}
                   </Button>
                 </form>
               ) : needsSetup ? (
                 /* ── Prompt to Setup Root User if server requires it ── */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                   <div {...stylex.props(styles.keyStatusRow)}>
-                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
-                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                    <Badge variant="success" dot>Admin key verified</Badge>
+                    <Button variant="ghost" onPress={handleClearKey}>
                       Change Key
                     </Button>
                   </div>
                   <Alert
                     variant="warning"
-                    description="Initial server setup is required. Please initialize the root administrator account to proceed."
+                    description="Initial setup required. Create the root administrator account to proceed."
                   />
                   <Button
                     variant="primary"
                     size="lg"
                     onPress={() => navigate({ to: '/setup' })}
                   >
-                    Initialize Root Administrator
+                    Create Root Admin
                   </Button>
                 </div>
               ) : (
                 /* ── Context 2: Root Credentials Login ── */
                 <form onSubmit={handleUserLogin} {...stylex.props(styles.form)}>
                   <div {...stylex.props(styles.keyStatusRow)}>
-                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
-                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                    <Badge variant="success" dot>Admin key verified</Badge>
+                    <Button variant="ghost" onPress={handleClearKey}>
                       Change Key
                     </Button>
                   </div>
 
                   <TextField
-                    label="Root Username or Email"
+                    label="Username or Email"
                     placeholder="admin@example.com"
                     value={identity}
                     onChange={setIdentity}
@@ -258,7 +258,7 @@ function LoginPage() {
                     size="lg"
                     isDisabled={loading}
                   >
-                    {loading ? 'Authenticating...' : 'Sign In to Admin Console'}
+                    {loading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
               )}
@@ -270,7 +270,7 @@ function LoginPage() {
               <div {...stylex.props(styles.footer)}>
                 First time running moul?{' '}
                 <RouterLink to="/setup" style={{ textDecoration: 'none' }}>
-                  <Link variant="primary">Initialize Root Administrator</Link>
+                  <Link variant="primary">Set up root administrator</Link>
                 </RouterLink>
               </div>
             </CardFooter>

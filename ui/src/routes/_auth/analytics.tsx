@@ -46,6 +46,9 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing6,
     maxWidth: '1200px',
+    width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -218,51 +221,53 @@ function AnalyticsPage() {
         <div>
           <h1 {...stylex.props(styles.title)}>Analytics & Request Logs</h1>
           <span {...stylex.props(styles.subtitle)}>
-            Real-time traffic telemetry, endpoint throughput, and visitor tracking.
+            Traffic, latency, and visitor telemetry.
           </span>
         </div>
         <Button
-          size="sm"
-          variant="secondary"
+          variant="outline"
           onPress={() => {
             refetchReq();
             refetchVisits();
           }}
         >
           <ArrowsClockwiseIcon size={14} />
-          <span>Refresh All</span>
+          <span>Refresh</span>
         </Button>
       </div>
 
-      {/* STAT SUMMARY CARDS */}
+      {/* TOP STAT CARDS */}
       <div {...stylex.props(styles.statsGrid)}>
         <Stat
           variant="glass"
           label="TOTAL REQUESTS"
-          value={reqLoading ? '...' : stats.totalReqs}
+          value={stats.totalReqs}
           icon={<ChartLineUpIcon size={20} color={tokens.colorPrimary500} />}
-          description="Recent HTTP requests recorded"
+          description="Sampled HTTP requests"
         />
+
         <Stat
           variant="glass"
-          label="AVG DURATION"
-          value={reqLoading ? '...' : `${stats.avgDuration} ms`}
-          icon={<ClockIcon size={20} color={tokens.colorWarning500} />}
-          description="Mean server response latency"
+          label="AVG LATENCY"
+          value={`${stats.avgDuration}ms`}
+          icon={<ClockIcon size={20} color={tokens.colorSuccess500} />}
+          description="Mean backend processing time"
         />
+
         <Stat
           variant="glass"
           label="ERROR RATE"
-          value={reqLoading ? '...' : `${stats.errorRate}%`}
-          icon={<WarningCircleIcon size={20} color={Number(stats.errorRate) > 5 ? tokens.colorError500 : tokens.colorSuccess500} />}
-          description={`${stats.errCount} client/server errors`}
+          value={`${stats.errorRate}%`}
+          icon={<WarningCircleIcon size={20} color={Number(stats.errorRate) > 5 ? tokens.colorError500 : tokens.colorFgSubtle} />}
+          description="4xx and 5xx responses"
         />
+
         <Stat
           variant="glass"
           label="VISITOR SESSIONS"
-          value={visitsLoading ? '...' : stats.totalVisits}
+          value={visits.length}
           icon={<UsersIcon size={20} color={tokens.colorPrimary500} />}
-          description="Unique tracked client visits"
+          description="Tracked client sessions"
         />
       </div>
 
@@ -270,18 +275,18 @@ function AnalyticsPage() {
       <div {...stylex.props(styles.chartsGrid)}>
         <ChartContainer
           title="Requests Over Time"
-          description="Throughput breakdown by successful requests vs errors"
+          description="Throughput breakdown by status"
           variant="glass"
           legend={[
-            { name: 'Success (2xx/3xx)', color: '#10b981' },
-            { name: 'Errors (4xx/5xx)', color: '#ef4444' },
+            { name: 'Success (2xx/3xx)', color: tokens.colorSuccess500 },
+            { name: 'Errors (4xx/5xx)', color: tokens.colorError500 },
           ]}
         >
           <AreaChart
             data={timeSeriesData}
             indexKey="time"
             categories={['success', 'error']}
-            colors={['#10b981', '#ef4444']}
+            colors={[tokens.colorSuccess500, tokens.colorError500]}
             valueFormatter={(val) => `${val} reqs`}
             height={220}
           />
@@ -347,8 +352,9 @@ function AnalyticsPage() {
                   <TableEmpty colSpan={6}>
                     <EmptyState
                       variant="default"
-                      title="No HTTP requests recorded"
-                      description="Traffic and API request logs will appear here in real-time."
+                      icon={<ChartLineUpIcon size={32} color={tokens.colorFgSubtle} />}
+                      title="No requests recorded"
+                      description="Incoming API and page traffic will appear here automatically."
                     />
                   </TableEmpty>
                 ) : (
@@ -358,12 +364,12 @@ function AnalyticsPage() {
                     return (
                       <TableRow key={r.id || idx}>
                         <TableCell>
-                          <Badge variant={isErr ? 'error' : 'success'} size="sm">
+                          <Badge variant={isErr ? 'error' : 'success'}>
                             {String(status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="neutral" size="sm">
+                          <Badge variant="neutral">
                             {r.method || 'GET'}
                           </Badge>
                         </TableCell>
@@ -430,6 +436,7 @@ function AnalyticsPage() {
                     <TableEmpty colSpan={5}>
                       <EmptyState
                         variant="default"
+                        icon={<GlobeIcon size={32} color={tokens.colorFgSubtle} />}
                         title="No visits recorded"
                         description="Visitor telemetry and session tracking will show up here."
                       />

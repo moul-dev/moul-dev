@@ -103,8 +103,10 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing6,
-    maxWidth: '1100px',
+    maxWidth: '1200px',
     width: '100%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -1080,14 +1082,14 @@ function SettingsPage() {
                       {rateLimitRules.length === 0 ? (
                         <TableEmpty colSpan={5}>
                           <EmptyState
-                            variant="default"
+                            variant="dashed"
                             icon={<GaugeIcon size={32} color={tokens.colorFgSubtle} />}
-                            title="No rate limit rules defined"
-                            description="Add custom rate limit rules to protect specific routes or collection endpoints."
+                            title="No rate limit rules"
+                            description="Add custom rules to protect sensitive endpoints from traffic spikes."
                             action={
-                              <Button variant="outline" size="sm" onPress={() => openDrawer('ratelimit-add')}>
-                                <PlusIcon size={16} />
-                                <span>Add Rate Limit Rule</span>
+                              <Button variant="outline" onPress={() => openDrawer('ratelimit-add')}>
+                                <PlusIcon size={14} />
+                                <span>Add Rule</span>
                               </Button>
                             }
                           />
@@ -1109,7 +1111,6 @@ function SettingsPage() {
                               <div style={{ display: 'flex', gap: tokens.spacing2 }}>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
                                   onPress={() => openDrawer('ratelimit-edit', idx)}
                                   aria-label={`Edit ${rule.label}`}
                                 >
@@ -1117,7 +1118,6 @@ function SettingsPage() {
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
                                   onPress={() => handleDeleteRule(idx)}
                                   aria-label={`Delete ${rule.label}`}
                                 >
@@ -1282,7 +1282,7 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-github')}>
+                    <Button variant="outline" onPress={() => openDrawer('oauth-github')}>
                       <GearIcon size={16} />
                       <span>Configure GitHub</span>
                     </Button>
@@ -1309,7 +1309,7 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-google')}>
+                    <Button variant="outline" onPress={() => openDrawer('oauth-google')}>
                       <GearIcon size={16} />
                       <span>Configure Google</span>
                     </Button>
@@ -1336,7 +1336,7 @@ function SettingsPage() {
                     </div>
                   </CardBody>
                   <CardFooter>
-                    <Button variant="outline" size="sm" onPress={() => openDrawer('oauth-apple')}>
+                    <Button variant="outline" onPress={() => openDrawer('oauth-apple')}>
                       <GearIcon size={16} />
                       <span>Configure Apple</span>
                     </Button>

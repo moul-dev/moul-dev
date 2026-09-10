@@ -8,6 +8,7 @@ import {
   SelectItem,
   Checkbox,
   Badge,
+  EmptyState,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
 import {
@@ -227,18 +228,6 @@ const styles = stylex.create({
     alignItems: 'center',
     fontSize: '14px',
     lineHeight: 1,
-  },
-  emptyNotice: {
-    padding: tokens.spacing4,
-    textAlign: 'center',
-    backgroundColor: tokens.colorBgSubtle,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: tokens.colorBorder,
-    color: tokens.colorFgSubtle,
-    fontSize: tokens.fontSizeXs,
-    fontFamily: tokens.fontFamilyBase,
   },
 });
 
@@ -516,22 +505,22 @@ export function FieldsBuilder({
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
                 <span>id</span>
-                <Badge size="sm" variant="neutral">PK</Badge>
+                <Badge variant="neutral">PK</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Required unique login username">
                 <UserIcon size={12} />
                 <span>username</span>
-                <Badge size="sm" variant="primary">unique</Badge>
+                <Badge variant="primary">unique</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Required unique email address">
                 <UserIcon size={12} />
                 <span>email</span>
-                <Badge size="sm" variant="primary">unique</Badge>
+                <Badge variant="primary">unique</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Bcrypt password hash (hidden from read APIs)">
                 <ShieldCheckIcon size={12} />
                 <span>passwordHash</span>
-                <Badge size="sm" variant="neutral">secure</Badge>
+                <Badge variant="neutral">secure</Badge>
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
                 <span>createdAt</span>
@@ -554,7 +543,7 @@ export function FieldsBuilder({
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="WebAuthn credentials list">
                 <span>passkeys</span>
-                <Badge size="sm" variant="neutral">json</Badge>
+                <Badge variant="neutral">json</Badge>
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Password reset token">
                 <span>resetToken</span>
@@ -564,7 +553,7 @@ export function FieldsBuilder({
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="OAuth provider identities">
                 <span>oauthProviders</span>
-                <Badge size="sm" variant="neutral">json</Badge>
+                <Badge variant="neutral">json</Badge>
               </span>
             </div>
           </div>
@@ -572,15 +561,15 @@ export function FieldsBuilder({
           <div {...stylex.props(styles.systemFieldGroup)}>
             <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
               <span>id</span>
-              <Badge size="sm" variant="neutral">PK</Badge>
+              <Badge variant="neutral">PK</Badge>
             </span>
             <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
               <span>createdAt</span>
-              <Badge size="sm" variant="neutral">datetime</Badge>
+              <Badge variant="neutral">datetime</Badge>
             </span>
             <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
               <span>updatedAt</span>
-              <Badge size="sm" variant="neutral">datetime</Badge>
+              <Badge variant="neutral">datetime</Badge>
             </span>
           </div>
         )}
@@ -588,9 +577,11 @@ export function FieldsBuilder({
 
       {/* Field List */}
       {fields.length === 0 ? (
-        <div {...stylex.props(styles.emptyNotice)}>
-          No custom fields yet. Click <strong>Add Field</strong> or <strong>Add Relation</strong> above to add fields.
-        </div>
+        <EmptyState
+          variant="dashed"
+          title="No custom fields"
+          description="Add fields or relations to define this collection schema."
+        />
       ) : (
         <div {...stylex.props(styles.fieldList)}>
           {fields.map((field, idx) => {
@@ -726,7 +717,6 @@ export function FieldsBuilder({
                       {canSuggestFix && (
                         <Button
                           variant="secondary"
-                          size="sm"
                           onPress={() => handleFieldChange(idx, 'name', suggestedCamel)}
                         >
                           Use &ldquo;{suggestedCamel}&rdquo;

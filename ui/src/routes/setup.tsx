@@ -185,8 +185,8 @@ function SetupPage() {
               </h1>
               <p {...stylex.props(styles.subtitle)}>
                 {hasVerifiedKey
-                  ? 'Create the primary root administrator account to initialize your database engine.'
-                  : 'Enter your Master Admin Key to authorize initial root user setup.'}
+                  ? 'Set up your root administrator account.'
+                  : 'Enter your Master Admin Key to continue.'}
               </p>
             </div>
           </CardHeader>
@@ -205,7 +205,7 @@ function SetupPage() {
                     value={masterKeyInput}
                     onChange={setMasterKeyInput}
                     isRequired
-                    description="Server administrative key configured via MOUL_ADMIN_KEY (step 1 of 2)"
+                    description="Configured via MOUL_ADMIN_KEY"
                   />
 
                   <Button
@@ -214,21 +214,21 @@ function SetupPage() {
                     size="lg"
                     isDisabled={loading}
                   >
-                    {loading ? 'Verifying Key...' : 'Verify & Continue'}
+                    {loading ? 'Verifying...' : 'Continue'}
                   </Button>
                 </form>
               ) : !needsSetup ? (
                 /* ── If setup is already complete, redirect to login ── */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                   <div {...stylex.props(styles.keyStatusRow)}>
-                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
-                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                    <Badge variant="success" dot>Admin key verified</Badge>
+                    <Button variant="ghost" onPress={handleClearKey}>
                       Change Key
                     </Button>
                   </div>
                   <Alert
                     variant="info"
-                    description="Root administrator has already been created. Please sign in with your credentials."
+                    description="Root administrator already created. Please sign in with your credentials."
                   />
                   <Button
                     variant="primary"
@@ -242,14 +242,14 @@ function SetupPage() {
                 /* ── Context 2: Root User Account Creation ── */
                 <form onSubmit={handleSetupSubmit} {...stylex.props(styles.form)}>
                   <div {...stylex.props(styles.keyStatusRow)}>
-                    <Badge variant="success" size="sm" dot>Master Admin Key Active</Badge>
-                    <Button variant="ghost" size="sm" onPress={handleClearKey}>
+                    <Badge variant="success" dot>Admin key verified</Badge>
+                    <Button variant="ghost" onPress={handleClearKey}>
                       Change Key
                     </Button>
                   </div>
 
                   <TextField
-                    label="Root Username"
+                    label="Username"
                     placeholder="admin"
                     value={username}
                     onChange={setUsername}
@@ -257,7 +257,7 @@ function SetupPage() {
                   />
 
                   <TextField
-                    label="Root Email"
+                    label="Email"
                     type="email"
                     placeholder="admin@example.com"
                     value={email}
@@ -290,7 +290,7 @@ function SetupPage() {
                     size="lg"
                     isDisabled={loading}
                   >
-                    {loading ? 'Creating Administrator...' : 'Initialize Administrator'}
+                    {loading ? 'Creating account...' : 'Create Account'}
                   </Button>
                 </form>
               )}
@@ -300,9 +300,9 @@ function SetupPage() {
           {hasVerifiedKey && (
             <CardFooter>
               <div {...stylex.props(styles.footer)}>
-                Already initialized?{' '}
+                Already set up?{' '}
                 <RouterLink to="/login" style={{ textDecoration: 'none' }}>
-                  <Link variant="primary">Sign In to Admin Console</Link>
+                  <Link variant="primary">Sign In</Link>
                 </RouterLink>
               </div>
             </CardFooter>
