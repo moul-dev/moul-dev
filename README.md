@@ -563,9 +563,15 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 
 ### Transport Modes
 
-1. **Stdio Transport Mode (`moul mcp` or `<custom-binary> mcp`)**: Runs directly as a CLI subcommand over standard input/output. Seamlessly supported in standalone `moul` and any custom binary extending `pkg/app`.
-2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `moul start` (or `<custom-binary>`). Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
-3. **Flexible Authentication**: Pass key via `X-Admin-Key` header, `Authorization: Bearer <MOUL_ADMIN_KEY>`, or URL query parameter `?adminKey=<MOUL_ADMIN_KEY>`.
+1. **Stdio Transport Mode (`moul mcp` or `<custom-binary> mcp`)**: Runs directly as a CLI subcommand over standard input/output. Seamlessly supported in standalone `moul` and any custom binary extending `pkg/app`. Requires **zero secrets or authentication tokens** as it executes with the privileges of the local user.
+2. **Streamable HTTP & SSE Mode (`/api/mcp`)**: Enabled automatically on `moul start` (or your embedded binary). Supports direct JSON-RPC POST requests (MCP 2025 Spec) and SSE streaming.
+
+### HTTP Authentication Methods
+
+When accessing `/api/mcp` over HTTP/SSE, two primary header authentication methods are supported:
+1. **Bearer Token Header (Recommended)**: `Authorization: Bearer <MOUL_ADMIN_KEY>` (standard for Cursor, Windsurf, Claude Code).
+2. **Admin Key Header**: `X-Admin-Key: <MOUL_ADMIN_KEY>` (ideal for API gateways, proxies, and cURL scripts).
+*(Fallback: `?adminKey=<MOUL_ADMIN_KEY>` query parameter).*
 
 ### Integration Examples
 
@@ -663,6 +669,10 @@ event, err := analyticsEngine.Track(context.Background(), "events", params)
 | `moul_get_system_metrics` | Fetch host CPU, Memory, Disk, and Load metrics |
 | `moul_get_analytics_summary` | Fetch visitor and request analytics totals |
 | `moul_list_requests` | Query recent HTTP request logs |
+
+### Custom Binary with MCP Support
+
+When extending Moul as an embedded Go library with `pkg/app`, you can register custom domain MCP tools using `moulApp.RegisterMCPTool(...)`. See [`examples/custom-binary-with-mcp/`](examples/custom-binary-with-mcp/) for a complete runnable example demonstrating custom tools, route handlers, worker tasks, and dual-mode stdio/HTTP transport.
 
 ---
 

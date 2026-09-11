@@ -6,42 +6,116 @@ description: Native MCP server enabling AI coding assistants to inspect schemas,
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Callout } from 'fumadocs-ui/components/callout'
 
-`moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This empowers AI coding assistants (Claude Desktop, Cursor, Antigravity, Windsurf) with deep inspection and operational control over your backend.
+`moul` includes a native Model Context Protocol (MCP) server powered by `github.com/mark3labs/mcp-go`. This empowers AI coding assistants (Claude Desktop, Cursor, Antigravity, Windsurf, Claude Code) with deep schema inspection, data manipulation, worker orchestration, and observability control directly over your backend.
 
 ---
 
 ## Transport Modes
 
-### 1. Stdio Mode (`moul mcp`)
-Communicates directly over standard input and output streams. Ideal for local IDEs without running a separate HTTP process.
+Moul supports two transport modes to fit every development and production workflow:
 
-### 2. Streamable HTTP & SSE Mode (`/api/mcp`)
-Enabled automatically when running `moul start`. Accepts direct JSON-RPC POST requests (MCP 2025 Spec) as well as legacy SSE streams. Authenticate using `Authorization: Bearer <ADMIN_SECRET_KEY>`, `X-Admin-Key: <ADMIN_SECRET_KEY>`, or URL query parameter `?adminKey=<ADMIN_SECRET_KEY>`.
+### 1. Local Stdio Transport (`moul mcp`)
+Communicates directly over standard input and standard output streams (`stdin`/`stdout`) via JSON-RPC.
+- **Zero Secrets Required**: Operates with the filesystem permissions of the executing local user. You do not need to supply `MOUL_ADMIN_KEY` or `MOUL_JWT_SECRET`.
+- **Ideal For**: Local desktop assistants like Claude Desktop, local Cursor processes, Antigravity CLI, or CI/CD test pipelines.
+
+### 2. Streamable HTTP & SSE Transport (`/api/mcp`)
+Active automatically whenever the server is running (`moul start` or your custom Go embedded binary).
+- **Modern MCP 2025 Spec**: Supports stateful and stateless direct JSON-RPC POST requests to `/api/mcp`.
+- **Legacy SSE Spec**: Supports Server-Sent Events at `/api/mcp` and message posting at `/api/mcp/message`.
+- **Ideal For**: Remote MCP setups, shared team development servers, containerized instances, or Cursor HTTP connections.
+
+---
+
+## HTTP Authentication Methods
+
+When communicating with the HTTP or SSE endpoint (`http://localhost:8090/api/mcp`), requests must be authenticated using the server's configured admin key (`MOUL_ADMIN_KEY`).
+
+Moul provides **two distinct header authentication methods**:
+
+### Method 1: Bearer Token Authorization Header (`Authorization`)
+The industry-standard OAuth 2.0 / HTTP Bearer convention. This is the **recommended** method for Cursor, Windsurf, and modern AI coding assistants.
+
+```http
+POST /api/mcp HTTP/1.1
+Host: localhost:8090
+Authorization: Bearer <MOUL_ADMIN_KEY>
+Content-Type: application/json
+```
+
+### Method 2: Dedicated Admin Key Header (`X-Admin-Key`)
+A custom header designed for API gateways, proxies, cloud load balancers, and shell scripts where setting standard Authorization headers might conflict with upstream proxies.
+
+```http
+POST /api/mcp HTTP/1.1
+Host: localhost:8090
+X-Admin-Key: <MOUL_ADMIN_KEY>
+Content-Type: application/json
+```
+
+<Callout type="info" title="Query Parameter Fallback">
+For restricted clients or environments where custom request headers cannot be configured, Moul also accepts the admin key via URL query parameter:
+`http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>`
+</Callout>
 
 ---
 
 ## Assistant Configuration
 
-<Tabs items={['Cursor & HTTP Clients', 'Claude Desktop', 'Cursor (Stdio)', 'cURL Direct JSON-RPC']}>
-  <Tab value="Cursor & HTTP Clients">
-Configure remote Streamable HTTP MCP in `.cursor/mcp.json` or your MCP client settings (VS Code, Windsurf, Claude Code):
+<Tabs items={['Cursor (HTTP Bearer)', 'Cursor (HTTP X-Admin-Key)', 'Cursor (Stdio)', 'Claude Desktop', 'cURL (Both Auth Headers)']}>
+  <Tab value="Cursor (HTTP Bearer)">
+Configure remote Streamable HTTP MCP in `.cursor/mcp.json` using the standard `Authorization: Bearer` header:
 
 ```json
 {
   "mcpServers": {
     "moul": {
       "type": "http",
+      "url": "http://localhost:8090/api/mcp",
       "headers": {
-        "Authorization": "Bearer ADMIN_SECRET_KEY"
-      },
-      "url": "http://localhost:8090/api/mcp"
+        "Authorization": "Bearer admin-key-dev-secret-change-me"
+      }
+    }
+  }
+}
+```
+  </Tab>
+  <Tab value="Cursor (HTTP X-Admin-Key)">
+Configure remote Streamable HTTP MCP in `.cursor/mcp.json` using the `X-Admin-Key` header:
+
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "url": "http://localhost:8090/api/mcp",
+      "headers": {
+        "X-Admin-Key": "admin-key-dev-secret-change-me"
+      }
+    }
+  }
+}
+```
+  </Tab>
+  <Tab value="Cursor (Stdio)">
+Launch a local `moul` binary process over stdio without running a separate HTTP server process. Configure in `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "command": "moul",
+      "args": ["mcp"],
+      "env": {
+        "MOUL_DB_PATH": "moul-local.db"
+      }
     }
   }
 }
 ```
   </Tab>
   <Tab value="Claude Desktop">
-Add to `claude_desktop_config.json`:
+Add to `claude_desktop_config.json` (on macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
 
 ```json
 {
@@ -50,31 +124,20 @@ Add to `claude_desktop_config.json`:
       "command": "/usr/local/bin/moul",
       "args": ["mcp"],
       "env": {
-        "MOUL_DB_PATH": "/path/to/moul-local.db"
+        "MOUL_DB_PATH": "/Users/username/myproject/moul-local.db"
       }
     }
   }
 }
 ```
   </Tab>
-  <Tab value="Cursor (Stdio)">
-Add to `.cursor/mcp.json` to launch a local `moul` binary process over stdio:
+  <Tab value="cURL (Both Auth Headers)">
+Verify your MCP server directly via raw JSON-RPC tool calls:
 
-```json
-{
-  "mcpServers": {
-    "moul": {
-      "command": "moul",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-  </Tab>
-  <Tab value="cURL Direct JSON-RPC">
+**Using Bearer Token:**
 ```bash
 curl -X POST "http://localhost:8090/api/mcp" \
-  -H "X-Admin-Key: test-admin-key-1234" \
+  -H "Authorization: Bearer admin-key-dev-secret-change-me" \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -86,17 +149,84 @@ curl -X POST "http://localhost:8090/api/mcp" \
     }
   }'
 ```
+
+**Using X-Admin-Key:**
+```bash
+curl -X POST "http://localhost:8090/api/mcp" \
+  -H "X-Admin-Key: admin-key-dev-secret-change-me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "moul_get_system_metrics",
+      "arguments": {}
+    }
+  }'
+```
   </Tab>
 </Tabs>
 
 ---
 
+## Custom Binaries & Custom MCP Tools
+
+When embedding Moul as a Go library via `pkg/app`, the built-in MCP server remains fully operational across both CLI Stdio mode and HTTP mode.
+
+You can also register custom, domain-specific MCP tools:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/moul-dev/moul-dev/pkg/app"
+)
+
+func main() {
+	moulApp := app.New(app.Config{
+		Version: "1.0.0-custom",
+	})
+
+	// Register a custom MCP tool
+	discountTool := mcp.NewTool(
+		"calculate_customer_discount",
+		mcp.WithDescription("Calculate customer discount rate"),
+		mcp.WithString("tier", mcp.Required(), mcp.Description("Tier: standard, gold, platinum")),
+		mcp.WithNumber("amount", mcp.Required(), mcp.Description("Order amount")),
+	)
+
+	moulApp.RegisterMCPTool(discountTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		tier := req.GetString("tier", "standard")
+		amount := req.GetFloat("amount", 0.0)
+		return mcp.NewToolResultText(fmt.Sprintf("Tier %s, Amount $%.2f", tier, amount)), nil
+	})
+
+	// Guard console output so stdio MCP transport isn't corrupted
+	if !app.IsMCP() {
+		fmt.Println("🚀 Server running on http://localhost:8090")
+	}
+
+	moulApp.Start(context.Background())
+}
+```
+
+Check out the full runnable example in [`examples/custom-binary-with-mcp`](https://github.com/moul-dev/moul-dev/tree/main/examples/custom-binary-with-mcp).
+
+---
+
 ## Available MCP Tools Catalog
+
+The built-in MCP server exposes 17+ high-level operational tools categorized by capability:
 
 | MCP Tool Name | Category | Description |
 | :--- | :--- | :--- |
 | `moul_list_collections` | Schema | List all dynamic collection schemas and tables. |
-| `moul_get_collection` | Schema | Get detailed schema definition, field types, and rules. |
+| `moul_get_collection` | Schema | Get detailed schema definition, field types, and access rules. |
 | `moul_create_collection` | Schema | Create a new dynamic collection and SQLite table. |
 | `moul_delete_collection` | Schema | Delete a collection and drop its SQLite table. |
 | `moul_list_records` | CRUD | Query paginated records with optional filters. |
@@ -104,7 +234,7 @@ curl -X POST "http://localhost:8090/api/mcp" \
 | `moul_create_record` | CRUD | Insert a new dynamic record into a collection. |
 | `moul_update_record` | CRUD | Update an existing record by ID. |
 | `moul_delete_record` | CRUD | Delete a record by ID. |
-| `moul_list_worker_jobs` | Workers | List background jobs by status (`available`, `executing`, etc.). |
+| `moul_list_worker_jobs` | Workers | List background jobs by status (`available`, `executing`, `retryable`, etc.). |
 | `moul_enqueue_job` | Workers | Enqueue a new background worker job. |
 | `moul_cancel_job` | Workers | Cancel a pending or retryable worker job. |
 | `moul_list_feature_flags` | Flags | List OpenFeature flags and targeting gate rules. |

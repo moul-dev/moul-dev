@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/gobuffalo/envy"
+	"github.com/mark3labs/mcp-go/mcp"
+	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
@@ -234,5 +236,64 @@ func TestPrintUsageOutput(t *testing.T) {
 	}
 	if !strings.Contains(out, "typegen") {
 		t.Errorf("Expected usage to mention 'typegen'")
+	}
+}
+
+func TestAppOnMCPInitHook(t *testing.T) {
+	a := New(Config{
+		DBPath:  ":memory:",
+		Version: "1.0.0-hooktest",
+	})
+
+	hookCalled := false
+	a.OnMCPInit(func(srv *moulmcp.Server) error {
+		hookCalled = true
+		if srv == nil || srv.MCPServer() == nil {
+			t.Fatal("Expected srv and MCPServer to be non-nil in OnMCPInit")
+		}
+		return nil
+	})
+
+	// Run in ServeMCP stdio context with cancel to exit quickly
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	// ServeMCP will initialize DB, run hooks, and attempt ServeStdio
+	_ = a.ServeMCP(ctx)
+
+	if !hookCalled {
+		t.Fatal("Expected OnMCPInit hook to be called during ServeMCP")
+	}
+
+	if a.MCPServer() == nil {
+		t.Fatal("Expected a.MCPServer() to be non-nil after ServeMCP")
+	}
+}
+
+func TestAppRegisterMCPTool(t *testing.T) {
+	jwtSecret := "test-jwt-secret-key-32-bytes-minimum!!"
+	adminKey := "test-admin-key-1234"
+	envy.Set("MOUL_JWT_SECRET", jwtSecret)
+	envy.Set("MOUL_ADMIN_KEY", adminKey)
+
+	a := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "1.0.0-tooltest",
+		JWTSecret: jwtSecret,
+		AdminKey:  adminKey,
+	})
+
+	customTool := mcp.NewTool("custom_tool_ping", mcp.WithDescription("Test tool"))
+	a.RegisterMCPTool(customTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return mcp.NewToolResultText("custom pong"), nil
+	})
+
+	if err := a.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+
+	if a.MCPServer() == nil || a.MCPServer().MCPServer() == nil {
+		t.Fatal("Expected MCPServer to be initialized")
 	}
 }

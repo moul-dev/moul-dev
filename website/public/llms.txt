@@ -49,6 +49,7 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 
 ## MCP Assistant Configuration (`.cursor/mcp.json` / `mcpServers`)
 
+### Option 1: Bearer Token Authentication (Recommended)
 ```json
 {
   "mcpServers": {
@@ -56,6 +57,21 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
       "type": "http",
       "headers": {
         "Authorization": "Bearer ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+
+### Option 2: Dedicated Admin Key Header (`X-Admin-Key`)
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "headers": {
+        "X-Admin-Key": "ADMIN_SECRET_KEY"
       },
       "url": "http://localhost:8090/api/mcp"
     }

@@ -192,6 +192,8 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
 17. `moul_list_requests`: `{"limit": int}` - Query recent HTTP request logs.
 
 ### MCP Client Configuration (`.cursor/mcp.json` / `mcpServers`)
+
+#### Option 1: Bearer Token Authentication (Recommended)
 ```json
 {
   "mcpServers": {
@@ -206,11 +208,26 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
 }
 ```
 
+#### Option 2: Dedicated Admin Key Header (`X-Admin-Key`)
+```json
+{
+  "mcpServers": {
+    "moul": {
+      "type": "http",
+      "headers": {
+        "X-Admin-Key": "ADMIN_SECRET_KEY"
+      },
+      "url": "http://localhost:8090/api/mcp"
+    }
+  }
+}
+```
+
 ---
 
 ## 8. Programmatic Go Extensibility & HTTP Route Hooks (`pkg/app`)
 
-`moul` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes or background workers without forking code.
+`moul` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes, background workers, or custom MCP tools without forking code.
 
 ### Core API Methods & Hooks
 - `app.New(cfg app.Config) *app.App`: Creates a new Mould app instance.
@@ -222,13 +239,16 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
 - `app.DefaultAdminFS() fs.FS`: Accesses the default embedded Web Admin Console filesystem from `pkg/ui`.
 - `app.RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc)`: Expressive shorthand method to register routes directly on the embedded Echo server.
 - `app.OnRouterInit(fn func(router *echo.Echo) error)`: Hook invoked during `Bootstrap()` right after the Echo router is constructed. Allows creating router groups, custom Echo middlewares, and specialized handlers.
-- `app.OnBeforeStart(fn func(app *app.App) error)`: Hook invoked at the end of `Bootstrap()` before listeners start. Gives full access to `app.DB()`, `app.Router()`, `app.WorkerEngine()`, `app.Mailer()`, and `app.AnalyticsEngine()`.
+- `app.OnBeforeStart(fn func(app *app.App) error)`: Hook invoked at the end of `Bootstrap()` before listeners start. Gives full access to `app.DB()`, `app.Router()`, `app.WorkerEngine()`, `app.Mailer()`, `app.AnalyticsEngine()`, and `app.MCPServer()`.
 - `app.RegisterWorker(name string, handler worker.JobHandler)`: Registers a custom background job worker (from `pkg/worker` or `app.JobHandler`).
 - `app.RegisterPeriodicWorker(interval time.Duration, name string, handler worker.JobHandler)`: Registers a periodic background task.
 - `app.OnWorkerInit(fn func(engine *worker.Engine) error)`: Hook executed when worker engine initializes (`pkg/worker.Engine`).
+- `app.RegisterMCPTool(tool mcp.Tool, handler server.ToolHandlerFunc)`: Registers a custom MCP tool exposed over both stdio and HTTP transports.
+- `app.OnMCPInit(fn func(srv *moulmcp.Server) error)`: Hook executed when the MCP server is initialized.
 - `app.MCPServer() *moulmcp.Server`: Accesses the built-in MCP server instance to inspect or attach custom MCP tools.
 - `app.ServeMCP(ctx context.Context) error`: Starts the built-in MCP server over stdio (auto-dispatched on `mcp` command without requiring HTTP secrets).
 - `app.IsMCP() bool`: Utility reporting whether the binary was invoked in MCP mode.
+
 
 ### Code Example
 ```go

@@ -15,6 +15,8 @@ import (
 
 	"github.com/gobuffalo/envy"
 	"github.com/labstack/echo/v5"
+	mcpspec "github.com/mark3labs/mcp-go/mcp"
+	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/pocketbase/dbx"
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
@@ -61,6 +63,9 @@ type RouterInitFunc func(router *echo.Echo) error
 // BeforeStartFunc is a hook callback invoked after Bootstrap completes, prior to server startup.
 type BeforeStartFunc func(app *App) error
 
+// MCPInitFunc is a hook callback invoked when the MCP server is initialized.
+type MCPInitFunc func(srv *moulmcp.Server) error
+
 // App represents the core Mould server application instance.
 type App struct {
 	config          Config
@@ -75,6 +80,7 @@ type App struct {
 	onWorkerInit    []WorkerInitFunc
 	onRouterInit    []RouterInitFunc
 	onBeforeStart   []BeforeStartFunc
+	onMCPInit       []MCPInitFunc
 	isDev           bool
 	litestreamStore *backup.LitestreamStore
 }
@@ -143,6 +149,14 @@ func (a *App) OnBeforeStart(fn BeforeStartFunc) {
 	}
 }
 
+// OnMCPInit registers a hook callback that executes when the built-in MCP server is initialized.
+// This allows registering custom MCP tools and capabilities for both HTTP and Stdio transport modes.
+func (a *App) OnMCPInit(fn MCPInitFunc) {
+	if fn != nil {
+		a.onMCPInit = append(a.onMCPInit, fn)
+	}
+}
+
 // RegisterRoute registers a custom HTTP route handler with the embedded Echo router.
 func (a *App) RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc) {
 	a.OnRouterInit(func(router *echo.Echo) error {
@@ -163,6 +177,15 @@ func (a *App) RegisterWorker(name string, handler worker.JobHandler) {
 func (a *App) RegisterPeriodicWorker(interval time.Duration, name string, handler worker.JobHandler) {
 	a.OnWorkerInit(func(engine *worker.Engine) error {
 		engine.RegisterPeriodicTask(interval, name, handler)
+		return nil
+	})
+}
+
+// RegisterMCPTool registers a custom MCP tool with the built-in MCP server.
+// The tool is automatically exposed across both Stdio and Streamable HTTP / SSE transports.
+func (a *App) RegisterMCPTool(tool mcpspec.Tool, handler mcpserver.ToolHandlerFunc) {
+	a.OnMCPInit(func(srv *moulmcp.Server) error {
+		srv.MCPServer().AddTool(tool, handler)
 		return nil
 	})
 }
@@ -334,6 +357,11 @@ func (a *App) Bootstrap() error {
 	// Built-in MCP Server
 	if a.mcpServer == nil {
 		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+		for _, hook := range a.onMCPInit {
+			if err := hook(a.mcpServer); err != nil {
+				return fmt.Errorf("mcp init hook failed: %w", err)
+			}
+		}
 	}
 
 	a.router = handlers.NewRouterWithOptions(
@@ -423,16 +451,22 @@ func (a *App) ServeMCP(ctx context.Context) error {
 		a.sysmonCollector = sysmon.NewCollector()
 	}
 
+	if a.mcpServer == nil {
+		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+		for _, hook := range a.onMCPInit {
+			if err := hook(a.mcpServer); err != nil {
+				return fmt.Errorf("mcp init hook failed: %w", err)
+			}
+		}
+	}
+
 	for _, hook := range a.onBeforeStart {
 		if err := hook(a); err != nil {
 			return fmt.Errorf("before start hook failed: %w", err)
 		}
 	}
 
-	srv := moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
-	a.mcpServer = srv
-
-	return srv.ServeStdio()
+	return a.mcpServer.ServeStdio()
 }
 
 // Start executes the application. If CLI arguments or flags are present (e.g. "mcp", "worker", "seed", etc.)

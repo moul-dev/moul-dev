@@ -198,7 +198,8 @@ Key features of stdio mode in embedded custom binaries:
 - **Clean Stdio Channel**: Stdio mode reserves `stdout` exclusively for JSON-RPC messages. Always guard terminal banners or raw `fmt.Println` output with `if !app.IsMCP() { ... }` or write diagnostic logs to `stderr` using `logger.Info` / `slog.Info`.
 - **Integrated Worker Queues**: Custom background workers registered with `moulApp.RegisterWorker` are immediately accessible to MCP tools (such as `moul_list_worker_jobs` and `moul_enqueue_job`).
 - **No Secrets Required**: Stdio mode runs locally with the user's execution privileges and operates directly on SQLite without requiring `MOUL_JWT_SECRET` or `MOUL_ADMIN_KEY`.
-- **Programmatic Control**: Access `moulApp.MCPServer()` to inspect or register custom MCP tools, or call `moulApp.ServeMCP(ctx)` directly.
+- **Programmatic Control**: Use `moulApp.RegisterMCPTool(tool, handler)` to add custom domain tools to the AI assistant, or hook into `moulApp.OnMCPInit(...)`.
+- **Dual HTTP Authentication**: In HTTP mode (`my-binary start`), remote MCP clients can authenticate using either `Authorization: Bearer <ADMIN_KEY>` or `X-Admin-Key: <ADMIN_KEY>`.
 
 ---
 
@@ -206,6 +207,12 @@ Key features of stdio mode in embedded custom binaries:
 
 ### `RegisterRoute(method, path, handler, middleware...)`
 Registers a single HTTP handler directly on the embedded router before server start.
+
+### `RegisterMCPTool(tool, handler)`
+Registers a custom Model Context Protocol (MCP) tool that is automatically exposed across both Stdio and Streamable HTTP / SSE transports.
+
+### `OnMCPInit(callback)`
+Hook that executes when the built-in MCP server is initialized, allowing low-level access to the underlying MCP server.
 
 ### `OnRouterInit(callback)`
 Provides access to the underlying `*echo.Echo` instance immediately after core Moul routes are configured. Enables custom middleware registration, route grouping (`router.Group(...)`), and specialized handler mounting.
@@ -220,8 +227,9 @@ Executes when the worker engine initializes, providing access to `*worker.Engine
 
 ## Standalone Examples
 
-A complete, standalone runnable example is available in the repository:
+Complete, standalone runnable examples are available in the repository:
 
+- [`examples/custom-binary-with-mcp/`](https://github.com/moul-dev/moul-dev/tree/main/examples/custom-binary-with-mcp): Demonstrates custom binary embedding with full MCP support, custom MCP tool registration, dual HTTP auth (`Bearer` and `X-Admin-Key`), and stdio execution.
 - [`examples/custom-binary/`](https://github.com/moul-dev/moul-dev/tree/main/examples/custom-binary): Demonstrates custom binary embedding with the Web Admin Console, custom API endpoints, and worker tasks.
 - [`examples/custom-routes/`](https://github.com/moul-dev/moul-dev/tree/main/examples/custom-routes): Custom route groupings and Echo middlewares.
 - [`examples/custom-worker/`](https://github.com/moul-dev/moul-dev/tree/main/examples/custom-worker): Background job dispatching and retries.
