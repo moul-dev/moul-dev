@@ -1,4 +1,4 @@
-import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
+import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock.core";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { ElementContent, Root, RootContent } from "hast";
 import { toJsxRuntime } from "hast-util-to-jsx-runtime";
@@ -16,6 +16,37 @@ import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import { visit } from "unist-util-visit";
+
+let highlighterPromise: Promise<any> | null = null;
+function getCustomHighlighter() {
+  if (!highlighterPromise) {
+    highlighterPromise = import("shiki/core").then(
+      async ({ createHighlighterCore }) => {
+        const { createJavaScriptRegexEngine } = await import(
+          "shiki/engine/javascript"
+        );
+        return createHighlighterCore({
+          themes: [
+            import("@shikijs/themes/github-dark"),
+            import("@shikijs/themes/github-light"),
+          ],
+          langs: [
+            import("@shikijs/langs/javascript"),
+            import("@shikijs/langs/typescript"),
+            import("@shikijs/langs/go"),
+            import("@shikijs/langs/bash"),
+            import("@shikijs/langs/json"),
+            import("@shikijs/langs/yaml"),
+            import("@shikijs/langs/sql"),
+            import("@shikijs/langs/markdown"),
+          ],
+          engine: createJavaScriptRegexEngine(),
+        });
+      },
+    );
+  }
+  return highlighterPromise;
+}
 
 export interface Processor {
   process: (content: string) => Promise<ReactNode>;
@@ -94,7 +125,19 @@ function Pre(props: ComponentProps<"pre">) {
 
   if (lang === "mdx") lang = "md";
 
-  return <DynamicCodeBlock lang={lang} code={content.trimEnd()} />;
+  return (
+    <DynamicCodeBlock
+      lang={lang}
+      code={content.trimEnd()}
+      highlighter={getCustomHighlighter}
+      options={{
+        themes: {
+          light: "github-light",
+          dark: "github-dark",
+        },
+      }}
+    />
+  );
 }
 
 const processor = createProcessor();
