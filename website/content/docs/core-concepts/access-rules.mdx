@@ -96,6 +96,44 @@ updateRule: "orgId = @request.auth.orgId"
 deleteRule: "orgId = @request.auth.orgId && @request.auth.role = 'org_admin'"
 ```
 
+### 3. Role-Based Access Control: `users` Auth Collection
+
+Configure the `users` auth collection with custom fields:
+- **`role`**: Type `select`, Options: `["admin", "editor", "public"]`, Required: `true`
+- **Optional profile fields**: `name` (`text`), `avatar` (`url` or `file`), `bio` (`text`)
+
+Access rules prevent privilege escalation while enabling self-service profile management and administrative oversight:
+
+```text
+listRule:   "id = @request.auth.id || @collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin')"
+viewRule:   "id = @request.auth.id || @collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin')"
+createRule: "@request.body.role:isset = false || @request.body.role = 'public' || (@collection.users.id = @request.auth.id && @collection.users.role = 'admin')"
+updateRule: "(@collection.users.id = @request.auth.id && @collection.users.role = 'admin') || (id = @request.auth.id && @request.body.role:changed = false)"
+deleteRule: "(@collection.users.id = @request.auth.id && @collection.users.role = 'admin') || id = @request.auth.id"
+```
+
+- **`createRule`**: Allows open registration with the `public` role (or omitting the field to accept default), while preventing unauthorized users from assigning themselves `editor` or `admin`. Only existing admins can provision elevated roles directly.
+- **`updateRule`**: Users can update their own profile fields, but cannot modify their assigned `role` (`@request.body.role:changed = false`). Only an `admin` can promote or demote user roles.
+- **`deleteRule`**: Users can self-delete their own account (`id = @request.auth.id`), while an `admin` can delete any user record.
+
+### 4. Enforcing Role-Level Access on Downstream Collections (e.g. `posts`)
+
+Downstream business collections query the `users` auth collection using `@collection` relational lookups to enforce role-level privileges (`public | editor | admin`):
+- **`authorId`**: Type `relation` targeting `users` (`1:1`)
+- **`status`**: Type `select`, Options: `["draft", "published", "archived"]`
+
+```text
+listRule:   "status = 'published' || (@collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin'))"
+viewRule:   "status = 'published' || (@collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin'))"
+createRule: "@collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin')"
+updateRule: "(@collection.users.id = @request.auth.id && @collection.users.role = 'admin') || (authorId = @request.auth.id && @collection.users.id = @request.auth.id && @collection.users.role = 'editor')"
+deleteRule: "@collection.users.id = @request.auth.id && @collection.users.role = 'admin'"
+```
+
+- **Public**: Anyone can list and view records where `status = 'published'`.
+- **Editor**: Can view unpublished drafts, create new posts, and edit posts where they are the designated author (`authorId = @request.auth.id`).
+- **Admin**: Has full access to view, create, edit, publish, and delete all records.
+
 ---
 
 ## Testing Rules via CLI Sandbox

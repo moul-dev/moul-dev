@@ -187,6 +187,15 @@ Dynamic collections support access rules governing `list`, `view`, `create`, `up
 - Public read: `""` (empty)
 - Auth required: `@request.auth.id != ""`
 - Owner restriction: `id = @request.auth.id` or `userId = @request.auth.id`
+- RBAC role check (`users` auth collection):
+  - Prevent role tampering during signup: `@request.body.role:isset = false || @request.body.role = 'public' || (@collection.users.id = @request.auth.id && @collection.users.role = 'admin')`
+  - Prevent self-promotion on update: `(@collection.users.id = @request.auth.id && @collection.users.role = 'admin') || (id = @request.auth.id && @request.body.role:changed = false)`
+- Downstream collection role enforcement (e.g. `posts`):
+  - Public read, editor write own, admin full:
+    - `list`: `status = 'published' || (@collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin'))`
+    - `create`: `@collection.users.id = @request.auth.id && (@collection.users.role = 'editor' || @collection.users.role = 'admin')`
+    - `update`: `(@collection.users.id = @request.auth.id && @collection.users.role = 'admin') || (authorId = @request.auth.id && @collection.users.id = @request.auth.id && @collection.users.role = 'editor')`
+    - `delete`: `@collection.users.id = @request.auth.id && @collection.users.role = 'admin'`
 
 ### Auth Collection Default Access Rules
 When creating an `auth` collection, default access rules are automatically configured across the Web Admin Console, `moul-ctl`, and backend engine:
