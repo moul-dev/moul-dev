@@ -49,12 +49,22 @@ func (m *Model) updateWorkerMonitor(msg tea.Msg) tea.Cmd {
 							"state":        "available",
 							"scheduled_at": nowStr,
 						}
-						_, err := m.Client.UpdateRecord(workerMoulName, jobID, payload)
+						var err error
+						if workerMoulName == "_workers" {
+							_, err = m.Client.UpdateWorker(jobID, payload)
+						} else {
+							_, err = m.Client.UpdateRecord(workerMoulName, jobID, payload)
+						}
 						if err != nil {
 							return ErrMsg{err}
 						}
 						// Reload jobs
-						jobs, err := m.Client.ListRecords(workerMoulName)
+						var jobs []map[string]interface{}
+						if workerMoulName == "_workers" {
+							jobs, err = m.Client.ListWorkers()
+						} else {
+							jobs, err = m.Client.ListRecords(workerMoulName)
+						}
 						if err != nil {
 							return ErrMsg{err}
 						}
@@ -72,12 +82,22 @@ func (m *Model) updateWorkerMonitor(msg tea.Msg) tea.Cmd {
 						payload := map[string]interface{}{
 							"state": "discarded",
 						}
-						_, err := m.Client.UpdateRecord(workerMoulName, jobID, payload)
+						var err error
+						if workerMoulName == "_workers" {
+							_, err = m.Client.UpdateWorker(jobID, payload)
+						} else {
+							_, err = m.Client.UpdateRecord(workerMoulName, jobID, payload)
+						}
 						if err != nil {
 							return ErrMsg{err}
 						}
 						// Reload jobs
-						jobs, err := m.Client.ListRecords(workerMoulName)
+						var jobs []map[string]interface{}
+						if workerMoulName == "_workers" {
+							jobs, err = m.Client.ListWorkers()
+						} else {
+							jobs, err = m.Client.ListRecords(workerMoulName)
+						}
 						if err != nil {
 							return ErrMsg{err}
 						}
@@ -113,7 +133,7 @@ func (m *Model) getWorkerMoulName() string {
 			return moul.Name
 		}
 	}
-	return "background_tasks"
+	return "_workers"
 }
 
 // viewWorkerMonitor renders the list of jobs in a styled table.

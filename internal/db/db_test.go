@@ -390,7 +390,37 @@ func TestEnsureSystemTables_FirstStartup(t *testing.T) {
 		}
 	}
 
-	// 6. Verify default settings seeded
+	// 6. Verify columns in _workers
+	var workerCols []struct {
+		Name string `db:"name"`
+	}
+	if err := rawDB.NewQuery("PRAGMA table_info(_workers);").All(&workerCols); err != nil {
+		t.Fatalf("PRAGMA table_info(_workers) failed: %v", err)
+	}
+	workerColMap := make(map[string]bool)
+	for _, c := range workerCols {
+		workerColMap[c.Name] = true
+	}
+	for _, reqCol := range []string{
+		"id", "createdAt", "updatedAt", "state", "queue", "worker", "args", "meta",
+		"tags", "errors", "attempt", "max_attempts", "priority", "inserted_at",
+		"scheduled_at", "attempted_at", "attempted_by", "cancelled_at", "completed_at", "discarded_at",
+	} {
+		if !workerColMap[reqCol] {
+			t.Errorf("Expected column %q in _workers table", reqCol)
+		}
+	}
+
+	// 7. Verify _workers is classified as system table and not exposed as user moul
+	if !IsSystemTable("_workers") {
+		t.Errorf("Expected IsSystemTable(\"_workers\") to be true")
+	}
+	_, err = LoadMoulByName(rawDB, "_workers")
+	if err == nil {
+		t.Errorf("Expected LoadMoulByName(\"_workers\") to fail because _workers is a system table, not a user moul")
+	}
+
+	// 8. Verify default settings seeded
 	var settingsCount int
 	if err := rawDB.Select("COUNT(*)").From("_settings").Row(&settingsCount); err != nil {
 		t.Fatalf("Failed to count _settings: %v", err)

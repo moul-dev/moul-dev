@@ -3511,6 +3511,445 @@
         }
       }
     },
+    "/api/workers": {
+      "get": {
+        "summary": "List Background Worker Jobs",
+        "description": "Paginated query list of background jobs from the built-in `_workers` queue with filtering and sorting support.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "available",
+                "executing",
+                "completed",
+                "retryable",
+                "discarded",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "-createdAt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of background worker jobs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer"
+                    },
+                    "perPage": {
+                      "type": "integer"
+                    },
+                    "totalItems": {
+                      "type": "integer"
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkerJob"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Enqueue Background Job",
+        "description": "Enqueues a new background job into the built-in `_workers` queue.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "worker"
+                ],
+                "properties": {
+                  "worker": {
+                    "type": "string",
+                    "description": "Name of the registered worker handler."
+                  },
+                  "queue": {
+                    "type": "string",
+                    "default": "default"
+                  },
+                  "args": {
+                    "type": "object",
+                    "description": "Job arguments dictionary."
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Optional metadata."
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "max_attempts": {
+                    "type": "integer",
+                    "default": 3
+                  },
+                  "scheduled_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job enqueued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/workers/{id}": {
+      "get": {
+        "summary": "Get Worker Job Details",
+        "description": "Retrieves details of a specific job from `_workers` by ID.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worker job record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Job not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Worker Job",
+        "description": "Updates job state (e.g. mark discarded or available for retry) or scheduled execution time.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "discarded",
+                      "cancelled"
+                    ]
+                  },
+                  "scheduled_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  },
+                  "max_attempts": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated worker job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Job not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Worker Job",
+        "description": "Permanently removes a job from the `_workers` table.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "404": {
+            "description": "Job not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/api/workers/retry": {
+      "post": {
+        "summary": "Retry Background Worker Jobs",
+        "description": "Resets discarded, cancelled, or specific worker jobs in `_workers` back to `available` state.",
+        "tags": [
+          "Background Worker Engine"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Specific job IDs to retry. If empty, all discarded/cancelled/retryable jobs are retried."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jobs retried successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "rows_affected": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
     "/api/rules/test": {
       "post": {
         "summary": "Test and Evaluate Rule Expression",
@@ -4915,6 +5354,85 @@
           },
           "disk_total_bytes": {
             "type": "integer"
+          }
+        }
+      },
+      "WorkerJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "executing",
+              "completed",
+              "retryable",
+              "discarded",
+              "cancelled"
+            ]
+          },
+          "queue": {
+            "type": "string"
+          },
+          "worker": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "object"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "inserted_at": {
+            "type": "string"
+          },
+          "scheduled_at": {
+            "type": "string"
+          },
+          "attempted_at": {
+            "type": "string"
+          },
+          "attempted_by": {
+            "type": "string"
+          },
+          "cancelled_at": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string"
+          },
+          "discarded_at": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
           }
         }
       }

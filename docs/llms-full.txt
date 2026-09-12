@@ -50,6 +50,7 @@ The engine reads environment variables from `.env` in the current working direct
 6. **`_feature_flags`**: Feature flag definitions, rollouts, and gate configs.
 7. **`_certmagic`**: TLS certificate and lock storage for automatic HTTPS management.
 8. **`_revoked_tokens`**: Blacklist table for invalidated and revoked JWT authentication tokens.
+9. **`_workers`**: Default system background worker job queue for built-in background tasks (SendEmail, cleanup routines) and zero-setup custom worker tasks.
 
 ---
 
@@ -145,6 +146,7 @@ When creating an `auth` collection, default access rules are automatically confi
 - `DELETE /api/moul/:name`: Delete collection schema and drop physical SQLite table.
 
 ### Dynamic Record CRUD
+> Note: Reserved system tables prefixed with `_*` (`_workers`, `_moul`, `_settings`, `_rootUsers`, etc.) are strictly protected and return `404 Not Found` on all `/api/moul/:name/records` endpoints. Use dedicated system routes instead.
 - `GET /api/moul/:name/records`: List paginated records (`page`, `perPage`, `sort`, `filter`, `search`). Admin requests (`X-Admin-Key` or root user JWT) bypass listRule restrictions.
 - `GET /api/moul/:name/records/:id`: Get single record by ID.
 - `POST /api/moul/:name/records`: Create record.
@@ -167,6 +169,20 @@ When creating an `auth` collection, default access rules are automatically confi
 - `POST /api/moul/:name/auth-with-oauth2`: Authenticate with OAuth2 code (for SPAs and mobile apps).
 - `POST /api/oauth2/device/authorize`: Init OAuth2 device flow code.
 - `POST /api/oauth2/device/token`: Poll for OAuth2 device access token.
+
+### Background Worker Management (`/api/workers` - Admin / Auth Protected)
+- `GET /api/workers`: List background jobs from the built-in `_workers` queue with pagination (`page`, `perPage`), status filter (`state`), queue filter (`queue`), worker filter (`worker`), and sorting (`sort`).
+- `POST /api/workers`: Enqueue a background job directly into the `_workers` system table (`worker`, `queue`, `args`, `meta`, `tags`, `priority`, `max_attempts`, `scheduled_at`).
+- `GET /api/workers/:id`: Get details of a single background job by ID.
+- `PATCH /api/workers/:id`: Update job state (e.g. `available`, `discarded`, `cancelled`) or rescheduled time. Setting to `available` resets attempt counter and triggers execution.
+- `DELETE /api/workers/:id`: Permanently delete a job record from `_workers`.
+- `POST /api/workers/retry`: Reset discarded, cancelled, or specific worker jobs in `_workers` back to `available` state for immediate processing.
+
+### Request Observability & Analytics (Admin / Auth Protected)
+- `GET /api/requests`: List tracked HTTP request logs with pagination (`page`, `perPage`).
+- `GET /api/requests/:id`: Get tracked HTTP request details.
+- `GET /api/visits`: List visit sessions with pagination.
+- `GET /api/visits/:id`: Get visit session details.
 
 ### Feature Flags
 - `GET /api/feature-flags`: List feature flags.

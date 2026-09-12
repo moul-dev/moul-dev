@@ -219,3 +219,71 @@ func TestUnregisteredWorker(t *testing.T) {
 		t.Errorf("Expected job to be discarded, got %v", recordMap["state"])
 	}
 }
+
+func TestEngine_DefaultWorkersTable(t *testing.T) {
+	dbConn := initTestDB(t)
+
+	// Note: We do NOT create any custom worker moul here.
+	// We test that _workers works immediately out of the box.
+
+	engine := NewEngine(dbConn)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var executedJob *Job
+
+	engine.Register("SendReport", func(ctx context.Context, job *Job) error {
+		executedJob = job
+		wg.Done()
+		return nil
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	engine.Start(ctx)
+	defer engine.Stop()
+
+	// 1. Enqueue job with empty table name (should default to _workers)
+	jobOpts := map[string]interface{}{
+		"worker": "SendReport",
+		"args": map[string]interface{}{
+			"report_type": "weekly_summary",
+		},
+	}
+	jobRes, err := engine.Enqueue(ctx, "", jobOpts)
+	if err != nil {
+		t.Fatalf("Enqueue to default table failed: %v", err)
+	}
+
+	if jobRes["table"] != nil && jobRes["table"] != "" && jobRes["table"] != "_workers" {
+		t.Errorf("Expected job table to be _workers, got %v", jobRes["table"])
+	}
+
+	// Wait for handler execution
+	wg.Wait()
+
+	if executedJob == nil {
+		t.Fatal("Expected SendReport handler to be called")
+	}
+	if executedJob.Worker != "SendReport" {
+		t.Errorf("Expected worker SendReport, got %s", executedJob.Worker)
+	}
+	if executedJob.Args["report_type"] != "weekly_summary" {
+		t.Errorf("Expected report_type=weekly_summary, got %v", executedJob.Args)
+	}
+
+	// Wait for DB state to settle
+	time.Sleep(100 * time.Millisecond)
+
+	var record dbx.NullStringMap
+	err = dbConn.Select("*").From("_workers").Where(dbx.HashExp{"id": jobRes["id"]}).One(&record)
+	if err != nil {
+		t.Fatalf("Failed to fetch job record from _workers: %v", err)
+	}
+	recordMap := nullStringMapToMap(record)
+
+	if recordMap["state"] != "completed" {
+		t.Errorf("Expected job state to be 'completed' in _workers, got %v", recordMap["state"])
+	}
+}

@@ -91,7 +91,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt", "/_moul_", "/admin"}),
+		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/api/workers", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt", "/_moul_", "/admin"}),
 	))
 
 	// HTTP Request logging
@@ -121,6 +121,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	deviceFlowHandler := NewDeviceFlowHandler(dbConn)
 	visitsHandler := NewVisitsHandler(dbConn)
 	requestsHandler := NewRequestsHandler(dbConn)
+	workersHandler := NewWorkersHandler(dbConn, workerEngine)
 	settingsHandler := NewSettingsHandler(dbConn)
 	settingsHandler.Mailer = mailService
 	settingsHandler.TLSManager = tlsManager
@@ -280,7 +281,16 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	e.GET("/api/requests", requestsHandler.ListRequests)
 	e.GET("/api/requests/:id", requestsHandler.GetRequest)
 
-	// 6. System monitoring metrics (JWT/Admin-protected)
+	// 6. Background worker management (JWT/Admin-protected)
+	workersGroup := e.Group("/api/workers", middleware.RequireAuthOrAdmin(adminKey))
+	workersGroup.GET("", workersHandler.ListJobs)
+	workersGroup.POST("", workersHandler.CreateJob)
+	workersGroup.GET("/:id", workersHandler.GetJob)
+	workersGroup.PATCH("/:id", workersHandler.UpdateJob)
+	workersGroup.DELETE("/:id", workersHandler.DeleteJob)
+	workersGroup.POST("/retry", workersHandler.RetryJobs)
+
+	// 7. System monitoring metrics (JWT/Admin-protected)
 	sysmonHandler := NewSysmonHandler(sysmonCollector)
 	sysmonGroup := e.Group("/api/system/metrics", middleware.RequireAuthOrAdmin(adminKey))
 	sysmonGroup.GET("", sysmonHandler.GetMetrics)

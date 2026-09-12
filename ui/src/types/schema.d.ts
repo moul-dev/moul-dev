@@ -80,6 +80,9 @@ export interface PostsRecord extends BaseSystemFields {
 export interface TasksQueueRecord extends WorkerSystemFields {
 }
 
+export interface WorkersRecord extends WorkerSystemFields {
+}
+
 export interface UsersRecord extends AuthSystemFields {
   avatar?: string;
   bio?: string;
@@ -88,6 +91,7 @@ export interface UsersRecord extends AuthSystemFields {
 }
 
 export interface MoulSchema {
+  "_workers"?: WorkersRecord;
   "categories": CategoriesRecord;
   "events": EventsRecord;
   "posts": PostsRecord;

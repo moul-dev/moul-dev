@@ -29,6 +29,12 @@ func renderEmailTemplate(tmplStr string, data interface{}) (string, error) {
 }
 
 func findWorkerTable(dbConn *dbx.DB) (string, error) {
+	// First check if default _workers system table exists
+	var exists int
+	err := dbConn.NewQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='_workers'").Row(&exists)
+	if err == nil && exists > 0 {
+		return "_workers", nil
+	}
 	mouls, err := db.LoadAllMoul(dbConn)
 	if err != nil {
 		return "", err

@@ -17,7 +17,7 @@ func (s *Server) registerWorkerTools() {
 	listJobsTool := mcp.NewTool(
 		"moul_list_worker_jobs",
 		mcp.WithDescription("List background jobs from a worker table"),
-		mcp.WithString("table", mcp.Required(), mcp.Description("Worker table name (e.g. jobs)")),
+		mcp.WithString("table", mcp.Description("Worker table name (default: _workers)")),
 		mcp.WithString("state", mcp.Description("Filter by state: available, executing, completed, retryable, cancelled, discarded")),
 		mcp.WithInteger("limit", mcp.Description("Max records to fetch (default: 50)")),
 	)
@@ -27,7 +27,7 @@ func (s *Server) registerWorkerTools() {
 	enqueueJobTool := mcp.NewTool(
 		"moul_enqueue_job",
 		mcp.WithDescription("Enqueue a new background job into a worker table"),
-		mcp.WithString("table", mcp.Required(), mcp.Description("Worker table name")),
+		mcp.WithString("table", mcp.Description("Worker table name (default: _workers)")),
 		mcp.WithString("worker", mcp.Required(), mcp.Description("Worker handler name (e.g. SendEmail)")),
 		mcp.WithString("args_json", mcp.Description("JSON object with job arguments")),
 		mcp.WithString("queue", mcp.Description("Queue name (default: default)")),
@@ -39,7 +39,7 @@ func (s *Server) registerWorkerTools() {
 	cancelJobTool := mcp.NewTool(
 		"moul_cancel_job",
 		mcp.WithDescription("Cancel a pending or retryable worker job"),
-		mcp.WithString("table", mcp.Required(), mcp.Description("Worker table name")),
+		mcp.WithString("table", mcp.Description("Worker table name (default: _workers)")),
 		mcp.WithString("id", mcp.Required(), mcp.Description("Job ID")),
 	)
 	s.mcpServer.AddTool(cancelJobTool, s.handleCancelJob)
@@ -48,15 +48,17 @@ func (s *Server) registerWorkerTools() {
 func (s *Server) handleListWorkerJobs(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	tableName := req.GetString("table", "")
 	if tableName == "" {
-		return mcp.NewToolResultError("table parameter is required"), nil
+		tableName = "_workers"
 	}
 
-	moul, err := db.LoadMoulByName(s.dbConn, tableName)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("table %q not found: %v", tableName, err)), nil
-	}
-	if moul.Type != "worker" {
-		return mcp.NewToolResultError(fmt.Sprintf("table %q is not of type 'worker'", tableName)), nil
+	if tableName != "_workers" {
+		moul, err := db.LoadMoulByName(s.dbConn, tableName)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("table %q not found: %v", tableName, err)), nil
+		}
+		if moul.Type != "worker" {
+			return mcp.NewToolResultError(fmt.Sprintf("table %q is not of type 'worker'", tableName)), nil
+		}
 	}
 
 	stateFilter := req.GetString("state", "")
@@ -95,9 +97,12 @@ func (s *Server) handleListWorkerJobs(ctx context.Context, req mcp.CallToolReque
 
 func (s *Server) handleEnqueueJob(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	tableName := req.GetString("table", "")
+	if tableName == "" {
+		tableName = "_workers"
+	}
 	workerName := req.GetString("worker", "")
-	if tableName == "" || workerName == "" {
-		return mcp.NewToolResultError("table and worker parameters are required"), nil
+	if workerName == "" {
+		return mcp.NewToolResultError("worker parameter is required"), nil
 	}
 
 	argsJSON := req.GetString("args_json", "")
@@ -130,9 +135,12 @@ func (s *Server) handleEnqueueJob(ctx context.Context, req mcp.CallToolRequest) 
 
 func (s *Server) handleCancelJob(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	tableName := req.GetString("table", "")
+	if tableName == "" {
+		tableName = "_workers"
+	}
 	id := req.GetString("id", "")
-	if tableName == "" || id == "" {
-		return mcp.NewToolResultError("table and id parameters are required"), nil
+	if id == "" {
+		return mcp.NewToolResultError("id parameter is required"), nil
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)

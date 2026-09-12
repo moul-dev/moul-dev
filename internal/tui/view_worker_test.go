@@ -59,3 +59,19 @@ func TestWorkerPollingTick(t *testing.T) {
 		t.Fatalf("Expected StateWorkerMonitor, got %d", updatedM.State)
 	}
 }
+
+func TestGetWorkerMoulName_Default(t *testing.T) {
+	m := NewModel("http://localhost:8090", "testkey")
+	m.Mouls = []schema.Moul{
+		{Name: "posts", Type: "base"},
+		{Name: "users", Type: "auth"},
+	}
+	if name := m.getWorkerMoulName(); name != "_workers" {
+		t.Errorf("Expected default worker table to be '_workers', got %q", name)
+	}
+
+	m.Mouls = append(m.Mouls, schema.Moul{Name: "custom_queue", Type: "worker"})
+	if name := m.getWorkerMoulName(); name != "custom_queue" {
+		t.Errorf("Expected custom worker table to be 'custom_queue', got %q", name)
+	}
+}

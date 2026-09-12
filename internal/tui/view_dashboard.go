@@ -347,21 +347,16 @@ func (m *Model) fetchRecords() tea.Cmd {
 
 func (m *Model) fetchJobs() tea.Cmd {
 	return func() tea.Msg {
-		// Find a worker moul in our collections, or if none, try 'background_tasks'
-		workerMoul := ""
-		for _, moul := range m.Mouls {
-			if moul.Type == "worker" {
-				workerMoul = moul.Name
-				break
-			}
+		workerMoul := m.getWorkerMoulName()
+		var jobs []map[string]interface{}
+		var err error
+		if workerMoul == "_workers" {
+			jobs, err = m.Client.ListWorkers()
+		} else {
+			jobs, err = m.Client.ListRecords(workerMoul)
 		}
-		if workerMoul == "" {
-			workerMoul = "background_tasks" // default fallback
-		}
-
-		jobs, err := m.Client.ListRecords(workerMoul)
 		if err != nil {
-			// If moul doesn't exist, return empty list rather than error out
+			// If table doesn't exist, return empty list rather than error out
 			return JobsMsg{make([]map[string]interface{}, 0)}
 		}
 		return JobsMsg{jobs}

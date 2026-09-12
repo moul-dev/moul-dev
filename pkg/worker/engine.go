@@ -12,6 +12,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
 )
@@ -177,12 +178,20 @@ func (e *Engine) Trigger(tableName string, jobID string) {
 
 // Enqueue inserts a new job record programmatically.
 func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[string]interface{}) (map[string]interface{}, error) {
-	moul, err := db.LoadMoulByName(e.db, tableName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load moul: %w", err)
+	if tableName == "" {
+		tableName = "_workers"
 	}
-	if moul.Type != "worker" {
-		return nil, fmt.Errorf("moul '%s' is not of type 'worker'", tableName)
+
+	var customFields []schema.MoulField
+	if tableName != "_workers" {
+		moul, err := db.LoadMoulByName(e.db, tableName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load moul: %w", err)
+		}
+		if moul.Type != "worker" {
+			return nil, fmt.Errorf("moul '%s' is not of type 'worker'", tableName)
+		}
+		customFields = moul.Fields
 	}
 
 	workerVal, _ := jobOpts["worker"].(string)
@@ -193,7 +202,7 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 	insertData := make(map[string]interface{})
 
 	// Handle custom fields
-	for _, field := range moul.Fields {
+	for _, field := range customFields {
 		if val, ok := jobOpts[field.Name]; ok {
 			if field.Type == "json" {
 				bytes, err := json.Marshal(val)
@@ -280,16 +289,14 @@ func (e *Engine) Enqueue(ctx context.Context, tableName string, jobOpts map[stri
 		}
 	}
 
-	_, err = e.db.Insert(tableName, dbx.Params(insertData)).Execute()
-	if err != nil {
+	if _, err := e.db.Insert(tableName, dbx.Params(insertData)).Execute(); err != nil {
 		return nil, fmt.Errorf("failed to insert job record: %w", err)
 	}
 
 	// Fetch back and parse response format before triggering worker execution
 	var record dbx.NullStringMap
-	err = e.db.Select("*").From(tableName).Where(dbx.HashExp{"id": recordID}).One(&record)
-	if err != nil {
-		return nil, err
+	if err := e.db.Select("*").From(tableName).Where(dbx.HashExp{"id": recordID}).One(&record); err != nil {
+		return nil, fmt.Errorf("failed to fetch inserted job record: %w", err)
 	}
 
 	e.Trigger(tableName, recordID)
@@ -333,18 +340,20 @@ func (e *Engine) loop() {
 }
 
 func (e *Engine) pollAndRunJobs() {
-	// Find all tables that are of type "worker"
+	// Gather worker tables: built-in _workers system table and any custom worker collections
+	workerTables := []string{"_workers"}
 	mouls, err := db.LoadAllMoul(e.db)
 	if err != nil {
 		e.logger.Error("Failed to fetch mouls to poll background jobs", "error", err)
-		return
+	} else {
+		for _, moul := range mouls {
+			if moul.Type == "worker" && moul.Name != "_workers" {
+				workerTables = append(workerTables, moul.Name)
+			}
+		}
 	}
 
-	for _, moul := range mouls {
-		if moul.Type != "worker" {
-			continue
-		}
-
+	for _, tableName := range workerTables {
 		// Pull jobs until concurrency is full or no more jobs exist
 	pollLoop:
 		for {
@@ -358,12 +367,12 @@ func (e *Engine) pollAndRunJobs() {
 			select {
 			case e.activeJobs <- struct{}{}:
 				// slot acquired, poll next job
-				job, err := e.claimNextJob(moul.Name)
+				job, err := e.claimNextJob(tableName)
 				if err != nil {
 					// Release slot immediately if we didn't get a job
 					<-e.activeJobs
 					if err.Error() != "sql: no rows in result set" {
-						e.logger.Error("Failed to claim background job", "table", moul.Name, "error", err)
+						e.logger.Error("Failed to claim background job", "table", tableName, "error", err)
 					}
 					// Exit loop for this table since no jobs are available or there's a DB error
 					break pollLoop

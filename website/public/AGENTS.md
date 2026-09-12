@@ -205,6 +205,9 @@ When creating an `auth` collection, default access rules are automatically confi
 - `update`: `id = @request.auth.id` (users can only edit their own profile)
 - `delete`: `id = @request.auth.id` (users can only delete their own account)
 
+### System Table Protection
+All internal tables starting with `_*` (`_workers`, `_moul`, `_settings`, `_rootUsers`, `_visits`, `_requests`, `_feature_flags`, `_certmagic`, `_revoked_tokens`) are reserved and protected against dynamic record endpoints (`/api/moul/:name/*`). Requests to dynamic record routes for system tables immediately return `404 Not Found`. Use dedicated authenticated endpoints instead (e.g. `/api/workers` for worker jobs, `/api/requests` for request logs, `/api/visits` for visitor analytics, `/api/settings` for settings, `/api/setup` / `/api/admin` for root accounts).
+
 ---
 
 ## 7. Web Admin Console & TanStack DevTools Architecture
@@ -275,7 +278,7 @@ When developing or refactoring backend Go code:
 - **Strict camelCase Field Naming**: All collection custom field names must follow strict `camelCase` (`^[a-z][a-zA-Z0-9]*$`). Snake_case, dashes, PascalCase, and reserved words (`id`, `createdAt`, `updatedAt`, `createdat`, `updatedat`, plus auth collection credentials) are forbidden and rejected with HTTP 400.
 - **System Timestamps**: System timestamps are universally standardized as `createdAt` and `updatedAt` across all tables, models, handlers, and generated client types.
 - **JSON Field Tags**: All Go structs exposed via HTTP JSON APIs (such as `RateLimitRule` with `maxRequests` and `targetedUsers`, `Moul`, `Webhook`, `FileInfo`) must use `camelCase` JSON tags.
-- **System Tables**: Internal engine tables use reserved underscore naming: `_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`.
+- **System Tables**: Internal engine tables use reserved underscore naming: `_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`, `_workers`.
 
 
 

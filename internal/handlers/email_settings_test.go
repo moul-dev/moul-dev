@@ -13,6 +13,8 @@ import (
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/pkg/worker"
+	"github.com/pocketbase/dbx"
 )
 
 func TestEmailSettingsAndUpdate(t *testing.T) {
@@ -168,4 +170,86 @@ func TestSendTestEmailHandler(t *testing.T) {
 		t.Fatalf("Expected 200 OK for test email send, got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+func TestSendTestEmailHandler_WorkerQueue(t *testing.T) {
+	adminKey := "test-admin-key"
+	auth.InitJWT("test-jwt-secret")
+
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize memory DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	// Create test auth moul
+	moul := schema.Moul{
+		ID:        "auth-moul-1",
+		Name:      "users",
+		Type:      "auth",
+		Fields:    []schema.MoulField{},
+		Rules:     schema.MoulRules{},
+		CreatedAt: "2026-07-27T12:00:00Z",
+		UpdatedAt: "2026-07-27T12:00:00Z",
+	}
+
+	fieldsJSON, _ := moul.SerializeFields()
+	rulesJSON, _ := moul.SerializeRules()
+
+	_, err = dbConn.Insert("_moul", map[string]interface{}{
+		"id":        moul.ID,
+		"name":      moul.Name,
+		"type":      moul.Type,
+		"fields":    fieldsJSON,
+		"rules":     rulesJSON,
+		"createdAt": moul.CreatedAt,
+		"updatedAt": moul.UpdatedAt,
+	}).Execute()
+	if err != nil {
+		t.Fatalf("Failed to insert auth moul: %v", err)
+	}
+
+	analyticsEngine, err := analytics.NewEngine(dbConn, "")
+	if err != nil {
+		t.Fatalf("Failed to initialize analytics: %v", err)
+	}
+	defer analyticsEngine.Close()
+
+	workerEngine := worker.NewEngine(dbConn)
+
+	e := handlers.NewRouter(dbConn, workerEngine, analyticsEngine, nil, nil, nil, adminKey, true)
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	// Send test email with worker engine attached (no custom worker moul created, should queue to _workers)
+	payload, _ := json.Marshal(map[string]string{
+		"email":    "worker-recipient@example.com",
+		"template": "otp",
+	})
+
+	req, _ := http.NewRequest("POST", server.URL+"/api/moul/users/email-templates/test", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Admin-Key", adminKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send test email request: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK for test email send with worker queue, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Verify job was enqueued into _workers
+	var count int
+	err = dbConn.Select("COUNT(*)").From("_workers").Where(dbx.HashExp{"worker": "SendEmail"}).Row(&count)
+	if err != nil {
+		t.Fatalf("Failed to query _workers: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("Expected 1 SendEmail job enqueued in _workers, got %d", count)
+	}
 }

@@ -28,6 +28,7 @@ var SystemTables = []string{
 	"_certmagic",
 	"_revoked_tokens",
 	"_requests",
+	"_workers",
 }
 
 // IsSystemTable returns true if the table name has the reserved system prefix "_".
@@ -295,6 +296,39 @@ func EnsureSystemTables(db *dbx.DB) error {
 	_, err = db.NewQuery("CREATE INDEX IF NOT EXISTS idx_requests_path ON _requests (path);").Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create idx_requests_path index: %w", err)
+	}
+
+	// Create meta-table _workers for built-in and system background workers
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _workers (
+			id TEXT PRIMARY KEY,
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL,
+			state TEXT NOT NULL DEFAULT 'available',
+			queue TEXT NOT NULL DEFAULT 'default',
+			worker TEXT NOT NULL,
+			args TEXT NOT NULL DEFAULT '{}',
+			meta TEXT NOT NULL DEFAULT '{}',
+			tags TEXT NOT NULL DEFAULT '[]',
+			errors TEXT NOT NULL DEFAULT '[]',
+			attempt INTEGER NOT NULL DEFAULT 0,
+			max_attempts INTEGER NOT NULL DEFAULT 20,
+			priority INTEGER NOT NULL DEFAULT 0,
+			inserted_at TEXT NOT NULL,
+			scheduled_at TEXT NOT NULL,
+			attempted_at TEXT,
+			attempted_by TEXT,
+			cancelled_at TEXT,
+			completed_at TEXT,
+			discarded_at TEXT
+		);
+		CREATE INDEX IF NOT EXISTS idx_workers_job_processing ON _workers (state, queue, priority, scheduled_at, id);
+		CREATE INDEX IF NOT EXISTS idx_workers_worker ON _workers (worker);
+		CREATE INDEX IF NOT EXISTS idx_workers_state ON _workers (state);
+		CREATE INDEX IF NOT EXISTS idx_workers_scheduled_at ON _workers (scheduled_at);
+	`).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create _workers table: %w", err)
 	}
 
 	return nil
@@ -1077,11 +1111,15 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 	var totalDeleted int64
 	completedCutoffStr := time.Now().UTC().Add(-completedMaxAge).Format(time.RFC3339)
 
+	tables := []string{"_workers"}
 	for _, moul := range mouls {
-		if moul.Type != "worker" {
-			continue
+		if moul.Type == "worker" && moul.Name != "_workers" {
+			tables = append(tables, moul.Name)
 		}
-		quotedName := QuoteIdentifier(moul.Name)
+	}
+
+	for _, tableName := range tables {
+		quotedName := QuoteIdentifier(tableName)
 
 		// Delete completed jobs older than completedMaxAge
 		resCompleted, err := dbConn.NewQuery(fmt.Sprintf(
@@ -1089,7 +1127,7 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 			quotedName,
 		)).Bind(dbx.Params{"completed_cutoff": completedCutoffStr}).Execute()
 		if err != nil {
-			return totalDeleted, fmt.Errorf("failed to cleanup completed jobs in %s: %w", moul.Name, err)
+			return totalDeleted, fmt.Errorf("failed to cleanup completed jobs in %s: %w", tableName, err)
 		}
 		if rows, err := resCompleted.RowsAffected(); err == nil {
 			totalDeleted += rows
@@ -1102,7 +1140,7 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 				quotedName,
 			)).Execute()
 			if err != nil {
-				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", moul.Name, err)
+				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", tableName, err)
 			}
 			if rows, err := resDiscarded.RowsAffected(); err == nil {
 				totalDeleted += rows
@@ -1114,7 +1152,7 @@ func CleanupCompletedJobs(dbConn *dbx.DB, completedMaxAge time.Duration, discard
 				quotedName,
 			)).Bind(dbx.Params{"discarded_cutoff": discardedCutoffStr}).Execute()
 			if err != nil {
-				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", moul.Name, err)
+				return totalDeleted, fmt.Errorf("failed to cleanup discarded jobs in %s: %w", tableName, err)
 			}
 			if rows, err := resDiscarded.RowsAffected(); err == nil {
 				totalDeleted += rows

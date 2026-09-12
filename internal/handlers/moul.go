@@ -127,6 +127,9 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	if name == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name is required")
 	}
+	if strings.HasPrefix(name, "_") {
+		return echo.NewHTTPError(http.StatusBadRequest, "Cannot delete system collections")
+	}
 
 	// Verify moul exists
 	moul, err := db.LoadMoulByName(h.DB, name)
@@ -160,6 +163,9 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	name := c.Param("name")
 	if name == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name is required")
+	}
+	if strings.HasPrefix(name, "_") {
+		return echo.NewHTTPError(http.StatusBadRequest, "Cannot update system collections")
 	}
 
 	origMoul, err := db.LoadMoulByName(h.DB, name)

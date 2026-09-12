@@ -196,16 +196,19 @@ function WorkersPage() {
     queryFn: api.listMouls,
   });
 
-  const workerMouls = (mouls || []).filter((m: any) => m.type === 'worker');
-  const defaultMoul = workerMouls.length > 0 ? workerMouls[0].name : 'background_tasks';
-  const [selectedCollection, setSelectedCollection] = useState<string>(defaultMoul);
+  const userWorkerMouls = (mouls || []).filter((m: any) => m.type === 'worker' && m.name !== '_workers');
+  const allWorkerCollections = React.useMemo(() => [
+    { name: '_workers', label: '_workers (Built-in)' },
+    ...userWorkerMouls.map((m: any) => ({ name: m.name, label: m.name })),
+  ], [userWorkerMouls]);
+  const [selectedCollection, setSelectedCollection] = useState<string>('_workers');
 
-  // Sync selected collection if workerMouls loads after mount
+  // Sync selected collection if worker collections change
   React.useEffect(() => {
-    if (workerMouls.length > 0 && !workerMouls.some((m: any) => m.name === selectedCollection)) {
-      setSelectedCollection(workerMouls[0].name);
+    if (!allWorkerCollections.some((m: any) => m.name === selectedCollection)) {
+      setSelectedCollection('_workers');
     }
-  }, [workerMouls, selectedCollection]);
+  }, [allWorkerCollections, selectedCollection]);
 
   const {
     data: jobsData,
@@ -214,10 +217,12 @@ function WorkersPage() {
   } = useQuery({
     queryKey: ['workerJobs', selectedCollection],
     queryFn: () =>
-      api.listRecords(selectedCollection, {
-        perPage: 100,
-        sort: '-createdAt',
-      }),
+      selectedCollection === '_workers'
+        ? api.listWorkers({ perPage: 100, sort: '-createdAt' })
+        : api.listRecords(selectedCollection, {
+            perPage: 100,
+            sort: '-createdAt',
+          }),
     enabled: Boolean(selectedCollection),
     refetchInterval: 5000,
   });
@@ -231,10 +236,15 @@ function WorkersPage() {
   // Mutations
   const retryMutation = useMutation({
     mutationFn: (job: any) =>
-      api.updateRecord(selectedCollection, job.id, {
-        state: 'available',
-        scheduled_at: new Date().toISOString(),
-      }),
+      selectedCollection === '_workers'
+        ? api.updateWorkerJob(job.id, {
+            state: 'available',
+            scheduled_at: new Date().toISOString(),
+          })
+        : api.updateRecord(selectedCollection, job.id, {
+            state: 'available',
+            scheduled_at: new Date().toISOString(),
+          }),
     onSuccess: (_, job) => {
       queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
       toastQueue.add({
@@ -257,9 +267,13 @@ function WorkersPage() {
 
   const discardMutation = useMutation({
     mutationFn: (job: any) =>
-      api.updateRecord(selectedCollection, job.id, {
-        state: 'discarded',
-      }),
+      selectedCollection === '_workers'
+        ? api.updateWorkerJob(job.id, {
+            state: 'discarded',
+          })
+        : api.updateRecord(selectedCollection, job.id, {
+            state: 'discarded',
+          }),
     onSuccess: (_, job) => {
       queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
       toastQueue.add({
@@ -312,16 +326,16 @@ function WorkersPage() {
               <span>Queue ({jobs.length})</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-              {workerMouls.length > 1 && (
-                <div style={{ width: '200px' }}>
+              {allWorkerCollections.length > 1 && (
+                <div style={{ width: '220px' }}>
                   <Select
                     placeholder="Worker Collection"
                     selectedKey={selectedCollection}
                     onSelectionChange={(key) => setSelectedCollection(String(key))}
                   >
-                    {workerMouls.map((m: any) => (
+                    {allWorkerCollections.map((m: any) => (
                       <SelectItem key={m.name} id={m.name}>
-                        {m.name}
+                        {m.label}
                       </SelectItem>
                     ))}
                   </Select>

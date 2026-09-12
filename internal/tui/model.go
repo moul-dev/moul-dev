@@ -1596,7 +1596,13 @@ func (m *Model) pollWorkerCmd(delay time.Duration) tea.Cmd {
 func (m *Model) fetchJobsSilent() tea.Cmd {
 	return func() tea.Msg {
 		workerMoul := m.getWorkerMoulName()
-		jobs, err := m.Client.ListRecords(workerMoul)
+		var jobs []map[string]interface{}
+		var err error
+		if workerMoul == "_workers" {
+			jobs, err = m.Client.ListWorkers()
+		} else {
+			jobs, err = m.Client.ListRecords(workerMoul)
+		}
 		if err != nil {
 			return nil
 		}

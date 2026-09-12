@@ -252,6 +252,55 @@ func (c *Client) DeleteRecord(moulName string, id string) error {
 	return c.request("DELETE", path, nil, nil)
 }
 
+// ListWorkers retrieves worker jobs from /api/workers with optional query parameters.
+func (c *Client) ListWorkers(params ...map[string]string) ([]map[string]interface{}, error) {
+	path := "/api/workers"
+	if len(params) > 0 && len(params[0]) > 0 {
+		vals := url.Values{}
+		for k, v := range params[0] {
+			vals.Set(k, v)
+		}
+		path = fmt.Sprintf("/api/workers?%s", vals.Encode())
+	}
+
+	var res struct {
+		Items []map[string]interface{} `json:"items"`
+	}
+	err := c.request("GET", path, nil, &res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workers: %w", err)
+	}
+	return res.Items, nil
+}
+
+// GetWorker retrieves a single worker job by ID.
+func (c *Client) GetWorker(id string) (map[string]interface{}, error) {
+	var job map[string]interface{}
+	err := c.request("GET", fmt.Sprintf("/api/workers/%s", url.PathEscape(id)), nil, &job)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worker job: %w", err)
+	}
+	return job, nil
+}
+
+// UpdateWorker updates a worker job record (e.g. state, scheduled_at).
+func (c *Client) UpdateWorker(id string, data map[string]interface{}) (map[string]interface{}, error) {
+	var job map[string]interface{}
+	err := c.request("PATCH", fmt.Sprintf("/api/workers/%s", url.PathEscape(id)), data, &job)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update worker job: %w", err)
+	}
+	return job, nil
+}
+
+// RetryWorkers retries jobs in _workers table.
+func (c *Client) RetryWorkers(ids ...string) error {
+	payload := map[string]interface{}{
+		"ids": ids,
+	}
+	return c.request("POST", "/api/workers/retry", payload, nil)
+}
+
 // ListVisits retrieves the visits log (requires JWT authentication), optionally filtered by 'from' timestamp.
 func (c *Client) ListVisits(from ...string) ([]map[string]interface{}, error) {
 	path := "/api/visits"

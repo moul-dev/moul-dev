@@ -235,6 +235,9 @@ func validateFieldConstraints(field schema.MoulField, val interface{}, isUpdate 
 // CreateRecord handles inserting a dynamic record in a moul table.
 func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	moulName := c.Param("name")
+	if db.IsSystemTable(moulName) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -715,6 +718,9 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 // ListRecords queries records using server-side filtering, sorting, and pagination.
 func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	moulName := c.Param("name")
+	if db.IsSystemTable(moulName) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	moul, err := db.LoadMoulByName(h.DB, moulName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -953,6 +959,9 @@ func buildCursorWhere(dbEn dbx.Builder, moulName string, moul *schema.Moul, sort
 // GetRecord returns a single record by ID.
 func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	moulName := c.Param("name")
+	if db.IsSystemTable(moulName) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -1001,6 +1010,9 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 // UpdateRecord handles partial updates on fields.
 func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	moulName := c.Param("name")
+	if db.IsSystemTable(moulName) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -1311,6 +1323,9 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 // DeleteRecord deletes a record by ID.
 func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	moulName := c.Param("name")
+	if db.IsSystemTable(moulName) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	id := c.Param("id")
 
 	moul, err := db.LoadMoulByName(h.DB, moulName)
@@ -1769,6 +1784,9 @@ func buildRequestContext(c *echo.Context, body map[string]interface{}) map[strin
 // RetryJobs resets failed/discarded worker jobs in a worker moul back to available state.
 func (h *RecordHandler) RetryJobs(c *echo.Context) error {
 	name := c.Param("name")
+	if db.IsSystemTable(name) {
+		return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+	}
 	moul, err := db.LoadMoulByName(h.DB, name)
 	if err != nil || moul == nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection not found"})

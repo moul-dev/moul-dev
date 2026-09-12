@@ -276,6 +276,45 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ ids: ids || [] }),
     }),
+  listWorkers: (params?: {
+    page?: number;
+    perPage?: number;
+    state?: string;
+    queue?: string;
+    worker?: string;
+    sort?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.perPage) query.set('perPage', String(params.perPage));
+    if (params?.state && params.state !== 'all') query.set('state', params.state);
+    if (params?.queue) query.set('queue', params.queue);
+    if (params?.worker) query.set('worker', params.worker);
+    if (params?.sort) query.set('sort', params.sort);
+    const qs = query.toString();
+    return request<any>(`/api/workers${qs ? `?${qs}` : ''}`);
+  },
+  getWorkerJob: (id: string) =>
+    request<any>(`/api/workers/${id}`),
+  createWorkerJob: (data: any) =>
+    request<any>('/api/workers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateWorkerJob: (id: string, data: any) =>
+    request<any>(`/api/workers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteWorkerJob: (id: string) =>
+    request<any>(`/api/workers/${id}`, {
+      method: 'DELETE',
+    }),
+  retryWorkerJobs: (ids?: string[]) =>
+    request<any>('/api/workers/retry', {
+      method: 'POST',
+      body: JSON.stringify({ ids: ids || [] }),
+    }),
   exportRecords: async (
     name: string,
     options?: {
