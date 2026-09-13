@@ -26,8 +26,8 @@ import {
   DrawerBody,
   DrawerFooter,
   TextField,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   Alert,
   ModalOverlay,
   Modal,
@@ -497,15 +497,23 @@ function CollectionsPage() {
                             description="Unique table name for this collection."
                           />
 
-                          <Select
+                          <ComboBox
                             label="Collection Type"
                             placeholder="Select Type"
+                            menuTrigger="focus"
                             selectedKey={newMoulType}
-                            onSelectionChange={(key) => handleTypeChange(String(key))}
+                            onSelectionChange={(key) => {
+                              if (key) handleTypeChange(String(key));
+                            }}
+                            renderEmptyState={() => (
+                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                                No matching items found
+                              </div>
+                            )}
                           >
-                            <SelectItem id="base" textValue="Base — Standard data collection">Base — Standard data collection</SelectItem>
-                            <SelectItem id="auth" textValue="Auth — Users with authentication">Auth — Users with authentication</SelectItem>
-                          </Select>
+                            <ComboBoxItem id="base" textValue="Base — Standard data collection">Base — Standard data collection</ComboBoxItem>
+                            <ComboBoxItem id="auth" textValue="Auth — Users with authentication">Auth — Users with authentication</ComboBoxItem>
+                          </ComboBox>
 
                           {/* Fields Builder */}
                           <FieldsBuilder

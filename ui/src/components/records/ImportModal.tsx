@@ -9,8 +9,8 @@ import {
   ModalFooter,
   Button,
   Badge,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   Spinner,
   Alert,
   toastQueue,
@@ -417,26 +417,44 @@ export function ImportModal({
 
                   {/* Options */}
                   <div {...stylex.props(styles.optionsGrid)}>
-                    <Select
+                    <ComboBox
                       label="Conflict Mode"
+                      placeholder="Select conflict mode..."
+                      menuTrigger="focus"
                       selectedKey={mode}
-                      onSelectionChange={(key) => setMode(key as any)}
+                      onSelectionChange={(key) => {
+                        if (key) setMode(key as any);
+                      }}
                       isDisabled={isUploading}
+                      renderEmptyState={() => (
+                        <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                          No matching items found
+                        </div>
+                      )}
                     >
-                      <SelectItem id="upsert">Upsert (Insert new, update by ID)</SelectItem>
-                      <SelectItem id="insert">Insert Only (Fail on duplicate ID)</SelectItem>
-                      <SelectItem id="replace">Replace (Truncate collection first)</SelectItem>
-                    </Select>
+                      <ComboBoxItem id="upsert" textValue="Upsert (Insert new, update by ID)">Upsert (Insert new, update by ID)</ComboBoxItem>
+                      <ComboBoxItem id="insert" textValue="Insert Only (Fail on duplicate ID)">Insert Only (Fail on duplicate ID)</ComboBoxItem>
+                      <ComboBoxItem id="replace" textValue="Replace (Truncate collection first)">Replace (Truncate collection first)</ComboBoxItem>
+                    </ComboBox>
 
-                    <Select
+                    <ComboBox
                       label="Error Handling"
+                      placeholder="Select error handling..."
+                      menuTrigger="focus"
                       selectedKey={onError}
-                      onSelectionChange={(key) => setOnError(key as any)}
+                      onSelectionChange={(key) => {
+                        if (key) setOnError(key as any);
+                      }}
                       isDisabled={isUploading}
+                      renderEmptyState={() => (
+                        <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                          No matching items found
+                        </div>
+                      )}
                     >
-                      <SelectItem id="atomic">Atomic (Rollback entire batch)</SelectItem>
-                      <SelectItem id="continue">Continue (Skip invalid rows)</SelectItem>
-                    </Select>
+                      <ComboBoxItem id="atomic" textValue="Atomic (Rollback entire batch)">Atomic (Rollback entire batch)</ComboBoxItem>
+                      <ComboBoxItem id="continue" textValue="Continue (Skip invalid rows)">Continue (Skip invalid rows)</ComboBoxItem>
+                    </ComboBox>
                   </div>
                 </>
               )}

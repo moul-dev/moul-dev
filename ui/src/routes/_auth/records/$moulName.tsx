@@ -46,8 +46,8 @@ import {
   TextField,
   NumberField,
   TextArea,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   Checkbox,
   Spinner,
   DrawerOverlay,
@@ -704,6 +704,7 @@ interface RelationFieldInputProps {
 function RelationFieldInput({ label, required, relationConfig, value, onChange, isInvalid, errorMessage }: RelationFieldInputProps) {
   const targetMoul = relationConfig?.targetMoul || '';
   const card = relationConfig?.cardinality || '1:N';
+  const [mnInputValue, setMnInputValue] = useState('');
 
   // Query records from target collection
   const { data: targetData, isLoading } = useQuery({
@@ -819,27 +820,33 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange, 
         </div>
 
         {/* Add Record Dropdown */}
-        <Select
+        <ComboBox
           aria-label={`Add ${label} record`}
           placeholder={isLoading ? 'Loading records...' : `Select record to add to ${label}...`}
-          selectedKey=""
+          menuTrigger="focus"
+          inputValue={mnInputValue}
+          onInputChange={setMnInputValue}
+          selectedKey={null}
           onSelectionChange={(key) => {
-            if (key && String(key) !== '' && String(key) !== '__placeholder__') {
+            if (key && String(key) !== '') {
               handleToggle(String(key));
+              setMnInputValue('');
             }
           }}
+          renderEmptyState={() => (
+            <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+              No matching items found
+            </div>
+          )}
         >
-          <SelectItem id="__placeholder__" textValue="Select record to link...">
-            <em>Select record to link...</em>
-          </SelectItem>
           {targetRecords
             .filter((r) => !selectedIds.includes(String(r.id)))
             .map((rec) => (
-              <SelectItem key={rec.id} id={rec.id} textValue={getRecordDisplayLabel(rec)}>
+              <ComboBoxItem key={rec.id} id={rec.id} textValue={`${getRecordDisplayLabel(rec)} (${rec.id})`}>
                 {getRecordDisplayLabel(rec)} ({rec.id})
-              </SelectItem>
+              </ComboBoxItem>
             ))}
-        </Select>
+        </ComboBox>
         {isInvalid && errorMessage && (
           <div style={{ color: tokens.colorError500, fontSize: tokens.fontSizeXs, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
             <WarningCircleIcon size={14} />
@@ -874,24 +881,36 @@ function RelationFieldInput({ label, required, relationConfig, value, onChange, 
           {required && <span style={{ color: tokens.colorError500 }}>*</span>}
         </label>
       </div>
-      <Select
+      <ComboBox
         aria-label={`${label} (${card} ➔ ${targetMoul})`}
         placeholder={isLoading ? 'Loading target records...' : `Select ${targetMoul} record...`}
-        selectedKey={currentVal}
-        onSelectionChange={(key) => onChange(key === '__none__' ? '' : String(key))}
+        menuTrigger="focus"
+        selectedKey={currentVal || null}
+        onSelectionChange={(key) => {
+          if (!key || key === '__none__') {
+            onChange('');
+          } else {
+            onChange(String(key));
+          }
+        }}
         isRequired={required}
         isInvalid={isInvalid}
         errorMessage={errorMessage}
+        renderEmptyState={() => (
+          <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+            No matching items found
+          </div>
+        )}
       >
-        <SelectItem id="__none__" textValue="(None / Clear)">
+        <ComboBoxItem id="__none__" textValue="(None / Clear)">
           <em>(None / Clear)</em>
-        </SelectItem>
+        </ComboBoxItem>
         {targetRecords.map((rec) => (
-          <SelectItem key={rec.id} id={rec.id} textValue={getRecordDisplayLabel(rec)}>
+          <ComboBoxItem key={rec.id} id={rec.id} textValue={`${getRecordDisplayLabel(rec)} (${rec.id})`}>
             {getRecordDisplayLabel(rec)} ({rec.id})
-          </SelectItem>
+          </ComboBoxItem>
         ))}
-      </Select>
+      </ComboBox>
     </div>
   );
 }
@@ -2193,25 +2212,31 @@ function RecordsPage() {
                           errorMessage={formErrors[f.name]}
                         />
                       ) : f.type === 'select' && f.options && f.options.length > 0 ? (
-                        <Select
+                        <ComboBox
                           label={f.name}
                           placeholder={`Select ${f.name}`}
-                          selectedKey={formData[f.name] || ''}
+                          menuTrigger="focus"
+                          selectedKey={formData[f.name] || null}
                           onSelectionChange={(key) => {
-                            const val = String(key);
+                            const val = key ? String(key) : '';
                             handleFieldChange(f.name, val);
                             handleFieldBlur(f.name);
                           }}
                           isRequired={Boolean(f.required)}
                           isInvalid={Boolean(formErrors[f.name])}
                           errorMessage={formErrors[f.name]}
+                          renderEmptyState={() => (
+                            <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                              No matching items found
+                            </div>
+                          )}
                         >
                           {f.options.map((opt: string) => (
-                            <SelectItem key={opt} id={opt} textValue={opt}>
+                            <ComboBoxItem key={opt} id={opt} textValue={opt}>
                               {opt}
-                            </SelectItem>
+                            </ComboBoxItem>
                           ))}
-                        </Select>
+                        </ComboBox>
                       ) : f.type === 'json' ? (
                         <TextArea
                           label={f.name}

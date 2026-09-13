@@ -4,8 +4,8 @@ import {
   Button,
   TextField,
   NumberField,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   Checkbox,
   Badge,
   EmptyState,
@@ -607,24 +607,33 @@ export function FieldsBuilder({
                     isInvalid={isInvalid}
                   />
 
-                  <Select
+                  <ComboBox
+                    aria-label="Field Type"
                     placeholder="Select Type"
+                    menuTrigger="focus"
                     selectedKey={field.type}
-                    onSelectionChange={(val) => handleFieldChange(idx, 'type', String(val))}
+                    onSelectionChange={(val) => {
+                      if (val) handleFieldChange(idx, 'type', String(val));
+                    }}
+                    renderEmptyState={() => (
+                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                        No matching items found
+                      </div>
+                    )}
                   >
-                    <SelectItem id="text">Text (String)</SelectItem>
-                    <SelectItem id="number">Number</SelectItem>
-                    <SelectItem id="bool">Boolean</SelectItem>
-                    <SelectItem id="email">Email</SelectItem>
-                    <SelectItem id="url">URL</SelectItem>
-                    <SelectItem id="date">Date</SelectItem>
-                    <SelectItem id="datetime">Date & Time</SelectItem>
-                    <SelectItem id="file">File Attachment</SelectItem>
-                    <SelectItem id="json">JSON Object</SelectItem>
-                    <SelectItem id="editor">Rich Text</SelectItem>
-                    <SelectItem id="select">Single Select (Enum)</SelectItem>
-                    <SelectItem id="relation">Relation (Foreign Key)</SelectItem>
-                  </Select>
+                    <ComboBoxItem id="text" textValue="Text (String)">Text (String)</ComboBoxItem>
+                    <ComboBoxItem id="number" textValue="Number">Number</ComboBoxItem>
+                    <ComboBoxItem id="bool" textValue="Boolean">Boolean</ComboBoxItem>
+                    <ComboBoxItem id="email" textValue="Email">Email</ComboBoxItem>
+                    <ComboBoxItem id="url" textValue="URL">URL</ComboBoxItem>
+                    <ComboBoxItem id="date" textValue="Date">Date</ComboBoxItem>
+                    <ComboBoxItem id="datetime" textValue="Date & Time">Date & Time</ComboBoxItem>
+                    <ComboBoxItem id="file" textValue="File Attachment">File Attachment</ComboBoxItem>
+                    <ComboBoxItem id="json" textValue="JSON Object">JSON Object</ComboBoxItem>
+                    <ComboBoxItem id="editor" textValue="Rich Text">Rich Text</ComboBoxItem>
+                    <ComboBoxItem id="select" textValue="Single Select (Enum)">Single Select (Enum)</ComboBoxItem>
+                    <ComboBoxItem id="relation" textValue="Relation (Foreign Key)">Relation (Foreign Key)</ComboBoxItem>
+                  </ComboBox>
 
                   <Checkbox
                     isSelected={Boolean(field.required)}
@@ -764,40 +773,64 @@ export function FieldsBuilder({
                         </div>
 
                         <div {...stylex.props(styles.relationGrid)}>
-                          <Select
+                          <ComboBox
                             label="Target Collection"
                             placeholder="Choose collection"
+                            menuTrigger="focus"
                             selectedKey={field.relationConfig?.targetMoul || (allMouls?.[0]?.name || 'users')}
-                            onSelectionChange={(key) => handleRelationConfigChange(idx, 'targetMoul', String(key))}
+                            onSelectionChange={(key) => {
+                              if (key) handleRelationConfigChange(idx, 'targetMoul', String(key));
+                            }}
+                            renderEmptyState={() => (
+                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                                No matching items found
+                              </div>
+                            )}
                           >
                             {(allMouls || []).map((m: any) => (
-                              <SelectItem key={m.name} id={m.name} textValue={m.name}>
+                              <ComboBoxItem key={m.name} id={m.name} textValue={m.name}>
                                 {m.name} {m.name === currentMoulName ? '(Self)' : `(${m.type})`}
-                              </SelectItem>
+                              </ComboBoxItem>
                             ))}
-                          </Select>
+                          </ComboBox>
 
-                          <Select
+                          <ComboBox
                             label="Relationship Type"
                             placeholder="Choose cardinality"
+                            menuTrigger="focus"
                             selectedKey={field.relationConfig?.cardinality || '1:N'}
-                            onSelectionChange={(key) => handleRelationConfigChange(idx, 'cardinality', String(key))}
+                            onSelectionChange={(key) => {
+                              if (key) handleRelationConfigChange(idx, 'cardinality', String(key));
+                            }}
+                            renderEmptyState={() => (
+                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                                No matching items found
+                              </div>
+                            )}
                           >
-                            <SelectItem id="1:N" textValue="1:N Single Reference">1:N — Single Reference (Many-to-One)</SelectItem>
-                            <SelectItem id="1:1" textValue="1:1 Unique Reference">1:1 — Unique Reference (One-to-One)</SelectItem>
-                            <SelectItem id="M:N" textValue="M:N Multiple References">M:N — Multiple References (Many-to-Many)</SelectItem>
-                          </Select>
+                            <ComboBoxItem id="1:N" textValue="1:N Single Reference">1:N — Single Reference (Many-to-One)</ComboBoxItem>
+                            <ComboBoxItem id="1:1" textValue="1:1 Unique Reference">1:1 — Unique Reference (One-to-One)</ComboBoxItem>
+                            <ComboBoxItem id="M:N" textValue="M:N Multiple References">M:N — Multiple References (Many-to-Many)</ComboBoxItem>
+                          </ComboBox>
 
-                          <Select
+                          <ComboBox
                             label="When Target is Deleted"
                             placeholder="Choose delete rule"
+                            menuTrigger="focus"
                             selectedKey={field.relationConfig?.onDelete || 'SET_NULL'}
-                            onSelectionChange={(key) => handleRelationConfigChange(idx, 'onDelete', String(key))}
+                            onSelectionChange={(key) => {
+                              if (key) handleRelationConfigChange(idx, 'onDelete', String(key));
+                            }}
+                            renderEmptyState={() => (
+                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                                No matching items found
+                              </div>
+                            )}
                           >
-                            <SelectItem id="SET_NULL" textValue="SET_NULL">SET_NULL (Clear link, keep record)</SelectItem>
-                            <SelectItem id="CASCADE" textValue="CASCADE">CASCADE (Delete record too)</SelectItem>
-                            <SelectItem id="RESTRICT" textValue="RESTRICT">RESTRICT (Prevent deleting target)</SelectItem>
-                          </Select>
+                            <ComboBoxItem id="SET_NULL" textValue="SET_NULL">SET_NULL (Clear link, keep record)</ComboBoxItem>
+                            <ComboBoxItem id="CASCADE" textValue="CASCADE">CASCADE (Delete record too)</ComboBoxItem>
+                            <ComboBoxItem id="RESTRICT" textValue="RESTRICT">RESTRICT (Prevent deleting target)</ComboBoxItem>
+                          </ComboBox>
                         </div>
                       </div>
                     )}

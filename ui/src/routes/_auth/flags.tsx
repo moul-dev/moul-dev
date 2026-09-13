@@ -29,8 +29,8 @@ import {
   TextField,
   TextArea,
   Checkbox,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   ModalOverlay,
   Modal,
   AlertDialog,
@@ -388,20 +388,29 @@ function FeatureFlagsPage() {
             <DrawerBody>
               <div {...stylex.props(styles.drawerForm)}>
                 {flags && flags.length > 0 && (
-                  <Select
+                  <ComboBox
                     label="Select Target Flag"
-                    selectedKey={evalFlagKey}
+                    placeholder="Search or select flag..."
+                    menuTrigger="focus"
+                    selectedKey={evalFlagKey || null}
                     onSelectionChange={(key) => {
-                      setEvalFlagKey(String(key));
-                      setEvalResult(null);
+                      if (key) {
+                        setEvalFlagKey(String(key));
+                        setEvalResult(null);
+                      }
                     }}
+                    renderEmptyState={() => (
+                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                        No matching items found
+                      </div>
+                    )}
                   >
                     {flags.map((f: any) => (
-                      <SelectItem key={f.key} id={f.key} textValue={f.key}>
+                      <ComboBoxItem key={f.key} id={f.key} textValue={f.key}>
                         {f.key} ({f.enabled ? 'ON' : 'OFF'})
-                      </SelectItem>
+                      </ComboBoxItem>
                     ))}
-                  </Select>
+                  </ComboBox>
                 )}
 
                 <div>

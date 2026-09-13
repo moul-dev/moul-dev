@@ -44,8 +44,8 @@ import {
   Switch,
   TextField,
   TextArea,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   DrawerOverlay,
   Drawer,
   DrawerDialog,
@@ -1596,23 +1596,30 @@ function SettingsPage() {
                     onChange={(val) => setRateLimitForm({ ...rateLimitForm, interval: Number(val) })}
                     isRequired
                   />
-                  <Select
+                  <ComboBox
                     label="Target Audience"
-                    selectedKey={rateLimitForm.targetedUsers}
-                    onSelectionChange={(key) =>
-                      setRateLimitForm({ ...rateLimitForm, targetedUsers: String(key) })
-                    }
+                    placeholder="Select audience..."
+                    menuTrigger="focus"
+                    selectedKey={rateLimitForm.targetedUsers || null}
+                    onSelectionChange={(key) => {
+                      if (key) setRateLimitForm({ ...rateLimitForm, targetedUsers: String(key) });
+                    }}
+                    renderEmptyState={() => (
+                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                        No matching items found
+                      </div>
+                    )}
                   >
-                    <SelectItem id="all" textValue="All Users (all)">
+                    <ComboBoxItem id="all" textValue="All Users (all)">
                       All Users (all)
-                    </SelectItem>
-                    <SelectItem id="authenticated" textValue="Authenticated Only (authenticated)">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="authenticated" textValue="Authenticated Only (authenticated)">
                       Authenticated Only (authenticated)
-                    </SelectItem>
-                    <SelectItem id="guest" textValue="Guests Only (guest)">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="guest" textValue="Guests Only (guest)">
                       Guests Only (guest)
-                    </SelectItem>
-                  </Select>
+                    </ComboBoxItem>
+                  </ComboBox>
                 </div>
               )}
 
@@ -1649,30 +1656,39 @@ function SettingsPage() {
                   >
                     Enable Transactional Email Delivery
                   </Switch>
-                  <Select
+                  <ComboBox
                     label="Email Delivery Provider"
-                    selectedKey={emailForm.email_provider}
-                    onSelectionChange={(key) => setEmailForm({ ...emailForm, email_provider: String(key) })}
+                    placeholder="Select provider..."
+                    menuTrigger="focus"
+                    selectedKey={emailForm.email_provider || null}
+                    onSelectionChange={(key) => {
+                      if (key) setEmailForm({ ...emailForm, email_provider: String(key) });
+                    }}
+                    renderEmptyState={() => (
+                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                        No matching items found
+                      </div>
+                    )}
                   >
-                    <SelectItem id="console" textValue="Console (Local Dev / Stdout)">
+                    <ComboBoxItem id="console" textValue="Console (Local Dev / Stdout)">
                       Console (Local Dev / Stdout)
-                    </SelectItem>
-                    <SelectItem id="ses" textValue="Amazon SES">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="ses" textValue="Amazon SES">
                       Amazon SES
-                    </SelectItem>
-                    <SelectItem id="resend" textValue="Resend">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="resend" textValue="Resend">
                       Resend
-                    </SelectItem>
-                    <SelectItem id="mailgun" textValue="Mailgun">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="mailgun" textValue="Mailgun">
                       Mailgun
-                    </SelectItem>
-                    <SelectItem id="sendgrid" textValue="SendGrid">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="sendgrid" textValue="SendGrid">
                       SendGrid
-                    </SelectItem>
-                    <SelectItem id="cloudflare" textValue="Cloudflare Email Workers">
+                    </ComboBoxItem>
+                    <ComboBoxItem id="cloudflare" textValue="Cloudflare Email Workers">
                       Cloudflare Email Workers
-                    </SelectItem>
-                  </Select>
+                    </ComboBoxItem>
+                  </ComboBox>
                   <TextField
                     label="From Address"
                     type="email"

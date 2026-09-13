@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { PlayIcon, StopIcon, TrashIcon, BroadcastIcon } from '@phosphor-icons/react';
 import {
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   Badge,
   Button,
   Card,
@@ -167,18 +167,27 @@ function RealtimePage() {
           <div {...stylex.props(styles.toolbar)}>
             <div {...stylex.props(styles.controls)}>
               <div style={{ width: '280px' }}>
-                <Select
+                <ComboBox
+                  aria-label="Select Collection"
                   placeholder="Select Collection"
-                  selectedKey={selectedMoul}
-                  onSelectionChange={(key) => setSelectedMoul(String(key))}
+                  menuTrigger="focus"
+                  selectedKey={selectedMoul || '*'}
+                  onSelectionChange={(key) => {
+                    if (key) setSelectedMoul(String(key));
+                  }}
+                  renderEmptyState={() => (
+                    <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                      No matching items found
+                    </div>
+                  )}
                 >
-                  <SelectItem id="*">All collections</SelectItem>
+                  <ComboBoxItem id="*" textValue="All collections">All collections</ComboBoxItem>
                   {mouls?.map((m: any) => (
-                    <SelectItem key={m.name} id={m.name}>
+                    <ComboBoxItem key={m.name} id={m.name} textValue={m.name}>
                       {m.name}
-                    </SelectItem>
+                    </ComboBoxItem>
                   ))}
-                </Select>
+                </ComboBox>
               </div>
               <Button
                 variant={isConnected ? 'danger' : 'primary'}

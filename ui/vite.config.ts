@@ -21,27 +21,37 @@ export default defineConfig({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
     }),
-    stylex.vite({
-      useCSSLayers: true,
-      unstable_moduleResolution: {
-        type: 'custom',
-        filePathResolver: (importPath, sourceFilePath) => {
-          if (importPath === '@moul-dev/ui/tokens.stylex' || importPath === '@moul-dev/ui/tokens') {
-            return path.resolve(__dirname, 'node_modules/@moul-dev/ui/dist/tokens.stylex.js');
-          }
-          if (importPath.startsWith('.')) {
-            return path.resolve(path.dirname(sourceFilePath), importPath);
-          }
-          return undefined;
+    (() => {
+      const plugin: any = stylex.vite({
+        useCSSLayers: true,
+        unstable_moduleResolution: {
+          type: 'custom',
+          filePathResolver: (importPath, sourceFilePath) => {
+            if (importPath === '@moul-dev/ui/tokens.stylex' || importPath === '@moul-dev/ui/tokens') {
+              return path.resolve(__dirname, 'node_modules/@moul-dev/ui/dist/tokens.stylex.js');
+            }
+            if (importPath.startsWith('.')) {
+              return path.resolve(path.dirname(sourceFilePath), importPath);
+            }
+            return undefined;
+          },
+          getCanonicalFilePath: (filePath) => {
+            if (filePath.includes('@moul-dev/ui') && filePath.includes('tokens.stylex')) {
+              return '@moul-dev/ui:src/tokens/tokens.stylex.ts';
+            }
+            return path.relative(__dirname, filePath);
+          },
         },
-        getCanonicalFilePath: (filePath) => {
-          if (filePath.includes('@moul-dev/ui') && filePath.includes('tokens.stylex')) {
-            return '@moul-dev/ui:src/tokens/tokens.stylex.ts';
-          }
-          return path.relative(__dirname, filePath);
-        },
-      },
-    }),
+      });
+      const origTransformInclude = plugin.transformInclude;
+      plugin.transformInclude = (id: string) => {
+        if (id.includes('@moul-dev/ui/dist/moul-ui')) {
+          return false;
+        }
+        return origTransformInclude ? origTransformInclude(id) : true;
+      };
+      return plugin;
+    })(),
     react(),
   ],
   base: '/_moul_/',

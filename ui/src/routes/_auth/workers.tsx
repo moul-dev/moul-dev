@@ -28,8 +28,8 @@ import {
   TableSkeleton,
   TableEmpty,
   EmptyState,
-  Select,
-  SelectItem,
+  ComboBox,
+  ComboBoxItem,
   DrawerOverlay,
   Drawer,
   DrawerDialog,
@@ -328,17 +328,26 @@ function WorkersPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
               {allWorkerCollections.length > 1 && (
                 <div style={{ width: '220px' }}>
-                  <Select
+                  <ComboBox
+                    aria-label="Worker Collection"
                     placeholder="Worker Collection"
-                    selectedKey={selectedCollection}
-                    onSelectionChange={(key) => setSelectedCollection(String(key))}
+                    menuTrigger="focus"
+                    selectedKey={selectedCollection || null}
+                    onSelectionChange={(key) => {
+                      if (key) setSelectedCollection(String(key));
+                    }}
+                    renderEmptyState={() => (
+                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                        No matching items found
+                      </div>
+                    )}
                   >
                     {allWorkerCollections.map((m: any) => (
-                      <SelectItem key={m.name} id={m.name}>
+                      <ComboBoxItem key={m.name} id={m.name} textValue={m.label || m.name}>
                         {m.label}
-                      </SelectItem>
+                      </ComboBoxItem>
                     ))}
-                  </Select>
+                  </ComboBox>
                 </div>
               )}
               <Button variant="secondary" onPress={() => refetchJobs()}>
