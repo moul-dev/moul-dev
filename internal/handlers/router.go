@@ -22,9 +22,29 @@ import (
 // RouterConfig holds optional configuration settings for creating an Echo router.
 type RouterConfig struct {
 	Version        string
+	APIPrefix      *string
 	AdminUIOptions AdminUIOptions
 	DisableAdminUI bool
 	MCPServer      *moulmcp.Server
+}
+
+// NormalizeAPIPrefix normalizes the API path prefix.
+// If prefix is nil, the default "/api" is returned.
+// An empty string or "/" normalizes to "" (mounted at root).
+// Non-empty prefixes will always start with "/" and have no trailing slash (e.g. "/v1").
+func NormalizeAPIPrefix(prefix *string) string {
+	if prefix == nil {
+		return "/api"
+	}
+	p := strings.TrimSpace(*prefix)
+	p = strings.TrimRight(p, "/")
+	if p == "" || p == "/" {
+		return ""
+	}
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return p
 }
 
 // NewRouter constructs and returns a fully configured Echo server instance with default options.
@@ -52,6 +72,15 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 		appVersion = "dev"
 	}
 
+	apiPrefix := NormalizeAPIPrefix(cfg.APIPrefix)
+	apiPath := func(path string) string {
+		clean := "/" + strings.TrimLeft(path, "/")
+		if apiPrefix == "" {
+			return clean
+		}
+		return apiPrefix + clean
+	}
+
 	if analyticsEngine == nil {
 		analyticsEngine, _ = analytics.NewEngine(dbConn, "")
 	}
@@ -60,6 +89,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	}
 
 	docsHandler := NewDocsHandler(dbConn, appVersion)
+	docsHandler.SetAPIPrefix(apiPrefix)
 
 	// ── Global Middleware ────────────────────────────────────────────
 
@@ -91,7 +121,19 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 
 	// Request tracking middleware (creates visit sessions, tracks all requests)
 	e.Use(middleware.RequestTracker(analyticsEngine, !isDev,
-		middleware.WithExcludePaths([]string{"/api/visits", "/api/requests", "/api/workers", "/openapi.yml", "/openapi.json", "/docs", "/api/mcp", "/AGENTS.md", "/llms.txt", "/llms-full.txt", "/_moul_", "/admin"}),
+		middleware.WithExcludePaths([]string{
+			apiPath("/visits"),
+			apiPath("/requests"),
+			apiPath("/workers"),
+			"/openapi.yml",
+			"/openapi.json",
+			"/docs",
+			apiPath("/mcp"),
+			"/AGENTS.md",
+			"/llms.txt",
+			"/llms-full.txt",
+			"/_moul_",
+		}),
 	))
 
 	// HTTP Request logging
@@ -143,10 +185,10 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	// ── API Routes ──────────────────────────────────────────────────
 
 	// Built-in MCP Server SSE endpoint (Admin-protected)
-	e.Any("/api/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+	e.Any(apiPath("/mcp*"), mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Rule expression testing and validation sandbox
-	e.POST("/api/rules/test", rulesTestHandler.TestRule, middleware.RequireAuthOrAdmin(adminKey))
+	e.POST(apiPath("/rules/test"), rulesTestHandler.TestRule, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Documentation & AI Agent Specification endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
@@ -160,7 +202,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	e.GET("/llms-full.txt", docsHandler.ServeLLMSFullTxt)
 
 	// Setup & Admin Console authentication (AdminKey-protected)
-	setupGroup := e.Group("/api/setup", middleware.RequireAdminKey(adminKey))
+	setupGroup := e.Group(apiPath("/setup"), middleware.RequireAdminKey(adminKey))
 	setupGroup.GET("", setupHandler.CheckSetupStatus)
 	setupGroup.POST("", setupHandler.SetupRootUser)
 	setupGroup.GET("/account", setupHandler.GetRootAccount)
@@ -169,7 +211,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	setupGroup.POST("/password", setupHandler.UpdateRootPassword)
 	setupGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 
-	adminAuthGroup := e.Group("/api/admin", middleware.RequireAdminKey(adminKey))
+	adminAuthGroup := e.Group(apiPath("/admin"), middleware.RequireAdminKey(adminKey))
 	adminAuthGroup.POST("/login", setupHandler.AdminLogin)
 	adminAuthGroup.GET("/account", setupHandler.GetRootAccount)
 	adminAuthGroup.POST("/account", setupHandler.UpdateRootAccount)
@@ -178,15 +220,15 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	adminAuthGroup.PATCH("/password", setupHandler.UpdateRootPassword)
 	adminAuthGroup.POST("/reload", settingsHandler.ReloadSettings)
 
-	e.GET("/api/settings/account", setupHandler.GetRootAccount, middleware.RequireAdminKey(adminKey))
-	e.POST("/api/settings/account", setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
-	e.PATCH("/api/settings/account", setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
-	e.POST("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
-	e.PATCH("/api/settings/password", setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
-	e.POST("/api/settings/reload", settingsHandler.ReloadSettings, middleware.RequireAdminKey(adminKey))
+	e.GET(apiPath("/settings/account"), setupHandler.GetRootAccount, middleware.RequireAdminKey(adminKey))
+	e.POST(apiPath("/settings/account"), setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
+	e.PATCH(apiPath("/settings/account"), setupHandler.UpdateRootAccount, middleware.RequireAdminKey(adminKey))
+	e.POST(apiPath("/settings/password"), setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
+	e.PATCH(apiPath("/settings/password"), setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
+	e.POST(apiPath("/settings/reload"), settingsHandler.ReloadSettings, middleware.RequireAdminKey(adminKey))
 
 	// Feature flags management & evaluation (Admin-protected)
-	flagsGroup := e.Group("/api/feature-flags", middleware.RequireAuthOrAdmin(adminKey))
+	flagsGroup := e.Group(apiPath("/feature-flags"), middleware.RequireAuthOrAdmin(adminKey))
 	flagsGroup.GET("", flagsHandler.ListFlags)
 	flagsGroup.POST("", flagsHandler.CreateFlag)
 	flagsGroup.GET("/:key", flagsHandler.GetFlag)
@@ -195,7 +237,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	flagsGroup.POST("/:key/eval", flagsHandler.EvaluateFlag)
 
 	// 1. Moul schema management (Admin-protected)
-	adminGroup := e.Group("/api/moul", middleware.RequireAuthOrAdmin(adminKey))
+	adminGroup := e.Group(apiPath("/moul"), middleware.RequireAuthOrAdmin(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.GET("/:name", moulHandler.GetMoul)
 	adminGroup.PATCH("/:name", moulHandler.UpdateMoul)
@@ -216,73 +258,73 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	adminGroup.POST("/:name/import", exportImportHandler.ImportRecords)
 
 	// Admin settings management (Admin-protected)
-	adminSettingsGroup := e.Group("/api/settings", middleware.RequireAuthOrAdmin(adminKey))
+	adminSettingsGroup := e.Group(apiPath("/settings"), middleware.RequireAuthOrAdmin(adminKey))
 	adminSettingsGroup.GET("", settingsHandler.GetSettings)
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 
 	// File upload & storage management endpoints (Requires auth or admin key)
-	e.POST("/api/upload", uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
-	e.GET("/api/upload", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
-	e.GET("/api/files", uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
-	e.DELETE("/api/upload/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
-	e.DELETE("/api/files/*", uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.POST(apiPath("/upload"), uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET(apiPath("/upload"), uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET(apiPath("/files"), uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE(apiPath("/upload/*"), uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.DELETE(apiPath("/files/*"), uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Storage directory serving (local or S3 redirect)
 	e.GET("/storage/*", uploadHandler.ServeStorage)
 
 	// Public moul listing (read-only, no admin key needed)
-	e.GET("/api/moul", moulHandler.ListMoul)
+	e.GET(apiPath("/moul"), moulHandler.ListMoul)
 
 	// 2. Auth collections
 	authGroup := e.Group("")
-	authGroup.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
-	authGroup.POST("/api/moul/:name/request-password-reset", authHandler.RequestPasswordReset)
-	authGroup.POST("/api/moul/:name/confirm-password-reset", authHandler.ConfirmPasswordReset)
-	authGroup.POST("/api/moul/:name/refresh", authHandler.RefreshToken)
-	authGroup.POST("/api/moul/:name/auth-refresh", authHandler.RefreshToken)
-	authGroup.POST("/api/moul/:name/logout", authHandler.Logout)
-	authGroup.POST("/api/moul/:name/otp/request", authHandler.RequestOTP)
-	authGroup.POST("/api/moul/:name/auth-with-otp", authHandler.AuthWithOTP)
-	authGroup.POST("/api/moul/:name/passkey/register/options", authHandler.PasskeyRegisterOptions)
-	authGroup.POST("/api/moul/:name/passkey/register/verify", authHandler.PasskeyRegisterVerify)
-	authGroup.POST("/api/moul/:name/passkey/signup/options", authHandler.PasskeySignupOptions)
-	authGroup.POST("/api/moul/:name/passkey/signup/verify", authHandler.PasskeySignupVerify)
-	authGroup.POST("/api/moul/:name/passkey/login/options", authHandler.PasskeyLoginOptions)
-	authGroup.POST("/api/moul/:name/passkey/login/verify", authHandler.PasskeyLoginVerify)
-	authGroup.GET("/api/moul/:name/auth-methods", authHandler.GetAuthMethods)
-	authGroup.GET("/api/moul/:name/oauth2/:provider", authHandler.OAuth2Authorize)
-	authGroup.GET("/api/moul/:name/oauth2/:provider/callback", authHandler.OAuth2Callback)
-	authGroup.POST("/api/moul/:name/oauth2/:provider/callback", authHandler.OAuth2Callback)
-	authGroup.POST("/api/moul/:name/auth-with-oauth2", authHandler.AuthWithOAuth2)
-	authGroup.POST("/api/oauth2/device/authorize", deviceFlowHandler.DeviceAuthorize)
-	authGroup.POST("/api/oauth2/device/token", deviceFlowHandler.DeviceToken)
+	authGroup.POST(apiPath("/moul/:name/auth-with-password"), authHandler.AuthWithPassword)
+	authGroup.POST(apiPath("/moul/:name/request-password-reset"), authHandler.RequestPasswordReset)
+	authGroup.POST(apiPath("/moul/:name/confirm-password-reset"), authHandler.ConfirmPasswordReset)
+	authGroup.POST(apiPath("/moul/:name/refresh"), authHandler.RefreshToken)
+	authGroup.POST(apiPath("/moul/:name/auth-refresh"), authHandler.RefreshToken)
+	authGroup.POST(apiPath("/moul/:name/logout"), authHandler.Logout)
+	authGroup.POST(apiPath("/moul/:name/otp/request"), authHandler.RequestOTP)
+	authGroup.POST(apiPath("/moul/:name/auth-with-otp"), authHandler.AuthWithOTP)
+	authGroup.POST(apiPath("/moul/:name/passkey/register/options"), authHandler.PasskeyRegisterOptions)
+	authGroup.POST(apiPath("/moul/:name/passkey/register/verify"), authHandler.PasskeyRegisterVerify)
+	authGroup.POST(apiPath("/moul/:name/passkey/signup/options"), authHandler.PasskeySignupOptions)
+	authGroup.POST(apiPath("/moul/:name/passkey/signup/verify"), authHandler.PasskeySignupVerify)
+	authGroup.POST(apiPath("/moul/:name/passkey/login/options"), authHandler.PasskeyLoginOptions)
+	authGroup.POST(apiPath("/moul/:name/passkey/login/verify"), authHandler.PasskeyLoginVerify)
+	authGroup.GET(apiPath("/moul/:name/auth-methods"), authHandler.GetAuthMethods)
+	authGroup.GET(apiPath("/moul/:name/oauth2/:provider"), authHandler.OAuth2Authorize)
+	authGroup.GET(apiPath("/moul/:name/oauth2/:provider/callback"), authHandler.OAuth2Callback)
+	authGroup.POST(apiPath("/moul/:name/oauth2/:provider/callback"), authHandler.OAuth2Callback)
+	authGroup.POST(apiPath("/moul/:name/auth-with-oauth2"), authHandler.AuthWithOAuth2)
+	authGroup.POST(apiPath("/oauth2/device/authorize"), deviceFlowHandler.DeviceAuthorize)
+	authGroup.POST(apiPath("/oauth2/device/token"), deviceFlowHandler.DeviceToken)
 	authGroup.GET("/device", deviceFlowHandler.RenderDeviceForm)
 	authGroup.POST("/device/verify", deviceFlowHandler.VerifyDevice)
 	authGroup.GET("/favicon.svg", deviceFlowHandler.ServeFavicon)
 	authGroup.GET("/favicon.ico", deviceFlowHandler.ServeFavicon)
 
 	// 3. Record management (Data CRUD) — protected by per-moul rules
-	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
-	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
-	e.GET("/api/moul/:name/records/:id", recordHandler.GetRecord)
-	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
-	e.DELETE("/api/moul/:name/records/:id", recordHandler.DeleteRecord)
-	e.POST("/api/moul/:name/retry-jobs", recordHandler.RetryJobs, middleware.RequireAuthOrAdmin(adminKey))
+	e.POST(apiPath("/moul/:name/records"), recordHandler.CreateRecord)
+	e.GET(apiPath("/moul/:name/records"), recordHandler.ListRecords)
+	e.GET(apiPath("/moul/:name/records/:id"), recordHandler.GetRecord)
+	e.PATCH(apiPath("/moul/:name/records/:id"), recordHandler.UpdateRecord)
+	e.DELETE(apiPath("/moul/:name/records/:id"), recordHandler.DeleteRecord)
+	e.POST(apiPath("/moul/:name/retry-jobs"), recordHandler.RetryJobs, middleware.RequireAuthOrAdmin(adminKey))
 
 	// Real-time SSE record subscriptions
-	e.GET("/api/moul/:name/subscribe", realtimeHandler.SubscribeCollection)
-	e.GET("/api/moul/subscribe", realtimeHandler.SubscribeGlobal)
+	e.GET(apiPath("/moul/:name/subscribe"), realtimeHandler.SubscribeCollection)
+	e.GET(apiPath("/moul/subscribe"), realtimeHandler.SubscribeGlobal)
 
 	// 4. Analytics visits log (JWT-protected)
-	e.GET("/api/visits", visitsHandler.ListVisits)
-	e.GET("/api/visits/:id", visitsHandler.GetVisit)
+	e.GET(apiPath("/visits"), visitsHandler.ListVisits)
+	e.GET(apiPath("/visits/:id"), visitsHandler.GetVisit)
 
 	// 5. Request tracking log (JWT-protected)
-	e.GET("/api/requests", requestsHandler.ListRequests)
-	e.GET("/api/requests/:id", requestsHandler.GetRequest)
+	e.GET(apiPath("/requests"), requestsHandler.ListRequests)
+	e.GET(apiPath("/requests/:id"), requestsHandler.GetRequest)
 
 	// 6. Background worker management (JWT/Admin-protected)
-	workersGroup := e.Group("/api/workers", middleware.RequireAuthOrAdmin(adminKey))
+	workersGroup := e.Group(apiPath("/workers"), middleware.RequireAuthOrAdmin(adminKey))
 	workersGroup.GET("", workersHandler.ListJobs)
 	workersGroup.POST("", workersHandler.CreateJob)
 	workersGroup.GET("/:id", workersHandler.GetJob)
@@ -292,13 +334,17 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 
 	// 7. System monitoring metrics (JWT/Admin-protected)
 	sysmonHandler := NewSysmonHandler(sysmonCollector)
-	sysmonGroup := e.Group("/api/system/metrics", middleware.RequireAuthOrAdmin(adminKey))
+	sysmonGroup := e.Group(apiPath("/system/metrics"), middleware.RequireAuthOrAdmin(adminKey))
 	sysmonGroup.GET("", sysmonHandler.GetMetrics)
 	sysmonGroup.POST("", sysmonHandler.PushMetrics)
 
 	// 7. Embedded Web Admin Console
 	if !cfg.DisableAdminUI {
-		RegisterAdminUIWithOptions(e, cfg.AdminUIOptions)
+		adminUIOpts := cfg.AdminUIOptions
+		if adminUIOpts.APIPrefix == "" {
+			adminUIOpts.APIPrefix = apiPrefix
+		}
+		RegisterAdminUIWithOptions(e, adminUIOpts)
 	}
 
 	return e

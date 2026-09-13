@@ -143,11 +143,15 @@ moulApp.DisableAdminUI()
 ```
   </Tab>
 
-  <Tab value="Enable /admin Redirect">
-In embedded mode, convenient `/admin` 301 redirects are disabled by default so your application's own `/admin` routes remain unaffected. If you want `/admin` to redirect to `AdminUIPrefix`:
+  <Tab value="Configure API Prefix">
+Customize the URL path prefix for all API routes (or mount at root using `""`):
 
 ```go
-moulApp.WithAdminRedirect(true)
+// Mount at /v1 instead of default /api
+moulApp.WithAPIPrefix("/v1")
+
+// Or mount directly at root level
+moulApp.WithAPIPrefix("")
 ```
   </Tab>
 </Tabs>
@@ -162,12 +166,12 @@ moulApp.WithAdminRedirect(true)
 | `Env` | `string` | `"development"` | Runtime environment (`"development"` or `"production"`). |
 | `DBPath` | `string` | `"moul-local.db"` | SQLite database file path or `":memory:"`. |
 | `Port` | `string` | `"8090"` | HTTP listener port. |
+| `APIPrefix` | `*string` | `nil` (`"/api"`) | URL path prefix for API endpoints. Set to pointer to `""` or use `WithAPIPrefix("")` to mount at root. |
 | `JWTSecret` | `string` | `MOUL_JWT_SECRET` | Secret key for signing and verifying JWT tokens. |
 | `AdminKey` | `string` | `MOUL_ADMIN_KEY` | Master administrative API key. |
 | `AdminUIFS` | `fs.FS` | `pkg/ui.DistFS()` | Filesystem containing web console assets. Defaults to embedded Moul UI bundle. |
 | `AdminUIPrefix` | `string` | `"/_moul_"` | URL path prefix where the Web Admin Console is mounted. |
 | `DisableAdminUI` | `bool` | `false` | When `true`, completely disables registering the Web Admin Console routes. |
-| `RegisterAdminRedirect` | `bool` | `false` | When `true`, registers 301 redirects from `/admin` and `/admin/*` to `AdminUIPrefix`. |
 | `DisableCLIParsing` | `bool` | `false` | When `true`, disables automatic CLI argument dispatching so `Start()` always boots the HTTP server. |
 
 ---

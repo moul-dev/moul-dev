@@ -10,7 +10,8 @@ Welcome to `moul`. This document provides essential instructions, operating rule
 
 Key Capabilities:
 - **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`moul`) backed by SQLite.
-- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/` (auto-redirect from `/admin`), built with TanStack Router, Meta StyleX, Moul UI (`@moul-dev/ui`), tri-state system/light/dark theme toggle, and Phosphor Icons embedded via Go `embed.FS`.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built with TanStack Router, Meta StyleX, Moul UI (`@moul-dev/ui`), tri-state system/light/dark theme toggle, and Phosphor Icons embedded via Go `embed.FS`.
+- **Configurable API Prefix**: All API endpoints default to `/api` but can be customized (e.g. `/v1`) or mounted directly at root (`""`) via `--api-prefix`, `MOUL_API_PREFIX`, or `WithAPIPrefix("")`.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
 - **Programmatic Go API & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
 - **AI-Native MCP Server**: Native Model Context Protocol (MCP) server supporting stdio transport (`moul mcp`) and HTTP SSE transport (`/api/mcp`).
@@ -105,6 +106,9 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 # Start the HTTP server engine and MCP SSE endpoint (default port 8090)
 moul start
 
+# Start with a custom API prefix (or --api-prefix "" for root-level routes)
+moul start --api-prefix /v1
+
 # Run built-in MCP server in stdio transport mode
 moul mcp
 
@@ -117,8 +121,8 @@ moul update
 # Launch Bubble Tea TUI Admin Console (via moul-ctl binary)
 moul-ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 
-# Or launch TUI via convenience subcommand in moul:
-moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
+# Or launch TUI via convenience subcommand in moul with custom API prefix:
+moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234 -api-prefix /v1
 ```
 
 ---
@@ -131,6 +135,7 @@ The engine reads environment variables from a `.env` file in the current working
 |---|---|---|
 | `MOUL_ENV` | `development` | Environment mode (`development` or `production`). |
 | `MOUL_PORT` | `8090` | HTTP server listening port. |
+| `MOUL_API_PREFIX` | `/api` | Base URL path prefix for API endpoints (set to `""` for root). |
 | `MOUL_PUBLIC_URL` | `http://localhost:8090` | Base public URL for email links. |
 | `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
 | `MOUL_ADMIN_KEY` | Required | Master admin key for administrative endpoints and MCP access. |

@@ -18,18 +18,30 @@ import (
 
 // Client wraps all communication with the moul-dev API.
 type Client struct {
-	BaseURL  string
-	AdminKey string
-	Token    string
-	HTTP     *http.Client
+	BaseURL   string
+	APIPrefix string
+	AdminKey  string
+	Token     string
+	HTTP      *http.Client
 }
 
-// NewClient creates a new TUI client instance.
+// NewClient creates a new TUI client instance with default "/api" prefix.
 func NewClient(baseURL, adminKey string) *Client {
+	return NewClientWithPrefix(baseURL, adminKey, "/api")
+}
+
+// NewClientWithPrefix creates a new TUI client instance with a custom API prefix.
+func NewClientWithPrefix(baseURL, adminKey, apiPrefix string) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	apiPrefix = strings.TrimSpace(apiPrefix)
+	apiPrefix = strings.TrimRight(apiPrefix, "/")
+	if apiPrefix != "" && !strings.HasPrefix(apiPrefix, "/") {
+		apiPrefix = "/" + apiPrefix
+	}
 	return &Client{
-		BaseURL:  baseURL,
-		AdminKey: adminKey,
+		BaseURL:   baseURL,
+		APIPrefix: apiPrefix,
+		AdminKey:  adminKey,
 		HTTP: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -40,6 +52,22 @@ func NewClient(baseURL, adminKey string) *Client {
 func (c *Client) CheckConnection() error {
 	_, err := c.ListMoul()
 	return err
+}
+
+func (c *Client) resolvePath(path string) string {
+	if strings.HasPrefix(path, "/api/") {
+		cleanSub := strings.TrimPrefix(path, "/api")
+		if c.APIPrefix == "" {
+			return cleanSub
+		}
+		return c.APIPrefix + cleanSub
+	} else if path == "/api" {
+		if c.APIPrefix == "" {
+			return "/"
+		}
+		return c.APIPrefix
+	}
+	return path
 }
 
 // request executes an HTTP request, automatically attaching required headers.
@@ -53,7 +81,7 @@ func (c *Client) request(method, path string, body interface{}, responseData int
 		bodyReader = bytes.NewReader(jsonData)
 	}
 
-	url := fmt.Sprintf("%s%s", c.BaseURL, path)
+	url := fmt.Sprintf("%s%s", c.BaseURL, c.resolvePath(path))
 	req, err := http.NewRequest(method, url, bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)

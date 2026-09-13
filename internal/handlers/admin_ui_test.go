@@ -16,35 +16,20 @@ import (
 func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	e := echo.New()
 	RegisterAdminUIWithOptions(e, AdminUIOptions{
-		Prefix:                "/_moul_",
-		RegisterAdminRedirect: true,
+		Prefix:    "/_moul_",
+		APIPrefix: "/api",
 	})
 
-	// 1. Test redirect /admin -> /_moul_/
+	// 1. /admin is not redirected (removed to prevent collision with root API routes)
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusMovedPermanently {
-		t.Fatalf("expected redirect 301 for /admin, got %d", rec.Code)
-	}
-	if loc := rec.Header().Get("Location"); loc != "/_moul_/" {
-		t.Fatalf("expected Location /_moul_/, got %q", loc)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for /admin (no redirect), got %d", rec.Code)
 	}
 
-	// 2. Test redirect /admin/collections -> /_moul_/collections
-	req = httptest.NewRequest(http.MethodGet, "/admin/collections", nil)
-	rec = httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusMovedPermanently {
-		t.Fatalf("expected redirect 301 for /admin/collections, got %d", rec.Code)
-	}
-	if loc := rec.Header().Get("Location"); loc != "/_moul_/collections" {
-		t.Fatalf("expected Location /_moul_/collections, got %q", loc)
-	}
-
-	// 3. Test redirect /_moul_ -> /_moul_/
+	// 2. Test redirect /_moul_ -> /_moul_/
 	req = httptest.NewRequest(http.MethodGet, "/_moul_", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -56,7 +41,7 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 		t.Fatalf("expected Location /_moul_/, got %q", loc)
 	}
 
-	// 4. Test serving index.html on /_moul_/
+	// 3. Test serving index.html on /_moul_/
 	req = httptest.NewRequest(http.MethodGet, "/_moul_/", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -109,17 +94,16 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 func TestAdminUINoRedirectByDefault(t *testing.T) {
 	e := echo.New()
 	RegisterAdminUIWithOptions(e, AdminUIOptions{
-		Prefix:                "/_moul_",
-		RegisterAdminRedirect: false,
+		Prefix: "/_moul_",
 	})
 
-	// When RegisterAdminRedirect is false, /admin should NOT be registered
+	// /admin is never registered as a redirect
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusNotFound {
-		t.Fatalf("expected 404 for /admin when RegisterAdminRedirect is false, got %d", rec.Code)
+		t.Fatalf("expected 404 for /admin, got %d", rec.Code)
 	}
 }
 
@@ -128,7 +112,7 @@ func TestAdminUICustomFileSystem(t *testing.T) {
 
 	customFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{
-			Data: []byte("<!DOCTYPE html><html><body>Custom Admin Dashboard</body></html>"),
+			Data: []byte("<!DOCTYPE html><html><head><title>Test</title></head><body>Custom Admin Dashboard</body></html>"),
 		},
 		"assets/bundle-123.js": &fstest.MapFile{
 			Data: []byte("console.log('custom dashboard bundle');"),
@@ -137,6 +121,7 @@ func TestAdminUICustomFileSystem(t *testing.T) {
 
 	RegisterAdminUIWithOptions(e, AdminUIOptions{
 		Prefix:     "/custom-admin",
+		APIPrefix:  "/v1",
 		FileSystem: customFS,
 	})
 
@@ -152,7 +137,7 @@ func TestAdminUICustomFileSystem(t *testing.T) {
 		t.Fatalf("expected Location /custom-admin/, got %q", loc)
 	}
 
-	// 2. Test serving index.html
+	// 2. Test serving index.html with window.__MOUL_API_PREFIX__ injected
 	req = httptest.NewRequest(http.MethodGet, "/custom-admin/", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -160,8 +145,12 @@ func TestAdminUICustomFileSystem(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "Custom Admin Dashboard") {
-		t.Fatalf("expected custom dashboard content, got: %s", rec.Body.String())
+	body := rec.Body.String()
+	if !strings.Contains(body, "Custom Admin Dashboard") {
+		t.Fatalf("expected custom dashboard content, got: %s", body)
+	}
+	if !strings.Contains(body, `<script>window.__MOUL_API_PREFIX__="/v1";</script>`) {
+		t.Fatalf("expected window.__MOUL_API_PREFIX__ script to be injected, got: %s", body)
 	}
 
 	// 3. Test static asset serving with immutable caching

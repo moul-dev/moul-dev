@@ -114,11 +114,10 @@ moulApp.RegisterWorker("GenerateReport", func(ctx context.Context, job *worker.J
 When embedding `pkg/app`, the full-featured Web Admin Console is automatically bundled and mounted at `/_moul_/` via `pkg/ui.DistFS()`.
 
 To prevent route collisions with your host application:
-- In embedded mode, `/admin` convenience redirects are disabled by default. Your application's `/admin` routes remain completely untouched.
-- You can customize the mount prefix: `moulApp.WithAdminPrefix("/dashboard")`.
+- The Web Admin Console is mounted at `/_moul_/` (customizable via `moulApp.WithAdminPrefix("/dashboard")`).
+- The API prefix is fully configurable via `moulApp.WithAPIPrefix("/v1")` or `moulApp.WithAPIPrefix("")` for root-level API endpoints.
 - You can replace the console with your own embedded frontend SPA: `moulApp.WithAdminUI(customFS)`.
 - You can disable the console entirely for headless API services: `moulApp.DisableAdminUI()`.
-- You can enable `/admin` redirects if desired: `moulApp.WithAdminRedirect(true)`.
 
 ---
 

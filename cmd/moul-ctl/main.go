@@ -23,6 +23,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -server <url>                   moul server URL")
+	fmt.Println("  -api-prefix <prefix>            moul API prefix (default: /api, use \"\" for root)")
 	fmt.Println("  -admin-key <key>                moul admin key")
 	fmt.Println("  -u, --update                    Update moul-ctl binary to the latest release")
 	fmt.Println("  -f, --force                     Force update even if already at latest version")
@@ -49,6 +50,7 @@ func main() {
 
 	serverFlag := flag.String("server", "", "moul server URL")
 	adminKeyFlag := flag.String("admin-key", "", "moul admin key")
+	apiPrefixFlag := flag.String("api-prefix", "", "moul API prefix (default: /api)")
 	versionFlag := flag.Bool("version", false, "Print version and exit")
 	versionShortFlag := flag.Bool("v", false, "Print version and exit")
 	updateFlag := flag.Bool("update", false, "Update moul-ctl binary to the latest release")
@@ -92,13 +94,27 @@ func main() {
 
 	tui.Version = Version
 
-	m := tui.NewModel(*serverFlag, *adminKeyFlag)
+	var apiPrefixOverride []string
+	if hasFlagInArgs("-api-prefix") || hasFlagInArgs("--api-prefix") {
+		apiPrefixOverride = append(apiPrefixOverride, *apiPrefixFlag)
+	}
+
+	m := tui.NewModel(*serverFlag, *adminKeyFlag, apiPrefixOverride...)
 
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running TUI: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func hasFlagInArgs(flagName string) bool {
+	for _, arg := range os.Args[1:] {
+		if arg == flagName || strings.HasPrefix(arg, flagName+"=") {
+			return true
+		}
+	}
+	return false
 }
 
 func parseUpdateArgs(args []string) (force bool, systemdService string) {

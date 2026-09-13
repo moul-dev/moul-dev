@@ -22,6 +22,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/backup"
 	"github.com/moul-dev/moul-dev/internal/dataio"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/seed"
@@ -48,6 +49,7 @@ func PrintUsage(w io.Writer) {
 	fmt.Fprintln(w, "  update      Update moul binary to the latest release")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Options:")
+	fmt.Fprintln(w, "  --api-prefix [prefix]          URL path prefix for API routes (default: /api, use \"\" for root)")
 	fmt.Fprintln(w, "  --db [path]                    Specify SQLite database path (default: MOUL_DB_PATH or moul-local.db)")
 	fmt.Fprintln(w, "  --out [file]                   Output file path for export or typegen (default: stdout)")
 	fmt.Fprintln(w, "  --format [csv|json]            Format for export or import (default: auto or json)")
@@ -65,6 +67,18 @@ func PrintUsage(w io.Writer) {
 	fmt.Fprintln(w, "  -s, --service, --systemd [name] Restart systemd service after update (default: moul)")
 	fmt.Fprintln(w, "  -v, --version, version         Print version information and exit")
 	fmt.Fprintln(w, "  -h, --help, help               Show help and usage instructions")
+}
+
+// resolveCLIApiPrefix resolves the API route prefix from CLI flags or environment.
+func resolveCLIApiPrefix() string {
+	if hasFlag("--api-prefix") {
+		p := parseFlagString("--api-prefix")
+		return handlers.NormalizeAPIPrefix(&p)
+	}
+	if envVal, exists := os.LookupEnv("MOUL_API_PREFIX"); exists {
+		return handlers.NormalizeAPIPrefix(&envVal)
+	}
+	return "/api"
 }
 
 // ParseFlagString extracts a string value for a named command-line flag.
@@ -409,7 +423,8 @@ func (a *App) runExport() error {
 	adminKey := parseFlagString("--admin-key")
 
 	if serverURL != "" {
-		exportURL := fmt.Sprintf("%s/api/moul/%s/export?format=%s", strings.TrimSuffix(serverURL, "/"), url.PathEscape(collection), url.QueryEscape(format))
+		apiPrefix := resolveCLIApiPrefix()
+		exportURL := fmt.Sprintf("%s%s/moul/%s/export?format=%s", strings.TrimSuffix(serverURL, "/"), apiPrefix, url.PathEscape(collection), url.QueryEscape(format))
 		if includeSchema {
 			exportURL += "&includeSchema=true"
 		}
@@ -530,7 +545,8 @@ func (a *App) runImport() error {
 	adminKey := parseFlagString("--admin-key")
 
 	if serverURL != "" {
-		importURL := fmt.Sprintf("%s/api/moul/%s/import?mode=%s&onError=%s", strings.TrimSuffix(serverURL, "/"), url.PathEscape(collection), url.QueryEscape(mode), url.QueryEscape(onError))
+		apiPrefix := resolveCLIApiPrefix()
+		importURL := fmt.Sprintf("%s%s/moul/%s/import?mode=%s&onError=%s", strings.TrimSuffix(serverURL, "/"), apiPrefix, url.PathEscape(collection), url.QueryEscape(mode), url.QueryEscape(onError))
 
 		fileContent, err := os.ReadFile(filePath)
 		if err != nil {

@@ -30,8 +30,8 @@ func main() {
 	// 3. Disable the admin console completely for a headless API microservice:
 	//    moulApp.DisableAdminUI()
 	//
-	// 4. Enable convenience /admin redirect (disabled by default in embedded mode so your own routes aren't hijacked):
-	//    moulApp.WithAdminRedirect(true)
+	// 4. Customize the API route prefix (use "" for root):
+	//    moulApp.WithAPIPrefix("/v1")
 
 	// Register custom application routes alongside Moul's built-in APIs
 	moulApp.RegisterRoute("GET", "/api/custom/hello", func(c *echo.Context) error {

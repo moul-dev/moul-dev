@@ -18,9 +18,10 @@ import (
 
 // DocsHandler handles API documentation endpoints.
 type DocsHandler struct {
-	version string
-	spec    []byte
-	DB      *dbx.DB
+	version   string
+	apiPrefix string
+	spec      []byte
+	DB        *dbx.DB
 }
 
 // NewDocsHandler creates a new instance of DocsHandler.
@@ -30,10 +31,16 @@ func NewDocsHandler(dbConn *dbx.DB, version ...string) *DocsHandler {
 		v = version[0]
 	}
 	return &DocsHandler{
-		version: v,
-		spec:    docs.GetSpec(v),
-		DB:      dbConn,
+		version:   v,
+		apiPrefix: "/api",
+		spec:      docs.GetSpec(v),
+		DB:        dbConn,
 	}
+}
+
+// SetAPIPrefix sets the base API prefix used for OpenAPI paths.
+func (h *DocsHandler) SetAPIPrefix(prefix string) {
+	h.apiPrefix = prefix
 }
 
 // ServeAgentsMD serves AGENTS.md for AI coding agents from embedded binary content.
@@ -139,6 +146,30 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 		root["paths"] = paths
 	}
 
+	apiPath := func(path string) string {
+		clean := "/" + strings.TrimLeft(path, "/")
+		if h.apiPrefix == "" {
+			return clean
+		}
+		return h.apiPrefix + clean
+	}
+
+	if h.apiPrefix != "/api" {
+		remappedPaths := make(map[string]interface{})
+		for p, val := range paths {
+			if strings.HasPrefix(p, "/api/") {
+				newPath := apiPath(strings.TrimPrefix(p, "/api"))
+				remappedPaths[newPath] = val
+			} else if p == "/api" {
+				remappedPaths[apiPath("")] = val
+			} else {
+				remappedPaths[p] = val
+			}
+		}
+		paths = remappedPaths
+		root["paths"] = paths
+	}
+
 	tags, ok := root["tags"].([]interface{})
 	if !ok {
 		tags = []interface{}{}
@@ -238,7 +269,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 
 		// 2. Add Endpoints for Collection
 
-		recordsPath := fmt.Sprintf("/api/moul/%s/records", moul.Name)
+		recordsPath := apiPath(fmt.Sprintf("/moul/%s/records", moul.Name))
 		paths[recordsPath] = map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     fmt.Sprintf("List Records (%s)", moul.Name),
@@ -291,7 +322,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 			},
 		}
 
-		recordIDPath := fmt.Sprintf("/api/moul/%s/records/{id}", moul.Name)
+		recordIDPath := apiPath(fmt.Sprintf("/moul/%s/records/{id}", moul.Name))
 		paths[recordIDPath] = map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     fmt.Sprintf("Get Record (%s)", moul.Name),
@@ -352,7 +383,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 			},
 		}
 
-		subscribePath := fmt.Sprintf("/api/moul/%s/subscribe", moul.Name)
+		subscribePath := apiPath(fmt.Sprintf("/moul/%s/subscribe", moul.Name))
 		paths[subscribePath] = map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     fmt.Sprintf("Real-time Record Subscriptions SSE (%s)", moul.Name),
@@ -372,7 +403,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 		}
 
 		if moul.Type == "auth" {
-			pwdPath := fmt.Sprintf("/api/moul/%s/auth-with-password", moul.Name)
+			pwdPath := apiPath(fmt.Sprintf("/moul/%s/auth-with-password", moul.Name))
 			paths[pwdPath] = map[string]interface{}{
 				"post": map[string]interface{}{
 					"summary":     fmt.Sprintf("Password Authentication (%s)", moul.Name),
@@ -410,7 +441,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 				},
 			}
 
-			methodsPath := fmt.Sprintf("/api/moul/%s/auth-methods", moul.Name)
+			methodsPath := apiPath(fmt.Sprintf("/moul/%s/auth-methods", moul.Name))
 			paths[methodsPath] = map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     fmt.Sprintf("List Auth Methods (%s)", moul.Name),
@@ -422,7 +453,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 				},
 			}
 
-			oauth2AuthPath := fmt.Sprintf("/api/moul/%s/oauth2/{provider}", moul.Name)
+			oauth2AuthPath := apiPath(fmt.Sprintf("/moul/%s/oauth2/{provider}", moul.Name))
 			paths[oauth2AuthPath] = map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     fmt.Sprintf("OAuth2 Authorize (%s)", moul.Name),
@@ -440,7 +471,7 @@ func (h *DocsHandler) BuildLiveSpec() (map[string]interface{}, error) {
 				},
 			}
 
-			oauth2WithCodePath := fmt.Sprintf("/api/moul/%s/auth-with-oauth2", moul.Name)
+			oauth2WithCodePath := apiPath(fmt.Sprintf("/moul/%s/auth-with-oauth2", moul.Name))
 			paths[oauth2WithCodePath] = map[string]interface{}{
 				"post": map[string]interface{}{
 					"summary":     fmt.Sprintf("OAuth2 Code Authentication (%s)", moul.Name),

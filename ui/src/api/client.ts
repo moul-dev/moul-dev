@@ -45,7 +45,32 @@ export class ApiError extends Error {
   }
 }
 
+export function getApiPrefix(): string {
+  if (typeof window !== 'undefined' && typeof (window as any).__MOUL_API_PREFIX__ === 'string') {
+    return (window as any).__MOUL_API_PREFIX__;
+  }
+  return '/api';
+}
+
+export function resolveApiPath(path: string): string {
+  const prefix = getApiPrefix();
+  if (path.startsWith('/api/')) {
+    const sub = path.slice('/api'.length);
+    if (!prefix || prefix === '/') {
+      return sub;
+    }
+    return `${prefix.replace(/\/+$/, '')}${sub}`;
+  } else if (path === '/api') {
+    if (!prefix || prefix === '/') {
+      return '/';
+    }
+    return prefix;
+  }
+  return path;
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const resolvedEndpoint = resolveApiPath(endpoint);
   const headers = new Headers(options.headers || {});
   const method = options.method || 'GET';
   const startTime = performance.now();
@@ -68,7 +93,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   let res: Response;
   try {
-    res = await fetch(endpoint, {
+    res = await fetch(resolvedEndpoint, {
       ...options,
       headers,
     });
@@ -76,7 +101,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const durationMs = Math.round(performance.now() - startTime);
     emitApiRequest({
       method,
-      url: endpoint,
+      url: resolvedEndpoint,
       status: 0,
       durationMs,
       error: err.message,
@@ -87,7 +112,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const durationMs = Math.round(performance.now() - startTime);
   emitApiRequest({
     method,
-    url: endpoint,
+    url: resolvedEndpoint,
     status: res.status,
     durationMs,
   });
@@ -331,7 +356,7 @@ export const api = {
     if (options?.filter) query.set('filter', options.filter);
     if (options?.sort) query.set('sort', options.sort);
 
-    const url = `/api/moul/${name}/export?${query.toString()}`;
+    const url = resolveApiPath(`/api/moul/${name}/export?${query.toString()}`);
     const token = getAuthToken();
     const adminKey = getStoredAdminKey();
     const headers: Record<string, string> = {};
@@ -378,7 +403,7 @@ export const api = {
     if (options?.onError) formData.append('onError', options.onError);
     if (options?.format) formData.append('format', options.format);
 
-    const url = `/api/moul/${name}/import`;
+    const url = resolveApiPath(`/api/moul/${name}/import`);
     const token = getAuthToken();
     const adminKey = getStoredAdminKey();
     const headers: Record<string, string> = {};

@@ -72,14 +72,12 @@ type AdminUIOptions struct {
 	// Prefix is the URL path prefix where the Admin Console is mounted (e.g. "/_moul_").
 	Prefix string
 
+	// APIPrefix is the URL path prefix where the API endpoints are mounted (e.g. "/api", "/v1", or "").
+	APIPrefix string
+
 	// FileSystem is an optional custom filesystem containing the SPA distribution.
 	// If nil, defaults to pkg/ui.DistFS().
 	FileSystem fs.FS
-
-	// RegisterAdminRedirect enables convenience 301 redirects from /admin and /admin/*
-	// to the Admin Console prefix. When false (recommended when embedding), host /admin routes
-	// remain untouched.
-	RegisterAdminRedirect bool
 }
 
 // RegisterAdminUIRoutes mounts the embedded Web Admin Console onto the Echo router with default options.
@@ -111,23 +109,12 @@ func RegisterAdminUIWithOptions(e *echo.Echo, opts AdminUIOptions) {
 		hasCustomUI = ui.HasCustomUI()
 	}
 
-	// Optional convenience redirect /admin and /admin/* to prefix/
-	if opts.RegisterAdminRedirect && prefix != "/admin" {
-		e.GET("/admin", func(c *echo.Context) error {
-			return c.Redirect(http.StatusMovedPermanently, prefix+"/")
-		})
-		e.GET("/admin/*", func(c *echo.Context) error {
-			path := c.Param("*")
-			return c.Redirect(http.StatusMovedPermanently, prefix+"/"+path)
-		})
-	}
-
 	// Redirect prefix (without trailing slash) to prefix + "/"
 	e.GET(prefix, func(c *echo.Context) error {
 		return c.Redirect(http.StatusMovedPermanently, prefix+"/")
 	})
 
-	// Helper to serve index.html with fallback
+	// Helper to serve index.html with fallback and runtime API prefix script injection
 	serveIndexHTML := func(c *echo.Context) error {
 		indexFile, err := distFS.Open("index.html")
 		if err != nil {
@@ -139,20 +126,23 @@ func RegisterAdminUIWithOptions(e *echo.Echo, opts AdminUIOptions) {
 		}
 		defer indexFile.Close()
 
-		stat, err := indexFile.Stat()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to read index.html")
-		}
-
 		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		if seeker, ok := indexFile.(io.ReadSeeker); ok {
-			http.ServeContent(c.Response(), c.Request(), "index.html", stat.ModTime(), seeker)
-			return nil
-		}
 		data, err := io.ReadAll(indexFile)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to read index.html")
 		}
+
+		// Inject window.__MOUL_API_PREFIX__ script so the Admin Console SPA dynamically discovers the active API prefix
+		apiScript := fmt.Sprintf("<script>window.__MOUL_API_PREFIX__=%q;</script>", opts.APIPrefix)
+		htmlStr := string(data)
+		if strings.Contains(htmlStr, "</head>") {
+			htmlStr = strings.Replace(htmlStr, "</head>", apiScript+"</head>", 1)
+			data = []byte(htmlStr)
+		} else if strings.Contains(htmlStr, "<head>") {
+			htmlStr = strings.Replace(htmlStr, "<head>", "<head>"+apiScript, 1)
+			data = []byte(htmlStr)
+		}
+
 		return c.Blob(http.StatusOK, "text/html; charset=utf-8", data)
 	}
 

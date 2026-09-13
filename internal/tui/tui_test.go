@@ -56,8 +56,44 @@ func TestClientInitialization(t *testing.T) {
 	if client.BaseURL != "http://localhost:8090" {
 		t.Errorf("Expected trailing slash to be trimmed: %s", client.BaseURL)
 	}
+	if client.APIPrefix != "/api" {
+		t.Errorf("Expected default APIPrefix /api, got: %s", client.APIPrefix)
+	}
 	if client.AdminKey != "test-key" {
 		t.Errorf("Expected admin key to be set: %s", client.AdminKey)
+	}
+	if client.resolvePath("/api/moul") != "/api/moul" {
+		t.Errorf("Expected /api/moul, got %s", client.resolvePath("/api/moul"))
+	}
+
+	// Test custom prefix /v1
+	c2 := NewClientWithPrefix("http://localhost:8090", "test-key", "/v1")
+	if c2.APIPrefix != "/v1" {
+		t.Errorf("Expected /v1, got %s", c2.APIPrefix)
+	}
+	if c2.resolvePath("/api/moul") != "/v1/moul" {
+		t.Errorf("Expected /v1/moul, got %s", c2.resolvePath("/api/moul"))
+	}
+	if c2.resolvePath("/api/workers") != "/v1/workers" {
+		t.Errorf("Expected /v1/workers, got %s", c2.resolvePath("/api/workers"))
+	}
+
+	// Test empty prefix "" (root level mounting)
+	c3 := NewClientWithPrefix("http://localhost:8090", "test-key", "")
+	if c3.APIPrefix != "" {
+		t.Errorf("Expected empty APIPrefix, got %s", c3.APIPrefix)
+	}
+	if c3.resolvePath("/api/moul") != "/moul" {
+		t.Errorf("Expected /moul, got %s", c3.resolvePath("/api/moul"))
+	}
+	if c3.resolvePath("/api/setup") != "/setup" {
+		t.Errorf("Expected /setup, got %s", c3.resolvePath("/api/setup"))
+	}
+	if c3.resolvePath("/api/admin/login") != "/admin/login" {
+		t.Errorf("Expected /admin/login, got %s", c3.resolvePath("/api/admin/login"))
+	}
+	if c3.resolvePath("/storage/test.png") != "/storage/test.png" {
+		t.Errorf("Expected /storage/test.png to remain untouched, got %s", c3.resolvePath("/storage/test.png"))
 	}
 }
 

@@ -41,17 +41,17 @@ type JobHandler = worker.JobHandler
 
 // Config holds configuration options for starting a Mould application.
 type Config struct {
-	Env                   string
-	DBPath                string
-	Port                  string
-	Version               string
-	JWTSecret             string
-	AdminKey              string
-	AdminUIFS             fs.FS
-	AdminUIPrefix         string
-	DisableAdminUI        bool
-	RegisterAdminRedirect bool
-	DisableCLIParsing     bool
+	Env               string
+	DBPath            string
+	Port              string
+	Version           string
+	JWTSecret         string
+	AdminKey          string
+	AdminUIFS         fs.FS
+	AdminUIPrefix     string
+	APIPrefix         *string
+	DisableAdminUI    bool
+	DisableCLIParsing bool
 }
 
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
@@ -110,16 +110,21 @@ func (a *App) WithAdminPrefix(prefix string) *App {
 	return a
 }
 
+// WithAPIPrefix configures the URL prefix where API routes are mounted.
+// Pass "" to mount API endpoints at the root level without a prefix.
+func (a *App) WithAPIPrefix(prefix string) *App {
+	a.config.APIPrefix = &prefix
+	return a
+}
+
 // DisableAdminUI disables mounting the embedded Web Admin Console.
 func (a *App) DisableAdminUI() *App {
 	a.config.DisableAdminUI = true
 	return a
 }
 
-// WithAdminRedirect configures whether convenience redirects from /admin and /admin/*
-// to the Admin Console prefix are registered.
-func (a *App) WithAdminRedirect(enable bool) *App {
-	a.config.RegisterAdminRedirect = enable
+// WithAdminRedirect is deprecated and a no-op; /admin redirect has been removed to prevent route collisions.
+func (a *App) WithAdminRedirect(_ bool) *App {
 	return a
 }
 
@@ -364,6 +369,17 @@ func (a *App) Bootstrap() error {
 		}
 	}
 
+	// API Prefix resolution from CLI flags or environment variable if not explicitly configured in code
+	if a.config.APIPrefix == nil {
+		if hasFlag("--api-prefix") {
+			prefix := parseFlagString("--api-prefix")
+			a.config.APIPrefix = &prefix
+		} else if envVal, exists := os.LookupEnv("MOUL_API_PREFIX"); exists {
+			a.config.APIPrefix = &envVal
+		}
+	}
+	normalizedAPIPrefix := handlers.NormalizeAPIPrefix(a.config.APIPrefix)
+
 	a.router = handlers.NewRouterWithOptions(
 		a.dbConn,
 		a.workerEngine,
@@ -377,10 +393,11 @@ func (a *App) Bootstrap() error {
 			Version:        a.config.Version,
 			DisableAdminUI: a.config.DisableAdminUI,
 			MCPServer:      a.mcpServer,
+			APIPrefix:      a.config.APIPrefix,
 			AdminUIOptions: handlers.AdminUIOptions{
-				Prefix:                adminPrefix,
-				FileSystem:            adminFS,
-				RegisterAdminRedirect: a.config.RegisterAdminRedirect,
+				Prefix:     adminPrefix,
+				FileSystem: adminFS,
+				APIPrefix:  normalizedAPIPrefix,
 			},
 		},
 	)

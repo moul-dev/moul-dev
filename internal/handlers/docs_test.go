@@ -308,4 +308,40 @@ func TestDynamicLiveDocsSpec(t *testing.T) {
 			t.Errorf("Expected live JSON spec to contain select field enum values, got snippet: %s", bodyStr)
 		}
 	})
+
+	t.Run("OpenAPI spec respects configured APIPrefix", func(t *testing.T) {
+		docsHandler.SetAPIPrefix("/v1")
+		resp, err := client.Get(server.URL + "/openapi.json")
+		if err != nil {
+			t.Fatalf("GET /openapi.json failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+		bodyStr := string(bodyBytes)
+
+		if !strings.Contains(bodyStr, "\"/v1/moul/products/records\"") {
+			t.Errorf("Expected live JSON spec to contain '/v1/moul/products/records' when APIPrefix is /v1, got snippet: %s", bodyStr[:500])
+		}
+		if strings.Contains(bodyStr, "\"/api/moul/products/records\"") {
+			t.Errorf("Expected live JSON spec NOT to contain '/api/moul/products/records' when APIPrefix is /v1")
+		}
+
+		// Test empty prefix
+		docsHandler.SetAPIPrefix("")
+		respEmpty, err := client.Get(server.URL + "/openapi.json")
+		if err != nil {
+			t.Fatalf("GET /openapi.json failed: %v", err)
+		}
+		defer respEmpty.Body.Close()
+
+		emptyBytes, _ := io.ReadAll(respEmpty.Body)
+		emptyStr := string(emptyBytes)
+		if !strings.Contains(emptyStr, "\"/moul/products/records\"") {
+			t.Errorf("Expected live JSON spec to contain '/moul/products/records' when APIPrefix is empty")
+		}
+	})
 }

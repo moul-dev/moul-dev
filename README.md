@@ -291,7 +291,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 <a id="web-admin-overview"></a>
 ### Overview
 
-`moul` features a high-performance, single-binary **Web Admin Console** mounted at `/_moul_/` (with automatic redirects from `/admin` and `/_moul_`). It provides a rich, responsive browser-based dashboard to manage collection schemas, dynamic records, real-time SSE subscriptions, analytics, background worker queues, feature flags, and server settings.
+`moul` features a high-performance, single-binary **Web Admin Console** mounted at `/_moul_/` (with automatic redirect from `/_moul_`). It provides a rich, responsive browser-based dashboard to manage collection schemas, dynamic records, real-time SSE subscriptions, analytics, background worker queues, feature flags, and server settings.
 
 ### Frontend Architecture & Stack
 
@@ -502,11 +502,11 @@ func main() {
 		Version: "1.0.0-custom",
 	})
 
-	// Optional: customize admin mount prefix, custom SPA filesystem, or disable
+	// Optional: customize API prefix, admin mount prefix, custom SPA filesystem, or disable
+	// moulApp.WithAPIPrefix("/v1") // customize API prefix (use "" for root)
 	// moulApp.WithAdminPrefix("/dashboard")
 	// moulApp.WithAdminUI(myCustomFS)
 	// moulApp.DisableAdminUI()
-	// moulApp.WithAdminRedirect(true) // enables /admin -> /_moul_/ 301 redirect
 
 	// Register custom HTTP route
 	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {
@@ -828,6 +828,7 @@ Set the following environment variables on your production server or container:
 | `MOUL_ADMIN_KEY` | Yes | Master administrative secret key | `super-secret-admin-key-9988` |
 | `MOUL_JWT_SECRET` | Yes | Secret key for signing JWT tokens | `jwt-secret-key-production-3344` |
 | `MOUL_PORT` | No | HTTP listening port (default: 8090) | `8090` |
+| `MOUL_API_PREFIX` | No | Base URL path prefix for API endpoints (default: /api, use `""` for root) | `/v1` or `""` |
 | `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |

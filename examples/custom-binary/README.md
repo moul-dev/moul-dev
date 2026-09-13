@@ -10,8 +10,7 @@ This example demonstrates how to embed Moul as a Go library inside your own cust
 - **Customizable**:
   - Customize URL prefix: `.WithAdminPrefix("/dashboard")`
   - Replace with your own frontend SPA: `.WithAdminUI(customFS)`
-  - Disable entirely for headless API services: `.DisableAdminUI()`
-  - Enable `/admin` convenience redirect: `.WithAdminRedirect(true)`
+  - Customize API prefix: `.WithAPIPrefix("/v1")` (or `""` for root)
 
 ## Running the Example
 

@@ -14,8 +14,7 @@ var Version = "dev"
 
 func main() {
 	moulApp := app.New(app.Config{
-		Version:               Version,
-		RegisterAdminRedirect: true,
+		Version: Version,
 	})
 
 	if err := moulApp.Start(context.Background()); err != nil {

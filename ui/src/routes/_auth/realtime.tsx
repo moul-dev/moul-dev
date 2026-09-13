@@ -14,7 +14,7 @@ import {
   type LogItem,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
-import { api, getAuthToken } from '../../api/client';
+import { api, getAuthToken, resolveApiPath } from '../../api/client';
 
 const styles = stylex.create({
   container: {
@@ -98,10 +98,11 @@ function RealtimePage() {
     if (!isConnected) return;
 
     const token = getAuthToken();
-    const url =
+    const url = resolveApiPath(
       selectedMoul === '*'
         ? `/api/moul/subscribe${token ? `?token=${encodeURIComponent(token)}` : ''}`
-        : `/api/moul/${selectedMoul}/subscribe${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+        : `/api/moul/${selectedMoul}/subscribe${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    );
 
     const es = new EventSource(url);
 

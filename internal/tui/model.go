@@ -123,6 +123,7 @@ type Model struct {
 
 	// Temporary data
 	serverURL          string
+	apiPrefix          string
 	adminKey           string
 	editRecordID       string
 	recordFormData     map[string]*string
@@ -269,14 +270,22 @@ type Model struct {
 }
 
 // NewModel initializes the TUI model with default values.
-func NewModel(serverURLOverride, adminKeyOverride string) *Model {
+func NewModel(serverURLOverride, adminKeyOverride string, apiPrefixOverride ...string) *Model {
 	cfg, _ := LoadConfig()
+
+	apiPrefix := "/api"
+	if len(apiPrefixOverride) > 0 {
+		apiPrefix = apiPrefixOverride[0]
+	} else if envVal, exists := os.LookupEnv("MOUL_API_PREFIX"); exists {
+		apiPrefix = envVal
+	}
 
 	m := &Model{
 		State:     StateConnect,
 		Config:    cfg,
 		serverURL: cfg.ServerURL,
 		authMode:  cfg.AuthMode,
+		apiPrefix: apiPrefix,
 	}
 
 	if serverURLOverride != "" {
@@ -717,7 +726,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check if form is completed/submitted
 		if m.ConnForm.State == huh.StateCompleted {
 			m.Err = nil
-			m.Client = NewClient(m.serverURL, m.adminKey)
+			m.Client = NewClientWithPrefix(m.serverURL, m.adminKey, m.apiPrefix)
 			_ = SetSecret(m.serverURL, "admin_key", m.adminKey)
 			return m, m.checkSetupStatusCmd()
 		}
@@ -1479,7 +1488,7 @@ func formatTime(tStr string) string {
 func (m *Model) connectCmd() tea.Cmd {
 	return func() tea.Msg {
 		if m.Client == nil {
-			m.Client = NewClient(m.serverURL, m.adminKey)
+			m.Client = NewClientWithPrefix(m.serverURL, m.adminKey, m.apiPrefix)
 			if m.authMode == "device_flow" {
 				token, _ := GetSecret(m.serverURL, "jwt_token")
 				m.Client.Token = token

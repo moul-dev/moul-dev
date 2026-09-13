@@ -255,12 +255,12 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
 `moul` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes, background workers, or custom MCP tools without forking code.
 
 ### Core API Methods & Hooks
-- `app.New(cfg app.Config) *app.App`: Creates a new Mould app instance.
-- `app.Config`: Holds engine configuration including `AdminUIFS fs.FS`, `AdminUIPrefix string` (default `/_moul_`), `DisableAdminUI bool`, and `RegisterAdminRedirect bool` (default `false` in embedded mode to avoid route collisions).
+- `app.Config`: Holds engine configuration including `APIPrefix *string` (default `nil` resolves to `"/api"`, set to `&""` to mount at root), `AdminUIFS fs.FS`, `AdminUIPrefix string` (default `/_moul_`), and `DisableAdminUI bool`.
+- `app.WithAPIPrefix(prefix string) *app.App`: Sets the URL path prefix for API endpoints (e.g. `"/v1"` or `""` for root).
 - `app.WithAdminUI(fs fs.FS) *app.App`: Overrides the default embedded Web Admin Console with a custom frontend SPA distribution.
 - `app.WithAdminPrefix(prefix string) *app.App`: Sets the URL mount prefix for the Web Admin Console.
 - `app.DisableAdminUI() *app.App`: Disables mounting the Web Admin Console routes entirely for headless microservices.
-- `app.WithAdminRedirect(enable bool) *app.App`: Enables convenience 301 redirects from `/admin` and `/admin/*` to `AdminUIPrefix`.
+- `app.WithAdminRedirect(enable bool) *app.App`: Deprecated and no-op; `/admin` redirects are removed to avoid collisions with root routes.
 - `app.DefaultAdminFS() fs.FS`: Accesses the default embedded Web Admin Console filesystem from `pkg/ui`.
 - `app.RegisterRoute(method, path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc)`: Expressive shorthand method to register routes directly on the embedded Echo server.
 - `app.OnRouterInit(fn func(router *echo.Echo) error)`: Hook invoked during `Bootstrap()` right after the Echo router is constructed. Allows creating router groups, custom Echo middlewares, and specialized handlers.
@@ -294,11 +294,11 @@ func main() {
 		Version: "1.0.0-custom",
 	})
 
-	// Optional: customize mount prefix, supply custom SPA filesystem, or disable
+	// Optional: customize API prefix, mount prefix, supply custom SPA filesystem, or disable
+	// moulApp.WithAPIPrefix("/v1") // customize API prefix (use "" for root)
 	// moulApp.WithAdminPrefix("/dashboard")
 	// moulApp.WithAdminUI(myCustomFS)
 	// moulApp.DisableAdminUI()
-	// moulApp.WithAdminRedirect(true)
 
 	// Register custom HTTP route
 	moulApp.RegisterRoute("GET", "/api/custom/ping", func(c *echo.Context) error {

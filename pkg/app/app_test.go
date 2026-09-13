@@ -360,16 +360,13 @@ func TestAppAdminUICustomization(t *testing.T) {
 		t.Fatalf("unexpected content: %s", rec.Body.String())
 	}
 
-	// 2. Check /admin redirects to /custom-console/ because WithAdminRedirect(true) was set
+	// 2. Check /admin is NOT redirected (removed to prevent route collision with root APIs)
 	req = httptest.NewRequest(http.MethodGet, "/admin", nil)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusMovedPermanently {
-		t.Fatalf("expected 301 redirect for /admin, got %d", rec.Code)
-	}
-	if loc := rec.Header().Get("Location"); loc != "/custom-console/" {
-		t.Fatalf("expected Location /custom-console/, got %s", loc)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for /admin (no redirect), got %d", rec.Code)
 	}
 
 	// 3. Test DisableAdminUI
@@ -391,5 +388,102 @@ func TestAppAdminUICustomization(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 when admin UI is disabled, got %d", rec.Code)
+	}
+}
+
+func TestAppAPIPrefix(t *testing.T) {
+	envy.Set("MOUL_JWT_SECRET", "test-jwt-secret-key-32-bytes-minimum!!")
+	envy.Set("MOUL_ADMIN_KEY", "test-admin-key")
+
+	// 1. Test Default Prefix (/api)
+	defaultApp := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	})
+	if err := defaultApp.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap defaultApp failed: %v", err)
+	}
+	// GET /api/setup should respond
+	req := httptest.NewRequest(http.MethodGet, "/api/setup", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
+	rec := httptest.NewRecorder()
+	defaultApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /api/setup with default prefix, got %d", rec.Code)
+	}
+	// GET /setup without prefix should 404
+	req = httptest.NewRequest(http.MethodGet, "/setup", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
+	rec = httptest.NewRecorder()
+	defaultApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 on /setup with default prefix, got %d", rec.Code)
+	}
+
+	// 2. Test Custom Prefix (/v1)
+	customApp := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	}).WithAPIPrefix("/v1")
+	if err := customApp.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap customApp failed: %v", err)
+	}
+	// GET /v1/setup should respond
+	req = httptest.NewRequest(http.MethodGet, "/v1/setup", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
+	rec = httptest.NewRecorder()
+	customApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /v1/setup with custom prefix, got %d", rec.Code)
+	}
+	// GET /api/setup should 404
+	req = httptest.NewRequest(http.MethodGet, "/api/setup", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
+	rec = httptest.NewRecorder()
+	customApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 on /api/setup when custom prefix is /v1, got %d", rec.Code)
+	}
+
+	// 3. Test Empty Prefix ("") - root level mounting
+	emptyApp := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "test-1.0",
+		JWTSecret: "test-jwt-secret-key-32-bytes-minimum!!",
+		AdminKey:  "test-admin-key",
+	}).WithAPIPrefix("")
+	if err := emptyApp.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap emptyApp failed: %v", err)
+	}
+	// GET /setup should respond at root
+	req = httptest.NewRequest(http.MethodGet, "/setup", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
+	rec = httptest.NewRecorder()
+	emptyApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /setup with empty prefix, got %d", rec.Code)
+	}
+	// GET /moul should respond at root
+	req = httptest.NewRequest(http.MethodGet, "/moul", nil)
+	rec = httptest.NewRecorder()
+	emptyApp.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /moul with empty prefix, got %d", rec.Code)
+	}
+	// POST /admin/login should respond at root (under /admin)
+	req = httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(`{"identity":"admin","password":"password"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	emptyApp.Router().ServeHTTP(rec, req)
+	// It should reach the handler and return 400 or 401 or 200 (not 404 or 301 redirect!)
+	if rec.Code == http.StatusNotFound || rec.Code == http.StatusMovedPermanently {
+		t.Fatalf("expected /admin/login to route to handler, got status %d", rec.Code)
 	}
 }
