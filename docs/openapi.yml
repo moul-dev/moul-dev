@@ -1993,6 +1993,12 @@ paths:
           description: Cursor record ID to fetch items after for cursor-based pagination.
           schema:
             type: string
+        - name: reveal
+          in: query
+          required: false
+          description: Comma-separated cloak field names (or 'all' / '*') to unmask decrypted plaintext for authenticated users.
+          schema:
+            type: string
       responses:
         '200':
           description: List of records matching listRule constraints.
@@ -2079,6 +2085,12 @@ paths:
         - name: expand
           in: query
           required: false
+          schema:
+            type: string
+        - name: reveal
+          in: query
+          required: false
+          description: Comma-separated cloak field names (or 'all' / '*') to unmask decrypted plaintext for authenticated users.
           schema:
             type: string
       responses:
@@ -3306,7 +3318,10 @@ components:
           type: string
         type:
           type: string
-          enum: [text, number, bool, date, datetime, json, url, file, select, relation]
+          enum: [text, number, bool, date, datetime, json, url, file, select, relation, cloak]
+        searchable:
+          type: boolean
+          description: For cloak fields, automatically creates an indexed HMAC-SHA256 companion column for exact match searches.
         relationConfig:
           type: object
           properties:

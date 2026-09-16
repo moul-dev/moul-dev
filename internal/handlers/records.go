@@ -14,6 +14,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -445,6 +446,35 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 					}
 					insertData[field.Name] = strVal
 				}
+			} else if field.Type == "cloak" {
+				if val == nil || val == "" {
+					insertData[field.Name] = nil
+					if field.Searchable {
+						insertData[field.Name+"Hash"] = ""
+					}
+				} else {
+					var rawBytes []byte
+					var hashStr string
+					if strVal, ok := val.(string); ok {
+						rawBytes = []byte(strVal)
+						hashStr = strVal
+					} else {
+						b, err := json.Marshal(val)
+						if err != nil {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid content for cloak field %s", field.Name))
+						}
+						rawBytes = b
+						hashStr = string(b)
+					}
+					encrypted, err := cloak.Encrypt(rawBytes)
+					if err != nil {
+						return echo.NewHTTPError(http.StatusInternalServerError, "Encryption failed: "+err.Error())
+					}
+					insertData[field.Name] = encrypted
+					if field.Searchable {
+						insertData[field.Name+"Hash"] = cloak.ComputeHash(hashStr)
+					}
+				}
 			} else if field.Type == "relation" {
 				if val == nil || val == "" {
 					if field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
@@ -692,7 +722,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record), NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)})
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, recordMap, expandParam)
 
@@ -897,8 +927,9 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 
 	items := make([]map[string]interface{}, 0, len(rawRecords))
 	expandParam := c.QueryParam("expand")
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
 	for _, rec := range rawRecords {
-		record := normalizeRecord(moul, nullStringMapToMap(rec))
+		record := normalizeRecord(moul, nullStringMapToMap(rec), normOpts)
 		h.expandRelations(moul, record, expandParam)
 		items = append(items, record)
 	}
@@ -983,7 +1014,8 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
+	recordMap := normalizeRecord(moul, nullStringMapToMap(record), normOpts)
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, recordMap, expandParam)
 	authUser := middleware.GetAuthRecord(c)
@@ -1118,6 +1150,35 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 						return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value %q for select field %s (allowed: %s)", strVal, field.Name, strings.Join(field.Options, ", ")))
 					}
 					updateParams[field.Name] = strVal
+				}
+			} else if field.Type == "cloak" {
+				if val == nil || val == "" {
+					updateParams[field.Name] = nil
+					if field.Searchable {
+						updateParams[field.Name+"Hash"] = ""
+					}
+				} else {
+					var rawBytes []byte
+					var hashStr string
+					if strVal, ok := val.(string); ok {
+						rawBytes = []byte(strVal)
+						hashStr = strVal
+					} else {
+						b, err := json.Marshal(val)
+						if err != nil {
+							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid content for cloak field %s", field.Name))
+						}
+						rawBytes = b
+						hashStr = string(b)
+					}
+					encrypted, err := cloak.Encrypt(rawBytes)
+					if err != nil {
+						return echo.NewHTTPError(http.StatusInternalServerError, "Encryption failed: "+err.Error())
+					}
+					updateParams[field.Name] = encrypted
+					if field.Searchable {
+						updateParams[field.Name+"Hash"] = cloak.ComputeHash(hashStr)
+					}
 				}
 			} else if field.Type == "relation" {
 				if val == nil || val == "" {
@@ -1295,7 +1356,8 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	updatedRecordMap := normalizeRecord(moul, nullStringMapToMap(updatedRecord))
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
+	updatedRecordMap := normalizeRecord(moul, nullStringMapToMap(updatedRecord), normOpts)
 	expandParam := c.QueryParam("expand")
 	h.expandRelations(moul, updatedRecordMap, expandParam)
 
@@ -1569,16 +1631,96 @@ func toInt(v interface{}) (int, error) {
 	}
 }
 
+// NormalizeOptions configures how record fields are normalized and revealed.
+type NormalizeOptions struct {
+	RevealFields map[string]bool
+	IsAdmin      bool
+}
+
+func parseRevealParam(c *echo.Context) map[string]bool {
+	if c == nil {
+		return nil
+	}
+	reveal := c.QueryParam("reveal")
+	if reveal == "" {
+		return nil
+	}
+	m := make(map[string]bool)
+	for _, part := range strings.Split(reveal, ",") {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			m[trimmed] = true
+		}
+	}
+	return m
+}
+
 // normalizeRecord helps format the output data for JSON responses
-func normalizeRecord(moul *schema.Moul, record map[string]interface{}) map[string]interface{} {
+func normalizeRecord(moul *schema.Moul, record map[string]interface{}, opts ...NormalizeOptions) map[string]interface{} {
+	var opt NormalizeOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
 	delete(record, "passwordHash")
 	delete(record, "otpCode")
 	delete(record, "otpExpiresAt")
 	delete(record, "passkeys")
 
+	// Delete any companion hash columns for cloak fields
+	for _, field := range moul.Fields {
+		if field.Type == "cloak" {
+			delete(record, field.Name+"Hash")
+		}
+	}
+
 	// Convert database strings to correct JSON types based on moul fields schema
 	for _, field := range moul.Fields {
 		val, ok := record[field.Name]
+		if field.Type == "cloak" {
+			if !ok || val == nil {
+				continue
+			}
+
+			var payload []byte
+			switch v := val.(type) {
+			case []byte:
+				payload = v
+			case string:
+				payload = []byte(v)
+			}
+
+			if len(payload) == 0 {
+				record[field.Name] = ""
+				continue
+			}
+
+			decrypted, err := cloak.Decrypt(payload)
+			if err != nil {
+				record[field.Name] = "••••"
+				continue
+			}
+
+			plainStr := string(decrypted)
+
+			shouldReveal := opt.IsAdmin
+			if !shouldReveal && opt.RevealFields != nil {
+				shouldReveal = opt.RevealFields[field.Name] || opt.RevealFields["*"] || opt.RevealFields["all"]
+			}
+
+			if shouldReveal {
+				var jsonDecoded interface{}
+				if err := json.Unmarshal(decrypted, &jsonDecoded); err == nil {
+					record[field.Name] = jsonDecoded
+				} else {
+					record[field.Name] = plainStr
+				}
+			} else {
+				record[field.Name] = cloak.Mask(plainStr)
+			}
+			continue
+		}
+
 		if field.Type == "relation" && field.RelationConfig != nil && field.RelationConfig.Cardinality == "M:N" {
 			if !ok || val == nil {
 				record[field.Name] = []string{}

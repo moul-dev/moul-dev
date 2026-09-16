@@ -74,8 +74,17 @@ func validateFieldsString(str string) error {
 			if cardinality != "1:1" && cardinality != "1:N" && cardinality != "M:N" {
 				return fmt.Errorf("invalid cardinality %q for relation field %q (allowed: 1:1, 1:N, M:N)", cardinality, fName)
 			}
+		case "cloak":
+			if len(subParts) == 3 {
+				opt := strings.ToLower(strings.TrimSpace(subParts[2]))
+				if opt != "searchable" && opt != "blind_index" {
+					return fmt.Errorf("invalid cloak option %q for field %q (allowed: searchable)", opt, fName)
+				}
+			} else if len(subParts) != 2 {
+				return fmt.Errorf("cloak field %q format: name:cloak or name:cloak:searchable", fName)
+			}
 		default:
-			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, date, datetime, json, url, file, relation, select)", fType, fName)
+			return fmt.Errorf("invalid type %q for field %q (allowed: text, number, bool, date, datetime, json, url, file, relation, select, cloak)", fType, fName)
 		}
 	}
 	return nil
@@ -113,6 +122,13 @@ func parseFieldsString(str string) []schema.MoulField {
 				Name:    strings.TrimSpace(subParts[0]),
 				Type:    "select",
 				Options: opts,
+			})
+		} else if len(subParts) == 3 && strings.TrimSpace(subParts[1]) == "cloak" {
+			isSearchable := strings.EqualFold(strings.TrimSpace(subParts[2]), "searchable") || strings.EqualFold(strings.TrimSpace(subParts[2]), "blind_index")
+			fields = append(fields, schema.MoulField{
+				Name:       strings.TrimSpace(subParts[0]),
+				Type:       "cloak",
+				Searchable: isSearchable,
 			})
 		} else if len(subParts) == 4 && strings.TrimSpace(subParts[1]) == "relation" {
 			fields = append(fields, schema.MoulField{
@@ -270,6 +286,7 @@ func (m *Model) initMoulFieldForm() {
 		if fToEdit != nil {
 			m.newFieldName = fToEdit.Name
 			m.newFieldType = fToEdit.Type
+			m.newFieldSearchable = fToEdit.Searchable
 			if fToEdit.Type == "select" {
 				m.newFieldOptions = strings.Join(fToEdit.Options, ", ")
 			} else {
@@ -361,9 +378,18 @@ func (m *Model) initMoulFieldForm() {
 					huh.NewOption("File (File Metadata)", "file"),
 					huh.NewOption("Select (Enum / Constrained Options)", "select"),
 					huh.NewOption("Association (Relation to other collection)", "relation"),
+					huh.NewOption("Cloak (AES-256-GCM Encrypted)", "cloak"),
 				).
 				Value(&m.newFieldType),
 		),
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Searchable Blind Index?").
+				Description("Creates an indexed HMAC-SHA256 column for exact searches (= and !=)").
+				Value(&m.newFieldSearchable),
+		).WithHideFunc(func() bool {
+			return m.newFieldType != "cloak"
+		}),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Select Options (comma-separated)").

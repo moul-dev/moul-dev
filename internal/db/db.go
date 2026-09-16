@@ -372,6 +372,8 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 
 func fieldToSQLiteType(fieldType string) string {
 	switch fieldType {
+	case "cloak":
+		return "BLOB"
 	case "number":
 		return "NUMERIC"
 	case "bool":
@@ -394,6 +396,9 @@ func buildCreateTableSQL(tableName string, m *schema.Moul) string {
 		}
 		sqliteType := fieldToSQLiteType(field.Type)
 		columns = append(columns, fmt.Sprintf("%s %s", QuoteIdentifier(field.Name), sqliteType))
+		if field.Type == "cloak" && field.Searchable {
+			columns = append(columns, fmt.Sprintf("%s TEXT", QuoteIdentifier(field.Name+"Hash")))
+		}
 	}
 
 	columnsSQL := ""
@@ -490,6 +495,17 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 		_, err = db.NewQuery(indexSQL).Execute()
 		if err != nil {
 			return fmt.Errorf("failed to create job index for table %s: %w", m.Name, err)
+		}
+	}
+
+	for _, field := range m.Fields {
+		if field.Type == "cloak" && field.Searchable {
+			quotedName := QuoteIdentifier(m.Name)
+			quotedCol := QuoteIdentifier(field.Name + "Hash")
+			indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s_hash ON %s (%s);", m.Name, field.Name, quotedName, quotedCol)
+			if _, err := db.NewQuery(indexSQL).Execute(); err != nil {
+				return fmt.Errorf("failed to create cloak hash index for %s.%s: %w", m.Name, field.Name, err)
+			}
 		}
 	}
 
@@ -777,6 +793,14 @@ func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) e
 				selectExprs = append(selectExprs, buildCastExpression(QuoteIdentifier(row.Name), field.Type))
 			}
 		}
+
+		if field.Type == "cloak" && field.Searchable {
+			hashLower := strings.ToLower(field.Name + "Hash")
+			if hashRow, exists := existingMap[hashLower]; exists {
+				insertCols = append(insertCols, QuoteIdentifier(field.Name+"Hash"))
+				selectExprs = append(selectExprs, QuoteIdentifier(hashRow.Name))
+			}
+		}
 	}
 
 	return db.Transactional(func(tx *dbx.Tx) error {
@@ -815,6 +839,15 @@ func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) e
 			indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_job_processing ON %s (state, queue, priority, scheduled_at, id);", m.Name, QuoteIdentifier(m.Name))
 			if _, err := tx.NewQuery(indexSQL).Execute(); err != nil {
 				return fmt.Errorf("failed to recreate index for worker table %s: %w", m.Name, err)
+			}
+		}
+
+		for _, field := range m.Fields {
+			if field.Type == "cloak" && field.Searchable {
+				indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s_hash ON %s (%s);", m.Name, field.Name, QuoteIdentifier(m.Name), QuoteIdentifier(field.Name+"Hash"))
+				if _, err := tx.NewQuery(indexSQL).Execute(); err != nil {
+					return fmt.Errorf("failed to recreate cloak hash index for table %s: %w", m.Name, err)
+				}
 			}
 		}
 
@@ -865,6 +898,15 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 				break
 			}
 		}
+		if field.Type == "cloak" && field.Searchable {
+			hashLower := strings.ToLower(field.Name + "Hash")
+			if row, ok := existingColsMap[hashLower]; ok {
+				if strings.ToUpper(row.Type) != "TEXT" {
+					requiresRebuild = true
+					break
+				}
+			}
+		}
 	}
 
 	if requiresRebuild {
@@ -875,6 +917,9 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 	schemaFields := make(map[string]bool)
 	for _, field := range m.Fields {
 		schemaFields[strings.ToLower(field.Name)] = true
+		if field.Type == "cloak" && field.Searchable {
+			schemaFields[strings.ToLower(field.Name+"Hash")] = true
+		}
 	}
 
 	// 1. Add columns present in schema but missing from physical table.
@@ -883,14 +928,26 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		if systemColumns[lowerName] {
 			continue
 		}
-		if _, exists := existingColsMap[lowerName]; exists {
-			continue
+		if _, exists := existingColsMap[lowerName]; !exists {
+			sqliteType := fieldToSQLiteType(field.Type)
+			alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", QuoteIdentifier(m.Name), QuoteIdentifier(field.Name), sqliteType)
+			if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
+				return fmt.Errorf("failed to add column %s to table %s: %w", field.Name, m.Name, err)
+			}
 		}
 
-		sqliteType := fieldToSQLiteType(field.Type)
-		alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", QuoteIdentifier(m.Name), QuoteIdentifier(field.Name), sqliteType)
-		if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
-			return fmt.Errorf("failed to add column %s to table %s: %w", field.Name, m.Name, err)
+		if field.Type == "cloak" && field.Searchable {
+			hashColLower := strings.ToLower(field.Name + "Hash")
+			if _, exists := existingColsMap[hashColLower]; !exists {
+				alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s TEXT;", QuoteIdentifier(m.Name), QuoteIdentifier(field.Name+"Hash"))
+				if _, err := db.NewQuery(alterSQL).Execute(); err != nil {
+					return fmt.Errorf("failed to add hash column %s to table %s: %w", field.Name+"Hash", m.Name, err)
+				}
+				indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s_hash ON %s (%s);", m.Name, field.Name, QuoteIdentifier(m.Name), QuoteIdentifier(field.Name+"Hash"))
+				if _, err := db.NewQuery(indexSQL).Execute(); err != nil {
+					return fmt.Errorf("failed to create cloak hash index for %s.%s: %w", m.Name, field.Name, err)
+				}
+			}
 		}
 	}
 

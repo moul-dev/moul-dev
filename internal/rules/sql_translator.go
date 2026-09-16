@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/cloak"
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/pocketbase/dbx"
 )
@@ -616,12 +618,66 @@ func (b *sqlBuilder) mapOperator(op string) string {
 	}
 }
 
+func (b *sqlBuilder) getCloakField(colName string) *schema.MoulField {
+	if b.moul == nil {
+		return nil
+	}
+	for _, f := range b.moul.Fields {
+		if strings.EqualFold(f.Name, colName) && f.Type == "cloak" {
+			return &f
+		}
+	}
+	return nil
+}
+
 func (b *sqlBuilder) formatComparison(
 	leftExpr string, leftVal interface{}, leftIsCol bool,
 	op string,
 	rightExpr string, rightVal interface{}, rightIsCol bool,
 ) (string, error) {
 	sqlOp := b.mapOperator(op)
+
+	// Check cloak field restrictions
+	var cloakF *schema.MoulField
+	var targetVal interface{}
+	var isLeftCol bool
+	if leftIsCol {
+		cloakF = b.getCloakField(leftExpr)
+		targetVal = rightVal
+		isLeftCol = true
+	} else if rightIsCol {
+		cloakF = b.getCloakField(rightExpr)
+		targetVal = leftVal
+		isLeftCol = false
+	}
+
+	if cloakF != nil {
+		if !cloakF.Searchable {
+			return "", fmt.Errorf("cloak field %q is not searchable", cloakF.Name)
+		}
+		if sqlOp != "=" && sqlOp != "!=" {
+			return "", fmt.Errorf("cloak field %q only supports '=' and '!=' operators", cloakF.Name)
+		}
+
+		hashColName := db.QuoteIdentifier(cloakF.Name + "Hash")
+
+		// Handle null checks on cloak field
+		if targetVal == nil {
+			if sqlOp == "=" {
+				return fmt.Sprintf("%s IS NULL", hashColName), nil
+			}
+			return fmt.Sprintf("%s IS NOT NULL", hashColName), nil
+		}
+
+		// Calculate HMAC blind index hash for search
+		hashVal := cloak.ComputeHash(fmt.Sprintf("%v", targetVal))
+		pName := b.nextParamName()
+		b.params[pName] = hashVal
+		if isLeftCol {
+			return fmt.Sprintf("%s %s {:%s}", hashColName, sqlOp, pName), nil
+		}
+		return fmt.Sprintf("{:%s} %s %s", pName, sqlOp, hashColName), nil
+	}
 
 	// Null checks
 	if rightVal == nil && !rightIsCol && rightExpr == "" {

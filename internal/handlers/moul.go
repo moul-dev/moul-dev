@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -294,6 +295,10 @@ func validateMoulFields(m *schema.Moul) error {
 		switch f.Type {
 		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
 			// standard types
+		case "cloak":
+			if !cloak.IsInitialized() {
+				return fmt.Errorf("cannot use cloak field %q: MOUL_ENCRYPTION_KEY is not configured", f.Name)
+			}
 		case "select":
 			var cleaned []string
 			for _, opt := range f.Options {

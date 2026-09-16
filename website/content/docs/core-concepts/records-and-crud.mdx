@@ -22,6 +22,7 @@ List queries (`GET /api/moul/:name/records`) accept the following standard query
 | `filter` | `string` | `""` | Filter expression evaluated against SQLite records. | `filter=published=true && views>100` |
 | `expand` | `string` | `""` | Comma-separated relation field names to expand inline. | `expand=authorId,categories` |
 | `fields` | `string` | `*` | Comma-separated fields to return in the payload. | `fields=id,title,createdAt` |
+| `reveal` | `string` | `""` | Comma-separated `cloak` field names (or `all` / `*`) to unmask decrypted plaintext for authenticated users. | `reveal=ssn,apiKey` |
 
 ---
 
@@ -153,3 +154,53 @@ curl -X DELETE "http://localhost:8090/api/moul/posts/records/rec_01J6XYZ123" \
   -H "Authorization: Bearer <user_token>"
 # Returns HTTP 204 No Content on success
 ```
+
+---
+
+## Encrypted Cloak Fields in Record CRUD
+
+Collections with `cloak` fields allow storing sensitive data with end-to-end server encryption:
+
+### Creating & Updating Records
+Submit plaintext strings in your JSON payload as normal. Moul automatically derives AES-256-GCM and HMAC keys, encrypts the value, and stores companion blind index hashes transparently:
+
+```bash
+curl -X POST "http://localhost:8090/api/moul/customers/records" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Smith", "ssn": "123-45-6789"}'
+```
+
+### Reading & Revealing Plaintext
+By default, record reads return masked strings (`••••` + last 4 characters) to prevent accidental exposure in UI tables, logs, and client bundles:
+
+```json
+{
+  "id": "rec_123",
+  "name": "Alice Smith",
+  "ssn": "••••6789"
+}
+```
+
+To unmask specific fields, append `?reveal=<fieldName>` or `?reveal=all`:
+
+```bash
+curl "http://localhost:8090/api/moul/customers/records/rec_123?reveal=ssn" \
+  -H "Authorization: Bearer <token>"
+```
+
+<Callout type="info">
+Administrators (authenticated via master `X-Admin-Key` or `_rootUsers` token) always receive decrypted unmasked values automatically.
+</Callout>
+
+### Exact Match Filtering via Blind Indexes
+If `searchable: true` was configured on the schema, filter expressions can perform exact equality searches:
+
+```bash
+curl "http://localhost:8090/api/moul/customers/records?filter=ssn = '123-45-6789'" \
+  -H "Authorization: Bearer <token>"
+```
+
+<Callout type="warn">
+Substring searches (`~`, `!~`) and range operators (`>`, `<`, `>=`, `<=`) are strictly forbidden on `cloak` fields and will return HTTP 400 Bad Request. Companion hash columns (`ssnHash`) are internal database details and are never exposed in API payloads.
+</Callout>

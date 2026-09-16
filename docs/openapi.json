@@ -2814,6 +2814,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "reveal",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated cloak field names (or 'all' / '*') to unmask decrypted plaintext for authenticated users.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2939,6 +2948,15 @@
             "name": "expand",
             "in": "query",
             "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reveal",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated cloak field names (or 'all' / '*') to unmask decrypted plaintext for authenticated users.",
             "schema": {
               "type": "string"
             }
@@ -4900,8 +4918,13 @@
               "url",
               "file",
               "select",
-              "relation"
+              "relation",
+              "cloak"
             ]
+          },
+          "searchable": {
+            "type": "boolean",
+            "description": "For cloak fields, automatically creates an indexed HMAC-SHA256 companion column for exact match searches."
           },
           "relationConfig": {
             "type": "object",

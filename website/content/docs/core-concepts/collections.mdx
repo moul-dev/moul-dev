@@ -1,6 +1,6 @@
 ---
 title: Collections & Schemas
-description: Understand Moul collections, schema modeling, collection types, and the 10 supported dynamic field types.
+description: Understand Moul collections, schema modeling, collection types, and the 11 supported dynamic field types.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
@@ -27,7 +27,7 @@ Moul supports four distinct collection types tailored for different application 
 
 ## Supported Dynamic Field Types
 
-Moul supports 10 dynamic field types with automatic SQLite column mapping, runtime validation, and OpenAPI 3.0 type generation:
+Moul supports 11 dynamic field types with automatic SQLite column mapping, runtime validation, and OpenAPI 3.0 type generation:
 
 | Field Type | Description | SQLite Storage | Validation Constraints | OpenAPI Type / Format |
 | :--- | :--- | :--- | :--- | :--- |
@@ -41,6 +41,20 @@ Moul supports 10 dynamic field types with automatic SQLite column mapping, runti
 | `file` | Uploaded file or S3 key | `TEXT` | File size bounds, MIME types | `type: string` |
 | `select` | Constrained enum string | `TEXT` | Must match one of `options` array | `type: string`, `enum: [...]` |
 | `relation` | Foreign key association | `TEXT` | Validates target record ID exists | `type: string` or `type: array` |
+| `cloak` | Authenticated encrypted binary with optional blind index | `BLOB` | Validates secret key; AES-256-GCM | `type: string` |
+
+---
+
+## Encrypted Fields (`cloak`) & Blind Indexing
+
+The `cloak` field type provides application-layer authenticated encryption at rest for sensitive data (PII, SSNs, access tokens, credit cards):
+
+- **Encryption Standard**: AES-256-GCM with a 12-byte random nonce and 16-byte authentication tag (`[0x01][nonce][ciphertext + tag]`). Keys are derived via HKDF-SHA256 from the `MOUL_ENCRYPTION_KEY` environment variable.
+- **Fail-Safe Startup**: If any collection in the database defines a `cloak` field and `MOUL_ENCRYPTION_KEY` is not provided, the engine refuses to boot to prevent unrecoverable data loss or unauthorized reads.
+- **Masking by Default**: Record reads mask `cloak` values automatically (`••••` + last 4 characters, or `••••` if 4 or fewer characters). Authenticated administrators always see decrypted values. Other authenticated consumers can pass `?reveal=fieldName` (or `?reveal=all`) to request unmasked plaintext.
+- **Searchable Blind Indexing**: Because ciphertext is encrypted nondeterministically with unique nonces, direct search on encrypted binary is impossible. Setting `"searchable": true` instructs Moul to maintain an automatic, indexed companion column (`<fieldName>Hash TEXT`) populated with an HMAC-SHA256 blind index.
+  - **Query Restrictions**: Exact equality queries (`field = 'value'` and `field != 'value'`) are seamlessly translated into companion hash lookups. Pattern matches (`~`, `!~`) and range comparisons (`>`, `<`) are strictly rejected with HTTP 400 Bad Request to prevent security misconfigurations.
+  - **Security Assurance**: Companion hash columns are internal SQLite storage details and are completely stripped from all API outputs.
 
 ---
 

@@ -32,6 +32,7 @@ The engine reads environment variables from `.env` in the current working direct
 | `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
 | `MOUL_ADMIN_KEY` | Required | Admin key for elevated API endpoints and TUI access. |
 | `MOUL_DB_PATH` | `moul-local.db` | Path to SQLite database file. |
+| `MOUL_ENCRYPTION_KEY` | `""` | Master encryption key (min 16 bytes) for `cloak` AES-256-GCM encryption and blind indexes. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
 
@@ -66,12 +67,18 @@ Collections can be of four primary types:
 - `text`: String data.
 - `number`: Numeric float or integer.
 - `bool`: Boolean flag (0 or 1 in SQLite).
+- `date`: Date string (`YYYY-MM-DD`).
+- `datetime`: Date and time timestamp string (ISO 8601).
 - `json`: Structured JSON payload stored as text.
+- `url`: Web address link string (HTTP/HTTPS).
 - `file`: File upload metadata reference.
 - `select`: Constrained option string matching `options: ["A", "B"]`.
 - `relation`: Relational reference to another collection with `relationConfig: {"targetMoul":"...", "cardinality":"1:1|1:N|M:N", "onDelete":"CASCADE|SET_NULL|RESTRICT"}`.
   - `1:1` and `1:N` store a single foreign key string ID in a `TEXT` column.
   - `M:N` uses a **Document / JSON Array model**, storing a JSON array of target record string IDs (e.g. `["id1", "id2"]`) inside a single `TEXT` column. No physical SQL junction table is created; relational queries operate via SQLite `json_each()` subqueries.
+- `cloak`: Authenticated encrypted binary stored as SQLite `BLOB` using AES-256-GCM (`[0x01][nonce][ciphertext+tag]`) with HKDF-SHA256 derived keys.
+  - Setting `searchable: true` automatically creates an indexed companion column `<fieldName>Hash TEXT` with HMAC-SHA256 blind indexes for exact equality filtering (`=` and `!=`). Range and pattern operators return 400 Bad Request.
+  - Responses mask values by default (`••••` + last 4 chars). Admins always receive unmasked decrypted values; clients can unmask via `?reveal=field1,field2` (or `?reveal=all`). Companion hash columns are stripped from all API outputs. Requires `MOUL_ENCRYPTION_KEY`.
 
 ### Field Naming Constraints & Universal Timestamps
 - **Strict camelCase**: All custom field names must match regex `^[a-z][a-zA-Z0-9]*$` (e.g. `authorId`, `viewsCount`, `isFeatured`). Snake_case, PascalCase, dashes, and reserved words are rejected with HTTP 400.

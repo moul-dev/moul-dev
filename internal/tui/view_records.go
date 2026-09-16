@@ -630,6 +630,8 @@ func (m *Model) initRecordForm(isEdit bool) {
 			inputField = inputField.Validate(ValidateNumber)
 		} else if f.Type == "json" {
 			inputField = inputField.Validate(ValidateJSON)
+		} else if f.Type == "cloak" {
+			inputField = inputField.EchoMode(huh.EchoModePassword)
 		}
 		fields = append(fields, inputField)
 	}

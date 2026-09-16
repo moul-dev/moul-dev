@@ -27,6 +27,7 @@ import {
   InfoIcon,
   DownloadSimpleIcon,
   SlidersIcon,
+  LockIcon,
 } from '@phosphor-icons/react';
 import {
   Table,
@@ -1868,6 +1869,21 @@ function RecordsPage() {
                       );
                     }
 
+                    if (f.type === 'cloak') {
+                      return (
+                        <TableCell key={f.name}>
+                          {val === null || val === undefined || val === '' ? (
+                            <span style={{ color: tokens.colorFgSubtle }}>-</span>
+                          ) : (
+                            <Badge variant="neutral">
+                              <LockIcon size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                              {String(val)}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      );
+                    }
+
                     // 3. Default Cell Rendering
                     return (
                       <TableCell key={f.name}>
@@ -2296,7 +2312,9 @@ function RecordsPage() {
                                   ? 'url'
                                   : f.type === 'email'
                                     ? 'email'
-                                    : 'text'
+                                    : f.type === 'cloak'
+                                      ? 'password'
+                                      : 'text'
                           }
                           value={String(formData[f.name] ?? '')}
                           onChange={(val) => handleFieldChange(f.name, val)}
@@ -2305,17 +2323,19 @@ function RecordsPage() {
                           isInvalid={Boolean(formErrors[f.name])}
                           errorMessage={formErrors[f.name]}
                           description={
-                            f.type === 'text' || f.type === 'editor'
-                              ? f.min !== undefined || f.max !== undefined
-                                ? `Length: ${f.min ?? 0}..${f.max ?? '∞'} characters`
-                                : undefined
-                              : f.type === 'url'
-                                ? 'Must start with http:// or https://'
-                                : f.type === 'date'
-                                  ? 'Date in YYYY-MM-DD format'
-                                  : f.type === 'datetime'
-                                    ? 'Local or ISO 8601 date & time'
-                                    : undefined
+                            f.type === 'cloak'
+                              ? 'Encrypted at rest with AES-256-GCM'
+                              : f.type === 'text' || f.type === 'editor'
+                                ? f.min !== undefined || f.max !== undefined
+                                  ? `Length: ${f.min ?? 0}..${f.max ?? '∞'} characters`
+                                  : undefined
+                                : f.type === 'url'
+                                  ? 'Must start with http:// or https://'
+                                  : f.type === 'date'
+                                    ? 'Date in YYYY-MM-DD format'
+                                    : f.type === 'datetime'
+                                      ? 'Local or ISO 8601 date & time'
+                                      : undefined
                           }
                         />
                       )}

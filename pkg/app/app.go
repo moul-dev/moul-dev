@@ -22,6 +22,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/backup"
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/logger"
@@ -47,6 +48,7 @@ type Config struct {
 	Version           string
 	JWTSecret         string
 	AdminKey          string
+	EncryptionKey     string
 	AdminUIFS         fs.FS
 	AdminUIPrefix     string
 	APIPrefix         *string
@@ -295,11 +297,35 @@ func (a *App) Bootstrap() error {
 	}
 	a.dbConn = dbConn
 
+	// Cloak Cryptography Engine
+	encryptionKey := a.config.EncryptionKey
+	if encryptionKey == "" {
+		encryptionKey = envy.Get("MOUL_ENCRYPTION_KEY", "")
+	}
+	if encryptionKey != "" {
+		if err := cloak.Init(encryptionKey); err != nil {
+			return fmt.Errorf("failed to initialize cloak encryption engine: %w", err)
+		}
+		logger.Info("Cloak encryption engine initialized")
+	}
+
 	// Ensure system tables (_*) exist on first startup
 	if err := db.EnsureSystemTables(a.dbConn); err != nil {
 		return fmt.Errorf("failed to ensure system tables on startup: %w", err)
 	}
 	logger.Info("System tables (_*) verified and ready")
+
+	// Verify cloak field requirements (strict fail-fast if cloak field present without encryption key)
+	allMouls, err := db.LoadAllMoul(a.dbConn)
+	if err == nil {
+		for _, m := range allMouls {
+			for _, f := range m.Fields {
+				if f.Type == "cloak" && !cloak.IsInitialized() {
+					return fmt.Errorf("collection %q contains cloak field %q but MOUL_ENCRYPTION_KEY is not configured", m.Name, f.Name)
+				}
+			}
+		}
+	}
 
 	// Start Litestream replication
 	store, err := backup.StartReplication(context.Background(), dbConn, dbPath)

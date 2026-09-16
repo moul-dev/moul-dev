@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -145,5 +146,60 @@ func TestBuildFilterSQL(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBuildFilterSQL_Cloak(t *testing.T) {
+	_ = cloak.Init("test-secret-key-1234567890-cloak")
+
+	moul := &schema.Moul{
+		Name: "patients",
+		Fields: []schema.MoulField{
+			{Name: "ssn", Type: "cloak", Searchable: true},
+			{Name: "secretNotes", Type: "cloak", Searchable: false},
+		},
+	}
+
+	// 1. Exact equality on searchable cloak field should translate to ssnHash
+	gotSQL, params, err := BuildFilterSQL(`ssn = "123-45-6789"`, moul, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedHash := cloak.ComputeHash("123-45-6789")
+	if gotSQL != "`ssnHash` = {:p1}" {
+		t.Errorf("got SQL %q, want '`ssnHash` = {:p1}'", gotSQL)
+	}
+	if params["p1"] != expectedHash {
+		t.Errorf("got param %v, want %v", params["p1"], expectedHash)
+	}
+
+	// 2. Inequality (!=) on searchable cloak field
+	gotSQL, params, err = BuildFilterSQL(`ssn != "123-45-6789"`, moul, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotSQL != "`ssnHash` != {:p1}" {
+		t.Errorf("got SQL %q, want '`ssnHash` != {:p1}'", gotSQL)
+	}
+	if params["p1"] != expectedHash {
+		t.Errorf("got param %v, want %v", params["p1"], expectedHash)
+	}
+
+	// 3. Like operator (~) on cloak field should be rejected
+	_, _, err = BuildFilterSQL(`ssn ~ "123"`, moul, nil)
+	if err == nil {
+		t.Fatal("expected error when using '~' on cloak field")
+	}
+
+	// 4. Greater than (>) on cloak field should be rejected
+	_, _, err = BuildFilterSQL(`ssn > "123"`, moul, nil)
+	if err == nil {
+		t.Fatal("expected error when using '>' on cloak field")
+	}
+
+	// 5. Query on non-searchable cloak field should be rejected
+	_, _, err = BuildFilterSQL(`secretNotes = "private"`, moul, nil)
+	if err == nil {
+		t.Fatal("expected error when querying non-searchable cloak field")
 	}
 }

@@ -101,6 +101,7 @@ MOUL_ENV=development
 MOUL_PORT=8090
 MOUL_JWT_SECRET=test-secret-key-for-unit-tests-1234
 MOUL_ADMIN_KEY=test-admin-key-1234
+MOUL_ENCRYPTION_KEY=test-encryption-key-for-unit-tests-1234
 MOUL_DB_PATH=moul-local.db
 ```
 
@@ -303,7 +304,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 - **Feature Flag Evaluation Playground**: Live evaluation sandbox to test flag targeting gates, percentage rollouts, and actor/group targeting rules against customizable JSON contexts with instant reason code breakdowns.
 - **Settings Unsaved State Protection**: Form divergence tracking (`isDirty`) with visual warning badges and `AlertDialog` confirmation guards protecting against accidental loss when configuring S3, Litestream, rate limits, OAuth, or email.
 - **Actionable System Overview & Live Collection Metrics**: Engine overview with live record count badges per schema and quick "+ New Record" actions.
-- **Enhanced Collection Creation & Schema Designer**: Dual-tab creation drawer ("General & Fields" and "API Access Rules") with type-based schema templates, live field modeling across 10 data types, smart rule token autocomplete (`@request.*`, `@collection.*`, schema fields), quick preset chips, and an interactive Rule Documentation modal dialog.
+- **Enhanced Collection Creation & Schema Designer**: Dual-tab creation drawer ("General & Fields" and "API Access Rules") with type-based schema templates, live field modeling across 11 data types, smart rule token autocomplete (`@request.*`, `@collection.*`, schema fields), quick preset chips, and an interactive Rule Documentation modal dialog.
 - **Relational Association Modeling**: Complete visual relationship builder directly in Schema Designer supporting **1:1 (One-to-One)**, **1:N (Many-to-One / Foreign Key)**, **M:N (Many-to-Many)**, self-referencing tree structures, on-delete referential integrity policies (`CASCADE`, `SET_NULL`, `RESTRICT`), and interactive linked record pickers with inline relation expansion.
 - **Theming**: Tri-state theme toggle supporting **System** (default, dynamically adapting to OS preference in real-time), **Light**, and **Dark** modes with persistent storage.
 - **Routing**: **TanStack Router** with file-based routing (`ui/src/routes/`), generated type-safe route trees, typed Zod search schemas, route loaders, intent preloading (`preload: 'intent'`), and automatic code splitting.
@@ -768,7 +769,7 @@ To subscribe across all collections or specific multi-collections, use `GET /api
 
 ## Data Modeling & Field Types
 
-Moul supports 10 dynamic field types for schema definitions with automatic SQLite storage mapping, OpenAPI 3.0 type hints, and runtime validation:
+Moul supports 11 dynamic field types for schema definitions with automatic SQLite storage mapping, OpenAPI 3.0 type hints, and runtime validation:
 
 | Field Type | Description | SQLite Storage | Validation & Constraints | OpenAPI Type / Format |
 | :--- | :--- | :--- | :--- | :--- |
@@ -782,6 +783,14 @@ Moul supports 10 dynamic field types for schema definitions with automatic SQLit
 | `file` | File path or upload metadata | `TEXT` | Validates file metadata structure | `type: string` |
 | `select` | Enum string with constrained allowed values | `TEXT` | Restricts value to one of predefined `options` | `type: string`, `enum: [...]` |
 | `relation` | Foreign key association to another collection | `TEXT` | Validates target record existence (`1:1`, `1:N`, or `M:N` array) | `type: string` or `type: array` |
+| `cloak` | Authenticated encrypted binary with optional blind-index | `BLOB` | AES-256-GCM; requires `MOUL_ENCRYPTION_KEY`; optional blind index | `type: string` |
+
+### Encrypted Fields (`cloak`)
+
+The `cloak` field type encrypts sensitive data (PII, SSNs, credit cards, secrets) at the application layer before writing to SQLite:
+- **Encryption Algorithm**: AES-256-GCM with a version byte and random 12-byte nonce (`[0x01][nonce][ciphertext + tag]`). Keys are derived via HKDF-SHA256 from `MOUL_ENCRYPTION_KEY`.
+- **Masking by Default**: API responses mask cloak fields (`••••` + last 4 chars, or `••••` if <= 4 chars). Admin callers always receive unmasked decrypted values. Non-admin users can request unmasked plaintext with `?reveal=field1,field2` (or `?reveal=all`).
+- **Searchable Blind Indexes**: Setting `searchable: true` automatically provisions an indexed companion column (`<fieldName>Hash TEXT`) containing an HMAC-SHA256 blind index. Allows exact equality queries (`field = 'value'` or `field != 'value'`) while range/pattern queries (`~`, `>`, etc.) are securely rejected. Companion hash columns are never exposed in API responses.
 
 ---
 
@@ -831,6 +840,7 @@ Set the following environment variables on your production server or container:
 | `MOUL_API_PREFIX` | No | Base URL path prefix for API endpoints (default: /api, use `""` for root) | `/v1` or `""` |
 | `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
+| `MOUL_ENCRYPTION_KEY` | Optional* | Master key (min 16 bytes) for `cloak` field encryption and blind indexes (*required if any collection has a `cloak` field) | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |
 

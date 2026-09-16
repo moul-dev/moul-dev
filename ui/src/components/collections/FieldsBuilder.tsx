@@ -208,6 +208,7 @@ export interface MoulField {
   min?: number;
   max?: number;
   options?: string[];
+  searchable?: boolean;
   relationConfig?: {
     targetMoul: string;
     cardinality: '1:1' | '1:N' | 'M:N';
@@ -633,6 +634,7 @@ export function FieldsBuilder({
                     <ComboBoxItem id="editor" textValue="Rich Text">Rich Text</ComboBoxItem>
                     <ComboBoxItem id="select" textValue="Single Select (Enum)">Single Select (Enum)</ComboBoxItem>
                     <ComboBoxItem id="relation" textValue="Relation (Foreign Key)">Relation (Foreign Key)</ComboBoxItem>
+                    <ComboBoxItem id="cloak" textValue="Encrypted (Cloak)">Encrypted (Cloak)</ComboBoxItem>
                   </ComboBox>
 
                   <Checkbox
@@ -641,6 +643,15 @@ export function FieldsBuilder({
                   >
                     Required
                   </Checkbox>
+
+                  {field.type === 'cloak' && (
+                    <Checkbox
+                      isSelected={Boolean(field.searchable)}
+                      onChange={(checked) => handleFieldChange(idx, 'searchable', checked)}
+                    >
+                      Searchable
+                    </Checkbox>
+                  )}
 
                   {/* Config & Remove Controls */}
                   <div {...stylex.props(styles.fieldControls)}>

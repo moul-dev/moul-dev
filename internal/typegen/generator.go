@@ -146,7 +146,7 @@ func GenerateTypeScript(mouls []*schema.Moul) string {
 
 func fieldToTSType(f schema.MoulField) string {
 	switch f.Type {
-	case "text", "url", "date", "datetime":
+	case "text", "date", "datetime", "url", "cloak":
 		return "string"
 	case "number":
 		return "number"
