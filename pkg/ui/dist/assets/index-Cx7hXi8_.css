@@ -17,6 +17,10 @@
     padding: 4px;
   }
 
+  .x153ncpu {
+    padding: 8px 12px;
+  }
+
   .xmw63kd {
     padding: var(--x1djehx3);
   }
@@ -165,10 +169,6 @@
 
   .x1tdtdd3 {
     gap: var(--xpmkuee);
-  }
-
-  .x1osaytk {
-    grid-column: 1 / -1;
   }
 
   .xg9jes1 {
@@ -549,6 +549,10 @@
     font-size: var(--xz9ra21);
   }
 
+  .x1k4tb9n {
+    font-style: italic;
+  }
+
   .xk50ysn {
     font-weight: 500;
   }
@@ -577,8 +581,8 @@
     grid-template-columns: 360px 1fr;
   }
 
-  .xszfov0 {
-    grid-template-columns: minmax(140px, 1.8fr) minmax(160px, 1.6fr) auto auto;
+  .x1ymisk {
+    grid-template-columns: 72px minmax(130px, 1.8fr) minmax(160px, 1.5fr) 64px minmax(110px, 1.1fr) 40px;
   }
 
   .x1p9eum2 {
@@ -755,6 +759,11 @@
 
   .xz4gly6 {
     transition-timing-function: ease-in-out;
+  }
+
+  .x87ps6o {
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .xxymvpz {
@@ -981,10 +990,6 @@
     margin-right: 2px;
   }
 
-  .x1rdy4ex {
-    margin-top: -4px;
-  }
-
   .xr9ek0c {
     margin-top: 2px;
   }
@@ -1025,6 +1030,14 @@
     max-width: 280px;
   }
 
+  .xxc7z9f {
+    max-width: 360px;
+  }
+
+  .x1dt7z5j {
+    max-width: 380px;
+  }
+
   .x1pfbilc {
     max-width: 460px;
   }
@@ -1053,6 +1066,10 @@
     min-width: 0;
   }
 
+  .x1wu2mox {
+    min-width: 14px;
+  }
+
   .x1klvvdw {
     min-width: 260px;
   }
@@ -1063,6 +1080,10 @@
 
   .x1odjw0f {
     overflow-y: auto;
+  }
+
+  .x1120s5i {
+    padding-bottom: 2px;
   }
 
   .xjkvuk6 {
@@ -1089,6 +1110,14 @@
     padding-bottom: var(--x1jforli);
   }
 
+  .x17rsaze {
+    padding-bottom: var(--x9epbqz);
+  }
+
+  .xqimf8 {
+    padding-left: var(--x1djehx3);
+  }
+
   .xm9ii0y {
     padding-right: var(--x1jforli);
   }
@@ -1099,10 +1128,6 @@
 
   .x889kno {
     padding-top: 10px;
-  }
-
-  .x1nn3v0j {
-    padding-top: 2px;
   }
 
   .x2opew6 {

@@ -25,6 +25,17 @@ import {
   UserIcon,
   ShieldCheckIcon,
   WarningCircleIcon,
+  LockKeyIcon,
+  TextAaIcon,
+  HashIcon,
+  ToggleLeftIcon,
+  EnvelopeSimpleIcon,
+  CalendarBlankIcon,
+  ClockIcon,
+  PaperclipIcon,
+  BracketsCurlyIcon,
+  ArticleIcon,
+  ListDashesIcon,
 } from '@phosphor-icons/react';
 
 const styles = stylex.create({
@@ -66,23 +77,38 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: tokens.spacing2,
   },
-  systemFieldsContainer: {
+  systemFieldsBanner: {
     display: 'flex',
-    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: tokens.spacing2,
-    padding: tokens.spacing3,
+    paddingBlock: tokens.spacing2,
+    paddingInline: tokens.spacing3,
     backgroundColor: tokens.colorBgSubtle,
     borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: tokens.colorBorder,
   },
-  systemFieldsHeader: {
+  systemFieldsBannerLeft: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: tokens.spacing2,
+  },
+  systemFieldsBannerRight: {
+    fontSize: '0.6875rem',
+    color: tokens.colorFgSubtle,
+    fontStyle: 'italic',
+  },
+  systemFieldsBannerLabel: {
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 600,
+    color: tokens.colorFgSubtle,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: tokens.spacing1,
   },
   systemFieldGroup: {
     display: 'flex',
@@ -121,17 +147,24 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: '4px',
   },
-  fieldConflictWarning: {
-    display: 'flex',
+  columnHeaderRow: {
+    display: 'grid',
+    gridTemplateColumns: '72px minmax(130px, 1.8fr) minmax(160px, 1.5fr) 64px minmax(110px, 1.1fr) 40px',
+    gap: tokens.spacing3,
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: tokens.spacing2,
-    color: tokens.colorError500,
-    fontSize: tokens.fontSizeXs,
+    paddingInline: tokens.spacing3,
+    paddingBottom: '2px',
+  },
+  headerCol: {
+    fontSize: '0.6875rem',
+    fontWeight: 600,
+    color: tokens.colorFgSubtle,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
     fontFamily: tokens.fontFamilyBase,
-    gridColumn: '1 / -1',
-    marginTop: '-4px',
-    paddingTop: '2px',
+  },
+  headerColCenter: {
+    textAlign: 'center',
   },
   fieldList: {
     display: 'flex',
@@ -155,15 +188,81 @@ const styles = stylex.create({
   },
   fieldMainRow: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(140px, 1.8fr) minmax(160px, 1.6fr) auto auto',
+    gridTemplateColumns: '72px minmax(130px, 1.8fr) minmax(160px, 1.5fr) 64px minmax(110px, 1.1fr) 40px',
     gap: tokens.spacing3,
     alignItems: 'center',
     padding: tokens.spacing3,
   },
-  fieldControls: {
+  orderCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing1,
+  },
+  orderNumber: {
+    fontSize: '0.6875rem',
+    fontFamily: 'var(--font-mono, monospace)',
+    color: tokens.colorFgSubtle,
+    fontWeight: 500,
+    minWidth: '14px',
+    textAlign: 'center',
+  },
+  orderActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+  },
+  checkboxCell: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionsCell: {
+    display: 'flex',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  actionsCell: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  truncatedText: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  placeholderDash: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+    width: '100%',
+    textAlign: 'center',
+    userSelect: 'none',
+  },
+  comboBoxItemContent: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing2,
+  },
+  emptyMenuState: {
+    padding: '8px 12px',
+    fontSize: tokens.fontSizeSm,
+    color: tokens.colorFgSubtle,
+  },
+  fieldValidationRow: {
+    paddingInline: tokens.spacing3,
+    paddingBottom: tokens.spacing2,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing1,
+  },
+  fieldConflictWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: tokens.spacing2,
+    color: tokens.colorError500,
+    fontSize: tokens.fontSizeXs,
+    fontFamily: tokens.fontFamilyBase,
   },
   expandedConfigPanel: {
     borderTopWidth: 1,
@@ -174,6 +273,11 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing3,
+  },
+  panelSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
   },
   relationGrid: {
     display: 'grid',
@@ -199,7 +303,73 @@ const styles = stylex.create({
     flexDirection: 'column',
     gap: tokens.spacing2,
   },
+  emptyOptionsState: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+    fontStyle: 'italic',
+  },
+  addOptionRow: {
+    display: 'flex',
+    gap: tokens.spacing2,
+    maxWidth: '360px',
+  },
+  constraintSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
+  },
+  constraintLabel: {
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 500,
+    color: tokens.colorFg,
+  },
+  numberInputsRow: {
+    display: 'flex',
+    gap: tokens.spacing2,
+    maxWidth: '380px',
+  },
+  securityHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+  },
+  securityTitle: {
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 600,
+    color: tokens.colorFg,
+  },
+  securityRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+  },
+  securityCheckboxLabel: {
+    fontSize: tokens.fontSizeXs,
+    fontWeight: 500,
+    color: tokens.colorFg,
+  },
+  securityDescription: {
+    fontSize: tokens.fontSizeXs,
+    color: tokens.colorFgSubtle,
+    paddingLeft: tokens.spacing4,
+  },
 });
+
+export const FIELD_TYPES = [
+  { id: 'text', label: 'Text (String)', icon: TextAaIcon },
+  { id: 'number', label: 'Number', icon: HashIcon },
+  { id: 'bool', label: 'Boolean', icon: ToggleLeftIcon },
+  { id: 'email', label: 'Email', icon: EnvelopeSimpleIcon },
+  { id: 'url', label: 'URL', icon: LinkIcon },
+  { id: 'date', label: 'Date', icon: CalendarBlankIcon },
+  { id: 'datetime', label: 'Date & Time', icon: ClockIcon },
+  { id: 'file', label: 'File Attachment', icon: PaperclipIcon },
+  { id: 'json', label: 'JSON Object', icon: BracketsCurlyIcon },
+  { id: 'editor', label: 'Rich Text', icon: ArticleIcon },
+  { id: 'select', label: 'Single Select (Enum)', icon: ListDashesIcon },
+  { id: 'relation', label: 'Relation (Foreign Key)', icon: LinkIcon },
+  { id: 'cloak', label: 'Encrypted (Cloak)', icon: LockKeyIcon },
+] as const;
 
 export interface MoulField {
   name: string;
@@ -322,33 +492,37 @@ export function FieldsBuilder({
     onChange(next);
   };
 
-  const handleAddRelationField = () => {
-    const nextIdx = fields.length;
-    const otherMoul = allMouls?.find((m: any) => m.name !== currentMoulName)?.name || currentMoulName || 'users';
-    const defaultName = getNextDefaultRelationName(otherMoul, currentMoulName, fields);
+  const handleMoveField = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= fields.length) return;
+    const nextFields = [...fields];
+    const temp = nextFields[index];
+    nextFields[index] = nextFields[targetIndex];
+    nextFields[targetIndex] = temp;
+    onChange(nextFields);
 
-    const next = [
-      ...fields,
-      {
-        name: defaultName,
-        type: 'relation',
-        required: false,
-        relationConfig: {
-          targetMoul: otherMoul,
-          cardinality: '1:N' as const,
-          onDelete: 'SET_NULL' as const,
-        },
-      },
-    ];
-    onChange(next);
-    setExpandedFields((prev) => ({ ...prev, [nextIdx]: true }));
+    setExpandedFields((prev) => {
+      const nextExpanded = { ...prev };
+      const currentExp = Boolean(prev[index]);
+      const targetExp = Boolean(prev[targetIndex]);
+      nextExpanded[index] = targetExp;
+      nextExpanded[targetIndex] = currentExp;
+      return nextExpanded;
+    });
   };
 
   const handleRemoveField = (idx: number) => {
     const next = fields.filter((_, i) => i !== idx);
     onChange(next);
-    const nextExp = { ...expandedFields };
-    delete nextExp[idx];
+    const nextExp: Record<number, boolean> = {};
+    Object.entries(expandedFields).forEach(([key, val]) => {
+      const numKey = Number(key);
+      if (numKey < idx) {
+        nextExp[numKey] = val;
+      } else if (numKey > idx) {
+        nextExp[numKey - 1] = val;
+      }
+    });
     setExpandedFields(nextExp);
   };
 
@@ -376,6 +550,12 @@ export function FieldsBuilder({
         updated.options = ['option1', 'option2'];
       }
       setExpandedFields((prev) => ({ ...prev, [idx]: true }));
+    }
+
+    if (key === 'type' && val === 'cloak') {
+      if (updated.searchable === undefined) {
+        updated.searchable = false;
+      }
     }
 
     next[idx] = updated;
@@ -437,10 +617,6 @@ export function FieldsBuilder({
         </div>
 
         <div {...stylex.props(styles.actions)}>
-          <Button variant="outline" onPress={handleAddRelationField}>
-            <LinkIcon size={16} />
-            <span>Add Relation</span>
-          </Button>
           <Button variant="primary" onPress={handleAddField}>
             <PlusIcon size={16} />
             <span>Add Field</span>
@@ -448,50 +624,33 @@ export function FieldsBuilder({
         </div>
       </div>
 
-      {/* Built-in System & Default Fields Section */}
-      <div {...stylex.props(styles.systemFieldsContainer)}>
-        <div {...stylex.props(styles.systemFieldsHeader)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing2 }}>
-            <InfoIcon size={15} color={tokens.colorPrimary500} />
-            <span style={{ fontWeight: 600, fontSize: tokens.fontSizeXs, color: tokens.colorFg }}>
-              {collectionType === 'auth' ? 'Built-in Auth & System Columns' : 'Built-in System Columns'}
-            </span>
-            <Badge variant={collectionType === 'auth' ? 'primary' : 'neutral'}>
-              {collectionType === 'auth' ? '12 default columns' : '3 default columns'}
-            </Badge>
-          </div>
-          <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle }}>
-            {collectionType === 'auth'
-              ? 'Managed automatically: Identity, credentials, 2FA, and timestamps'
-              : 'Managed automatically: Primary key and audit timestamps'}
+      {/* Built-in System Columns Compact Banner */}
+      <div {...stylex.props(styles.systemFieldsBanner)}>
+        <div {...stylex.props(styles.systemFieldsBannerLeft)}>
+          <span {...stylex.props(styles.systemFieldsBannerLabel)}>
+            <InfoIcon size={14} color={tokens.colorPrimary500} />
+            <span>{collectionType === 'auth' ? 'Auth & System Columns:' : 'System Columns:'}</span>
           </span>
-        </div>
 
-        {collectionType === 'auth' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
-            {/* Core & Primary Auth Identity Fields */}
+          {collectionType === 'auth' ? (
             <div {...stylex.props(styles.systemFieldGroup)}>
-              <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontWeight: 500 }}>
-                Core & Identity:
-              </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
                 <span>id</span>
-                <Badge variant="neutral">PK</Badge>
+                <Badge variant="neutral" size="sm">PK</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Required unique login username">
-                <UserIcon size={12} />
+                <UserIcon size={11} />
                 <span>username</span>
-                <Badge variant="primary">unique</Badge>
+                <Badge variant="primary" size="sm">unique</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Required unique email address">
-                <UserIcon size={12} />
+                <UserIcon size={11} />
                 <span>email</span>
-                <Badge variant="primary">unique</Badge>
+                <Badge variant="primary" size="sm">unique</Badge>
               </span>
               <span {...stylex.props(styles.authFieldPill)} title="Bcrypt password hash (hidden from read APIs)">
-                <ShieldCheckIcon size={12} />
+                <ShieldCheckIcon size={11} />
                 <span>passwordHash</span>
-                <Badge variant="neutral">secure</Badge>
               </span>
               <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
                 <span>createdAt</span>
@@ -500,67 +659,55 @@ export function FieldsBuilder({
                 <span>updatedAt</span>
               </span>
             </div>
-
-            {/* Extended Security Columns */}
+          ) : (
             <div {...stylex.props(styles.systemFieldGroup)}>
-              <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontWeight: 500 }}>
-                Security & 2FA:
+              <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
+                <span>id</span>
+                <Badge variant="neutral" size="sm">PK</Badge>
               </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="One-time password login code">
-                <span>otpCode</span>
+              <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
+                <span>createdAt</span>
+                <Badge variant="neutral" size="sm">datetime</Badge>
               </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="OTP expiration timestamp">
-                <span>otpExpiresAt</span>
-              </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="WebAuthn credentials list">
-                <span>passkeys</span>
-                <Badge variant="neutral">json</Badge>
-              </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="Password reset token">
-                <span>resetToken</span>
-              </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="Reset token expiration timestamp">
-                <span>resetTokenExpiresAt</span>
-              </span>
-              <span {...stylex.props(styles.systemFieldPill)} title="OAuth provider identities">
-                <span>oauthProviders</span>
-                <Badge variant="neutral">json</Badge>
+              <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
+                <span>updatedAt</span>
+                <Badge variant="neutral" size="sm">datetime</Badge>
               </span>
             </div>
-          </div>
-        ) : (
-          <div {...stylex.props(styles.systemFieldGroup)}>
-            <span {...stylex.props(styles.systemFieldPill)} title="Primary Key (string)">
-              <span>id</span>
-              <Badge variant="neutral">PK</Badge>
-            </span>
-            <span {...stylex.props(styles.systemFieldPill)} title="Creation ISO-8601 timestamp">
-              <span>createdAt</span>
-              <Badge variant="neutral">datetime</Badge>
-            </span>
-            <span {...stylex.props(styles.systemFieldPill)} title="Last updated ISO-8601 timestamp">
-              <span>updatedAt</span>
-              <Badge variant="neutral">datetime</Badge>
-            </span>
-          </div>
-        )}
+          )}
+        </div>
+
+        <span {...stylex.props(styles.systemFieldsBannerRight)}>
+          Auto-managed
+        </span>
       </div>
 
-      {/* Field List */}
+      {/* Field List & Column Headers */}
       {fields.length === 0 ? (
         <EmptyState
           variant="dashed"
           title="No custom fields"
-          description="Add fields or relations to define this collection schema."
+          description="Click '+ Add Field' to start defining custom columns."
         />
       ) : (
         <div {...stylex.props(styles.fieldList)}>
+          {/* Subtle Column Header Row */}
+          <div {...stylex.props(styles.columnHeaderRow)}>
+            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>#</span>
+            <span {...stylex.props(styles.headerCol)}>Field Name</span>
+            <span {...stylex.props(styles.headerCol)}>Data Type</span>
+            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>Required</span>
+            <span {...stylex.props(styles.headerCol)}>Options / Rules</span>
+            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>Actions</span>
+          </div>
+
           {fields.map((field, idx) => {
             const isRelation = field.type === 'relation';
             const isSelect = field.type === 'select';
             const isNumber = field.type === 'number';
             const isText = field.type === 'text' || field.type === 'editor';
-            const isConfigurable = isRelation || isSelect || isNumber || isText;
+            const isCloak = field.type === 'cloak';
+            const isConfigurable = isRelation || isSelect || isNumber || isText || isCloak;
             const isExpanded = Boolean(expandedFields[idx]);
             const trimmedName = (field.name || '').trim();
             const isEmpty = !trimmedName;
@@ -601,15 +748,45 @@ export function FieldsBuilder({
               >
                 {/* Main Row */}
                 <div {...stylex.props(styles.fieldMainRow)}>
+                  {/* 1. Order & Reorder Controls */}
+                  <div {...stylex.props(styles.orderCell)}>
+                    <span {...stylex.props(styles.orderNumber)}>{idx + 1}</span>
+                    <div {...stylex.props(styles.orderActions)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        isIcon
+                        aria-label={`Move ${field.name || `field ${idx + 1}`} up`}
+                        isDisabled={idx === 0}
+                        onPress={() => handleMoveField(idx, -1)}
+                      >
+                        <CaretUpIcon size={12} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        isIcon
+                        aria-label={`Move ${field.name || `field ${idx + 1}`} down`}
+                        isDisabled={idx === fields.length - 1}
+                        onPress={() => handleMoveField(idx, 1)}
+                      >
+                        <CaretDownIcon size={12} />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 2. Field Name */}
                   <TextField
+                    aria-label={`Field ${idx + 1} name`}
                     placeholder="fieldName (e.g. authorId)"
                     value={field.name}
                     onChange={(val) => handleFieldChange(idx, 'name', val)}
                     isInvalid={isInvalid}
                   />
 
+                  {/* 3. Field Type Selector */}
                   <ComboBox
-                    aria-label="Field Type"
+                    aria-label={`Field ${idx + 1} type`}
                     placeholder="Select Type"
                     menuTrigger="focus"
                     selectedKey={field.type}
@@ -617,167 +794,190 @@ export function FieldsBuilder({
                       if (val) handleFieldChange(idx, 'type', String(val));
                     }}
                     renderEmptyState={() => (
-                      <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
-                        No matching items found
+                      <div {...stylex.props(styles.emptyMenuState)}>
+                        No matching types found
                       </div>
                     )}
                   >
-                    <ComboBoxItem id="text" textValue="Text (String)">Text (String)</ComboBoxItem>
-                    <ComboBoxItem id="number" textValue="Number">Number</ComboBoxItem>
-                    <ComboBoxItem id="bool" textValue="Boolean">Boolean</ComboBoxItem>
-                    <ComboBoxItem id="email" textValue="Email">Email</ComboBoxItem>
-                    <ComboBoxItem id="url" textValue="URL">URL</ComboBoxItem>
-                    <ComboBoxItem id="date" textValue="Date">Date</ComboBoxItem>
-                    <ComboBoxItem id="datetime" textValue="Date & Time">Date & Time</ComboBoxItem>
-                    <ComboBoxItem id="file" textValue="File Attachment">File Attachment</ComboBoxItem>
-                    <ComboBoxItem id="json" textValue="JSON Object">JSON Object</ComboBoxItem>
-                    <ComboBoxItem id="editor" textValue="Rich Text">Rich Text</ComboBoxItem>
-                    <ComboBoxItem id="select" textValue="Single Select (Enum)">Single Select (Enum)</ComboBoxItem>
-                    <ComboBoxItem id="relation" textValue="Relation (Foreign Key)">Relation (Foreign Key)</ComboBoxItem>
-                    <ComboBoxItem id="cloak" textValue="Encrypted (Cloak)">Encrypted (Cloak)</ComboBoxItem>
+                    {FIELD_TYPES.map((t) => {
+                      const IconComp = t.icon;
+                      return (
+                        <ComboBoxItem key={t.id} id={t.id} textValue={t.label}>
+                          <div {...stylex.props(styles.comboBoxItemContent)}>
+                            <IconComp size={15} color={tokens.colorPrimary500} />
+                            <span>{t.label}</span>
+                          </div>
+                        </ComboBoxItem>
+                      );
+                    })}
                   </ComboBox>
 
-                  <Checkbox
-                    isSelected={Boolean(field.required)}
-                    onChange={(checked) => handleFieldChange(idx, 'required', checked)}
-                  >
-                    Required
-                  </Checkbox>
-
-                  {field.type === 'cloak' && (
+                  {/* 4. Required Checkbox */}
+                  <div {...stylex.props(styles.checkboxCell)}>
                     <Checkbox
-                      isSelected={Boolean(field.searchable)}
-                      onChange={(checked) => handleFieldChange(idx, 'searchable', checked)}
-                    >
-                      Searchable
-                    </Checkbox>
-                  )}
+                      aria-label={`${field.name || `Field ${idx + 1}`} is required`}
+                      isSelected={Boolean(field.required)}
+                      onChange={(checked) => handleFieldChange(idx, 'required', checked)}
+                    />
+                  </div>
 
-                  {/* Config & Remove Controls */}
-                  <div {...stylex.props(styles.fieldControls)}>
-                    {isConfigurable && (
+                  {/* 5. Options & Rules Button */}
+                  <div {...stylex.props(styles.optionsCell)}>
+                    {isConfigurable ? (
                       <Button
-                        variant={isRelation ? 'secondary' : 'outline'}
-                        aria-label={`Configure ${field.name}`}
+                        variant={
+                          isRelation
+                            ? (field.relationConfig?.targetMoul ? 'secondary' : 'outline')
+                            : isCloak
+                              ? (field.searchable ? 'secondary' : 'outline')
+                              : ((isText && (field.min !== undefined || field.max !== undefined)) ||
+                                (isNumber && (field.min !== undefined || field.max !== undefined)) ||
+                                (isSelect && (field.options || []).length > 0))
+                                ? 'secondary'
+                                : 'outline'
+                        }
+                        aria-label={`Configure options for ${field.name || `field ${idx + 1}`}`}
                         onPress={() => toggleExpand(idx)}
                       >
                         {isRelation ? (
                           <>
-                            <LinkIcon size={14} color={tokens.colorPrimary500} />
-                            <span>
+                            <LinkIcon size={13} color={tokens.colorPrimary500} />
+                            <span {...stylex.props(styles.truncatedText)}>
                               {field.relationConfig?.targetMoul
                                 ? `➔ ${field.relationConfig.targetMoul}`
                                 : 'Configure'}
                             </span>
-                            {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
+                            {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
+                          </>
+                        ) : isCloak ? (
+                          <>
+                            <LockKeyIcon size={13} color={tokens.colorPrimary500} />
+                            <span>{field.searchable ? 'Searchable' : 'Options'}</span>
+                            {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         ) : isSelect ? (
                           <>
-                            <TagIcon size={14} />
-                            <span>
-                              {(field.options || []).length} options
-                            </span>
-                            {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
+                            <TagIcon size={13} color={tokens.colorPrimary500} />
+                            <span>{(field.options || []).length} options</span>
+                            {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         ) : isText ? (
                           <>
-                            <SlidersIcon size={14} />
+                            <SlidersIcon size={13} color={tokens.colorPrimary500} />
                             <span>
                               {field.min !== undefined || field.max !== undefined
                                 ? `${field.min ?? 0}..${field.max ?? '∞'} chars`
                                 : 'Length'}
                             </span>
-                            {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
+                            {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         ) : (
                           <>
-                            <SlidersIcon size={14} />
+                            <SlidersIcon size={13} color={tokens.colorPrimary500} />
                             <span>
                               {field.min !== undefined || field.max !== undefined
                                 ? `${field.min ?? '-∞'}..${field.max ?? '+∞'}`
                                 : 'Min/Max'}
                             </span>
-                            {isExpanded ? <CaretUpIcon size={14} /> : <CaretDownIcon size={14} />}
+                            {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         )}
                       </Button>
+                    ) : (
+                      <span {...stylex.props(styles.placeholderDash)}>
+                        —
+                      </span>
                     )}
+                  </div>
 
+                  {/* 6. Actions (Delete) */}
+                  <div {...stylex.props(styles.actionsCell)}>
                     <Button
                       variant="ghost"
                       isIcon
-                      aria-label={`Remove field ${field.name || idx}`}
+                      size="sm"
+                      aria-label={`Remove field ${field.name || `field ${idx + 1}`}`}
                       onPress={() => handleRemoveField(idx)}
                     >
-                      <TrashIcon size={18} color={tokens.colorError500} />
+                      <TrashIcon size={16} color={tokens.colorError500} />
                     </Button>
                   </div>
-
-                  {isEmpty && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>Field name is required.</span>
-                    </div>
-                  )}
-
-                  {isConflict && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>
-                        &ldquo;{field.name}&rdquo; is already a built-in default column for {collectionType} collections. Please rename or remove it.
-                      </span>
-                    </div>
-                  )}
-                  {!isConflict && !isEmpty && isInvalidCamel && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>
-                        Field name &ldquo;{field.name}&rdquo; must be camelCase (e.g. &ldquo;authorId&rdquo;, &ldquo;viewsCount&rdquo;).
-                      </span>
-                      {canSuggestFix && (
-                        <Button
-                          variant="secondary"
-                          onPress={() => handleFieldChange(idx, 'name', suggestedCamel)}
-                        >
-                          Use &ldquo;{suggestedCamel}&rdquo;
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {isDuplicate && !isConflict && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>
-                        Field name &ldquo;{field.name}&rdquo; is already used in another field. Field names must be unique.
-                      </span>
-                    </div>
-                  )}
-                  {hasMinMaxConflict && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>
-                        Minimum ({field.min}) cannot be greater than maximum ({field.max}).
-                      </span>
-                    </div>
-                  )}
-                  {hasSelectError && (
-                    <div {...stylex.props(styles.fieldConflictWarning)}>
-                      <WarningCircleIcon size={14} color={tokens.colorError500} />
-                      <span>
-                        Select field requires at least one allowed option.
-                      </span>
-                    </div>
-                  )}
                 </div>
+
+                {/* Validation Warnings Section */}
+                {isInvalid && (
+                  <div {...stylex.props(styles.fieldValidationRow)}>
+                    {isEmpty && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>Field name is required.</span>
+                      </div>
+                    )}
+
+                    {isConflict && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          &ldquo;{field.name}&rdquo; is already a built-in default column for {collectionType} collections. Please rename or remove it.
+                        </span>
+                      </div>
+                    )}
+
+                    {!isConflict && !isEmpty && isInvalidCamel && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          Field name &ldquo;{field.name}&rdquo; must be camelCase (e.g. &ldquo;authorId&rdquo;, &ldquo;viewsCount&rdquo;).
+                        </span>
+                        {canSuggestFix && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => handleFieldChange(idx, 'name', suggestedCamel)}
+                          >
+                            Use &ldquo;{suggestedCamel}&rdquo;
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {isDuplicate && !isConflict && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          Field name &ldquo;{field.name}&rdquo; is already used in another field. Field names must be unique.
+                        </span>
+                      </div>
+                    )}
+
+                    {hasMinMaxConflict && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          Minimum ({field.min}) cannot be greater than maximum ({field.max}).
+                        </span>
+                      </div>
+                    )}
+
+                    {hasSelectError && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          Select field requires at least one allowed option.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Expandable Configuration Section */}
                 {isExpanded && isConfigurable && (
                   <div {...stylex.props(styles.expandedConfigPanel)}>
                     {/* 1. Relation Configurator */}
                     {isRelation && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
+                      <div {...stylex.props(styles.panelSection)}>
                         <div {...stylex.props(styles.relationHelperBanner)}>
-                          <InfoIcon size={15} color={tokens.colorPrimary500} style={{ flexShrink: 0 }} />
+                          <InfoIcon size={15} color={tokens.colorPrimary500} />
                           <span>
                             Relational link from <strong>{currentMoulName || 'this collection'}</strong> to target collection.
                           </span>
@@ -793,7 +993,7 @@ export function FieldsBuilder({
                               if (key) handleRelationConfigChange(idx, 'targetMoul', String(key));
                             }}
                             renderEmptyState={() => (
-                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                              <div {...stylex.props(styles.emptyMenuState)}>
                                 No matching items found
                               </div>
                             )}
@@ -814,7 +1014,7 @@ export function FieldsBuilder({
                               if (key) handleRelationConfigChange(idx, 'cardinality', String(key));
                             }}
                             renderEmptyState={() => (
-                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                              <div {...stylex.props(styles.emptyMenuState)}>
                                 No matching items found
                               </div>
                             )}
@@ -833,7 +1033,7 @@ export function FieldsBuilder({
                               if (key) handleRelationConfigChange(idx, 'onDelete', String(key));
                             }}
                             renderEmptyState={() => (
-                              <div style={{ padding: '8px 12px', fontSize: tokens.fontSizeSm, color: tokens.colorFgSubtle }}>
+                              <div {...stylex.props(styles.emptyMenuState)}>
                                 No matching items found
                               </div>
                             )}
@@ -859,7 +1059,7 @@ export function FieldsBuilder({
                               : undefined
                           }
                           renderEmptyState={() => (
-                            <span style={{ fontSize: tokens.fontSizeXs, color: tokens.colorFgSubtle, fontStyle: 'italic' }}>
+                            <span {...stylex.props(styles.emptyOptionsState)}>
                               No options added yet. Type an option name below and press Add.
                             </span>
                           )}
@@ -873,7 +1073,7 @@ export function FieldsBuilder({
                             </Tag>
                           ))}
                         </TagGroup>
-                        <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '360px' }}>
+                        <div {...stylex.props(styles.addOptionRow)}>
                           <TextField
                             aria-label="New option name"
                             placeholder="Option name (e.g. published)"
@@ -895,11 +1095,11 @@ export function FieldsBuilder({
 
                     {/* 3. Text Length Constraints */}
                     {isText && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
-                        <span style={{ fontSize: tokens.fontSizeXs, fontWeight: 500, color: tokens.colorFg }}>
+                      <div {...stylex.props(styles.constraintSection)}>
+                        <span {...stylex.props(styles.constraintLabel)}>
                           Character Length Limits (optional):
                         </span>
-                        <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '380px' }}>
+                        <div {...stylex.props(styles.numberInputsRow)}>
                           <NumberField
                             label="Min Characters"
                             minValue={0}
@@ -918,11 +1118,11 @@ export function FieldsBuilder({
 
                     {/* 4. Number Min/Max Constraints */}
                     {isNumber && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing2 }}>
-                        <span style={{ fontSize: tokens.fontSizeXs, fontWeight: 500, color: tokens.colorFg }}>
+                      <div {...stylex.props(styles.constraintSection)}>
+                        <span {...stylex.props(styles.constraintLabel)}>
                           Numeric Range Limits (optional):
                         </span>
-                        <div style={{ display: 'flex', gap: tokens.spacing2, maxWidth: '380px' }}>
+                        <div {...stylex.props(styles.numberInputsRow)}>
                           <NumberField
                             label="Minimum Value"
                             value={field.min ?? undefined}
@@ -934,6 +1134,31 @@ export function FieldsBuilder({
                             onChange={(val) => handleFieldChange(idx, 'max', val)}
                           />
                         </div>
+                      </div>
+                    )}
+
+                    {/* 5. Encrypted Cloak Constraints */}
+                    {isCloak && (
+                      <div {...stylex.props(styles.panelSection)}>
+                        <div {...stylex.props(styles.securityHeader)}>
+                          <LockKeyIcon size={16} color={tokens.colorPrimary500} />
+                          <span {...stylex.props(styles.securityTitle)}>
+                            Encrypted Field (Cloak) Security Configuration
+                          </span>
+                        </div>
+                        <div {...stylex.props(styles.securityRow)}>
+                          <Checkbox
+                            isSelected={Boolean(field.searchable)}
+                            onChange={(checked) => handleFieldChange(idx, 'searchable', checked)}
+                          >
+                            <span {...stylex.props(styles.securityCheckboxLabel)}>
+                              Enable Searchable Ciphertext (Blind Indexing)
+                            </span>
+                          </Checkbox>
+                        </div>
+                        <span {...stylex.props(styles.securityDescription)}>
+                          Enables exact equality queries on encrypted fields using a deterministic blind index HMAC without revealing plaintext to the database server.
+                        </span>
                       </div>
                     )}
                   </div>
