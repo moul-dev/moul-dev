@@ -23,6 +23,7 @@ type MoulField struct {
 	Options        []string        `json:"options,omitempty"`
 	RelationConfig *RelationConfig `json:"relationConfig,omitempty"`
 	Searchable     bool            `json:"searchable,omitempty"`
+	Unique         bool            `json:"unique,omitempty"`
 }
 
 type MoulRules struct {

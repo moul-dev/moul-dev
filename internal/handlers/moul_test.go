@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
@@ -1473,6 +1474,165 @@ func TestValidateMoulFieldsCamelCase(t *testing.T) {
 	resp = postJSON(t, client, server.URL+"/api/moul", reservedUpdatedMoul, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("Expected 400 for reserved field name updatedAt, got %d", resp.StatusCode)
+	}
+}
+
+func TestValidateMoulFieldsUnique(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+	e := echo.New()
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Valid unique fields on allowed scalar types
+	validMoul := schema.Moul{
+		Name: "unique_collection",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "slug", Type: "text", Unique: true},
+			{Name: "code", Type: "number", Unique: true},
+			{Name: "contactEmail", Type: "email", Unique: true},
+			{Name: "websiteUrl", Type: "url", Unique: true},
+			{Name: "eventDate", Type: "date", Unique: true},
+			{Name: "publishTime", Type: "datetime", Unique: true},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", validMoul, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for valid unique fields, got %d", resp.StatusCode)
+	}
+
+	// 2. Ineligible field types should be rejected when Unique is true
+	ineligibleTypes := []string{"bool", "json", "file"}
+	for _, fType := range ineligibleTypes {
+		badMoul := schema.Moul{
+			Name: "bad_" + fType,
+			Type: "base",
+			Fields: []schema.MoulField{
+				{Name: "badField", Type: fType, Unique: true},
+			},
+		}
+		resp := postJSON(t, client, server.URL+"/api/moul", badMoul, "")
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("Expected 400 for unique on %s field, got %d", fType, resp.StatusCode)
+		}
+	}
+}
+
+func TestMoulUniqueConstraintEnforcement(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+	e := echo.New()
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	recordHandler := handlers.NewRecordHandler(dbConn)
+
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.PATCH("/api/moul/:name", moulHandler.UpdateMoul)
+	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
+	e.PATCH("/api/moul/:name/records/:id", recordHandler.UpdateRecord)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. Create collection with unique slug
+	createMoul := schema.Moul{
+		Name: "articles",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "slug", Type: "text", Unique: true},
+		},
+	}
+	resp := postJSON(t, client, server.URL+"/api/moul", createMoul, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201, got %d", resp.StatusCode)
+	}
+
+	// 2. Insert first record
+	rec1 := map[string]interface{}{
+		"title": "First Article",
+		"slug":  "first-article",
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/articles/records", rec1, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for first insert, got %d", resp.StatusCode)
+	}
+	var created1 map[string]interface{}
+	_ = json.NewDecoder(resp.Body).Decode(&created1)
+	id1 := created1["id"].(string)
+
+	// 3. Insert second record with same slug -> should fail with 400 and granular error message
+	rec2 := map[string]interface{}{
+		"title": "Second Article",
+		"slug":  "first-article",
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/articles/records", rec2, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for duplicate unique value, got %d", resp.StatusCode)
+	}
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(bodyBytes), "slug") {
+		t.Fatalf("Expected error message to mention field 'slug', got: %s", string(bodyBytes))
+	}
+
+	// 4. Insert third record with different slug -> succeeds
+	rec3 := map[string]interface{}{
+		"title": "Third Article",
+		"slug":  "third-article",
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul/articles/records", rec3, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for unique insert, got %d", resp.StatusCode)
+	}
+	var created3 map[string]interface{}
+	_ = json.NewDecoder(resp.Body).Decode(&created3)
+	id3 := created3["id"].(string)
+
+	// 5. Update rec3 to have rec1's slug -> should fail with 400
+	updateRec := map[string]interface{}{
+		"slug": "first-article",
+	}
+	resp = patchJSON(t, client, server.URL+"/api/moul/articles/records/"+id3, updateRec, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for duplicate slug on update, got %d", resp.StatusCode)
+	}
+
+	// 6. Update rec1 to same slug (its own value) -> succeeds
+	resp = patchJSON(t, client, server.URL+"/api/moul/articles/records/"+id1, updateRec, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 when updating record with its own value, got %d", resp.StatusCode)
+	}
+
+	// 7. Schema migration: create a collection with non-unique field, add duplicates, then try enabling unique -> 400
+	moulNoUnique := schema.Moul{
+		Name: "tags",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "code", Type: "text", Unique: false},
+		},
+	}
+	resp = postJSON(t, client, server.URL+"/api/moul", moulNoUnique, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201, got %d", resp.StatusCode)
+	}
+
+	// Insert duplicate codes
+	postJSON(t, client, server.URL+"/api/moul/tags/records", map[string]interface{}{"code": "tag1"}, "")
+	postJSON(t, client, server.URL+"/api/moul/tags/records", map[string]interface{}{"code": "tag1"}, "")
+
+	// Now try updating schema to make code unique -> should fail with 400
+	updateSchema := schema.Moul{
+		Name: "tags",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "code", Type: "text", Unique: true},
+		},
+	}
+	resp = patchJSON(t, client, server.URL+"/api/moul/tags", updateSchema, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 when enabling unique on table with duplicates, got %d", resp.StatusCode)
 	}
 }
 

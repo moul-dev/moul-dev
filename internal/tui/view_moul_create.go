@@ -13,6 +13,16 @@ import (
 
 var tableNamePattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]{0,62}$`)
 
+// isTypeEligibleForUnique returns true if the field type supports unique constraints.
+func isTypeEligibleForUnique(fType string) bool {
+	switch fType {
+	case "text", "number", "date", "datetime", "url", "email":
+		return true
+	default:
+		return false
+	}
+}
+
 // validateFieldsString validates the custom fields input string.
 func validateFieldsString(str string) error {
 	fieldsStr := strings.TrimSpace(str)
@@ -27,7 +37,7 @@ func validateFieldsString(str string) error {
 		}
 		subParts := strings.Split(part, ":")
 		if len(subParts) != 2 && len(subParts) != 3 && len(subParts) != 4 {
-			return fmt.Errorf("invalid format for %q: must be name:type, name:select:opt1|opt2, or name:relation:targetMoul:cardinality", part)
+			return fmt.Errorf("invalid format for %q: must be name:type, name:type:unique, name:select:opt1|opt2, or name:relation:targetMoul:cardinality", part)
 		}
 		fName := strings.TrimSpace(subParts[0])
 		fType := strings.TrimSpace(subParts[1])
@@ -40,8 +50,17 @@ func validateFieldsString(str string) error {
 		}
 		// Validate type
 		switch fType {
-		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
-			if len(subParts) != 2 {
+		case "text", "number", "bool", "date", "datetime", "json", "url", "file", "email":
+			if len(subParts) == 3 {
+				opt := strings.ToLower(strings.TrimSpace(subParts[2]))
+				if opt == "unique" {
+					if !isTypeEligibleForUnique(fType) {
+						return fmt.Errorf("field %q of type %q cannot have a unique constraint", fName, fType)
+					}
+				} else {
+					return fmt.Errorf("invalid option %q for field %q (allowed: unique)", opt, fName)
+				}
+			} else if len(subParts) != 2 {
 				return fmt.Errorf("field %q of type %q cannot have extra parameters", fName, fType)
 			}
 		case "select":
@@ -108,6 +127,13 @@ func parseFieldsString(str string) []schema.MoulField {
 			fields = append(fields, schema.MoulField{
 				Name: strings.TrimSpace(subParts[0]),
 				Type: strings.TrimSpace(subParts[1]),
+			})
+		} else if len(subParts) == 3 && strings.EqualFold(strings.TrimSpace(subParts[2]), "unique") {
+			fields = append(fields, schema.MoulField{
+				Name:     strings.TrimSpace(subParts[0]),
+				Type:     strings.TrimSpace(subParts[1]),
+				Unique:   true,
+				Required: true,
 			})
 		} else if len(subParts) == 3 && strings.TrimSpace(subParts[1]) == "select" {
 			rawOpts := strings.Split(subParts[2], "|")
@@ -275,6 +301,8 @@ func (m *Model) initMoulFieldForm() {
 		m.newFieldRelationTarget = ""
 		m.newFieldRelationCard = "1:N"
 		m.newFieldRelationOnDelete = "SET_NULL"
+		m.newFieldSearchable = false
+		m.newFieldUnique = false
 	} else {
 		var fToEdit *schema.MoulField
 		for i := range m.newMoulFieldsList {
@@ -287,6 +315,7 @@ func (m *Model) initMoulFieldForm() {
 			m.newFieldName = fToEdit.Name
 			m.newFieldType = fToEdit.Type
 			m.newFieldSearchable = fToEdit.Searchable
+			m.newFieldUnique = fToEdit.Unique
 			if fToEdit.Type == "select" {
 				m.newFieldOptions = strings.Join(fToEdit.Options, ", ")
 			} else {
@@ -373,6 +402,7 @@ func (m *Model) initMoulFieldForm() {
 					huh.NewOption("Boolean (True/False)", "bool"),
 					huh.NewOption("Date (YYYY-MM-DD)", "date"),
 					huh.NewOption("DateTime (ISO 8601 / RFC3339)", "datetime"),
+					huh.NewOption("Email (Email Address)", "email"),
 					huh.NewOption("URL (Web Link)", "url"),
 					huh.NewOption("JSON (Structured Object/Array)", "json"),
 					huh.NewOption("File (File Metadata)", "file"),
@@ -382,6 +412,14 @@ func (m *Model) initMoulFieldForm() {
 				).
 				Value(&m.newFieldType),
 		),
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Unique Constraint?").
+				Description("Enforce unique values across all records (requires required=true)").
+				Value(&m.newFieldUnique),
+		).WithHideFunc(func() bool {
+			return !isTypeEligibleForUnique(m.newFieldType)
+		}),
 		huh.NewGroup(
 			huh.NewConfirm().
 				Title("Searchable Blind Index?").
@@ -664,6 +702,8 @@ func (m *Model) viewMoulCreate() string {
 				s.WriteString(fmt.Sprintf("  - %s (relation:%s %s)\n", f.Name, f.RelationConfig.TargetMoul, f.RelationConfig.Cardinality))
 			} else if f.Type == "select" {
 				s.WriteString(fmt.Sprintf("  - %s (select: %s)\n", f.Name, strings.Join(f.Options, ", ")))
+			} else if f.Unique {
+				s.WriteString(fmt.Sprintf("  - %s (%s, unique)\n", f.Name, f.Type))
 			} else {
 				s.WriteString(fmt.Sprintf("  - %s (%s)\n", f.Name, f.Type))
 			}

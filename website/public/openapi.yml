@@ -3318,7 +3318,10 @@ components:
           type: string
         type:
           type: string
-          enum: [text, number, bool, date, datetime, json, url, file, select, relation, cloak]
+          enum: [text, number, bool, date, datetime, json, url, file, select, relation, cloak, email]
+        unique:
+          type: boolean
+          description: Enforces unique values across all records for scalar types (text, number, date, datetime, url, email). Requires required=true.
         searchable:
           type: boolean
           description: For cloak fields, automatically creates an indexed HMAC-SHA256 companion column for exact match searches.

@@ -4919,8 +4919,13 @@
               "file",
               "select",
               "relation",
-              "cloak"
+              "cloak",
+              "email"
             ]
+          },
+          "unique": {
+            "type": "boolean",
+            "description": "Enforces unique values across all records for scalar types (text, number, date, datetime, url, email). Requires required=true."
           },
           "searchable": {
             "type": "boolean",

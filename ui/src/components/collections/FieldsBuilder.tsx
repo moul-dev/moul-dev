@@ -147,25 +147,6 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: '4px',
   },
-  columnHeaderRow: {
-    display: 'grid',
-    gridTemplateColumns: '72px minmax(130px, 1.8fr) minmax(160px, 1.5fr) 64px minmax(110px, 1.1fr) 40px',
-    gap: tokens.spacing3,
-    alignItems: 'center',
-    paddingInline: tokens.spacing3,
-    paddingBottom: '2px',
-  },
-  headerCol: {
-    fontSize: '0.6875rem',
-    fontWeight: 600,
-    color: tokens.colorFgSubtle,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    fontFamily: tokens.fontFamilyBase,
-  },
-  headerColCenter: {
-    textAlign: 'center',
-  },
   fieldList: {
     display: 'flex',
     flexDirection: 'column',
@@ -179,6 +160,8 @@ const styles = stylex.create({
     borderColor: tokens.colorBorder,
     overflow: 'hidden',
     transition: 'border-color 0.15s ease',
+    display: 'flex',
+    flexDirection: 'column',
   },
   fieldCardRelation: {
     borderColor: tokens.colorPrimary500,
@@ -186,17 +169,55 @@ const styles = stylex.create({
   fieldCardConflict: {
     borderColor: tokens.colorError500,
   },
-  fieldMainRow: {
-    display: 'grid',
-    gridTemplateColumns: '72px minmax(130px, 1.8fr) minmax(160px, 1.5fr) 64px minmax(110px, 1.1fr) 40px',
-    gap: tokens.spacing3,
-    alignItems: 'center',
+  cardContent: {
     padding: tokens.spacing3,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacing2,
+  },
+  cardTopRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing2,
+    width: '100%',
+  },
+  fieldNameWrapper: {
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  fieldTypeWrapper: {
+    width: '175px',
+    flexShrink: 0,
+  },
+  cardBottomRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: tokens.spacing2,
+  },
+  checkboxesGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacing4,
+  },
+  checkboxLabel: {
+    fontSize: tokens.fontSizeXs,
+    fontFamily: tokens.fontFamilyBase,
+    fontWeight: 500,
+    color: tokens.colorFg,
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+  checkboxLabelDisabled: {
+    color: tokens.colorFgSubtle,
+    cursor: 'not-allowed',
   },
   orderCell: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacing1,
+    flexShrink: 0,
   },
   orderNumber: {
     fontSize: '0.6875rem',
@@ -211,32 +232,11 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: '2px',
   },
-  checkboxCell: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionsCell: {
-    display: 'flex',
-    alignItems: 'center',
-    minWidth: 0,
-  },
-  actionsCell: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   truncatedText: {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-  },
-  placeholderDash: {
-    fontSize: tokens.fontSizeXs,
-    color: tokens.colorFgSubtle,
-    width: '100%',
-    textAlign: 'center',
-    userSelect: 'none',
+    maxWidth: '180px',
   },
   comboBoxItemContent: {
     display: 'flex',
@@ -249,8 +249,7 @@ const styles = stylex.create({
     color: tokens.colorFgSubtle,
   },
   fieldValidationRow: {
-    paddingInline: tokens.spacing3,
-    paddingBottom: tokens.spacing2,
+    paddingTop: '2px',
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacing1,
@@ -375,6 +374,7 @@ export interface MoulField {
   name: string;
   type: string;
   required?: boolean;
+  unique?: boolean;
   min?: number;
   max?: number;
   options?: string[];
@@ -384,6 +384,10 @@ export interface MoulField {
     cardinality: '1:1' | '1:N' | 'M:N';
     onDelete: 'SET_NULL' | 'CASCADE' | 'RESTRICT';
   };
+}
+
+export function isEligibleForUnique(type: string): boolean {
+  return ['text', 'number', 'date', 'datetime', 'url', 'email'].includes(type);
 }
 
 export interface FieldsBuilderProps {
@@ -558,6 +562,16 @@ export function FieldsBuilder({
       }
     }
 
+    if (key === 'unique' && val) {
+      updated.required = true;
+    }
+    if (key === 'required' && !val && updated.unique) {
+      updated.unique = false;
+    }
+    if (key === 'type' && !isEligibleForUnique(val)) {
+      updated.unique = false;
+    }
+
     next[idx] = updated;
     onChange(next);
   };
@@ -682,7 +696,7 @@ export function FieldsBuilder({
         </span>
       </div>
 
-      {/* Field List & Column Headers */}
+      {/* Field List */}
       {fields.length === 0 ? (
         <EmptyState
           variant="dashed"
@@ -691,16 +705,6 @@ export function FieldsBuilder({
         />
       ) : (
         <div {...stylex.props(styles.fieldList)}>
-          {/* Subtle Column Header Row */}
-          <div {...stylex.props(styles.columnHeaderRow)}>
-            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>#</span>
-            <span {...stylex.props(styles.headerCol)}>Field Name</span>
-            <span {...stylex.props(styles.headerCol)}>Data Type</span>
-            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>Required</span>
-            <span {...stylex.props(styles.headerCol)}>Options / Rules</span>
-            <span {...stylex.props(styles.headerCol, styles.headerColCenter)}>Actions</span>
-          </div>
-
           {fields.map((field, idx) => {
             const isRelation = field.type === 'relation';
             const isSelect = field.type === 'select';
@@ -727,7 +731,9 @@ export function FieldsBuilder({
             const hasSelectError = Boolean(
               isSelect && (!field.options || field.options.length === 0)
             );
-            const isInvalid = isEmpty || isConflict || isInvalidCamel || isDuplicate || hasMinMaxConflict || hasSelectError;
+            const isUniqueEligible = isEligibleForUnique(field.type);
+            const hasUniqueError = Boolean(field.unique && !isUniqueEligible);
+            const isInvalid = isEmpty || isConflict || isInvalidCamel || isDuplicate || hasMinMaxConflict || hasSelectError || hasUniqueError;
             const suggestedCamel = toCamelCase(trimmedName);
             const canSuggestFix = Boolean(
               isInvalidCamel &&
@@ -746,84 +752,125 @@ export function FieldsBuilder({
                   isInvalid && styles.fieldCardConflict
                 )}
               >
-                {/* Main Row */}
-                <div {...stylex.props(styles.fieldMainRow)}>
-                  {/* 1. Order & Reorder Controls */}
-                  <div {...stylex.props(styles.orderCell)}>
-                    <span {...stylex.props(styles.orderNumber)}>{idx + 1}</span>
-                    <div {...stylex.props(styles.orderActions)}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        isIcon
-                        aria-label={`Move ${field.name || `field ${idx + 1}`} up`}
-                        isDisabled={idx === 0}
-                        onPress={() => handleMoveField(idx, -1)}
-                      >
-                        <CaretUpIcon size={12} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        isIcon
-                        aria-label={`Move ${field.name || `field ${idx + 1}`} down`}
-                        isDisabled={idx === fields.length - 1}
-                        onPress={() => handleMoveField(idx, 1)}
-                      >
-                        <CaretDownIcon size={12} />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 2. Field Name */}
-                  <TextField
-                    aria-label={`Field ${idx + 1} name`}
-                    placeholder="fieldName (e.g. authorId)"
-                    value={field.name}
-                    onChange={(val) => handleFieldChange(idx, 'name', val)}
-                    isInvalid={isInvalid}
-                  />
-
-                  {/* 3. Field Type Selector */}
-                  <ComboBox
-                    aria-label={`Field ${idx + 1} type`}
-                    placeholder="Select Type"
-                    menuTrigger="focus"
-                    selectedKey={field.type}
-                    onSelectionChange={(val) => {
-                      if (val) handleFieldChange(idx, 'type', String(val));
-                    }}
-                    renderEmptyState={() => (
-                      <div {...stylex.props(styles.emptyMenuState)}>
-                        No matching types found
+                <div {...stylex.props(styles.cardContent)}>
+                  {/* Top Row: Order, Name, Type, and Delete Action */}
+                  <div {...stylex.props(styles.cardTopRow)}>
+                    {/* Order & Reorder Controls */}
+                    <div {...stylex.props(styles.orderCell)}>
+                      <span {...stylex.props(styles.orderNumber)}>{idx + 1}</span>
+                      <div {...stylex.props(styles.orderActions)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          isIcon
+                          aria-label={`Move ${field.name || `field ${idx + 1}`} up`}
+                          isDisabled={idx === 0}
+                          onPress={() => handleMoveField(idx, -1)}
+                        >
+                          <CaretUpIcon size={12} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          isIcon
+                          aria-label={`Move ${field.name || `field ${idx + 1}`} down`}
+                          isDisabled={idx === fields.length - 1}
+                          onPress={() => handleMoveField(idx, 1)}
+                        >
+                          <CaretDownIcon size={12} />
+                        </Button>
                       </div>
-                    )}
-                  >
-                    {FIELD_TYPES.map((t) => {
-                      const IconComp = t.icon;
-                      return (
-                        <ComboBoxItem key={t.id} id={t.id} textValue={t.label}>
-                          <div {...stylex.props(styles.comboBoxItemContent)}>
-                            <IconComp size={15} color={tokens.colorPrimary500} />
-                            <span>{t.label}</span>
-                          </div>
-                        </ComboBoxItem>
-                      );
-                    })}
-                  </ComboBox>
+                    </div>
 
-                  {/* 4. Required Checkbox */}
-                  <div {...stylex.props(styles.checkboxCell)}>
-                    <Checkbox
-                      aria-label={`${field.name || `Field ${idx + 1}`} is required`}
-                      isSelected={Boolean(field.required)}
-                      onChange={(checked) => handleFieldChange(idx, 'required', checked)}
-                    />
+                    {/* Field Name */}
+                    <div {...stylex.props(styles.fieldNameWrapper)}>
+                      <TextField
+                        aria-label={`Field ${idx + 1} name`}
+                        placeholder="fieldName (e.g. authorId)"
+                        value={field.name}
+                        onChange={(val) => handleFieldChange(idx, 'name', val)}
+                        isInvalid={isInvalid}
+                      />
+                    </div>
+
+                    {/* Field Type Selector */}
+                    <div {...stylex.props(styles.fieldTypeWrapper)}>
+                      <ComboBox
+                        aria-label={`Field ${idx + 1} type`}
+                        placeholder="Select Type"
+                        menuTrigger="focus"
+                        selectedKey={field.type}
+                        onSelectionChange={(val) => {
+                          if (val) handleFieldChange(idx, 'type', String(val));
+                        }}
+                        renderEmptyState={() => (
+                          <div {...stylex.props(styles.emptyMenuState)}>
+                            No matching types found
+                          </div>
+                        )}
+                      >
+                        {FIELD_TYPES.map((t) => {
+                          const IconComp = t.icon;
+                          return (
+                            <ComboBoxItem key={t.id} id={t.id} textValue={t.label}>
+                              <div {...stylex.props(styles.comboBoxItemContent)}>
+                                <IconComp size={15} color={tokens.colorPrimary500} />
+                                <span>{t.label}</span>
+                              </div>
+                            </ComboBoxItem>
+                          );
+                        })}
+                      </ComboBox>
+                    </div>
+
+                    {/* Delete Action Button */}
+                    <Button
+                      variant="ghost"
+                      isIcon
+                      size="sm"
+                      aria-label={`Remove field ${field.name || `field ${idx + 1}`}`}
+                      onPress={() => handleRemoveField(idx)}
+                    >
+                      <TrashIcon size={16} color={tokens.colorError500} />
+                    </Button>
                   </div>
 
-                  {/* 5. Options & Rules Button */}
-                  <div {...stylex.props(styles.optionsCell)}>
-                    {isConfigurable ? (
+                  {/* Bottom Row: Checkboxes (Required, Unique) and Options Drawer Trigger */}
+                  <div {...stylex.props(styles.cardBottomRow)}>
+                    <div {...stylex.props(styles.checkboxesGroup)}>
+                      <Checkbox
+                        isSelected={Boolean(field.required)}
+                        onChange={(checked) => handleFieldChange(idx, 'required', checked)}
+                        aria-label={`Required constraint for ${field.name || `field ${idx + 1}`}`}
+                      >
+                        <span {...stylex.props(styles.checkboxLabel)}>Required</span>
+                      </Checkbox>
+
+                      {isUniqueEligible ? (
+                        <Checkbox
+                          isSelected={Boolean(field.unique)}
+                          onChange={(checked) => handleFieldChange(idx, 'unique', checked)}
+                          aria-label={`Unique constraint for ${field.name || `field ${idx + 1}`}`}
+                        >
+                          <span {...stylex.props(styles.checkboxLabel)}>Unique</span>
+                        </Checkbox>
+                      ) : (
+                        <Checkbox
+                          isSelected={false}
+                          isDisabled
+                          aria-label={`Unique constraint not supported for ${field.name || `field ${idx + 1}`}`}
+                        >
+                          <span
+                            {...stylex.props(styles.checkboxLabel, styles.checkboxLabelDisabled)}
+                            title={`Unique constraint is not supported for ${field.type} fields`}
+                          >
+                            Unique
+                          </span>
+                        </Checkbox>
+                      )}
+                    </div>
+
+                    {isConfigurable && (
                       <Button
                         variant={
                           isRelation
@@ -836,6 +883,7 @@ export function FieldsBuilder({
                                 ? 'secondary'
                                 : 'outline'
                         }
+                        size="sm"
                         aria-label={`Configure options for ${field.name || `field ${idx + 1}`}`}
                         onPress={() => toggleExpand(idx)}
                       >
@@ -844,15 +892,15 @@ export function FieldsBuilder({
                             <LinkIcon size={13} color={tokens.colorPrimary500} />
                             <span {...stylex.props(styles.truncatedText)}>
                               {field.relationConfig?.targetMoul
-                                ? `➔ ${field.relationConfig.targetMoul}`
-                                : 'Configure'}
+                                ? `➔ ${field.relationConfig.targetMoul} (${field.relationConfig.cardinality || '1:N'})`
+                                : 'Configure Relation'}
                             </span>
                             {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         ) : isCloak ? (
                           <>
                             <LockKeyIcon size={13} color={tokens.colorPrimary500} />
-                            <span>{field.searchable ? 'Searchable' : 'Options'}</span>
+                            <span>{field.searchable ? 'Searchable' : 'Cloak Options'}</span>
                             {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         ) : isSelect ? (
@@ -867,7 +915,7 @@ export function FieldsBuilder({
                             <span>
                               {field.min !== undefined || field.max !== undefined
                                 ? `${field.min ?? 0}..${field.max ?? '∞'} chars`
-                                : 'Length'}
+                                : 'Length Limits'}
                             </span>
                             {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
@@ -877,32 +925,14 @@ export function FieldsBuilder({
                             <span>
                               {field.min !== undefined || field.max !== undefined
                                 ? `${field.min ?? '-∞'}..${field.max ?? '+∞'}`
-                                : 'Min/Max'}
+                                : 'Value Range'}
                             </span>
                             {isExpanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
                           </>
                         )}
                       </Button>
-                    ) : (
-                      <span {...stylex.props(styles.placeholderDash)}>
-                        —
-                      </span>
                     )}
                   </div>
-
-                  {/* 6. Actions (Delete) */}
-                  <div {...stylex.props(styles.actionsCell)}>
-                    <Button
-                      variant="ghost"
-                      isIcon
-                      size="sm"
-                      aria-label={`Remove field ${field.name || `field ${idx + 1}`}`}
-                      onPress={() => handleRemoveField(idx)}
-                    >
-                      <TrashIcon size={16} color={tokens.colorError500} />
-                    </Button>
-                  </div>
-                </div>
 
                 {/* Validation Warnings Section */}
                 {isInvalid && (
@@ -967,8 +997,18 @@ export function FieldsBuilder({
                         </span>
                       </div>
                     )}
+
+                    {hasUniqueError && (
+                      <div {...stylex.props(styles.fieldConflictWarning)}>
+                        <WarningCircleIcon size={14} color={tokens.colorError500} />
+                        <span>
+                          Field &ldquo;{field.name}&rdquo; of type &ldquo;{field.type}&rdquo; cannot have a unique constraint.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
 
                 {/* Expandable Configuration Section */}
                 {isExpanded && isConfigurable && (

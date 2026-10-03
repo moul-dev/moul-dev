@@ -235,6 +235,9 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 
 	// Sync new field columns to table
 	if err := db.SyncMoulTableColumns(h.DB, updated); err != nil {
+		if strings.Contains(err.Error(), "contain duplicates") {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
 		logger.Error("Failed to sync table columns", "moul", updated.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to sync table columns")
 	}
@@ -293,7 +296,7 @@ func validateMoulFields(m *schema.Moul) error {
 		}
 
 		switch f.Type {
-		case "text", "number", "bool", "date", "datetime", "json", "url", "file":
+		case "text", "number", "bool", "date", "datetime", "json", "url", "file", "email":
 			// standard types
 		case "cloak":
 			if !cloak.IsInitialized() {
@@ -333,6 +336,16 @@ func validateMoulFields(m *schema.Moul) error {
 			f.RelationConfig.OnDelete = onDel
 		default:
 			return fmt.Errorf("invalid type %q for field %q", f.Type, f.Name)
+		}
+
+		if f.Unique {
+			switch f.Type {
+			case "text", "number", "date", "datetime", "url", "email":
+				// eligible
+			default:
+				return fmt.Errorf("field %q of type %q cannot have a unique constraint", f.Name, f.Type)
+			}
+			f.Required = true
 		}
 	}
 	return nil

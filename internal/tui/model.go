@@ -146,6 +146,7 @@ type Model struct {
 	newFieldRelationCard     string
 	newFieldRelationOnDelete string
 	newFieldSearchable       bool
+	newFieldUnique           bool
 	MoulActionForm           *huh.Form
 	MoulFieldForm            *huh.Form
 	MoulRulesForm            *huh.Form
@@ -918,6 +919,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newField.Options = opts
 				} else if m.newFieldType == "cloak" {
 					newField.Searchable = m.newFieldSearchable
+				}
+				if isTypeEligibleForUnique(m.newFieldType) && m.newFieldUnique {
+					newField.Unique = true
+					newField.Required = true
 				}
 
 				if m.isEditingField {

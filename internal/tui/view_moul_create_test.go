@@ -26,6 +26,13 @@ func TestValidateFieldsString(t *testing.T) {
 		{"status:select:draft|published", false},
 		{"status:select:", true},
 		{"status:select", true},
+		{"slug:text:unique", false},
+		{"code:number:unique", false},
+		{"contactEmail:email:unique", false},
+		{"website:url:unique", false},
+		{"active:bool:unique", true},
+		{"info:json:unique", true},
+		{"avatar:file:unique", true},
 		{"title", true},
 		{"title:", true},
 		{":text", true},
@@ -44,21 +51,24 @@ func TestValidateFieldsString(t *testing.T) {
 }
 
 func TestParseFieldsString(t *testing.T) {
-	input := "title:text, views:number, published:bool, status:select:draft|published"
+	input := "title:text, views:number, published:bool, status:select:draft|published, slug:text:unique"
 	fields := parseFieldsString(input)
 
-	if len(fields) != 4 {
-		t.Fatalf("Expected 4 fields, got %d", len(fields))
+	if len(fields) != 5 {
+		t.Fatalf("Expected 5 fields, got %d", len(fields))
 	}
 
 	expected := []struct {
-		name  string
-		fType string
+		name     string
+		fType    string
+		unique   bool
+		required bool
 	}{
-		{"title", "text"},
-		{"views", "number"},
-		{"published", "bool"},
-		{"status", "select"},
+		{"title", "text", false, false},
+		{"views", "number", false, false},
+		{"published", "bool", false, false},
+		{"status", "select", false, false},
+		{"slug", "text", true, true},
 	}
 
 	for i, exp := range expected {
@@ -67,6 +77,12 @@ func TestParseFieldsString(t *testing.T) {
 		}
 		if fields[i].Type != exp.fType {
 			t.Errorf("Expected fields[%d].Type = %q, got %q", i, exp.fType, fields[i].Type)
+		}
+		if fields[i].Unique != exp.unique {
+			t.Errorf("Expected fields[%d].Unique = %v, got %v", i, exp.unique, fields[i].Unique)
+		}
+		if fields[i].Required != exp.required {
+			t.Errorf("Expected fields[%d].Required = %v, got %v", i, exp.required, fields[i].Required)
 		}
 	}
 	if len(fields[3].Options) != 2 || fields[3].Options[0] != "draft" || fields[3].Options[1] != "published" {

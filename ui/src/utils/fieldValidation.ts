@@ -1,4 +1,4 @@
-import { MoulField, isReservedFieldName, isValidCamelCase } from '../components/collections/FieldsBuilder';
+import { MoulField, isReservedFieldName, isValidCamelCase, isEligibleForUnique } from '../components/collections/FieldsBuilder';
 
 /**
  * Validates a single collection field value according to its schema constraints.
@@ -370,6 +370,14 @@ export function validateSchemaFields(
       if (!f.relationConfig?.targetMoul) {
         errors.relation = 'Relation field must specify a target collection.';
         summaryErrors.push(`Field "${f.name || idx + 1}": Target collection is required.`);
+      }
+    }
+
+    // 8. Unique constraint eligible type check
+    if (f.unique) {
+      if (!isEligibleForUnique(f.type)) {
+        errors.unique = `Field "${f.name || idx + 1}" of type "${f.type}" cannot have a unique constraint.`;
+        summaryErrors.push(`Field "${f.name || idx + 1}": Unique constraint not supported for type "${f.type}".`);
       }
     }
 

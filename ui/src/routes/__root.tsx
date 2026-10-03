@@ -55,11 +55,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       <span style={{ fontSize: '0.875rem' }}>Loading moul console...</span>
     </div>
   ),
-  errorComponent: ({ error }) => (
+  errorComponent: ({ error }: { error: any }) => (
     <div {...stylex.props(styles.errorContainer)}>
       <h2 style={{ color: tokens.colorError500, marginBottom: '1rem' }}>Console Application Error</h2>
       <p style={{ color: tokens.colorFgSubtle, maxWidth: '600px', marginBottom: '1.5rem' }}>
-        {error.message || 'An unexpected error occurred in the admin console.'}
+        {error?.message || 'An unexpected error occurred in the admin console.'}
       </p>
       <Button
         variant="primary"

@@ -499,8 +499,16 @@ func CreateMoulTable(db *dbx.DB, m *schema.Moul) error {
 	}
 
 	for _, field := range m.Fields {
+		quotedName := QuoteIdentifier(m.Name)
+		if field.Unique {
+			quotedCol := QuoteIdentifier(field.Name)
+			indexName := QuoteIdentifier(fmt.Sprintf("idx_%s_%s_unique", m.Name, field.Name))
+			indexSQL := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s);", indexName, quotedName, quotedCol)
+			if _, err := db.NewQuery(indexSQL).Execute(); err != nil {
+				return fmt.Errorf("failed to create unique index for %s.%s: %w", m.Name, field.Name, err)
+			}
+		}
 		if field.Type == "cloak" && field.Searchable {
-			quotedName := QuoteIdentifier(m.Name)
 			quotedCol := QuoteIdentifier(field.Name + "Hash")
 			indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s_hash ON %s (%s);", m.Name, field.Name, quotedName, quotedCol)
 			if _, err := db.NewQuery(indexSQL).Execute(); err != nil {
@@ -843,6 +851,16 @@ func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) e
 		}
 
 		for _, field := range m.Fields {
+			if field.Unique {
+				indexName := QuoteIdentifier(fmt.Sprintf("idx_%s_%s_unique", m.Name, field.Name))
+				indexSQL := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s);", indexName, QuoteIdentifier(m.Name), QuoteIdentifier(field.Name))
+				if _, err := tx.NewQuery(indexSQL).Execute(); err != nil {
+					if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "columns are not unique") {
+						return fmt.Errorf("cannot enable unique constraint on field %q: existing records contain duplicates: %w", field.Name, err)
+					}
+					return fmt.Errorf("failed to recreate unique index for table %s.%s: %w", m.Name, field.Name, err)
+				}
+			}
 			if field.Type == "cloak" && field.Searchable {
 				indexSQL := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s_hash ON %s (%s);", m.Name, field.Name, QuoteIdentifier(m.Name), QuoteIdentifier(field.Name+"Hash"))
 				if _, err := tx.NewQuery(indexSQL).Execute(); err != nil {
@@ -965,6 +983,29 @@ func SyncMoulTableColumns(db *dbx.DB, m *schema.Moul) error {
 		if _, err := db.NewQuery(dropSQL).Execute(); err != nil {
 			// Fallback to table rebuild if ALTER TABLE DROP COLUMN is not supported
 			return rebuildMoulTable(db, m, rows)
+		}
+	}
+
+	// 3. Sync unique indexes: create unique index if field.Unique is true, or drop index if field.Unique is false.
+	for _, field := range m.Fields {
+		lowerName := strings.ToLower(field.Name)
+		if systemColumns[lowerName] {
+			continue
+		}
+		indexName := QuoteIdentifier(fmt.Sprintf("idx_%s_%s_unique", m.Name, field.Name))
+		if field.Unique {
+			createIdxSQL := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s);", indexName, QuoteIdentifier(m.Name), QuoteIdentifier(field.Name))
+			if _, err := db.NewQuery(createIdxSQL).Execute(); err != nil {
+				if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "columns are not unique") {
+					return fmt.Errorf("cannot enable unique constraint on field %q: existing records contain duplicates: %w", field.Name, err)
+				}
+				return fmt.Errorf("failed to create unique index for %s.%s: %w", m.Name, field.Name, err)
+			}
+		} else {
+			dropIdxSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", indexName)
+			if _, err := db.NewQuery(dropIdxSQL).Execute(); err != nil {
+				return fmt.Errorf("failed to drop unique index for %s.%s: %w", m.Name, field.Name, err)
+			}
 		}
 	}
 

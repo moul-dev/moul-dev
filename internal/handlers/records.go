@@ -701,9 +701,8 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	// Perform SQLite INSERT
 	_, err = h.DB.Insert(moulName, dbx.Params(insertData)).Execute()
 	if err != nil {
-		// Detect unique constraints for auth mouls
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
+		if uErr := parseUniqueConstraintError(err, moul); uErr != nil {
+			return uErr
 		}
 		logger.Error("Failed to insert record", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to insert record")
@@ -1340,8 +1339,8 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 		_, err = h.DB.Update(moulName, updateParams, dbx.HashExp{"id": id}).Execute()
 		if err != nil {
-			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-				return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
+			if uErr := parseUniqueConstraintError(err, moul); uErr != nil {
+				return uErr
 			}
 			logger.Error("Failed to update record", "record", id, "moul", moulName, "err", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update record")
@@ -1975,4 +1974,33 @@ func (h *RecordHandler) RetryJobs(c *echo.Context) error {
 		"success":       true,
 		"rows_affected": affected,
 	})
+}
+
+func parseUniqueConstraintError(err error, moul *schema.Moul) error {
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "UNIQUE constraint failed") {
+		return nil
+	}
+	idx := strings.Index(errMsg, "UNIQUE constraint failed: ")
+	if idx == -1 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Unique constraint violation")
+	}
+	details := strings.TrimSpace(errMsg[idx+len("UNIQUE constraint failed: "):])
+	parts := strings.Split(details, ",")
+	firstPart := strings.TrimSpace(parts[0])
+	col := firstPart
+	if dotIdx := strings.LastIndex(firstPart, "."); dotIdx != -1 {
+		col = firstPart[dotIdx+1:]
+	}
+	col = strings.TrimSpace(col)
+
+	// Auth collection compatibility
+	if moul != nil && moul.Type == "auth" && (col == "username" || col == "email") {
+		return echo.NewHTTPError(http.StatusBadRequest, "Username or Email already exists")
+	}
+
+	if col != "" {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Value for field %q already exists", col))
+	}
+	return echo.NewHTTPError(http.StatusBadRequest, "Unique constraint violation")
 }
