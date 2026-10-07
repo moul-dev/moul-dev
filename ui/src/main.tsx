@@ -3,9 +3,17 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@moul-dev/ui/style.css';
-import { ToastContainer } from '@moul-dev/ui';
+import { ToastContainer, toastQueue } from '@moul-dev/ui';
 import { AppThemeProvider } from './context/ThemeContext';
 import './index.css';
+
+// Automatically dismiss toasts after 3 seconds by default if no timeout is specified
+const originalToastAdd = toastQueue.add.bind(toastQueue);
+toastQueue.add = (content, options) => {
+  const timeout = options?.timeout ?? (content as { timeout?: number })?.timeout ?? 3000;
+  const mergedOptions = timeout > 0 ? { timeout, ...options } : { ...options };
+  return originalToastAdd(content, mergedOptions);
+};
 
 // Import the auto-generated route tree
 import { routeTree } from './routeTree.gen';
