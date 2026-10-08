@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { removeAuthToken } from '../api/client.js';
+import { authActions } from '../context/auth-state.js';
 
 @customElement('dashboard-page')
 export class DashboardPage extends LitElement {
@@ -41,8 +41,8 @@ export class DashboardPage extends LitElement {
   `;
 
   private _handleLogout() {
-    removeAuthToken();
-    window.location.href = '/_moul_/login';
+    authActions.logout();
+    window.dispatchEvent(new CustomEvent('navigate', { detail: '/_moul_/login' }));
   }
 
   render() {
