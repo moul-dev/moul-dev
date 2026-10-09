@@ -21,6 +21,7 @@ import (
 
 // RouterConfig holds optional configuration settings for creating an Echo router.
 type RouterConfig struct {
+	AppName        string
 	Version        string
 	APIPrefix      *string
 	AdminUIOptions AdminUIOptions
@@ -72,6 +73,11 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 		appVersion = "dev"
 	}
 
+	appName := cfg.AppName
+	if appName == "" {
+		appName = moulmcp.ResolveAppName(dbConn)
+	}
+
 	apiPrefix := NormalizeAPIPrefix(cfg.APIPrefix)
 	apiPath := func(path string) string {
 		clean := "/" + strings.TrimLeft(path, "/")
@@ -112,8 +118,8 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	}
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: allowOrigins,
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-		AllowHeaders: []string{echo.HeaderAuthorization, echo.HeaderContentType, "X-Admin-Key", "X-Visit-Token", "X-Visitor-Token"},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
+		AllowHeaders: []string{echo.HeaderAuthorization, echo.HeaderContentType, "X-Admin-Key", "X-Visit-Token", "X-Visitor-Token", "Mcp-Session-Id", "Last-Event-ID", "Accept"},
 	}))
 
 	// Auth context loader (JWT extraction from Authorization header)
@@ -129,6 +135,10 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 			"/openapi.json",
 			"/docs",
 			apiPath("/mcp"),
+			"/mcp",
+			"/.well-known",
+			apiPath("/oauth2"),
+			"/oauth2",
 			"/AGENTS.md",
 			"/llms.txt",
 			"/llms-full.txt",
@@ -178,14 +188,70 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	// Built-in MCP Server
 	mcpServer := cfg.MCPServer
 	if mcpServer == nil {
-		mcpServer = moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion)
+		mcpServer = moulmcp.NewServer(dbConn, workerEngine, analyticsEngine, sysmonCollector, appVersion, appName)
 	}
 	mcpHandler := NewMCPHandler(mcpServer)
+	oauthServerHandler := NewOAuthServerHandler(dbConn, adminKey, appName)
 
 	// ── API Routes ──────────────────────────────────────────────────
 
-	// Built-in MCP Server SSE endpoint (Admin-protected)
+	// Built-in MCP Server endpoint (Admin-protected or OAuth Bearer)
 	e.Any(apiPath("/mcp*"), mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+	if p := apiPath("/mcp*"); p != "/mcp*" {
+		e.Any("/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+	}
+
+	// Root endpoint for health check / probe / Admin UI
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/", func(c *echo.Context) error {
+		if !cfg.DisableAdminUI {
+			return c.Redirect(http.StatusTemporaryRedirect, "/_moul_/")
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"name":    appName,
+			"status":  "ok",
+			"version": appVersion,
+			"mcp":     apiPath("/mcp"),
+			"docs":    "/docs",
+		})
+	})
+
+	// RFC 9728 Protected Resource Metadata (MCP Discovery for Google Gemini, Claude, etc.)
+	e.GET("/.well-known/oauth-protected-resource", oauthServerHandler.ProtectedResourceMetadata)
+	e.GET("/.well-known/oauth-protected-resource/*", oauthServerHandler.ProtectedResourceMetadata)
+	if p := apiPath("/.well-known/oauth-protected-resource"); p != "/.well-known/oauth-protected-resource" {
+		e.GET(p, oauthServerHandler.ProtectedResourceMetadata)
+		e.GET(p+"/*", oauthServerHandler.ProtectedResourceMetadata)
+	}
+
+	// RFC 8414 Authorization Server Metadata & OpenID Configuration
+	e.GET("/.well-known/oauth-authorization-server", oauthServerHandler.AuthorizationServerMetadata)
+	e.GET("/.well-known/openid-configuration", oauthServerHandler.AuthorizationServerMetadata)
+	if p := apiPath("/.well-known/oauth-authorization-server"); p != "/.well-known/oauth-authorization-server" {
+		e.GET(p, oauthServerHandler.AuthorizationServerMetadata)
+	}
+	if p := apiPath("/.well-known/openid-configuration"); p != "/.well-known/openid-configuration" {
+		e.GET(p, oauthServerHandler.AuthorizationServerMetadata)
+	}
+
+	// OAuth 2.0 / 2.1 Dynamic Client Registration (RFC 7591)
+	e.POST(apiPath("/oauth2/register"), oauthServerHandler.RegisterClient)
+	if p := apiPath("/oauth2/register"); p != "/oauth2/register" {
+		e.POST("/oauth2/register", oauthServerHandler.RegisterClient)
+	}
+
+	// OAuth 2.0 / 2.1 Authorization Code Flow with PKCE (RFC 6749, RFC 7636)
+	e.GET(apiPath("/oauth2/authorize"), oauthServerHandler.Authorize)
+	e.POST(apiPath("/oauth2/authorize"), oauthServerHandler.AuthorizeConfirm)
+	if p := apiPath("/oauth2/authorize"); p != "/oauth2/authorize" {
+		e.GET("/oauth2/authorize", oauthServerHandler.Authorize)
+		e.POST("/oauth2/authorize", oauthServerHandler.AuthorizeConfirm)
+	}
+
+	// OAuth 2.0 / 2.1 Token Exchange (Authorization Code & Refresh Token)
+	e.POST(apiPath("/oauth2/token"), oauthServerHandler.Token)
+	if p := apiPath("/oauth2/token"); p != "/oauth2/token" {
+		e.POST("/oauth2/token", oauthServerHandler.Token)
+	}
 
 	// Rule expression testing and validation sandbox
 	e.POST(apiPath("/rules/test"), rulesTestHandler.TestRule, middleware.RequireAuthOrAdmin(adminKey))

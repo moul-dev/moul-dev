@@ -353,3 +353,64 @@ func TestSettingsAndUploadFlow(t *testing.T) {
 		t.Errorf("Expected reload status 'ok', got %v", reloadResult["status"])
 	}
 }
+
+func TestSettingsAppName(t *testing.T) {
+	adminKey := "test-admin-secret-key"
+	auth.InitJWT("test-jwt-secret-key")
+
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test DB: %v", err)
+	}
+	defer dbConn.Close()
+
+	if err := db.EnsureSystemTables(dbConn); err != nil {
+		t.Fatalf("Failed to ensure system tables: %v", err)
+	}
+
+	e := echo.New()
+	settingsHandler := handlers.NewSettingsHandler(dbConn)
+	e.GET("/api/settings", settingsHandler.GetSettings, middleware.RequireAdminKey(adminKey))
+	e.PATCH("/api/settings", settingsHandler.UpdateSettings, middleware.RequireAdminKey(adminKey))
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+
+	client := server.Client()
+
+	// 1. Initial setting should be default "moul-dev"
+	req, _ := http.NewRequest("GET", server.URL+"/api/settings", nil)
+	req.Header.Set("X-Admin-Key", adminKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("GET /api/settings failed: %v", err)
+	}
+	var settings map[string]string
+	json.NewDecoder(resp.Body).Decode(&settings)
+	resp.Body.Close()
+	if settings["app_name"] != "moul-dev" {
+		t.Errorf("Expected default app_name 'moul-dev', got %q", settings["app_name"])
+	}
+
+	// 2. Update app_name via PATCH /api/settings
+	patchData, _ := json.Marshal(map[string]string{
+		"app_name": "Acme Workspace",
+	})
+	patchReq, _ := http.NewRequest("PATCH", server.URL+"/api/settings", bytes.NewReader(patchData))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchReq.Header.Set("X-Admin-Key", adminKey)
+	patchResp, err := client.Do(patchReq)
+	if err != nil {
+		t.Fatalf("PATCH /api/settings failed: %v", err)
+	}
+	if patchResp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for PATCH /api/settings, got %d", patchResp.StatusCode)
+	}
+	var updatedSettings map[string]string
+	json.NewDecoder(patchResp.Body).Decode(&updatedSettings)
+	patchResp.Body.Close()
+
+	if updatedSettings["app_name"] != "Acme Workspace" {
+		t.Errorf("Expected app_name 'Acme Workspace', got %q", updatedSettings["app_name"])
+	}
+}

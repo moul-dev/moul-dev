@@ -49,6 +49,7 @@ func PrintUsage(w io.Writer) {
 	fmt.Fprintln(w, "  update      Update moul binary to the latest release")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Options:")
+	fmt.Fprintln(w, "  --app-name [name]              Specify application / MCP server name (default: MOUL_APP_NAME or moul-dev)")
 	fmt.Fprintln(w, "  --api-prefix [prefix]          URL path prefix for API routes (default: /api, use \"\" for root)")
 	fmt.Fprintln(w, "  --db [path]                    Specify SQLite database path (default: MOUL_DB_PATH or moul-local.db)")
 	fmt.Fprintln(w, "  --out [file]                   Output file path for export or typegen (default: stdout)")
@@ -67,6 +68,26 @@ func PrintUsage(w io.Writer) {
 	fmt.Fprintln(w, "  -s, --service, --systemd [name] Restart systemd service after update (default: moul)")
 	fmt.Fprintln(w, "  -v, --version, version         Print version information and exit")
 	fmt.Fprintln(w, "  -h, --help, help               Show help and usage instructions")
+}
+
+// ResolveCLIAppName resolves the application name from CLI flags or environment.
+func ResolveCLIAppName() string {
+	if hasFlag("--app-name") {
+		return parseFlagString("--app-name")
+	}
+	if envVal := strings.TrimSpace(os.Getenv("MOUL_APP_NAME")); envVal != "" {
+		return envVal
+	}
+	if envVal := strings.TrimSpace(envy.Get("MOUL_APP_NAME", "")); envVal != "" {
+		return envVal
+	}
+	if envVal := strings.TrimSpace(os.Getenv("MOUL_MCP_NAME")); envVal != "" {
+		return envVal
+	}
+	if envVal := strings.TrimSpace(envy.Get("MOUL_MCP_NAME", "")); envVal != "" {
+		return envVal
+	}
+	return ""
 }
 
 // resolveCLIApiPrefix resolves the API route prefix from CLI flags or environment.

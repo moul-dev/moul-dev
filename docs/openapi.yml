@@ -165,6 +165,8 @@ tags:
     description: Dynamic record operations (Create, List, Get, Update, Delete) governed by collection HCL rules.
   - name: OAuth2 Device Flow
     description: OAuth2 Device Authorization Grant flow for CLI, terminal apps, and constrained devices.
+  - name: OAuth2 Server & Discovery
+    description: Standard OAuth 2.0 / 2.1 RFC 9728 Protected Resource Metadata, RFC 8414 Authorization Server Metadata, RFC 7591 Dynamic Client Registration, and PKCE Authorization Code endpoints for MCP clients (Google Gemini, Claude, Cursor).
   - name: Admin Email Templates Management
     description: Admin endpoints to customize transactional email templates (OTP, Password Reset, Verification).
   - name: Admin Settings Management
@@ -175,17 +177,25 @@ tags:
     description: Administrative and tracking endpoints for HTTP requests and site visit analytics.
   - name: Model Context Protocol (MCP)
     description: |
-      Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `moul`.
+      Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity, Google Gemini) to interact with `moul`.
 
       #### Connection Modes & Setup
       1. **Stdio Transport (`moul mcp`)**: Standard I/O bridge mode for local AI clients.
       2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.
+      3. **OAuth 2.0 / 2.1 Protected Resource (RFC 9728 & RFC 8414)**: Native standard OAuth discovery and authorization code grant with PKCE for Google Gemini custom apps and enterprise assistants.
 
       #### Authentication
-      HTTP SSE requests require master key authentication:
-      - Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+      HTTP SSE requests support:
+      - OAuth 2.0 / 2.1 Bearer access token (`Authorization: Bearer <access_token>`)
+      - Master Admin Key: Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
+      - Query parameter: `?adminKey=<MOUL_ADMIN_KEY>`.
 
       #### Configuration Examples
+      - **Google Gemini Custom Connected Apps** (`gemini.google.com/apps`):
+        1. Open Gemini Settings > Connected Apps > Add a custom app.
+        2. Enter your MCP Server URL (e.g. `https://your-domain.com/api/mcp`).
+        3. Gemini automatically discovers OAuth metadata (RFC 9728 & RFC 8414) and registers via Dynamic Client Registration (RFC 7591).
+        4. Authorize access via the consent screen using your Root Administrator credentials (email/username and password), fully decoupled from the Master Admin Key.
       - **Streamable HTTP MCP Client / Cursor IDE** (`.cursor/mcp.json`):
         ```json
         {
@@ -1938,6 +1948,142 @@ paths:
                 type: string
         '400':
           description: Bad request, user validation failed.
+
+  /.well-known/oauth-protected-resource:
+    get:
+      summary: RFC 9728 OAuth 2.0 Protected Resource Metadata
+      description: Returns metadata defining authorization servers and supported scopes for Model Context Protocol (MCP) clients such as Google Gemini.
+      tags:
+        - OAuth2 Server & Discovery
+      responses:
+        '200':
+          description: Protected Resource Metadata JSON document.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource:
+                    type: string
+                  authorization_servers:
+                    type: array
+                    items:
+                      type: string
+                  scopes_supported:
+                    type: array
+                    items:
+                      type: string
+                  bearer_methods_supported:
+                    type: array
+                    items:
+                      type: string
+
+  /.well-known/oauth-authorization-server:
+    get:
+      summary: RFC 8414 OAuth 2.0 Authorization Server Metadata
+      description: Returns authorization server configuration including authorization, token, and dynamic client registration endpoints.
+      tags:
+        - OAuth2 Server & Discovery
+      responses:
+        '200':
+          description: Authorization Server Metadata JSON document.
+
+  /.well-known/openid-configuration:
+    get:
+      summary: OpenID Connect Discovery 1.0 Metadata
+      description: Alias for OAuth 2.0 Authorization Server Metadata.
+      tags:
+        - OAuth2 Server & Discovery
+      responses:
+        '200':
+          description: Authorization Server Metadata JSON document.
+
+  /api/oauth2/register:
+    post:
+      summary: RFC 7591 Dynamic Client Registration
+      description: Dynamically registers a client application (e.g. Google Gemini) to obtain client credentials.
+      tags:
+        - OAuth2 Server & Discovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_name:
+                  type: string
+                redirect_uris:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Client registered successfully.
+
+  /api/oauth2/authorize:
+    get:
+      summary: OAuth 2.0 Authorization Endpoint
+      description: Renders interactive HTML consent page where users authenticate and approve client access.
+      tags:
+        - OAuth2 Server & Discovery
+      parameters:
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: code_challenge
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: HTML consent form.
+    post:
+      summary: Authorize Consent Submission
+      description: Verifies admin credentials, creates authorization code, and redirects to client redirect_uri.
+      tags:
+        - OAuth2 Server & Discovery
+      responses:
+        '302':
+          description: Redirects with authorization code.
+
+  /api/oauth2/token:
+    post:
+      summary: OAuth 2.0 Token Endpoint
+      description: Exchanges authorization code (with PKCE) or refresh token for a JWT access token.
+      tags:
+        - OAuth2 Server & Discovery
+      responses:
+        '200':
+          description: Access token issued.
 
   /api/moul/{name}/records:
     get:

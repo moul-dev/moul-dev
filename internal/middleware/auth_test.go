@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -244,6 +245,24 @@ func TestCheckAdminKey(t *testing.T) {
 			headerName:    "Authorization",
 			headerVal:     "Bearer " + adminKey,
 			shouldSucceed: true,
+		},
+		{
+			name:          "Authorization Basic Admin Key Match",
+			headerName:    "Authorization",
+			headerVal:     "Basic " + base64.StdEncoding.EncodeToString([]byte("client_id:"+adminKey)),
+			shouldSucceed: true,
+		},
+		{
+			name:          "Authorization Basic Admin Key Mismatch",
+			headerName:    "Authorization",
+			headerVal:     "Basic " + base64.StdEncoding.EncodeToString([]byte("client_id:wrong_key")),
+			shouldSucceed: false,
+		},
+		{
+			name:          "Authorization Basic Malformed",
+			headerName:    "Authorization",
+			headerVal:     "Basic not_base64_encoded",
+			shouldSucceed: false,
 		},
 		{
 			name:          "Authorization Raw Admin Key Match",

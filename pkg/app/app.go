@@ -42,6 +42,7 @@ type JobHandler = worker.JobHandler
 
 // Config holds configuration options for starting a Mould application.
 type Config struct {
+	AppName           string
 	Env               string
 	DBPath            string
 	Port              string
@@ -98,6 +99,12 @@ func New(cfg Config) *App {
 	return &App{
 		config: cfg,
 	}
+}
+
+// WithAppName sets or overrides the application and MCP server name.
+func (a *App) WithAppName(name string) *App {
+	a.config.AppName = name
+	return a
 }
 
 // WithAdminUI sets or overrides the filesystem serving the Web Admin Console.
@@ -385,9 +392,16 @@ func (a *App) Bootstrap() error {
 		adminFS = ui.DistFS()
 	}
 
+	// App name resolution from explicit config, CLI flags, environment, or DB
+	if a.config.AppName == "" {
+		a.config.AppName = ResolveCLIAppName()
+	}
+	appName := moulmcp.ResolveAppName(a.dbConn, a.config.AppName)
+	a.config.AppName = appName
+
 	// Built-in MCP Server
 	if a.mcpServer == nil {
-		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version, a.config.AppName)
 		for _, hook := range a.onMCPInit {
 			if err := hook(a.mcpServer); err != nil {
 				return fmt.Errorf("mcp init hook failed: %w", err)
@@ -416,6 +430,7 @@ func (a *App) Bootstrap() error {
 		a.config.AdminKey,
 		a.isDev,
 		handlers.RouterConfig{
+			AppName:        a.config.AppName,
 			Version:        a.config.Version,
 			DisableAdminUI: a.config.DisableAdminUI,
 			MCPServer:      a.mcpServer,
@@ -494,8 +509,15 @@ func (a *App) ServeMCP(ctx context.Context) error {
 		a.sysmonCollector = sysmon.NewCollector()
 	}
 
+	// App name resolution from explicit config, CLI flags, environment, or DB
+	if a.config.AppName == "" {
+		a.config.AppName = ResolveCLIAppName()
+	}
+	appName := moulmcp.ResolveAppName(a.dbConn, a.config.AppName)
+	a.config.AppName = appName
+
 	if a.mcpServer == nil {
-		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version)
+		a.mcpServer = moulmcp.NewServer(a.dbConn, a.workerEngine, a.analyticsEngine, a.sysmonCollector, a.config.Version, a.config.AppName)
 		for _, hook := range a.onMCPInit {
 			if err := hook(a.mcpServer); err != nil {
 				return fmt.Errorf("mcp init hook failed: %w", err)

@@ -20,6 +20,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 | `MOUL_PORT` | No | `8090` | TCP port the Echo HTTP server listens on. | `8090` |
 | `MOUL_DB_PATH` | No | `moul-local.db` | Path to the SQLite database file. | `/var/lib/moul/moul.db` |
 | `MOUL_PUBLIC_URL` | No | `http://localhost:8090` | Canonical public URL used in transactional email links. | `https://api.myapp.com` |
+| `MOUL_APP_NAME` | No | `moul-dev` | Custom application and MCP server name (used in Google Gemini / Claude MCP display and OAuth discovery). | `Acme Backend` |
 | `MOUL_ENCRYPTION_KEY` | Conditional* | — | Master encryption key (min 16 bytes) for `cloak` fields (*required if any collection has a `cloak` field). | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | `*` | Comma-separated list of allowed CORS origins. | `https://myapp.com,https://admin.myapp.com` |
 | `GEOIP_DB_PATH` | No | — | Path to MaxMind GeoIP2 `.mmdb` database file for visitor analytics. | `/var/lib/moul/GeoLite2-City.mmdb` |

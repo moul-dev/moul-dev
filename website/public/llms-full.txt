@@ -143,8 +143,13 @@ When creating an `auth` collection, default access rules are automatically confi
 - `POST /api/admin/password`: Update root user password (`currentPassword`, `password`, `passwordConfirm`, optional `identity`).
 - `POST /api/admin/reload` / `POST /api/settings/reload`: Hot-reload runtime middleware (rate limiter, root IP allowlist), mailer, and TLS configurations.
 
-### Built-in MCP Server (Admin Auth)
-- `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint.
+### Built-in MCP Server & OAuth2 Discovery (Admin Auth & OAuth2)
+- `ALL /api/mcp*`: Model Context Protocol Streamable HTTP & SSE server endpoint. Supports Bearer token auth (`Authorization: Bearer <token>`), dedicated header (`X-Admin-Key`), or OAuth 2.0 / 2.1 access tokens.
+- `GET /.well-known/oauth-protected-resource` & `/.well-known/oauth-protected-resource/*`: RFC 9728 OAuth 2.0 Protected Resource Metadata for automatic discovery by AI clients (e.g. Google Gemini Custom Connected Apps). Returns authorization servers and supported scopes (`moul:mcp:admin`).
+- `GET /.well-known/oauth-authorization-server` & `/.well-known/openid-configuration`: RFC 8414 OAuth 2.0 Authorization Server Metadata describing authorization, token, and registration endpoints with PKCE (`S256`).
+- `POST /api/oauth2/register`: RFC 7591 Dynamic Client Registration endpoint allowing Gemini or other clients to register dynamically.
+- `GET /api/oauth2/authorize` & `POST /api/oauth2/authorize`: OAuth 2.1 authorization consent endpoint supporting PKCE (`code_challenge`), login with root admin credentials or Admin Secret Key, and authorization code issuance.
+- `POST /api/oauth2/token`: OAuth 2.1 token issuance exchanging authorization code or refresh token for a JWT Bearer access token.
 
 ### Collection Management (Admin Auth)
 - `GET /api/moul`: List all collection schemas (Public read-only summary).
@@ -254,6 +259,12 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
   }
 }
 ```
+
+#### Option 3: Google Gemini Custom Connected Apps (OAuth 2.0 / 2.1)
+- MCP Server URL: `https://<your-host>/api/mcp`
+- Discovery: RFC 9728 (`/.well-known/oauth-protected-resource`) and RFC 8414 (`/.well-known/oauth-authorization-server`).
+- Dynamic Client Registration: Fully supports RFC 7591 automatic client registration.
+- Consent & Authorization: Users approve access on the interactive consent screen using Root Administrator credentials (email/username and password), fully decoupled from the Admin Key.
 
 ---
 

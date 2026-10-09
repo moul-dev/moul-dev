@@ -48,6 +48,7 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 
 	// Update only existing settings keys for security
 	allowedKeys := map[string]bool{
+		"app_name":                       true,
 		"file_s3_enabled":                true,
 		"file_s3_bucket":                 true,
 		"file_s3_endpoint":               true,

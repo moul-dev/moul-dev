@@ -91,6 +91,15 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
        -H "Content-Type: application/json" \
        -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "curl", "version": "1.0"}}}'
      ```
+   - **Google Gemini Custom Connected Apps** (`gemini.google.com/apps`):
+     - URL: `https://<your-host>/api/mcp`
+     - Discovery: Automatic RFC 9728 (`/.well-known/oauth-protected-resource`) and RFC 8414 (`/.well-known/oauth-authorization-server`).
+     - Registration & Authorization: Full RFC 7591 Dynamic Client Registration and RFC 7636 PKCE authorization code grant with root admin credentials or `MOUL_ADMIN_KEY`.
+     - **Configuring Display Name & Mention Handle** (e.g. `@Custom Name` in Gemini):
+       - Environment variable: `MOUL_APP_NAME="Custom Name"` (or `MOUL_MCP_NAME="Custom Name"`)
+       - Database setting (`_settings` table): `PATCH /api/settings` with `{"app_name": "Custom Name"}`
+       - CLI flag: `moul start --app-name "Custom Name"` or `moul mcp --app-name "Custom Name"`
+       - Go programmatic SDK: `app.New(app.Config{AppName: "Custom Name"})` or `app.WithAppName("Custom Name")`
 
 ### Option B: REST API & OpenAPI Specification
 - Live OpenAPI Spec: `http://localhost:8090/openapi.json` or `http://localhost:8090/openapi.yml`

@@ -9,6 +9,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/pocketbase/dbx"
 )
 
 func TestMCPServerInitialization(t *testing.T) {
@@ -115,4 +116,46 @@ func TestMCPSSEFlow(t *testing.T) {
 	postBuf := make([]byte, 1024)
 	postN, _ := postResp.Body.Read(postBuf)
 	t.Logf("POST initialize status: %d, response: %s", postResp.StatusCode, string(postBuf[:postN]))
+}
+
+func TestAppNameConfiguration(t *testing.T) {
+	// 1. Default fallback
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to init test db: %v", err)
+	}
+	defer dbConn.Close()
+
+	if err := db.EnsureSystemTables(dbConn); err != nil {
+		t.Fatalf("Failed to ensure system tables: %v", err)
+	}
+
+	name := moulmcp.ResolveAppName(dbConn)
+	if name != "moul-dev" {
+		t.Fatalf("Expected default 'moul-dev', got %q", name)
+	}
+
+	// 2. Explicit argument override
+	explicitSrv := moulmcp.NewServer(dbConn, nil, nil, nil, "1.0.0", "Explicit App")
+	if explicitSrv.AppName() != "Explicit App" {
+		t.Fatalf("Expected 'Explicit App', got %q", explicitSrv.AppName())
+	}
+
+	// 3. Environment variable override
+	t.Setenv("MOUL_APP_NAME", "Env App Name")
+	nameFromEnv := moulmcp.ResolveAppName(dbConn)
+	if nameFromEnv != "Env App Name" {
+		t.Fatalf("Expected 'Env App Name', got %q", nameFromEnv)
+	}
+
+	// 4. Database _settings table override
+	_, err = dbConn.Update("_settings", dbx.Params{"value": "Database Custom App"}, dbx.HashExp{"key": "app_name"}).Execute()
+	if err != nil {
+		t.Fatalf("Failed to update _settings: %v", err)
+	}
+
+	nameFromDB := moulmcp.ResolveAppName(dbConn)
+	if nameFromDB != "Database Custom App" {
+		t.Fatalf("Expected 'Database Custom App', got %q", nameFromDB)
+	}
 }

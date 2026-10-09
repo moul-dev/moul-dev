@@ -33,6 +33,10 @@
       "description": "OAuth2 Device Authorization Grant flow for CLI, terminal apps, and constrained devices."
     },
     {
+      "name": "OAuth2 Server & Discovery",
+      "description": "Standard OAuth 2.0 / 2.1 RFC 9728 Protected Resource Metadata, RFC 8414 Authorization Server Metadata, RFC 7591 Dynamic Client Registration, and PKCE Authorization Code endpoints for MCP clients (Google Gemini, Claude, Cursor)."
+    },
+    {
       "name": "Admin Email Templates Management",
       "description": "Admin endpoints to customize transactional email templates (OTP, Password Reset, Verification)."
     },
@@ -50,7 +54,7 @@
     },
     {
       "name": "Model Context Protocol (MCP)",
-      "description": "Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity) to interact with `moul`.\n\n#### Connection Modes & Setup\n1. **Stdio Transport (`moul mcp`)**: Standard I/O bridge mode for local AI clients.\n2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.\n\n#### Authentication\nHTTP SSE requests require master key authentication:\n- Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.\n\n#### Configuration Examples\n- **Streamable HTTP MCP Client / Cursor IDE** (`.cursor/mcp.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": {\n        \"type\": \"http\",\n        \"headers\": {\n          \"Authorization\": \"Bearer ADMIN_SECRET_KEY\"\n        },\n        \"url\": \"http://localhost:8090/api/mcp\"\n      }\n    }\n  }\n  ```\n- **Claude Desktop** (`claude_desktop_config.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": {\n        \"command\": \"/usr/local/bin/moul\",\n        \"args\": [\"mcp\"],\n        \"env\": { \"MOUL_DB_PATH\": \"./moul-local.db\" }\n      },\n      \"moul-sse\": {\n        \"url\": \"http://localhost:8090/api/mcp\",\n        \"headers\": { \"X-Admin-Key\": \"<MOUL_ADMIN_KEY>\" }\n      }\n    }\n  }\n  ```\n- **Cursor IDE (Stdio)** (`.cursor/mcp.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": { \"command\": \"moul\", \"args\": [\"mcp\"] }\n    }\n  }\n  ```\n\n#### Available MCP Tools (17 Tools)\n- `moul_list_collections`: List all dynamic database collections.\n- `moul_get_collection`: View collection definition and rules.\n- `moul_create_collection`: Register a new collection schema (base, auth, worker, analytic).\n- `moul_delete_collection`: Drop collection table and remove schema.\n- `moul_list_records`: List records with field filtering and limits.\n- `moul_get_record`: Fetch single record by ID.\n- `moul_create_record`: Create record in collection.\n- `moul_update_record`: Update record by ID.\n- `moul_delete_record`: Delete record by ID.\n- `moul_list_worker_jobs`: List background jobs from worker table by state.\n- `moul_enqueue_job`: Enqueue job with handler, args_json, and priority.\n- `moul_cancel_job`: Cancel worker job.\n- `moul_list_feature_flags`: List OpenFeature flags.\n- `moul_set_feature_flag`: Create/update feature flag.\n- `moul_get_system_metrics`: Query host CPU, RAM, Disk, Load metrics.\n- `moul_get_analytics_summary`: Get visit count and request metrics.\n- `moul_list_requests`: Query HTTP request telemetry log.\n"
+      "description": "Native Model Context Protocol (MCP) server endpoints allowing AI agents (Claude Desktop, Cursor, Antigravity, Google Gemini) to interact with `moul`.\n\n#### Connection Modes & Setup\n1. **Stdio Transport (`moul mcp`)**: Standard I/O bridge mode for local AI clients.\n2. **HTTP SSE Transport (`/api/mcp`)**: Server-Sent Events stream endpoint for network-based AI clients.\n3. **OAuth 2.0 / 2.1 Protected Resource (RFC 9728 & RFC 8414)**: Native standard OAuth discovery and authorization code grant with PKCE for Google Gemini custom apps and enterprise assistants.\n\n#### Authentication\nHTTP SSE requests support:\n- OAuth 2.0 / 2.1 Bearer access token (`Authorization: Bearer <access_token>`)\n- Master Admin Key: Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.\n- Query parameter: `?adminKey=<MOUL_ADMIN_KEY>`.\n\n#### Configuration Examples\n- **Google Gemini Custom Connected Apps** (`gemini.google.com/apps`):\n  1. Open Gemini Settings > Connected Apps > Add a custom app.\n  2. Enter your MCP Server URL (e.g. `https://your-domain.com/api/mcp`).\n  3. Gemini automatically discovers OAuth metadata (RFC 9728 & RFC 8414) and registers via Dynamic Client Registration (RFC 7591).\n  4. Authorize access via the consent screen using your Root Administrator credentials (email/username and password), fully decoupled from the Master Admin Key.\n- **Streamable HTTP MCP Client / Cursor IDE** (`.cursor/mcp.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": {\n        \"type\": \"http\",\n        \"headers\": {\n          \"Authorization\": \"Bearer ADMIN_SECRET_KEY\"\n        },\n        \"url\": \"http://localhost:8090/api/mcp\"\n      }\n    }\n  }\n  ```\n- **Claude Desktop** (`claude_desktop_config.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": {\n        \"command\": \"/usr/local/bin/moul\",\n        \"args\": [\"mcp\"],\n        \"env\": { \"MOUL_DB_PATH\": \"./moul-local.db\" }\n      },\n      \"moul-sse\": {\n        \"url\": \"http://localhost:8090/api/mcp\",\n        \"headers\": { \"X-Admin-Key\": \"<MOUL_ADMIN_KEY>\" }\n      }\n    }\n  }\n  ```\n- **Cursor IDE (Stdio)** (`.cursor/mcp.json`):\n  ```json\n  {\n    \"mcpServers\": {\n      \"moul\": { \"command\": \"moul\", \"args\": [\"mcp\"] }\n    }\n  }\n  ```\n\n#### Available MCP Tools (17 Tools)\n- `moul_list_collections`: List all dynamic database collections.\n- `moul_get_collection`: View collection definition and rules.\n- `moul_create_collection`: Register a new collection schema (base, auth, worker, analytic).\n- `moul_delete_collection`: Drop collection table and remove schema.\n- `moul_list_records`: List records with field filtering and limits.\n- `moul_get_record`: Fetch single record by ID.\n- `moul_create_record`: Create record in collection.\n- `moul_update_record`: Update record by ID.\n- `moul_delete_record`: Delete record by ID.\n- `moul_list_worker_jobs`: List background jobs from worker table by state.\n- `moul_enqueue_job`: Enqueue job with handler, args_json, and priority.\n- `moul_cancel_job`: Cancel worker job.\n- `moul_list_feature_flags`: List OpenFeature flags.\n- `moul_set_feature_flag`: Create/update feature flag.\n- `moul_get_system_metrics`: Query host CPU, RAM, Disk, Load metrics.\n- `moul_get_analytics_summary`: Get visit count and request metrics.\n- `moul_list_requests`: Query HTTP request telemetry log.\n"
     }
   ],
   "paths": {
@@ -2732,6 +2736,211 @@
           },
           "400": {
             "description": "Bad request, user validation failed."
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "summary": "RFC 9728 OAuth 2.0 Protected Resource Metadata",
+        "description": "Returns metadata defining authorization servers and supported scopes for Model Context Protocol (MCP) clients such as Google Gemini.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "Protected Resource Metadata JSON document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resource": {
+                      "type": "string"
+                    },
+                    "authorization_servers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "scopes_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "bearer_methods_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "summary": "RFC 8414 OAuth 2.0 Authorization Server Metadata",
+        "description": "Returns authorization server configuration including authorization, token, and dynamic client registration endpoints.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorization Server Metadata JSON document."
+          }
+        }
+      }
+    },
+    "/.well-known/openid-configuration": {
+      "get": {
+        "summary": "OpenID Connect Discovery 1.0 Metadata",
+        "description": "Alias for OAuth 2.0 Authorization Server Metadata.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorization Server Metadata JSON document."
+          }
+        }
+      }
+    },
+    "/api/oauth2/register": {
+      "post": {
+        "summary": "RFC 7591 Dynamic Client Registration",
+        "description": "Dynamically registers a client application (e.g. Google Gemini) to obtain client credentials.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string"
+                  },
+                  "redirect_uris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client registered successfully."
+          }
+        }
+      }
+    },
+    "/api/oauth2/authorize": {
+      "get": {
+        "summary": "OAuth 2.0 Authorization Endpoint",
+        "description": "Renders interactive HTML consent page where users authenticate and approve client access.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML consent form."
+          }
+        }
+      },
+      "post": {
+        "summary": "Authorize Consent Submission",
+        "description": "Verifies admin credentials, creates authorization code, and redirects to client redirect_uri.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects with authorization code."
+          }
+        }
+      }
+    },
+    "/api/oauth2/token": {
+      "post": {
+        "summary": "OAuth 2.0 Token Endpoint",
+        "description": "Exchanges authorization code (with PKCE) or refresh token for a JWT access token.",
+        "tags": [
+          "OAuth2 Server & Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token issued."
           }
         }
       }

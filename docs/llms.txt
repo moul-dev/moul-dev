@@ -78,6 +78,12 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 }
 ```
 
+### Option 3: Google Gemini Custom Connected Apps (OAuth 2.0 / 2.1)
+- MCP Server URL: `https://<your-host>/api/mcp`
+- Discovery: RFC 9728 (`/.well-known/oauth-protected-resource`) and RFC 8414 (`/.well-known/oauth-authorization-server`).
+- Dynamic Client Registration: Fully supports RFC 7591 automatic client registration.
+- Consent & Authorization: Users approve access on the interactive consent screen using Root Administrator credentials (email/username and password), fully decoupled from the Admin Key.
+
 ## Essential CLI Commands
 
 ```bash

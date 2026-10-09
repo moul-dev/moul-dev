@@ -297,3 +297,39 @@ func TestAppRegisterMCPTool(t *testing.T) {
 		t.Fatal("Expected MCPServer to be initialized")
 	}
 }
+
+func TestAppWithAppName(t *testing.T) {
+	jwtSecret := "test-jwt-secret-key-32-bytes-minimum!!"
+	adminKey := "test-admin-key-1234"
+
+	// 1. Config.AppName
+	a1 := New(Config{
+		AppName:   "Custom Application",
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "1.0.0",
+		JWTSecret: jwtSecret,
+		AdminKey:  adminKey,
+	})
+	if err := a1.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+	if a1.MCPServer().AppName() != "Custom Application" {
+		t.Errorf("Expected 'Custom Application', got %q", a1.MCPServer().AppName())
+	}
+
+	// 2. Builder WithAppName
+	a2 := New(Config{
+		DBPath:    ":memory:",
+		Env:       "test",
+		Version:   "1.0.0",
+		JWTSecret: jwtSecret,
+		AdminKey:  adminKey,
+	}).WithAppName("Builder Application")
+	if err := a2.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+	if a2.MCPServer().AppName() != "Builder Application" {
+		t.Errorf("Expected 'Builder Application', got %q", a2.MCPServer().AppName())
+	}
+}

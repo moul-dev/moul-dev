@@ -189,6 +189,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
+		"app_name":                       "moul-dev",
 		"file_s3_enabled":                "false",
 		"file_s3_bucket":                 "",
 		"file_s3_endpoint":               "",

@@ -649,6 +649,19 @@ When accessing `/api/mcp` over HTTP/SSE, two primary header authentication metho
 }
 ```
 
+#### Custom Apps (Google Gemini)
+
+To connect `moul` as a Custom Connected App in Google Gemini Apps (`gemini.google.com/apps`):
+
+1. In Gemini, navigate to **Settings > Connected Apps > Custom apps**.
+2. Click **Add a custom app** and enter your `moul` MCP URL (e.g., `https://your-moul-instance.com/api/mcp`).
+3. Click **Next**.
+   - `moul` automatically serves standard **RFC 9728 Protected Resource Metadata** and **RFC 8414 Authorization Server Metadata** via `/.well-known/`.
+   - Gemini automatically discovers endpoints and registers via **RFC 7591 Dynamic Client Registration**.
+4. In the authorization consent screen, enter your root admin credentials (username/email and password) or your `MOUL_ADMIN_KEY`, then click **Authorize Google Gemini**.
+5. Once authorized, Gemini connects seamlessly over Streamable HTTP with an OAuth 2.1 Bearer access token.
+*(Optional fallback: If you configure manual credentials, click **Show more** under Advanced features in Gemini, enter your Client ID and Client Secret, and complete the authorization consent screen).*
+
 ### Available MCP Tools
 
 | MCP Tool Name | Description |

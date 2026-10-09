@@ -60,6 +60,18 @@ For restricted clients or environments where custom request headers cannot be co
 
 ---
 
+## Google Gemini Custom Connected Apps (OAuth 2.0 / 2.1)
+
+Moul natively supports the OAuth 2.0 specifications required by Google Gemini Custom Connected Apps, including **RFC 9728** (Protected Resource Metadata), **RFC 8414** (Authorization Server Metadata), **RFC 7591** (Dynamic Client Registration), and PKCE (**RFC 7636**):
+
+1. In Gemini, navigate to **Settings > Connected Apps > Custom apps** (or visit [gemini.google.com/apps](https://gemini.google.com/apps)).
+2. Click **Add a custom app**.
+3. Enter your Moul MCP server URL (e.g. `https://your-moul-domain.com/api/mcp`).
+4. Click **Connect**. Gemini will automatically discover the authorization server via `/.well-known/oauth-protected-resource` and open the Moul authorization consent page.
+5. Sign in using your Root Administrator credentials (email or username and password), fully decoupled from the Master Admin Key.
+6. Once authorized, Gemini connects seamlessly to all 17 built-in Moul MCP tools.
+
+
 ## Assistant Configuration
 
 <Tabs items={['Cursor (HTTP Bearer)', 'Cursor (HTTP X-Admin-Key)', 'Cursor (Stdio)', 'Claude Desktop', 'cURL (Both Auth Headers)']}>
