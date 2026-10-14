@@ -8,17 +8,57 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/pocketbase/dbx"
 )
 
 type RealtimeHandler struct {
-	DB *dbx.DB
+	DB             *dbx.DB
+	TicketStore    *realtime.TicketStore
+	AdminSecretKey string
 }
 
-func NewRealtimeHandler(dbConn *dbx.DB) *RealtimeHandler {
-	return &RealtimeHandler{DB: dbConn}
+func NewRealtimeHandler(dbConn *dbx.DB, ticketStore *realtime.TicketStore, adminSecretKey string) *RealtimeHandler {
+	return &RealtimeHandler{
+		DB:             dbConn,
+		TicketStore:    ticketStore,
+		AdminSecretKey: adminSecretKey,
+	}
+}
+
+// CreateTicket handles POST /api/realtime/ticket.
+// It exchanges authenticated user JWT or admin credentials for a 30-second single-use ticket.
+func (h *RealtimeHandler) CreateTicket(c *echo.Context) error {
+	authUser := middleware.GetAuthRecord(c)
+	adminKey := c.Request().Header.Get("X-Admin-Key")
+	isAdmin := (authUser != nil && authUser["moul"] == "_rootUsers") ||
+		(adminKey != "" && h.AdminSecretKey != "" && middleware.CheckAdminKey(c, h.AdminSecretKey))
+
+	if authUser == nil && !isAdmin {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to request a realtime ticket")
+	}
+
+	if h.TicketStore == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
+	}
+
+	// Clean up expired tickets opportunistically
+	if _, err := h.TicketStore.CleanupExpired(); err != nil {
+		logger.Warn("Failed to clean up expired tickets", "err", err)
+	}
+
+	ticket, err := h.TicketStore.IssueTicket(authUser, isAdmin, 30*time.Second)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to issue realtime ticket: %v", err))
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"ticket":    ticket.ID,
+		"expiresAt": ticket.ExpiresAt,
+		"expiresIn": 30,
+	})
 }
 
 // SubscribeCollection handles GET /api/moul/:name/subscribe over SSE.
@@ -30,12 +70,26 @@ func (h *RealtimeHandler) SubscribeCollection(c *echo.Context) error {
 	}
 
 	authUser := middleware.GetAuthRecord(c)
-	isRootUser := authUser != nil && authUser["moul"] == "_rootUsers"
 	adminKey := c.Request().Header.Get("X-Admin-Key")
-	if adminKey == "" {
-		adminKey = c.QueryParam("admin_key")
+	isAdmin := (authUser != nil && authUser["moul"] == "_rootUsers") ||
+		(adminKey != "" && h.AdminSecretKey != "" && middleware.CheckAdminKey(c, h.AdminSecretKey))
+
+	// Consume ticket if provided in query string
+	if ticketID := c.QueryParam("ticket"); ticketID != "" {
+		if h.TicketStore == nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
+		}
+		ticket, err := h.TicketStore.ConsumeTicket(ticketID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or expired realtime ticket")
+		}
+		if ticket.AuthRecord != nil {
+			authUser = ticket.AuthRecord
+		}
+		if ticket.IsAdmin {
+			isAdmin = true
+		}
 	}
-	isAdmin := isRootUser || adminKey != ""
 
 	// Access rule selection
 	rule := moul.Rules.SubscribeRule
@@ -117,12 +171,26 @@ func (h *RealtimeHandler) SubscribeGlobal(c *echo.Context) error {
 	}
 
 	authUser := middleware.GetAuthRecord(c)
-	isRootUser := authUser != nil && authUser["moul"] == "_rootUsers"
 	adminKey := c.Request().Header.Get("X-Admin-Key")
-	if adminKey == "" {
-		adminKey = c.QueryParam("admin_key")
+	isAdmin := (authUser != nil && authUser["moul"] == "_rootUsers") ||
+		(adminKey != "" && h.AdminSecretKey != "" && middleware.CheckAdminKey(c, h.AdminSecretKey))
+
+	// Consume ticket if provided in query string
+	if ticketID := c.QueryParam("ticket"); ticketID != "" {
+		if h.TicketStore == nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
+		}
+		ticket, err := h.TicketStore.ConsumeTicket(ticketID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or expired realtime ticket")
+		}
+		if ticket.AuthRecord != nil {
+			authUser = ticket.AuthRecord
+		}
+		if ticket.IsAdmin {
+			isAdmin = true
+		}
 	}
-	isAdmin := isRootUser || adminKey != ""
 
 	eventFilter := c.QueryParam("event")
 	if eventFilter == "" {

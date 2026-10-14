@@ -525,4 +525,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  createRealtimeTicket: () =>
+    request<{
+      ticket: string;
+      expiresAt: string;
+      expiresIn: number;
+    }>('/api/realtime/ticket', {
+      method: 'POST',
+    }),
 };

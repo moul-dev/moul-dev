@@ -132,4 +132,12 @@ export const api = {
       created_at?: string;
       updated_at?: string;
     }>('/api/admin/account'),
+  createRealtimeTicket: () =>
+    request<{
+      ticket: string;
+      expiresAt: string;
+      expiresIn: number;
+    }>('/api/realtime/ticket', {
+      method: 'POST',
+    }),
 };

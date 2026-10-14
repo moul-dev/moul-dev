@@ -12,8 +12,8 @@ import (
 
 // CheckAdminKey validates if the request presents a valid admin key via:
 // 1. X-Admin-Key header
-// 2. Authorization header ("Bearer <adminKey>" or "<adminKey>")
-// 3. Query parameter (?adminKey=..., ?admin_key=..., ?x-admin-key=..., ?api_key=..., ?token=...)
+// 2. Authorization header ("Bearer <adminKey>", "Basic <base64>", or "<adminKey>")
+// Query parameters are strictly disallowed for security reasons.
 func CheckAdminKey(c *echo.Context, expectedKey string) bool {
 	if expectedKey == "" {
 		return false
@@ -53,15 +53,6 @@ func CheckAdminKey(c *echo.Context, expectedKey string) bool {
 		// Fallback to direct token comparison (if it was Bearer or just raw token)
 		if subtle.ConstantTimeCompare([]byte(token), []byte(expectedKey)) == 1 {
 			return true
-		}
-	}
-
-	// 3. Check query parameters
-	for _, param := range []string{"adminKey", "admin_key", "x-admin-key", "api_key", "token"} {
-		if key := c.QueryParam(param); key != "" {
-			if subtle.ConstantTimeCompare([]byte(key), []byte(expectedKey)) == 1 {
-				return true
-			}
 		}
 	}
 

@@ -18,21 +18,28 @@ Moul provides built-in Server-Sent Events (SSE) streaming for real-time reactivi
 Query Parameters:
 - `event`: Comma-separated list of event actions to filter (`create`, `update`, `delete`, or `*`). Default: `*`.
 - `id`: Optional filter for a specific record ID.
-- `token`: Optional JWT authorization token (useful for standard browser `EventSource` which does not support custom authorization headers).
+- `ticket`: Optional short-lived single-use SSE ticket obtained via `POST /api/realtime/ticket`.
+
+> **Security Note**: Passing credentials in URL query strings (`?token=` or `?admin_key=`) is strictly disabled and returns `HTTP 400 Bad Request` to prevent exposure in proxy logs, browser histories, and Referer headers. Always stream via headers (`Authorization: Bearer`) or exchange credentials for a 30-second single-use ticket.
 
 ### 2. Multi-Collection Subscription
-`GET /api/moul/subscribe?mouls=posts,comments,notifications`
+`GET /api/moul/subscribe?mouls=posts,comments,notifications&ticket=tkt_...`
 
 ---
 
 ## Client Integration Examples
 
-### JavaScript / TypeScript Browser Client
+### Browser Client: Single-Use Ticket Exchange
 
 ```typescript
-const userToken = 'eyJhbGciOi...';
-const sseUrl = `/api/moul/posts/subscribe?event=create,update,delete&token=${userToken}`;
+// 1. Request an opaque, 30-second single-use ticket
+const { ticket } = await fetch('/api/realtime/ticket', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${userToken}` },
+}).then(r => r.json());
 
+// 2. Open standard EventSource without URL credential leakage
+const sseUrl = `/api/moul/posts/subscribe?event=create,update,delete&ticket=${ticket}`;
 const evtSource = new EventSource(sseUrl);
 
 // Listen for new record insertions
@@ -93,10 +100,17 @@ export function useRecordSubscription<T>(collection: string, initialData: T[]) {
 }
 ```
 
-### cURL CLI Streaming
+### cURL CLI Streaming (Header Auth or Ticket)
 
 ```bash
-curl -N "http://localhost:8090/api/moul/posts/subscribe?token=test-admin-key-1234"
+# Direct stream using standard Authorization Bearer header
+curl -N -H "Authorization: Bearer <USER_JWT>" "http://localhost:8090/api/moul/posts/subscribe"
+
+# Direct stream using Admin Key header
+curl -N -H "X-Admin-Key: <ADMIN_KEY>" "http://localhost:8090/api/moul/posts/subscribe"
+
+# Stream using short-lived single-use ticket
+curl -N "http://localhost:8090/api/moul/posts/subscribe?ticket=tkt_98a7f..."
 ```
 
 ---

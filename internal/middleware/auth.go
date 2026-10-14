@@ -59,9 +59,18 @@ const AuthContextKey = "auth"
 
 // LoadAuthContextMiddleware reads the Authorization header, validates the JWT,
 // checks token revocation status, and maps the verified user details into the Echo context.
+// Requests attempting to pass credentials via query parameters are rejected with HTTP 400 Bad Request.
 func LoadAuthContextMiddleware(dbConn ...*dbx.DB) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
+			// Disallow credentials in query parameters to prevent URL log leakage
+			if c.QueryParam("token") != "" {
+				return echo.NewHTTPError(http.StatusBadRequest, "Authentication via ?token= query parameter is disabled for security reasons. Provide your credentials via Authorization header (Bearer <token>) or request a single-use ticket via POST /api/realtime/ticket.")
+			}
+			if c.QueryParam("admin_key") != "" || c.QueryParam("adminKey") != "" || c.QueryParam("api_key") != "" {
+				return echo.NewHTTPError(http.StatusBadRequest, "Authentication via URL query parameters is disabled for security reasons. Provide your admin key via the X-Admin-Key header or request a single-use ticket via POST /api/realtime/ticket.")
+			}
+
 			tokenString := ""
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader != "" {
@@ -69,9 +78,6 @@ func LoadAuthContextMiddleware(dbConn ...*dbx.DB) echo.MiddlewareFunc {
 				if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
 					tokenString = parts[1]
 				}
-			}
-			if tokenString == "" {
-				tokenString = c.QueryParam("token")
 			}
 			if tokenString == "" {
 				return next(c)

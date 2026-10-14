@@ -106,6 +106,48 @@ func TestLoadAuthContextMiddleware(t *testing.T) {
 	}
 }
 
+func TestLoadAuthContextMiddleware_QueryCredentialsRejected(t *testing.T) {
+	e := echo.New()
+	tests := []struct {
+		name        string
+		queryString string
+	}{
+		{"Query param ?token=", "/?token=secret123"},
+		{"Query param ?admin_key=", "/?admin_key=admin123"},
+		{"Query param ?adminKey=", "/?adminKey=admin123"},
+		{"Query param ?api_key=", "/?api_key=api123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.queryString, nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			handlerCalled := false
+			h := LoadAuthContextMiddleware()(func(ctx *echo.Context) error {
+				handlerCalled = true
+				return nil
+			})
+
+			err := h(c)
+			if err == nil {
+				t.Fatalf("Expected error for query credential, got nil")
+			}
+			httpErr, ok := err.(*echo.HTTPError)
+			if !ok {
+				t.Fatalf("Expected *echo.HTTPError, got %T", err)
+			}
+			if httpErr.Code != http.StatusBadRequest {
+				t.Errorf("Expected status 400 Bad Request, got %d", httpErr.Code)
+			}
+			if handlerCalled {
+				t.Errorf("Handler should not have been called when query credentials present")
+			}
+		})
+	}
+}
+
 func TestGetAuthRecordInvalidTypes(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -271,14 +313,14 @@ func TestCheckAdminKey(t *testing.T) {
 			shouldSucceed: true,
 		},
 		{
-			name:          "Query Param adminKey Match",
+			name:          "Query Param adminKey Rejected",
 			queryParams:   "?adminKey=" + adminKey,
-			shouldSucceed: true,
+			shouldSucceed: false,
 		},
 		{
-			name:          "Query Param token Match",
+			name:          "Query Param token Rejected",
 			queryParams:   "?token=" + adminKey,
-			shouldSucceed: true,
+			shouldSucceed: false,
 		},
 		{
 			name:          "Invalid Key",

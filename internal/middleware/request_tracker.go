@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -75,6 +76,9 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 				}
 			}
 
+			cleanLandingPage := sanitizeSensitiveURL(req.URL.String())
+			cleanReferer := sanitizeSensitiveURL(req.Referer())
+
 			// Ensure a visit session exists
 			result, err := engine.EnsureVisit(
 				visitToken,
@@ -82,8 +86,8 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 				userID,
 				c.RealIP(),
 				req.UserAgent(),
-				req.Referer(),
-				req.URL.String(),
+				cleanReferer,
+				cleanLandingPage,
 			)
 			if err != nil {
 				// Log but don't fail the request — tracking is best-effort
@@ -140,4 +144,40 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 			return err
 		}
 	}
+}
+
+// sanitizeSensitiveURL parses a URL and replaces values of sensitive query parameters with [REDACTED].
+func sanitizeSensitiveURL(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	if u.RawQuery == "" {
+		return rawURL
+	}
+
+	q := u.Query()
+	modified := false
+	for k := range q {
+		lowerK := strings.ToLower(k)
+		if isSensitiveParam(lowerK) {
+			q.Set(k, "[REDACTED]")
+			modified = true
+		}
+	}
+	if modified {
+		u.RawQuery = q.Encode()
+	}
+	return u.String()
+}
+
+func isSensitiveParam(name string) bool {
+	switch name {
+	case "token", "admin_key", "adminkey", "ticket", "secret", "password", "api_key", "apikey", "auth", "authorization", "code", "access_token", "refresh_token":
+		return true
+	}
+	return false
 }

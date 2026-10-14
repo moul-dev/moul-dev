@@ -741,33 +741,46 @@ Moul provides high-performance real-time record subscriptions over Server-Sent E
 - **Query Parameters**:
   - `event`: Optional comma-separated list of event actions to filter (`create`, `update`, `delete`, or `*`). Default: `*`.
   - `id`: Optional filter for a specific record ID.
-  - `token`: Optional JWT authorization token for browser `EventSource` clients.
+  - `ticket`: Optional short-lived single-use SSE ticket obtained via `POST /api/realtime/ticket`.
 
-### JavaScript Client Example
+> **Security Note**: Passing credentials in URL query strings (e.g. `?token=` or `?admin_key=`) is strictly disabled and returns `HTTP 400 Bad Request` to prevent credential exposure in reverse proxy logs, browser histories, and Referer headers. Always use `Authorization: Bearer` headers (via `fetch()` readable streams) or exchange for a short-lived single-use ticket.
 
+### JavaScript Client Examples
+
+#### Option 1: Single-Use Ticket Exchange (for standard browser `EventSource`)
 ```javascript
-const evtSource = new EventSource('/api/moul/posts/subscribe?token=' + userToken);
+// 1. Request an opaque, 30-second single-use ticket
+const { ticket } = await fetch('/api/realtime/ticket', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + userToken }
+}).then(r => r.json());
+
+// 2. Connect safely via EventSource using the single-use ticket
+const evtSource = new EventSource(`/api/moul/posts/subscribe?ticket=${ticket}`);
 
 evtSource.addEventListener('create', (e) => {
   const data = JSON.parse(e.data);
   console.log('New post created:', data.record);
 });
+```
 
-evtSource.addEventListener('update', (e) => {
-  const data = JSON.parse(e.data);
-  console.log('Post updated:', data.record);
-});
+#### Option 2: Direct Header Streaming via `moul-live` / `fetch()`
+```javascript
+import { subscribeWithFetch } from '@moul-dev/ui'; // or ui/src/api/moul-live
 
-evtSource.addEventListener('delete', (e) => {
-  const data = JSON.parse(e.data);
-  console.log('Post deleted:', data.record);
+const unsubscribe = subscribeWithFetch({
+  url: '/api/moul/posts/subscribe',
+  token: userToken, // Dispatched via standard Authorization: Bearer header
+  onMessage: (event) => {
+    console.log(`[${event.moul}] ${event.action}:`, event.record);
+  }
 });
 ```
 
 ### Global Subscriptions
 
 To subscribe across all collections or specific multi-collections, use `GET /api/moul/subscribe`:
-`GET /api/moul/subscribe?mouls=posts,comments`
+`GET /api/moul/subscribe?mouls=posts,comments&ticket=tkt_...`
 
 ---
 

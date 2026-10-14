@@ -231,3 +231,51 @@ func TestRequestTracker_EnqueuesRequestData(t *testing.T) {
 		t.Errorf("Expected status 201, got %d", rec.Code)
 	}
 }
+
+func TestSanitizeSensitiveURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Empty URL",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "URL with no query params",
+			input:    "https://example.com/api/moul/posts",
+			expected: "https://example.com/api/moul/posts",
+		},
+		{
+			name:     "URL with safe query params",
+			input:    "https://example.com/page?utm_source=twitter&page=2",
+			expected: "https://example.com/page?utm_source=twitter&page=2",
+		},
+		{
+			name:     "URL with token query param",
+			input:    "https://example.com/api/moul/posts/subscribe?token=jwt.secret.payload",
+			expected: "https://example.com/api/moul/posts/subscribe?token=%5BREDACTED%5D",
+		},
+		{
+			name:     "URL with admin_key and adminkey and safe params",
+			input:    "https://example.com/api?admin_key=secretkey&page=1&adminkey=secret2",
+			expected: "https://example.com/api?admin_key=%5BREDACTED%5D&adminkey=%5BREDACTED%5D&page=1",
+		},
+		{
+			name:     "URL with ticket and secret",
+			input:    "https://example.com/subscribe?ticket=tkt_12345&secret=mysecret",
+			expected: "https://example.com/subscribe?secret=%5BREDACTED%5D&ticket=%5BREDACTED%5D",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeSensitiveURL(tt.input)
+			if got != tt.expected {
+				t.Errorf("sanitizeSensitiveURL(%q) = %q; want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

@@ -187,6 +187,21 @@ func EnsureSystemTables(db *dbx.DB) error {
 		return fmt.Errorf("failed to create _revoked_tokens table: %w", err)
 	}
 
+	// Create meta-table _realtime_tickets
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _realtime_tickets (
+			id TEXT PRIMARY KEY,
+			authRecord TEXT,
+			isAdmin INTEGER NOT NULL DEFAULT 0,
+			expiresAt TEXT NOT NULL,
+			createdAt TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_realtime_tickets_expires ON _realtime_tickets(expiresAt);
+	`).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create _realtime_tickets table: %w", err)
+	}
+
 	// Seed default settings if they don't exist
 	defaultSettings := map[string]string{
 		"app_name":                       "moul-dev",

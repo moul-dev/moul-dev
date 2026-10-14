@@ -13,6 +13,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/middleware"
+	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/pkg/worker"
@@ -181,7 +182,8 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)
 	webhookHandler := NewWebhookHandler(dbConn)
-	realtimeHandler := NewRealtimeHandler(dbConn)
+	ticketStore := realtime.NewTicketStore(dbConn)
+	realtimeHandler := NewRealtimeHandler(dbConn, ticketStore, adminKey)
 	rulesTestHandler := NewRulesTestHandler(dbConn)
 	exportImportHandler := NewExportImportHandler(dbConn)
 
@@ -377,7 +379,8 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	e.DELETE(apiPath("/moul/:name/records/:id"), recordHandler.DeleteRecord)
 	e.POST(apiPath("/moul/:name/retry-jobs"), recordHandler.RetryJobs, middleware.RequireAuthOrAdmin(adminKey))
 
-	// Real-time SSE record subscriptions
+	// Real-time SSE record subscriptions and ticket exchange
+	e.POST(apiPath("/realtime/ticket"), realtimeHandler.CreateTicket)
 	e.GET(apiPath("/moul/:name/subscribe"), realtimeHandler.SubscribeCollection)
 	e.GET(apiPath("/moul/subscribe"), realtimeHandler.SubscribeGlobal)
 

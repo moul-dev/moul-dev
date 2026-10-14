@@ -3634,10 +3634,10 @@
             }
           },
           {
-            "name": "token",
+            "name": "ticket",
             "in": "query",
             "required": false,
-            "description": "JWT Auth Token for browser SSE clients",
+            "description": "Short-lived single-use SSE ticket obtained via POST /api/realtime/ticket",
             "schema": {
               "type": "string"
             }
@@ -3656,6 +3656,104 @@
           },
           "404": {
             "description": "Collection not found."
+          }
+        }
+      }
+    },
+    "/api/moul/subscribe": {
+      "get": {
+        "summary": "Global Real-time Record Subscriptions (SSE)",
+        "description": "Establishes a Server-Sent Events (SSE) stream for real-time mutations across all collections or specified collections.",
+        "tags": [
+          "Realtime Subscriptions"
+        ],
+        "parameters": [
+          {
+            "name": "mouls",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated collection names to subscribe to (e.g. `posts,comments`), or `*` for all",
+            "schema": {
+              "type": "string",
+              "default": "*"
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "description": "Filter event actions (create, update, delete, *)",
+            "schema": {
+              "type": "string",
+              "default": "*"
+            }
+          },
+          {
+            "name": "ticket",
+            "in": "query",
+            "required": false,
+            "description": "Short-lived single-use SSE ticket obtained via POST /api/realtime/ticket",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Real-time SSE event stream opened.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/realtime/ticket": {
+      "post": {
+        "summary": "Exchange Credentials for Single-Use Realtime Ticket",
+        "description": "Exchanges an authenticated JWT Bearer token or X-Admin-Key header for a 30-second, single-use opaque ticket. Use this ticket ID in `?ticket=tkt_...` when connecting via standard browser EventSource without leaking credentials in URL logs.",
+        "tags": [
+          "Realtime Subscriptions"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single-use realtime ticket issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket": {
+                      "type": "string",
+                      "example": "tkt_a8f9c1e7d4b2..."
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expiresIn": {
+                      "type": "integer",
+                      "example": 30
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
           }
         }
       }

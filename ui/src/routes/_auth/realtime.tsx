@@ -14,7 +14,8 @@ import {
   type LogItem,
 } from '@moul-dev/ui';
 import { tokens } from '@moul-dev/ui/tokens.stylex';
-import { api, getAuthToken, resolveApiPath } from '../../api/client';
+import { api, getAuthToken, getStoredAdminKey, resolveApiPath } from '../../api/client';
+import { subscribeWithFetch } from '../../api/moul-live';
 
 const styles = stylex.create({
   container: {
@@ -98,20 +99,21 @@ function RealtimePage() {
     if (!isConnected) return;
 
     const token = getAuthToken();
+    const adminKey = getStoredAdminKey();
     const url = resolveApiPath(
       selectedMoul === '*'
-        ? `/api/moul/subscribe${token ? `?token=${encodeURIComponent(token)}` : ''}`
-        : `/api/moul/${selectedMoul}/subscribe${token ? `?token=${encodeURIComponent(token)}` : ''}`
+        ? '/api/moul/subscribe'
+        : `/api/moul/${selectedMoul}/subscribe`
     );
 
-    const es = new EventSource(url);
-
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
+    const unsubscribe = subscribeWithFetch({
+      url,
+      token,
+      adminKey,
+      onMessage: (payload) => {
         const action = payload.action || 'mutation';
         const moul = payload.moul || selectedMoul;
-        const record = payload.record || payload;
+        const record = payload.record;
         const recordId = record?.id ? String(record.id) : '';
 
         const item: LogItem = {
@@ -124,24 +126,25 @@ function RealtimePage() {
             action,
             recordId: recordId || undefined,
           },
-          raw: JSON.stringify(record, null, 2),
+          raw: payload.raw || JSON.stringify(record, null, 2),
         };
 
         setEvents((prev) => [item, ...prev].slice(0, 200));
-      } catch {
+      },
+      onError: (err) => {
         const rawItem: LogItem = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           timestamp: new Date().toLocaleTimeString(),
-          level: 'info',
-          message: String(e.data),
-          raw: String(e.data),
+          level: 'error',
+          message: `Stream error: ${err.message}`,
+          raw: String(err),
         };
         setEvents((prev) => [rawItem, ...prev].slice(0, 200));
-      }
-    };
+      },
+    });
 
     return () => {
-      es.close();
+      unsubscribe();
     };
   }, [selectedMoul, isConnected]);
 
