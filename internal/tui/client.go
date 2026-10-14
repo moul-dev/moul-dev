@@ -445,6 +445,33 @@ type RootAccountResponse struct {
 	Token  string                 `json:"token,omitempty"`
 }
 
+// UnmarshalJSON handles both wrapped {"record": {...}} and flat {"id": ..., "username": ...} responses.
+func (r *RootAccountResponse) UnmarshalJSON(data []byte) error {
+	type Alias RootAccountResponse
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	if r.Record == nil {
+		var raw map[string]interface{}
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return err
+		}
+		if rec, ok := raw["record"].(map[string]interface{}); ok {
+			r.Record = rec
+		} else if _, ok := raw["username"]; ok {
+			r.Record = raw
+		} else if _, ok := raw["id"]; ok {
+			r.Record = raw
+		}
+	}
+	return nil
+}
+
 // GetRootAccount retrieves the root administrator user profile.
 func (c *Client) GetRootAccount() (*RootAccountResponse, error) {
 	var res RootAccountResponse

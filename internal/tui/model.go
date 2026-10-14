@@ -220,9 +220,12 @@ type Model struct {
 	oauthInputs                    []textinput.Model
 
 	// Settings Tabs & Custom Inputs
+	settingRootID              string
 	settingRootUsername        string
 	settingRootName            string
 	settingRootEmail           string
+	settingRootCreatedAt       string
+	settingRootUpdatedAt       string
 	settingRootCurrentPassword string
 	settingRootNewPassword     string
 	settingRootConfirmPassword string
@@ -422,6 +425,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settingOAuthApplePrivateKey = msg.Settings["oauth_apple_private_key"]
 
 		if msg.Account != nil {
+			if id, ok := msg.Account["id"].(string); ok {
+				m.settingRootID = id
+			}
 			if u, ok := msg.Account["username"].(string); ok {
 				m.settingRootUsername = u
 			}
@@ -430,6 +436,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if e, ok := msg.Account["email"].(string); ok {
 				m.settingRootEmail = e
+			}
+			if ca, ok := msg.Account["createdAt"].(string); ok {
+				m.settingRootCreatedAt = ca
+			}
+			if ua, ok := msg.Account["updatedAt"].(string); ok {
+				m.settingRootUpdatedAt = ua
 			}
 		}
 

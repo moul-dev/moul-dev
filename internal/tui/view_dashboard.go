@@ -364,12 +364,30 @@ func (m *Model) fetchJobs() tea.Cmd {
 }
 
 func (m *Model) viewDashboardSettingsInfo(width int) string {
+	var rootInfo string
+	if m.settingRootUsername != "" {
+		name := m.settingRootName
+		if name == "" {
+			name = m.settingRootUsername
+		}
+		email := m.settingRootEmail
+		if email == "" {
+			email = "no email configured"
+		}
+		rootInfo = fmt.Sprintf("\n\n%s\n  User: %s (%s) <%s>\n  Role: Root Administrator (_rootUsers)",
+			FormLabelStyle.Render("ROOT ACCOUNT"),
+			lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Render(m.settingRootUsername),
+			name, email,
+		)
+	}
+
 	content := fmt.Sprintf(
-		"%s\n%s\n\n%s\n%s\n\n%s",
+		"%s\n%s\n\n%s\n%s%s\n\n%s",
 		HeaderStyle.Render("System: Settings Console"),
-		SubtitleStyle.Render("Configure S3 Storage & Litestream Backups"),
+		SubtitleStyle.Render("Configure System Storage, Backups & Root Account"),
 		FormLabelStyle.Render("DESCRIPTION"),
-		"  Manage system-wide configuration directly in the database settings table.\n\n  Configure AWS S3 (or S3-compatible) buckets for file storage and set up\n  Litestream database replica paths to automatically back up your SQLite DB.",
+		"  Manage system-wide configuration directly in the database settings table.\n\n  Configure file storage, backups, rate limits, OAuth2, and manage the\n  root administrator account credentials and security policies.",
+		rootInfo,
 		lipgloss.NewStyle().Foreground(ColorCyanLight).Bold(true).Render("Press [Enter] or [l] to open the Settings panel."),
 	)
 	return ContentStyle.Width(width).Render(content)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -549,6 +550,15 @@ func (m *Model) viewSettings() string {
 		return ContentStyle.Width(m.Width).Render(s.String())
 	}
 
+	// Render Root Account info panel or contextual header
+	if m.settingsActiveTab == 6 {
+		s.WriteString("  " + m.renderRootAccountCard(m.Width) + "\n\n")
+		s.WriteString("  " + FormLabelStyle.Render("UPDATE ROOT ACCOUNT CREDENTIALS") + "\n")
+		s.WriteString("  " + SubtitleStyle.Render("Modify username, display name, email, or supply current & new password") + "\n\n")
+	} else if m.settingsActiveTab == 3 && m.settingRootUsername != "" {
+		s.WriteString("  " + SubtitleStyle.Render(fmt.Sprintf("Security restrictions for root user %q (%s)", m.settingRootUsername, m.settingRootEmail)) + "\n\n")
+	}
+
 	// Render fields of the active tab
 	fields := m.getSettingsFields()
 	for i, f := range fields {
@@ -817,6 +827,9 @@ func (m *Model) updateRootPasswordForm() {
 	}
 
 	if res != nil && res.Record != nil {
+		if id, ok := res.Record["id"].(string); ok {
+			m.settingRootID = id
+		}
 		if u, ok := res.Record["username"].(string); ok {
 			m.settingRootUsername = u
 		}
@@ -825,6 +838,12 @@ func (m *Model) updateRootPasswordForm() {
 		}
 		if e, ok := res.Record["email"].(string); ok {
 			m.settingRootEmail = e
+		}
+		if ca, ok := res.Record["createdAt"].(string); ok {
+			m.settingRootCreatedAt = ca
+		}
+		if ua, ok := res.Record["updatedAt"].(string); ok {
+			m.settingRootUpdatedAt = ua
 		}
 	}
 
@@ -847,4 +866,93 @@ func (m *Model) clearRootPasswordForm() {
 	m.settingRootNewPassword = ""
 	m.settingRootConfirmPassword = ""
 	m.Err = nil
+}
+
+// renderRootAccountCard renders a styled card summarizing current root user account information.
+func (m *Model) renderRootAccountCard(width int) string {
+	boxWidth := width - 6
+	if boxWidth < 50 {
+		boxWidth = 50
+	}
+	if boxWidth > 86 {
+		boxWidth = 86
+	}
+
+	username := m.settingRootUsername
+	if username == "" {
+		username = "(not loaded)"
+	}
+	name := m.settingRootName
+	if name == "" {
+		name = username
+	}
+	email := m.settingRootEmail
+	if email == "" {
+		email = "(not configured)"
+	}
+	id := m.settingRootID
+	if id == "" {
+		id = "(primary root)"
+	}
+	created := formatTimestamp(m.settingRootCreatedAt)
+	updated := formatTimestamp(m.settingRootUpdatedAt)
+
+	title := lipgloss.NewStyle().Bold(true).Foreground(ColorCyan).Render("👤 CURRENT ROOT ACCOUNT INFORMATION")
+	statusBadge := lipgloss.NewStyle().Bold(true).Foreground(ColorGreen).Render("● Active")
+	roleBadge := lipgloss.NewStyle().Bold(true).Foreground(ColorIndigoLight).Render("Root Administrator")
+	collectionBadge := lipgloss.NewStyle().Foreground(ColorTextMuted).Render("_rootUsers")
+
+	col1LabelStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorTextMuted).Width(15)
+	col1ValStyle := lipgloss.NewStyle().Foreground(ColorTextLight).Width(24)
+	col2LabelStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorTextMuted).Width(13)
+	col2ValStyle := lipgloss.NewStyle().Foreground(ColorTextLight)
+
+	line1 := fmt.Sprintf("%s%s  %s%s",
+		col1LabelStyle.Render("Username:"), col1ValStyle.Render(username),
+		col2LabelStyle.Render("Status:"), statusBadge,
+	)
+	line2 := fmt.Sprintf("%s%s  %s%s",
+		col1LabelStyle.Render("Display Name:"), col1ValStyle.Render(name),
+		col2LabelStyle.Render("Role:"), roleBadge,
+	)
+	line3 := fmt.Sprintf("%s%s  %s%s",
+		col1LabelStyle.Render("Email Address:"), col1ValStyle.Render(email),
+		col2LabelStyle.Render("Collection:"), collectionBadge,
+	)
+	line4 := fmt.Sprintf("%s%s  %s%s",
+		col1LabelStyle.Render("Account ID:"), col1ValStyle.Render(id),
+		col2LabelStyle.Render("Created:"), col2ValStyle.Render(created),
+	)
+	line5 := fmt.Sprintf("%s%s  %s%s",
+		col1LabelStyle.Render(""), col1ValStyle.Render(""),
+		col2LabelStyle.Render("Updated:"), col2ValStyle.Render(updated),
+	)
+
+	content := fmt.Sprintf("%s\n\n%s\n%s\n%s\n%s\n%s", title, line1, line2, line3, line4, line5)
+
+	cardStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorBorderActive).
+		Padding(0, 2).
+		Width(boxWidth)
+
+	return cardStyle.Render(content)
+}
+
+func formatTimestamp(ts string) string {
+	if ts == "" {
+		return "—"
+	}
+	for _, layout := range []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05.000Z",
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+	} {
+		if t, err := time.Parse(layout, ts); err == nil {
+			return t.UTC().Format("2006-01-02 15:04:05 UTC")
+		}
+	}
+	return ts
 }

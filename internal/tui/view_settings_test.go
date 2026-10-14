@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -154,5 +156,105 @@ func TestSettingsTabNavigation(t *testing.T) {
 	updatedModel3 := newM3.(*Model)
 	if updatedModel3.settingsActiveTab != 0 {
 		t.Fatalf("Expected active tab to wrap to 0 (S3 Storage), got %d", updatedModel3.settingsActiveTab)
+	}
+}
+
+func TestRenderRootAccountCard(t *testing.T) {
+	m := &Model{
+		Width:                80,
+		settingRootID:        "usr_root_001",
+		settingRootUsername:  "admin",
+		settingRootName:      "Administrator",
+		settingRootEmail:     "admin@moul.dev",
+		settingRootCreatedAt: "2026-10-14T10:00:00Z",
+		settingRootUpdatedAt: "2026-10-14T12:00:00Z",
+	}
+
+	card := m.renderRootAccountCard(m.Width)
+	if !strings.Contains(card, "CURRENT ROOT ACCOUNT INFORMATION") {
+		t.Errorf("Expected card to have title 'CURRENT ROOT ACCOUNT INFORMATION', got: %s", card)
+	}
+	if !strings.Contains(card, "admin") {
+		t.Errorf("Expected card to contain username 'admin', got: %s", card)
+	}
+	if !strings.Contains(card, "Administrator") {
+		t.Errorf("Expected card to contain name 'Administrator', got: %s", card)
+	}
+	if !strings.Contains(card, "admin@moul.dev") {
+		t.Errorf("Expected card to contain email 'admin@moul.dev', got: %s", card)
+	}
+	if !strings.Contains(card, "usr_root_001") {
+		t.Errorf("Expected card to contain ID 'usr_root_001', got: %s", card)
+	}
+	if !strings.Contains(card, "_rootUsers") {
+		t.Errorf("Expected card to contain collection '_rootUsers', got: %s", card)
+	}
+}
+
+func TestRenderRootAccountCardDefaults(t *testing.T) {
+	m := &Model{
+		Width: 80,
+	}
+
+	card := m.renderRootAccountCard(m.Width)
+	if !strings.Contains(card, "(not loaded)") {
+		t.Errorf("Expected card to show '(not loaded)' when username empty, got: %s", card)
+	}
+	if !strings.Contains(card, "(primary root)") {
+		t.Errorf("Expected card to show '(primary root)' when ID empty, got: %s", card)
+	}
+}
+
+func TestRootAccountResponseUnmarshal(t *testing.T) {
+	// Test Flat JSON unmarshaling (from GET /api/settings/account)
+	flatJSON := `{"id":"usr_flat","username":"root","name":"Root Admin","email":"root@moul.dev","createdAt":"2026-10-14T10:00:00Z","updatedAt":"2026-10-14T10:00:00Z"}`
+	var flatRes RootAccountResponse
+	if err := json.Unmarshal([]byte(flatJSON), &flatRes); err != nil {
+		t.Fatalf("Failed to unmarshal flat root account JSON: %v", err)
+	}
+	if flatRes.Record == nil {
+		t.Fatal("Expected Record to be non-nil for flat JSON")
+	}
+	if flatRes.Record["username"] != "root" || flatRes.Record["email"] != "root@moul.dev" {
+		t.Errorf("Unexpected record from flat JSON: %v", flatRes.Record)
+	}
+
+	// Test Wrapped JSON unmarshaling (from PATCH /api/settings/account)
+	wrappedJSON := `{"message":"ok","token":"jwt-test-token","record":{"id":"usr_wrapped","username":"superadmin","name":"Super","email":"super@moul.dev"}}`
+	var wrappedRes RootAccountResponse
+	if err := json.Unmarshal([]byte(wrappedJSON), &wrappedRes); err != nil {
+		t.Fatalf("Failed to unmarshal wrapped root account JSON: %v", err)
+	}
+	if wrappedRes.Record == nil {
+		t.Fatal("Expected Record to be non-nil for wrapped JSON")
+	}
+	if wrappedRes.Record["username"] != "superadmin" || wrappedRes.Token != "jwt-test-token" {
+		t.Errorf("Unexpected record or token from wrapped JSON: %v, token=%q", wrappedRes.Record, wrappedRes.Token)
+	}
+}
+
+func TestViewSettingsRootAccount(t *testing.T) {
+	m := &Model{
+		Width:                100,
+		State:                StateSettings,
+		settingsActiveTab:    6, // ROOT ACCOUNT
+		settingRootID:        "usr_01j7",
+		settingRootUsername:  "admin",
+		settingRootName:      "Administrator",
+		settingRootEmail:     "admin@moul.dev",
+		settingRootCreatedAt: "2026-10-14T08:00:00Z",
+		settingRootUpdatedAt: "2026-10-14T09:00:00Z",
+	}
+	m.initSettingsInputs()
+
+	output := m.viewSettings()
+	if !strings.Contains(output, "CURRENT ROOT ACCOUNT INFORMATION") {
+		t.Errorf("Expected viewSettings to include root account information card, got: %s", output)
+	}
+	if !strings.Contains(output, "admin") || !strings.Contains(output, "Administrator") || !strings.Contains(output, "admin@moul.dev") {
+		t.Errorf("Expected viewSettings to display existing root credentials, got: %s", output)
+	}
+	if !strings.Contains(output, "UPDATE ROOT ACCOUNT CREDENTIALS") {
+		t.Errorf("Expected viewSettings to include credentials update section header, got: %s", output)
 	}
 }

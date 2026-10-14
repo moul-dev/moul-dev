@@ -342,6 +342,16 @@ func (h *SetupHandler) GetRootAccount(c *echo.Context) error {
 		name = username
 	}
 
+	recordResponse := map[string]interface{}{
+		"id":        id,
+		"email":     email,
+		"username":  username,
+		"name":      name,
+		"moul":      "_rootUsers",
+		"createdAt": recordMap["createdAt"],
+		"updatedAt": recordMap["updatedAt"],
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"id":        id,
 		"email":     email,
@@ -350,6 +360,7 @@ func (h *SetupHandler) GetRootAccount(c *echo.Context) error {
 		"moul":      "_rootUsers",
 		"createdAt": recordMap["createdAt"],
 		"updatedAt": recordMap["updatedAt"],
+		"record":    recordResponse,
 	})
 }
 
