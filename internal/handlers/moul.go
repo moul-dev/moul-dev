@@ -10,6 +10,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 
@@ -90,6 +91,8 @@ func (h *MoulHandler) CreateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save moul metadata")
 	}
 
+	realtime.DefaultHub.InvalidateCache(m.Name)
+
 	return c.JSON(http.StatusCreated, m)
 }
 
@@ -155,6 +158,8 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 		logger.Error("Failed to delete metadata for moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete moul metadata")
 	}
+
+	realtime.DefaultHub.InvalidateCache(name)
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -246,6 +251,11 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	if err := db.UpdateMoulMetadata(h.DB, name, updated); err != nil {
 		logger.Error("Failed to update metadata for moul", "moul", updated.Name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update moul metadata")
+	}
+
+	realtime.DefaultHub.InvalidateCache(name)
+	if updated.Name != name {
+		realtime.DefaultHub.InvalidateCache(updated.Name)
 	}
 
 	return c.JSON(http.StatusOK, updated)

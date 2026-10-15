@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
@@ -193,6 +194,8 @@ func EnsureSystemTables(db *dbx.DB) error {
 			id TEXT PRIMARY KEY,
 			authRecord TEXT,
 			isAdmin INTEGER NOT NULL DEFAULT 0,
+			tokenHash TEXT,
+			tokenExpiresAt TEXT,
 			expiresAt TEXT NOT NULL,
 			createdAt TEXT NOT NULL
 		);
@@ -200,6 +203,13 @@ func EnsureSystemTables(db *dbx.DB) error {
 	`).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create _realtime_tickets table: %w", err)
+	}
+
+	if err := ensureColumnExists(db, "_realtime_tickets", "tokenHash", "TEXT"); err != nil {
+		return fmt.Errorf("failed to ensure tokenHash column on _realtime_tickets: %w", err)
+	}
+	if err := ensureColumnExists(db, "_realtime_tickets", "tokenExpiresAt", "TEXT"); err != nil {
+		return fmt.Errorf("failed to ensure tokenExpiresAt column on _realtime_tickets: %w", err)
 	}
 
 	// Seed default settings if they don't exist
@@ -1127,23 +1137,52 @@ func EnsureAuthColumns(dbConn *dbx.DB, moulName string) error {
 	return nil
 }
 
-func hashToken(tokenString string) string {
+// HashToken computes the sha256 hash of a JWT token string.
+func HashToken(tokenString string) string {
 	hash := sha256.Sum256([]byte(tokenString))
 	return hex.EncodeToString(hash[:])
 }
 
-// RevokeToken marks a JWT token string as revoked until its expiration time.
+func hashToken(tokenString string) string {
+	return HashToken(tokenString)
+}
+
+var (
+	tokenRevocationHooksMu sync.RWMutex
+	tokenRevocationHooks   []func(tokenHash string)
+)
+
+// RegisterOnTokenRevoked registers a callback invoked whenever a token is revoked.
+func RegisterOnTokenRevoked(fn func(tokenHash string)) {
+	tokenRevocationHooksMu.Lock()
+	defer tokenRevocationHooksMu.Unlock()
+	tokenRevocationHooks = append(tokenRevocationHooks, fn)
+}
+
+func notifyTokenRevoked(tokenHash string) {
+	tokenRevocationHooksMu.RLock()
+	defer tokenRevocationHooksMu.RUnlock()
+	for _, fn := range tokenRevocationHooks {
+		fn(tokenHash)
+	}
+}
+
+// RevokeToken marks a JWT token string as revoked until its expiration time and notifies listeners.
 func RevokeToken(dbConn *dbx.DB, tokenString string, expiresAt time.Time) error {
 	if dbConn == nil || tokenString == "" {
 		return nil
 	}
-	tokenHash := hashToken(tokenString)
+	tokenHash := HashToken(tokenString)
 	expStr := expiresAt.UTC().Format(time.RFC3339)
 	_, err := dbConn.Insert("_revoked_tokens", dbx.Params{
 		"token_hash": tokenHash,
 		"expires_at": expStr,
 	}).Execute()
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to insert revoked token: %w", err)
+	}
+	notifyTokenRevoked(tokenHash)
+	return nil
 }
 
 // IsTokenRevoked checks if a JWT token has been revoked.
@@ -1151,7 +1190,14 @@ func IsTokenRevoked(dbConn *dbx.DB, tokenString string) bool {
 	if dbConn == nil || tokenString == "" {
 		return false
 	}
-	tokenHash := hashToken(tokenString)
+	return IsTokenRevokedByHash(dbConn, HashToken(tokenString))
+}
+
+// IsTokenRevokedByHash checks if a token hash has been recorded in _revoked_tokens and remains unexpired.
+func IsTokenRevokedByHash(dbConn *dbx.DB, tokenHash string) bool {
+	if dbConn == nil || tokenHash == "" {
+		return false
+	}
 	var count int
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	err := dbConn.Select("COUNT(*)").From("_revoked_tokens").

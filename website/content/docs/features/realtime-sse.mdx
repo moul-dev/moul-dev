@@ -54,10 +54,18 @@ evtSource.addEventListener('update', (event) => {
   console.log('Record updated:', data.record);
 });
 
-// Listen for deletions
+// Listen for deletions or transition-out events
 evtSource.addEventListener('delete', (event) => {
   const data = JSON.parse(event.data);
-  console.log('Record deleted with ID:', data.record.id);
+  console.log('Record removed or visibility revoked with ID:', data.record.id);
+});
+
+// Listen for mid-stream token expiration or revocation
+evtSource.addEventListener('auth_expired', (event) => {
+  const data = JSON.parse(event.data);
+  console.warn('Session expired or revoked:', data.message);
+  evtSource.close();
+  // Redirect to login or initiate JWT refresh
 });
 
 evtSource.onerror = (err) => {

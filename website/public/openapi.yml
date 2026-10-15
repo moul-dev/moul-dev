@@ -2513,7 +2513,9 @@ paths:
       summary: Subscribe to Real-time Record Changes (SSE)
       description: |
         Establishes a Server-Sent Events (SSE) stream for real-time record creations, updates, and deletions on the target collection.
-        Governed by `subscribeRule` (or fallback to `listRule`).
+        Governed by continuous mid-stream per-event authorization re-evaluation against `subscribeRule` (or fallback to `viewRule`).
+        Transition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed to remove it from UI state.
+        Immediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.
       tags:
         - Dynamic Records CRUD
         - Realtime Subscriptions
@@ -2555,7 +2557,11 @@ paths:
   /api/moul/subscribe:
     get:
       summary: Global Real-time Record Subscriptions (SSE)
-      description: Establishes a Server-Sent Events (SSE) stream for real-time mutations across all collections or specified collections.
+      description: |
+        Establishes a Server-Sent Events (SSE) stream for real-time mutations across all collections or specified collections.
+        Governed by continuous mid-stream per-event authorization re-evaluation against each collection's `subscribeRule` / `viewRule`.
+        Transition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed.
+        Immediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.
       tags:
         - Realtime Subscriptions
       parameters:

@@ -165,8 +165,8 @@ When creating an `auth` collection, default access rules are automatically confi
 - `PATCH /api/moul/:name/records/:id`: Update record by ID.
 - `DELETE /api/moul/:name/records/:id`: Delete record by ID.
 - `POST /api/realtime/ticket`: Exchange Bearer token or X-Admin-Key for a 30s single-use ticket (`ticket`, `expiresAt`, `expiresIn`).
-- `GET /api/moul/:name/subscribe`: Real-time record subscription stream (SSE) for collection updates (`event`, `id`, `ticket` query params, or `Authorization: Bearer` header). Governed by `subscribeRule` / `listRule`. Query credentials (`?token=`, `?admin_key=`) are rejected with HTTP 400.
-- `GET /api/moul/subscribe`: Global real-time record subscription stream (SSE) across collections (`?mouls=posts,comments&ticket=...`).
+- `GET /api/moul/:name/subscribe`: Real-time record subscription stream (SSE) for collection updates (`event`, `id`, `ticket` query params, or `Authorization: Bearer` header). Governed by continuous mid-stream authorization re-evaluation against `subscribeRule` / `viewRule` with transition-aware synthetic delete events. Query credentials (`?token=`, `?admin_key=`) are rejected with HTTP 400. Immediate disconnect (`event: auth_expired`) upon token expiry or revocation.
+- `GET /api/moul/subscribe`: Global real-time record subscription stream (SSE) across collections (`?mouls=posts,comments&ticket=...`) with continuous per-event authorization re-evaluation.
 - `GET /api/moul/:name/export`: Export records in CSV or JSON format (`?format=csv|json&schema=true`). Admin requests only (`X-Admin-Key` or root user JWT).
 - `POST /api/moul/:name/import`: Import records from CSV or JSON payload (`?mode=upsert|insert|replace&error_strategy=atomic|continue`). Supports multipart/form-data (`file` field) or direct payload (`Content-Type: text/csv` or `application/json`). Admin requests only.
 

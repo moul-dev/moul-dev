@@ -14,6 +14,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/pocketbase/dbx"
 )
 
 func setupRealtimeTestServer(t *testing.T) (*httptest.Server, *analytics.Engine, func()) {
@@ -320,5 +321,196 @@ func TestRealtimeSubscribe_QueryCredentialsRejected(t *testing.T) {
 
 	if adminResp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400 Bad Request for ?admin_key=, got %d", adminResp.StatusCode)
+	}
+}
+
+func setupRealtimeTestServerWithDB(t *testing.T) (*httptest.Server, *dbx.DB, func()) {
+	t.Helper()
+	testDB, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize in-memory test DB: %v", err)
+	}
+
+	auth.InitJWT("test-secret-key-realtime-tests-1234")
+	analyticsEngine, err := analytics.NewEngine(testDB, "")
+	if err != nil {
+		if closeErr := testDB.Close(); closeErr != nil {
+			t.Errorf("Failed to close testDB: %v", closeErr)
+		}
+		t.Fatalf("Failed to initialize analytics engine: %v", err)
+	}
+
+	testMoul := &schema.Moul{
+		ID:   "moul_sse_test",
+		Name: "sse_posts",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "title", Type: "text"},
+			{Name: "authorId", Type: "text"},
+		},
+		Rules: schema.MoulRules{
+			ListRule: "", // public
+		},
+	}
+	if err := db.SaveMoulMetadata(testDB, testMoul); err != nil {
+		if closeErr := testDB.Close(); closeErr != nil {
+			t.Errorf("Failed to close testDB: %v", closeErr)
+		}
+		t.Fatalf("Failed to save moul metadata: %v", err)
+	}
+	if err := db.CreateMoulTable(testDB, testMoul); err != nil {
+		if closeErr := testDB.Close(); closeErr != nil {
+			t.Errorf("Failed to close testDB: %v", closeErr)
+		}
+		t.Fatalf("Failed to create moul table: %v", err)
+	}
+
+	router := NewRouter(testDB, nil, analyticsEngine, nil, nil, nil, "admin-secret-key", true)
+	server := httptest.NewServer(router)
+
+	cleanup := func() {
+		server.Close()
+		if closeErr := analyticsEngine.Close(); closeErr != nil {
+			t.Errorf("Failed to close analytics engine: %v", closeErr)
+		}
+		if closeErr := testDB.Close(); closeErr != nil {
+			t.Errorf("Failed to close testDB: %v", closeErr)
+		}
+	}
+	return server, testDB, cleanup
+}
+
+func TestRealtimeSSE_ImmediateDisconnectOnTokenRevocation(t *testing.T) {
+	server, testDB, cleanup := setupRealtimeTestServerWithDB(t)
+	defer cleanup()
+
+	token, err := auth.GenerateToken("usr_sse_rev", "rev@moul.dev", "revuser", "users")
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute SSE connect: %v", err)
+	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Read initial connected event
+	eventLine, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read event line: %v", err)
+	}
+	if !strings.HasPrefix(eventLine, "event: connected") {
+		t.Fatalf("Expected event: connected, got %q", eventLine)
+	}
+	if _, err := reader.ReadString('\n'); err != nil {
+		t.Fatalf("Failed to read data line: %v", err)
+	}
+	if _, err := reader.ReadString('\n'); err != nil {
+		t.Fatalf("Failed to read separator line: %v", err)
+	}
+
+	// Revoke token via database
+	if err := db.RevokeToken(testDB, token, time.Now().Add(1*time.Hour)); err != nil {
+		t.Fatalf("Failed to revoke token: %v", err)
+	}
+
+	// Read next event: must be event: auth_expired
+	authExpiredEventLine, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read auth_expired line: %v", err)
+	}
+	if !strings.HasPrefix(authExpiredEventLine, "event: auth_expired") {
+		t.Fatalf("Expected event: auth_expired, got %q", authExpiredEventLine)
+	}
+
+	authExpiredDataLine, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read auth_expired data: %v", err)
+	}
+	if !strings.Contains(authExpiredDataLine, "auth_expired") {
+		t.Fatalf("Expected data containing auth_expired, got %q", authExpiredDataLine)
+	}
+}
+
+func TestRealtimeTicketWithTokenRevocation(t *testing.T) {
+	server, testDB, cleanup := setupRealtimeTestServerWithDB(t)
+	defer cleanup()
+
+	token, err := auth.GenerateToken("usr_ticket_rev", "ticketrev@moul.dev", "ticketuser", "users")
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	// 1. Issue ticket with Authorization header
+	ticketReq, err := http.NewRequest(http.MethodPost, server.URL+"/api/realtime/ticket", nil)
+	if err != nil {
+		t.Fatalf("Failed to build ticket request: %v", err)
+	}
+	ticketReq.Header.Set("Authorization", "Bearer "+token)
+
+	ticketResp, err := http.DefaultClient.Do(ticketReq)
+	if err != nil {
+		t.Fatalf("Failed to issue ticket: %v", err)
+	}
+	defer ticketResp.Body.Close()
+
+	var ticketPayload struct {
+		Ticket string `json:"ticket"`
+	}
+	if err := json.NewDecoder(ticketResp.Body).Decode(&ticketPayload); err != nil {
+		t.Fatalf("Failed to decode ticket: %v", err)
+	}
+
+	// 2. Connect to SSE via ?ticket=
+	sseReq, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe?ticket="+ticketPayload.Ticket, nil)
+	if err != nil {
+		t.Fatalf("Failed to build SSE request: %v", err)
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	sseResp, err := client.Do(sseReq)
+	if err != nil {
+		t.Fatalf("Failed to execute SSE request: %v", err)
+	}
+	defer sseResp.Body.Close()
+
+	reader := bufio.NewReader(sseResp.Body)
+	// Read initial connected event
+	eventLine, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read event line: %v", err)
+	}
+	if !strings.HasPrefix(eventLine, "event: connected") {
+		t.Fatalf("Expected event: connected, got %q", eventLine)
+	}
+	if _, err := reader.ReadString('\n'); err != nil {
+		t.Fatalf("Failed to read data line: %v", err)
+	}
+	if _, err := reader.ReadString('\n'); err != nil {
+		t.Fatalf("Failed to read separator line: %v", err)
+	}
+
+	// 3. Revoke original JWT token
+	if err := db.RevokeToken(testDB, token, time.Now().Add(1*time.Hour)); err != nil {
+		t.Fatalf("Failed to revoke token: %v", err)
+	}
+
+	// 4. Ticket-based stream must receive auth_expired
+	authExpiredEventLine, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read auth_expired line: %v", err)
+	}
+	if !strings.HasPrefix(authExpiredEventLine, "event: auth_expired") {
+		t.Fatalf("Expected event: auth_expired, got %q", authExpiredEventLine)
 	}
 }

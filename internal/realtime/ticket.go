@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,19 +19,23 @@ var (
 
 // Ticket represents a short-lived opaque credential for SSE connection handshake.
 type Ticket struct {
-	ID         string                 `json:"ticket"`
-	AuthRecord map[string]interface{} `json:"authRecord,omitempty"`
-	IsAdmin    bool                   `json:"isAdmin"`
-	ExpiresAt  string                 `json:"expiresAt"`
-	CreatedAt  string                 `json:"createdAt"`
+	ID             string                 `json:"ticket"`
+	AuthRecord     map[string]interface{} `json:"authRecord,omitempty"`
+	IsAdmin        bool                   `json:"isAdmin"`
+	TokenHash      string                 `json:"tokenHash,omitempty"`
+	TokenExpiresAt string                 `json:"tokenExpiresAt,omitempty"`
+	ExpiresAt      string                 `json:"expiresAt"`
+	CreatedAt      string                 `json:"createdAt"`
 }
 
 type ticketRow struct {
-	ID         string `db:"id"`
-	AuthRecord string `db:"authRecord"`
-	IsAdmin    int    `db:"isAdmin"`
-	ExpiresAt  string `db:"expiresAt"`
-	CreatedAt  string `db:"createdAt"`
+	ID             string         `db:"id"`
+	AuthRecord     string         `db:"authRecord"`
+	IsAdmin        int            `db:"isAdmin"`
+	TokenHash      sql.NullString `db:"tokenHash"`
+	TokenExpiresAt sql.NullString `db:"tokenExpiresAt"`
+	ExpiresAt      string         `db:"expiresAt"`
+	CreatedAt      string         `db:"createdAt"`
 }
 
 // TicketStore handles issuing, consuming, and pruning SSE tickets backed by SQLite.
@@ -44,7 +49,8 @@ func NewTicketStore(db *dbx.DB) *TicketStore {
 }
 
 // IssueTicket creates and persists a single-use ticket for the authenticated user or admin.
-func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin bool, ttl time.Duration) (*Ticket, error) {
+// Optional tokenMeta parameters: tokenMeta[0] = tokenHash, tokenMeta[1] = tokenExpiresAt.
+func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin bool, ttl time.Duration, tokenMeta ...string) (*Ticket, error) {
 	if s == nil || s.db == nil {
 		return nil, errors.New("database connection is required for ticket store")
 	}
@@ -75,31 +81,45 @@ func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin boo
 		adminVal = 1
 	}
 
+	var tokenHash, tokenExpiresAt string
+	if len(tokenMeta) > 0 {
+		tokenHash = tokenMeta[0]
+	}
+	if len(tokenMeta) > 1 {
+		tokenExpiresAt = tokenMeta[1]
+	}
+
 	row := ticketRow{
-		ID:         ticketID,
-		AuthRecord: authRecordJSON,
-		IsAdmin:    adminVal,
-		ExpiresAt:  expiresAt.Format(time.RFC3339),
-		CreatedAt:  now.Format(time.RFC3339),
+		ID:             ticketID,
+		AuthRecord:     authRecordJSON,
+		IsAdmin:        adminVal,
+		TokenHash:      sql.NullString{String: tokenHash, Valid: tokenHash != ""},
+		TokenExpiresAt: sql.NullString{String: tokenExpiresAt, Valid: tokenExpiresAt != ""},
+		ExpiresAt:      expiresAt.Format(time.RFC3339),
+		CreatedAt:      now.Format(time.RFC3339),
 	}
 
 	_, err := s.db.Insert("_realtime_tickets", dbx.Params{
-		"id":         row.ID,
-		"authRecord": row.AuthRecord,
-		"isAdmin":    row.IsAdmin,
-		"expiresAt":  row.ExpiresAt,
-		"createdAt":  row.CreatedAt,
+		"id":             row.ID,
+		"authRecord":     row.AuthRecord,
+		"isAdmin":        row.IsAdmin,
+		"tokenHash":      row.TokenHash,
+		"tokenExpiresAt": row.TokenExpiresAt,
+		"expiresAt":      row.ExpiresAt,
+		"createdAt":      row.CreatedAt,
 	}).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist realtime ticket: %w", err)
 	}
 
 	return &Ticket{
-		ID:         ticketID,
-		AuthRecord: authRecord,
-		IsAdmin:    isAdmin,
-		ExpiresAt:  row.ExpiresAt,
-		CreatedAt:  row.CreatedAt,
+		ID:             ticketID,
+		AuthRecord:     authRecord,
+		IsAdmin:        isAdmin,
+		TokenHash:      tokenHash,
+		TokenExpiresAt: tokenExpiresAt,
+		ExpiresAt:      row.ExpiresAt,
+		CreatedAt:      row.CreatedAt,
 	}, nil
 }
 
@@ -148,11 +168,13 @@ func (s *TicketStore) ConsumeTicket(ticketID string) (*Ticket, error) {
 		}
 
 		res = &Ticket{
-			ID:         row.ID,
-			AuthRecord: authRecord,
-			IsAdmin:    row.IsAdmin == 1,
-			ExpiresAt:  row.ExpiresAt,
-			CreatedAt:  row.CreatedAt,
+			ID:             row.ID,
+			AuthRecord:     authRecord,
+			IsAdmin:        row.IsAdmin == 1,
+			TokenHash:      row.TokenHash.String,
+			TokenExpiresAt: row.TokenExpiresAt.String,
+			ExpiresAt:      row.ExpiresAt,
+			CreatedAt:      row.CreatedAt,
 		}
 		return nil
 	})

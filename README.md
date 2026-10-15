@@ -63,7 +63,7 @@
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Native Host System Monitoring**: Lightweight, zero-dependency host system metrics collector (CPU, memory, disk space, goroutines, system load) for real-time observability in the TUI console and REST API.
 12. **Outbound HTTP Webhooks**: Configure outbound HTTP webhooks per collection with granular event triggers (`create:before`, `create:after`, `update:before`, `update:after`, `delete:before`, `delete:after`, or wildcard `*`). Supports synchronous before-hooks that can reject/abort database operations on error, asynchronous background after-hooks, and HMAC-SHA256 payload signature verification (`X-Moul-Signature`).
-13. **Real-time SSE Record Subscriptions**: High-performance, lock-optimized Server-Sent Events (SSE) subscriptions via `GET /api/moul/:name/subscribe`. Frontend clients react instantly to record changes (`create`, `update`, `delete`) without polling, complete with event filtering, single-record targeting, and `subscribeRule` security checks.
+13. **Real-time SSE Record Subscriptions**: High-performance, lock-optimized Server-Sent Events (SSE) subscriptions via `GET /api/moul/:name/subscribe` and global `/api/moul/subscribe`. Features continuous mid-stream authorization re-evaluation (`subscribeRule` / `viewRule`), transition-aware visibility (emitting synthetic `delete` events when mutations revoke access), and immediate stream disconnect (`event: auth_expired`) on token revocation or expiry.
 14. **Built-in MCP Server**: Native Model Context Protocol (MCP) server providing AI agents (Claude Desktop, Cursor, custom assistants) full inspection and control over collections, record CRUD, background workers, feature flags, and system metrics via stdio (`moul mcp`) and HTTP SSE (`/api/mcp`).
 15. **Data Import & Export (CSV & JSON)**: Full-fidelity per-collection data import and export supporting RFC 4180 CSV and JSON formats, schema envelopes, configurable conflict modes (`upsert`, `insert`, `replace`), atomic or continue-on-error strategies, and unified support across the CLI (`moul export` / `moul import`), Web Admin Console, and TUI (`moul-ctl`).
 
@@ -734,6 +734,12 @@ Outbound webhook POST requests include the following headers and payload:
 ## Real-time SSE Subscriptions
 
 Moul provides high-performance real-time record subscriptions over Server-Sent Events (SSE). Frontend applications can open an SSE connection to react to record changes (`create`, `update`, `delete`) in real time without polling.
+
+### Continuous Mid-Stream Authorization & Token Revocation
+Realtime subscriptions feature continuous mid-stream authorization re-evaluation:
+- **Per-Event Rule Evaluation**: Every record mutation (`create`, `update`, `delete`) evaluates the collection's latest `subscribeRule` (or fallback `viewRule`) against the subscriber's auth context and the mutated record before dispatching frames.
+- **Transition-Aware State Sync**: When a record update causes an item to no longer satisfy the subscriber's view rule (e.g., status changed from public to draft), the server emits a synthetic `delete` event so client UIs immediately drop it.
+- **Immediate Disconnect on Revocation / Expiry**: Subscribed clients track JWT credentials. If a token is revoked (via `POST /api/moul/:name/logout` or `db.RevokeToken`) or expires during a connection, the server immediately emits an `event: auth_expired` frame and terminates the SSE connection.
 
 ### Subscribing to Collection Events
 
