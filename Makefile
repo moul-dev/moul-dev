@@ -4,7 +4,7 @@ export MOUL_ADMIN_KEY ?= test-admin-key-1234
 export MOUL_ENCRYPTION_KEY ?= test-encryption-key-for-unit-tests-1234
 VERSION ?= dev
 
-.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync fmt lint lint-fix install-hooks
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage bench-sse bench-sse-engine bench-sse-network run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync fmt lint lint-fix install-hooks
 
 # Format Go source files
 fmt:
@@ -96,6 +96,22 @@ test-e2e:
 test-coverage:
 	MOUL_TEST_ENV=true GOTOOLCHAIN=go1.26.5 go test -v -coverprofile=coverage.out ./internal/... ./pkg/...
 	GOTOOLCHAIN=go1.26.5 go tool cover -func=coverage.out
+
+# Run the complete SSE benchmark suite (engine mode with 100, 1k, 10k connections)
+bench-sse:
+	@mkdir -p tmp
+	GOTOOLCHAIN=go1.26.5 go run cmd/sse-bench/main.go --mode=engine --targets=100,1000,10000 --export-json=tmp/sse-benchmark.json --export-md=tmp/sse-benchmark.md --export-html=tmp/sse-benchmark.html
+
+# Run SSE in-process engine benchmark
+bench-sse-engine:
+	@mkdir -p tmp
+	GOTOOLCHAIN=go1.26.5 go run cmd/sse-bench/main.go --mode=engine --targets=100,1000,10000 --export-json=tmp/sse-engine.json --export-html=tmp/sse-engine.html
+
+# Run SSE network benchmark over HTTP/TCP
+bench-sse-network:
+	@mkdir -p tmp
+	@ulimit -n 65535 2>/dev/null || true
+	GOTOOLCHAIN=go1.26.5 go run cmd/sse-bench/main.go --mode=network --targets=100,1000 --export-json=tmp/sse-network.json --export-html=tmp/sse-network.html
 
 # Remove SQLite database
 clean-db:

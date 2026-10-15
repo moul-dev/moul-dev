@@ -265,6 +265,7 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 - **Rule Expression Testing**: `moul test-rule --rule="<rule>" --record='{...}' --auth='{...}'` validates and benchmarks rules.
 - **Worker DLQ Management**: `moul worker retry <table_name> [job_id]` and `moul worker list-failed <table_name>`.
 - **Self-Contained E2E Flow Testing**: `make test-e2e` executes full API authentication, CRUD, worker, and analytics flows in-process without manual server startup.
+- **SSE Scalability & Backpressure Benchmarking**: `make bench-sse` (in-process engine) and `make bench-sse-network` (HTTP/TCP) test 100, 1,000, and 10,000 connections using `cmd/sse-bench` with automated leak detection, slow-consumer backpressure verification, baseline regression checks, and interactive HTML dashboards.
 
 ---
 

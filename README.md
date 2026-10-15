@@ -254,6 +254,20 @@ Ensure the server is running (`make run`) in a separate terminal before executin
   make test-analytics
   ```
 
+#### 4. SSE Scalability & Backpressure Benchmarking
+The dedicated `cmd/sse-bench` tool stress-tests Server-Sent Events across 100, 1,000, and 10,000 connections with automated leak detection, slow-consumer backpressure verification, and interactive HTML dashboards:
+
+```bash
+# Run in-process engine benchmark suite (100, 1k, 10k connections)
+make bench-sse
+
+# Run network benchmark over HTTP/TCP sockets
+make bench-sse-network
+
+# Run CLI with custom baseline regression checks and HTML export
+go run cmd/sse-bench/main.go --mode=engine --targets=100,1000,10000 --export-html=report.html --compare-with=baseline.json
+```
+
 
 ---
 
