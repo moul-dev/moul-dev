@@ -1636,11 +1636,7 @@ type NormalizeOptions struct {
 	IsAdmin      bool
 }
 
-func parseRevealParam(c *echo.Context) map[string]bool {
-	if c == nil {
-		return nil
-	}
-	reveal := c.QueryParam("reveal")
+func parseRevealString(reveal string) map[string]bool {
 	if reveal == "" {
 		return nil
 	}
@@ -1652,6 +1648,13 @@ func parseRevealParam(c *echo.Context) map[string]bool {
 		}
 	}
 	return m
+}
+
+func parseRevealParam(c *echo.Context) map[string]bool {
+	if c == nil {
+		return nil
+	}
+	return parseRevealString(c.QueryParam("reveal"))
 }
 
 // normalizeRecord helps format the output data for JSON responses

@@ -3,10 +3,12 @@ package realtime
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -30,6 +32,7 @@ type Event struct {
 type ClientOptions struct {
 	TokenHash      string
 	TokenExpiresAt time.Time
+	RevealFields   map[string]bool
 }
 
 type Client struct {
@@ -43,6 +46,7 @@ type Client struct {
 	Rule           string                 // SubscribeRule or fallback rule
 	TokenHash      string                 // sha256 hash of JWT for mid-stream revocation tracking
 	TokenExpiresAt time.Time              // JWT exp claim for heartbeat validation
+	RevealFields   map[string]bool        // permitted unmasked cloak fields (admins only)
 	Send           chan *Event            // buffered channel for SSE output
 	Disconnect     chan string            // signal channel for mid-stream disconnect with reason
 	cancelOnce     sync.Once
@@ -71,9 +75,11 @@ func NewClient(moulName string, authUser map[string]interface{}, isAdmin bool, r
 
 	var tokenHash string
 	var tokenExpiresAt time.Time
+	var revealFields map[string]bool
 	if len(opts) > 0 {
 		tokenHash = opts[0].TokenHash
 		tokenExpiresAt = opts[0].TokenExpiresAt
+		revealFields = opts[0].RevealFields
 	}
 
 	return &Client{
@@ -87,6 +93,7 @@ func NewClient(moulName string, authUser map[string]interface{}, isAdmin bool, r
 		Rule:           rule,
 		TokenHash:      tokenHash,
 		TokenExpiresAt: tokenExpiresAt,
+		RevealFields:   revealFields,
 		Send:           make(chan *Event, 128),
 		Disconnect:     make(chan string, 1),
 		closed:         make(chan struct{}),
@@ -294,34 +301,120 @@ func (h *Hub) SubscriberCount(moulName string) int {
 	return total
 }
 
-func (h *Hub) getCollectionRule(dbConn *dbx.DB, moulName string) (string, bool) {
+func (h *Hub) getMoul(dbConn *dbx.DB, moulName string) (*schema.Moul, bool) {
 	if moulName == "" || moulName == "*" || dbConn == nil {
-		return "", true
+		return nil, false
 	}
 
-	var m *schema.Moul
 	if h.schemaCache != nil {
 		if cached, ok := h.schemaCache.Get(moulName); ok {
-			m = cached
+			return cached, true
 		}
 	}
 
-	if m == nil {
-		loaded, err := db.LoadMoulByName(dbConn, moulName)
-		if err != nil || loaded == nil {
-			return "", false
+	loaded, err := db.LoadMoulByName(dbConn, moulName)
+	if err != nil || loaded == nil {
+		return nil, false
+	}
+	if h.schemaCache != nil {
+		h.schemaCache.Set(moulName, loaded)
+	}
+	return loaded, true
+}
+
+// CloneAndSanitizeRecord creates an isolated, sanitized copy of a record for a specific client.
+// It unconditionally strips companion blind-index hash columns (<fieldName>Hash) and auth secrets,
+// and enforces cloak masking (••••1234) unless the client is an authorized admin with explicit reveal permissions.
+func CloneAndSanitizeRecord(m *schema.Moul, rawRecord map[string]interface{}, client *Client) map[string]interface{} {
+	if rawRecord == nil {
+		return nil
+	}
+
+	clean := make(map[string]interface{}, len(rawRecord))
+	for k, v := range rawRecord {
+		clean[k] = v
+	}
+
+	// Always delete internal auth credentials
+	delete(clean, "passwordHash")
+	delete(clean, "otpCode")
+	delete(clean, "otpExpiresAt")
+	delete(clean, "passkeys")
+
+	if m != nil {
+		// 1. Strip companion hash columns for all cloak fields unconditionally
+		for _, field := range m.Fields {
+			if field.Type == "cloak" {
+				delete(clean, field.Name+"Hash")
+			}
 		}
-		m = loaded
-		if h.schemaCache != nil {
-			h.schemaCache.Set(moulName, m)
+
+		// 2. Process each cloak field
+		for _, field := range m.Fields {
+			if field.Type != "cloak" {
+				continue
+			}
+
+			val, ok := clean[field.Name]
+			if !ok || val == nil {
+				continue
+			}
+
+			var payload []byte
+			switch v := val.(type) {
+			case []byte:
+				payload = v
+			case string:
+				if strings.HasPrefix(v, "••••") {
+					// Already masked
+					continue
+				}
+				payload = []byte(v)
+			}
+
+			if len(payload) == 0 {
+				clean[field.Name] = ""
+				continue
+			}
+
+			shouldReveal := client != nil && client.IsAdmin && client.RevealFields != nil &&
+				(client.RevealFields[field.Name] || client.RevealFields["*"] || client.RevealFields["all"])
+
+			var plainStr string
+			// Check if payload starts with Version1 (0x01) and has minimum length for AES-GCM
+			if len(payload) >= 1+cloak.NonceSize+16 && payload[0] == cloak.Version1 {
+				decrypted, err := cloak.Decrypt(payload)
+				if err != nil {
+					clean[field.Name] = "••••"
+					continue
+				}
+				plainStr = string(decrypted)
+			} else {
+				// Raw string or plaintext payload passed into event
+				plainStr = string(payload)
+			}
+
+			if shouldReveal {
+				var jsonDecoded interface{}
+				if err := json.Unmarshal([]byte(plainStr), &jsonDecoded); err == nil {
+					clean[field.Name] = jsonDecoded
+				} else {
+					clean[field.Name] = plainStr
+				}
+			} else {
+				clean[field.Name] = cloak.Mask(plainStr)
+			}
+		}
+	} else {
+		// Schema-less fallback: defensively delete any companion *Hash columns (except tokenHash)
+		for k := range clean {
+			if strings.HasSuffix(k, "Hash") && k != "tokenHash" {
+				delete(clean, k)
+			}
 		}
 	}
 
-	rule := m.Rules.SubscribeRule
-	if rule == "" {
-		rule = m.Rules.ViewRule
-	}
-	return rule, true
+	return clean
 }
 
 func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
@@ -351,14 +444,19 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 		event.Timestamp = time.Now().UTC().Format(time.RFC3339)
 	}
 
-	// Resolve the target collection rule dynamically
+	// Resolve the target collection moul & rule dynamically
+	var m *schema.Moul
 	rule := ""
 	if dbConn != nil {
-		resolvedRule, found := h.getCollectionRule(dbConn, event.Moul)
-		if !found {
+		loadedMoul, found := h.getMoul(dbConn, event.Moul)
+		if !found || loadedMoul == nil {
 			return
 		}
-		rule = resolvedRule
+		m = loadedMoul
+		rule = m.Rules.SubscribeRule
+		if rule == "" {
+			rule = m.Rules.ViewRule
+		}
 	}
 
 	for _, client := range targetClients {
@@ -388,7 +486,7 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 				if err != nil || !allowed {
 					continue
 				}
-				h.sendEvent(client, event)
+				h.sendEvent(client, event, m)
 
 			case "delete":
 				recordToCheck := event.Record
@@ -399,12 +497,12 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 				if err != nil || !allowed {
 					continue
 				}
-				h.sendEvent(client, event)
+				h.sendEvent(client, event, m)
 
 			case "update":
 				newAllowed, errNew := rules.EvaluateRule(dbConn, evalRule, authUser, event.Record)
 				if errNew == nil && newAllowed {
-					h.sendEvent(client, event)
+					h.sendEvent(client, event, m)
 					continue
 				}
 
@@ -415,7 +513,7 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 						// Emit synthetic delete action so client drops the record
 						syntheticDelete := event
 						syntheticDelete.Action = "delete"
-						h.sendEvent(client, syntheticDelete)
+						h.sendEvent(client, syntheticDelete, m)
 						continue
 					}
 				}
@@ -427,17 +525,22 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 				if err != nil || !allowed {
 					continue
 				}
-				h.sendEvent(client, event)
+				h.sendEvent(client, event, m)
 			}
 		} else {
-			// Admin client or no dbConn: send directly
-			h.sendEvent(client, event)
+			// Admin client or no dbConn: send directly with sanitization
+			h.sendEvent(client, event, m)
 		}
 	}
 }
 
-func (h *Hub) sendEvent(client *Client, event Event) {
+func (h *Hub) sendEvent(client *Client, event Event, m *schema.Moul) {
 	eventCopy := event
+	eventCopy.Record = CloneAndSanitizeRecord(m, event.Record, client)
+	if len(event.OldRecord) > 0 {
+		eventCopy.OldRecord = CloneAndSanitizeRecord(m, event.OldRecord, client)
+	}
+
 	select {
 	case <-client.closed:
 	case client.Send <- &eventCopy:

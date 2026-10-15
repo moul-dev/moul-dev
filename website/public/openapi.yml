@@ -2544,6 +2544,12 @@ paths:
           description: Short-lived single-use SSE ticket obtained via POST /api/realtime/ticket
           schema:
             type: string
+        - name: reveal
+          in: query
+          required: false
+          description: Comma-separated cloak field names to reveal in plaintext (e.g. `ssn` or `all`). Root/Admin credentials only. Non-admin requests with reveal will receive HTTP 400 Bad Request. Companion hash columns are always stripped.
+          schema:
+            type: string
       responses:
         '200':
           description: Real-time SSE event stream opened.
@@ -2551,6 +2557,8 @@ paths:
             text/event-stream:
               schema:
                 type: string
+        '400':
+          description: Bad request (e.g. reveal parameter requested by a non-admin client).
         '404':
           description: Collection not found.
 
@@ -2585,6 +2593,12 @@ paths:
           description: Short-lived single-use SSE ticket obtained via POST /api/realtime/ticket
           schema:
             type: string
+        - name: reveal
+          in: query
+          required: false
+          description: Comma-separated cloak field names to reveal in plaintext (e.g. `ssn` or `all`). Root/Admin credentials only. Non-admin requests with reveal will receive HTTP 400 Bad Request. Companion hash columns are always stripped.
+          schema:
+            type: string
       responses:
         '200':
           description: Real-time SSE event stream opened.
@@ -2592,6 +2606,8 @@ paths:
             text/event-stream:
               schema:
                 type: string
+        '400':
+          description: Bad request (e.g. reveal parameter requested by a non-admin client).
 
   /api/realtime/ticket:
     post:
@@ -2601,6 +2617,13 @@ paths:
         Use this ticket ID in `?ticket=tkt_...` when connecting via standard browser EventSource without leaking credentials in URL logs.
       tags:
         - Realtime Subscriptions
+      parameters:
+        - name: reveal
+          in: query
+          required: false
+          description: Optional comma-separated cloak fields or `all` to associate with this ticket. Root/Admin credentials only; non-admin callers specifying reveal will receive HTTP 400 Bad Request.
+          schema:
+            type: string
       security:
         - BearerAuth: []
         - AdminKeyAuth: []
@@ -2621,6 +2644,8 @@ paths:
                   expiresIn:
                     type: integer
                     example: 30
+        '400':
+          description: Bad request (e.g. reveal parameter requested by a non-admin client).
         '401':
           $ref: '#/components/responses/401Unauthorized'
 

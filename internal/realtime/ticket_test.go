@@ -132,3 +132,24 @@ func TestTicketStore_CleanupExpired(t *testing.T) {
 		t.Errorf("Expected ticket ID %q, got %q", activeTicket.ID, consumed.ID)
 	}
 }
+
+func TestTicketStore_RevealFields(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+	store := realtime.NewTicketStore(dbConn)
+
+	ticket, err := store.IssueTicket(nil, true, 30*time.Second, "token_hash_123", "2099-01-01T00:00:00Z", "all")
+	if err != nil {
+		t.Fatalf("Failed to issue ticket with reveal fields: %v", err)
+	}
+	if ticket.RevealFields != "all" {
+		t.Errorf("Expected RevealFields 'all', got %q", ticket.RevealFields)
+	}
+
+	consumed, err := store.ConsumeTicket(ticket.ID)
+	if err != nil {
+		t.Fatalf("Failed to consume ticket: %v", err)
+	}
+	if consumed.RevealFields != "all" {
+		t.Errorf("Expected consumed RevealFields 'all', got %q", consumed.RevealFields)
+	}
+}

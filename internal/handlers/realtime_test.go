@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
+	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -512,5 +514,269 @@ func TestRealtimeTicketWithTokenRevocation(t *testing.T) {
 	}
 	if !strings.HasPrefix(authExpiredEventLine, "event: auth_expired") {
 		t.Fatalf("Expected event: auth_expired, got %q", authExpiredEventLine)
+	}
+}
+
+func TestRealtime_NonAdminRevealRejected(t *testing.T) {
+	server, _, cleanup := setupRealtimeTestServer(t)
+	defer cleanup()
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// 1. Non-admin attempting ?reveal=all on GET /api/moul/:name/subscribe
+	req1, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe?reveal=all", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	resp1, err := client.Do(req1)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	defer resp1.Body.Close()
+
+	if resp1.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for non-admin reveal on collection subscribe, got %d", resp1.StatusCode)
+	}
+	var errBody1 map[string]interface{}
+	_ = json.NewDecoder(resp1.Body).Decode(&errBody1)
+	if msg, _ := errBody1["message"].(string); !strings.Contains(msg, "The reveal parameter is not permitted on realtime broadcast streams") {
+		t.Errorf("Expected rejection message, got %v", msg)
+	}
+
+	// 2. Non-admin attempting ?reveal=all on GET /api/moul/subscribe
+	req2, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/subscribe?reveal=all", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	resp2, err := client.Do(req2)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for non-admin reveal on global subscribe, got %d", resp2.StatusCode)
+	}
+
+	// 3. Non-admin attempting ?reveal=all on POST /api/realtime/ticket
+	req3, err := http.NewRequest(http.MethodPost, server.URL+"/api/realtime/ticket?reveal=all", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	token, _ := auth.GenerateToken("usr_regular", "regular@moul.dev", "regularuser", "users")
+	req3.Header.Set("Authorization", "Bearer "+token)
+	resp3, err := client.Do(req3)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	defer resp3.Body.Close()
+
+	if resp3.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for non-admin reveal on ticket request, got %d", resp3.StatusCode)
+	}
+}
+
+func TestRealtime_AdminRevealAllowed(t *testing.T) {
+	server, _, cleanup := setupRealtimeTestServer(t)
+	defer cleanup()
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// 1. Admin using X-Admin-Key requesting ticket with ?reveal=all
+	ticketReq, err := http.NewRequest(http.MethodPost, server.URL+"/api/realtime/ticket?reveal=all", nil)
+	if err != nil {
+		t.Fatalf("Failed to create ticket request: %v", err)
+	}
+	ticketReq.Header.Set("X-Admin-Key", "admin-secret-key")
+
+	ticketResp, err := client.Do(ticketReq)
+	if err != nil {
+		t.Fatalf("Failed to execute ticket request: %v", err)
+	}
+	defer ticketResp.Body.Close()
+
+	if ticketResp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200 for admin ticket request, got %d", ticketResp.StatusCode)
+	}
+
+	var ticketPayload struct {
+		Ticket string `json:"ticket"`
+	}
+	if err := json.NewDecoder(ticketResp.Body).Decode(&ticketPayload); err != nil {
+		t.Fatalf("Failed to decode ticket: %v", err)
+	}
+
+	// 2. Admin connects to SSE with ticket and ?reveal=all
+	sseReq, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe?ticket="+ticketPayload.Ticket, nil)
+	if err != nil {
+		t.Fatalf("Failed to create SSE request: %v", err)
+	}
+
+	sseResp, err := client.Do(sseReq)
+	if err != nil {
+		t.Fatalf("Failed to connect SSE: %v", err)
+	}
+	defer sseResp.Body.Close()
+
+	if sseResp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 for admin SSE connection, got %d", sseResp.StatusCode)
+	}
+}
+
+func TestRealtime_CloakFieldMaskingEndToEnd(t *testing.T) {
+	cloak.Reset()
+	if err := cloak.Init("test-secret-key-for-realtime-streams-123456"); err != nil {
+		t.Fatalf("cloak.Init failed: %v", err)
+	}
+	defer cloak.Reset()
+
+	server, testDB, cleanup := setupRealtimeTestServerWithDB(t)
+	defer cleanup()
+
+	// Create collection "patients" with a cloak field
+	patientsMoul := &schema.Moul{
+		ID:   "moul_patients_sse",
+		Name: "patients",
+		Type: "base",
+		Fields: []schema.MoulField{
+			{Name: "fullName", Type: "text"},
+			{Name: "ssn", Type: "cloak", Searchable: true},
+		},
+		Rules: schema.MoulRules{
+			ListRule:      "",
+			ViewRule:      "",
+			SubscribeRule: "",
+		},
+	}
+	if err := db.SaveMoulMetadata(testDB, patientsMoul); err != nil {
+		t.Fatalf("SaveMoulMetadata failed: %v", err)
+	}
+	if err := db.CreateMoulTable(testDB, patientsMoul); err != nil {
+		t.Fatalf("CreateMoulTable failed: %v", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	// 1. Connect standard SSE subscriber (no reveal)
+	standardReq, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/patients/subscribe", nil)
+	if err != nil {
+		t.Fatalf("Failed to build standard SSE req: %v", err)
+	}
+	standardResp, err := client.Do(standardReq)
+	if err != nil {
+		t.Fatalf("Failed to connect standard SSE: %v", err)
+	}
+	defer standardResp.Body.Close()
+	standardReader := bufio.NewReader(standardResp.Body)
+
+	// Read initial connected event for standard subscriber
+	line, err := standardReader.ReadString('\n')
+	if err != nil || !strings.HasPrefix(line, "event: connected") {
+		t.Fatalf("Failed reading initial connected event for standard: %v, line: %s", err, line)
+	}
+	_, _ = standardReader.ReadString('\n')
+	_, _ = standardReader.ReadString('\n')
+
+	// 2. Connect admin SSE subscriber with ?reveal=all
+	adminReq, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/patients/subscribe?reveal=all", nil)
+	if err != nil {
+		t.Fatalf("Failed to build admin SSE req: %v", err)
+	}
+	adminReq.Header.Set("X-Admin-Key", "admin-secret-key")
+	adminResp, err := client.Do(adminReq)
+	if err != nil {
+		t.Fatalf("Failed to connect admin SSE: %v", err)
+	}
+	defer adminResp.Body.Close()
+	adminReader := bufio.NewReader(adminResp.Body)
+
+	// Read initial connected event for admin subscriber
+	line, err = adminReader.ReadString('\n')
+	if err != nil || !strings.HasPrefix(line, "event: connected") {
+		t.Fatalf("Failed reading initial connected event for admin: %v, line: %s", err, line)
+	}
+	_, _ = adminReader.ReadString('\n')
+	_, _ = adminReader.ReadString('\n')
+
+	// 3. Admin creates a record with cloak SSN
+	createPayload := map[string]interface{}{
+		"fullName": "Alice Smith",
+		"ssn":      "987-65-4321",
+	}
+	payloadBytes, _ := json.Marshal(createPayload)
+	createReq, err := http.NewRequest(http.MethodPost, server.URL+"/api/moul/patients/records", bytes.NewReader(payloadBytes))
+	if err != nil {
+		t.Fatalf("Failed to create record req: %v", err)
+	}
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.Header.Set("X-Admin-Key", "admin-secret-key")
+
+	createResp, err := client.Do(createReq)
+	if err != nil {
+		t.Fatalf("Failed to execute create record: %v", err)
+	}
+	defer createResp.Body.Close()
+	if createResp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected status 201 Created, got %d", createResp.StatusCode)
+	}
+
+	// 4. Verify standard subscriber receives MASKED payload and NO companion hash
+	var standardEventLine, standardDataLine string
+	standardEventLine, err = standardReader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read standard event line: %v", err)
+	}
+	if !strings.HasPrefix(standardEventLine, "event: create") {
+		t.Errorf("Expected event: create, got %q", standardEventLine)
+	}
+	standardDataLine, err = standardReader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read standard data line: %v", err)
+	}
+	_, _ = standardReader.ReadString('\n')
+
+	standardJSON := strings.TrimPrefix(standardDataLine, "data: ")
+	var standardEvt struct {
+		Action string                 `json:"action"`
+		Record map[string]interface{} `json:"record"`
+	}
+	if err := json.Unmarshal([]byte(standardJSON), &standardEvt); err != nil {
+		t.Fatalf("Failed to unmarshal standard SSE event: %v", err)
+	}
+	if standardEvt.Record["ssn"] != "••••4321" {
+		t.Errorf("Standard subscriber expected masked ssn '••••4321', got %v", standardEvt.Record["ssn"])
+	}
+	if _, exists := standardEvt.Record["ssnHash"]; exists {
+		t.Errorf("Security breach: companion ssnHash column leaked over SSE: %v", standardEvt.Record["ssnHash"])
+	}
+
+	// 5. Verify admin subscriber with ?reveal=all receives UNMASKED plaintext and NO companion hash
+	var adminEventLine, adminDataLine string
+	adminEventLine, err = adminReader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read admin event line: %v", err)
+	}
+	if !strings.HasPrefix(adminEventLine, "event: create") {
+		t.Errorf("Expected admin event: create, got %q", adminEventLine)
+	}
+	adminDataLine, err = adminReader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("Failed to read admin data line: %v", err)
+	}
+	_, _ = adminReader.ReadString('\n')
+
+	adminJSON := strings.TrimPrefix(adminDataLine, "data: ")
+	var adminEvt struct {
+		Action string                 `json:"action"`
+		Record map[string]interface{} `json:"record"`
+	}
+	if err := json.Unmarshal([]byte(adminJSON), &adminEvt); err != nil {
+		t.Fatalf("Failed to unmarshal admin SSE event: %v", err)
+	}
+	if adminEvt.Record["ssn"] != "987-65-4321" {
+		t.Errorf("Admin subscriber expected unmasked ssn '987-65-4321', got %v", adminEvt.Record["ssn"])
+	}
+	if _, exists := adminEvt.Record["ssnHash"]; exists {
+		t.Errorf("Companion ssnHash should still be stripped for admin subscriber: %v", adminEvt.Record["ssnHash"])
 	}
 }

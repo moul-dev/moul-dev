@@ -196,6 +196,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 			isAdmin INTEGER NOT NULL DEFAULT 0,
 			tokenHash TEXT,
 			tokenExpiresAt TEXT,
+			revealFields TEXT,
 			expiresAt TEXT NOT NULL,
 			createdAt TEXT NOT NULL
 		);
@@ -210,6 +211,9 @@ func EnsureSystemTables(db *dbx.DB) error {
 	}
 	if err := ensureColumnExists(db, "_realtime_tickets", "tokenExpiresAt", "TEXT"); err != nil {
 		return fmt.Errorf("failed to ensure tokenExpiresAt column on _realtime_tickets: %w", err)
+	}
+	if err := ensureColumnExists(db, "_realtime_tickets", "revealFields", "TEXT"); err != nil {
+		return fmt.Errorf("failed to ensure revealFields column on _realtime_tickets: %w", err)
 	}
 
 	// Seed default settings if they don't exist
@@ -1141,10 +1145,6 @@ func EnsureAuthColumns(dbConn *dbx.DB, moulName string) error {
 func HashToken(tokenString string) string {
 	hash := sha256.Sum256([]byte(tokenString))
 	return hex.EncodeToString(hash[:])
-}
-
-func hashToken(tokenString string) string {
-	return HashToken(tokenString)
 }
 
 var (

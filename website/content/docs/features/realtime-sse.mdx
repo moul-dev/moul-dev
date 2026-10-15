@@ -123,19 +123,29 @@ curl -N "http://localhost:8090/api/moul/posts/subscribe?ticket=tkt_98a7f..."
 
 ---
 
-## Event Payload Structure
-
 ```json
 {
   "action": "create",
-  "collection": "posts",
+  "moul": "posts",
   "record": {
     "id": "rec_01J6XYZ123",
     "title": "Realtime Streams in Moul",
     "slug": "realtime-streams-in-moul",
     "published": true,
-    "created": "2026-08-01T12:00:00Z",
-    "updated": "2026-08-01T12:00:00Z"
+    "createdAt": "2026-08-01T12:00:00Z",
+    "updatedAt": "2026-08-01T12:00:00Z"
   }
 }
 ```
+
+---
+
+## Encrypted Cloak Field Masking & Stream Security
+
+When collections contain encrypted `cloak` fields (e.g. SSNs, API secrets, financial information, or PII), the realtime hub guarantees privacy across persistent broadcast channels:
+
+1. **Automatic Masking (`••••1234`)**: All cloak fields are decrypted in-flight and serialized using Moul's masking algorithm (`••••1234` or `••••`), guaranteeing neither raw ciphertext nor plaintext secrets are broadcast to standard clients.
+2. **Companion Hash Stripping**: Companion blind-index columns (`<fieldName>Hash`, e.g. `ssnHash`) and internal auth credentials (`passwordHash`, `otpCode`, `passkeys`) are stripped unconditionally before frames reach client channels.
+3. **Strict Reveal Restrictions**: Non-admin clients specifying `?reveal=all` or any `reveal` parameter on subscription endpoints (`/api/moul/:name/subscribe`, `/api/moul/subscribe`, or `/api/realtime/ticket`) receive `HTTP 400 Bad Request: "The reveal parameter is not permitted on realtime broadcast streams"`.
+4. **Authorized Admin Reveal**: Authenticated administrators (root accounts or `X-Admin-Key`) may explicitly request unmasked plaintext by supplying `?reveal=all` (or a comma-separated field list) either when generating a ticket (`POST /api/realtime/ticket?reveal=all`) or directly upon connecting to the SSE stream. Admins without `?reveal` default to masked values for defense-in-depth.
+

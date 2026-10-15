@@ -24,6 +24,7 @@ type Ticket struct {
 	IsAdmin        bool                   `json:"isAdmin"`
 	TokenHash      string                 `json:"tokenHash,omitempty"`
 	TokenExpiresAt string                 `json:"tokenExpiresAt,omitempty"`
+	RevealFields   string                 `json:"revealFields,omitempty"`
 	ExpiresAt      string                 `json:"expiresAt"`
 	CreatedAt      string                 `json:"createdAt"`
 }
@@ -34,6 +35,7 @@ type ticketRow struct {
 	IsAdmin        int            `db:"isAdmin"`
 	TokenHash      sql.NullString `db:"tokenHash"`
 	TokenExpiresAt sql.NullString `db:"tokenExpiresAt"`
+	RevealFields   sql.NullString `db:"revealFields"`
 	ExpiresAt      string         `db:"expiresAt"`
 	CreatedAt      string         `db:"createdAt"`
 }
@@ -49,7 +51,7 @@ func NewTicketStore(db *dbx.DB) *TicketStore {
 }
 
 // IssueTicket creates and persists a single-use ticket for the authenticated user or admin.
-// Optional tokenMeta parameters: tokenMeta[0] = tokenHash, tokenMeta[1] = tokenExpiresAt.
+// Optional tokenMeta parameters: tokenMeta[0] = tokenHash, tokenMeta[1] = tokenExpiresAt, tokenMeta[2] = revealFields.
 func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin bool, ttl time.Duration, tokenMeta ...string) (*Ticket, error) {
 	if s == nil || s.db == nil {
 		return nil, errors.New("database connection is required for ticket store")
@@ -81,12 +83,15 @@ func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin boo
 		adminVal = 1
 	}
 
-	var tokenHash, tokenExpiresAt string
+	var tokenHash, tokenExpiresAt, revealFields string
 	if len(tokenMeta) > 0 {
 		tokenHash = tokenMeta[0]
 	}
 	if len(tokenMeta) > 1 {
 		tokenExpiresAt = tokenMeta[1]
+	}
+	if len(tokenMeta) > 2 {
+		revealFields = tokenMeta[2]
 	}
 
 	row := ticketRow{
@@ -95,6 +100,7 @@ func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin boo
 		IsAdmin:        adminVal,
 		TokenHash:      sql.NullString{String: tokenHash, Valid: tokenHash != ""},
 		TokenExpiresAt: sql.NullString{String: tokenExpiresAt, Valid: tokenExpiresAt != ""},
+		RevealFields:   sql.NullString{String: revealFields, Valid: revealFields != ""},
 		ExpiresAt:      expiresAt.Format(time.RFC3339),
 		CreatedAt:      now.Format(time.RFC3339),
 	}
@@ -105,6 +111,7 @@ func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin boo
 		"isAdmin":        row.IsAdmin,
 		"tokenHash":      row.TokenHash,
 		"tokenExpiresAt": row.TokenExpiresAt,
+		"revealFields":   row.RevealFields,
 		"expiresAt":      row.ExpiresAt,
 		"createdAt":      row.CreatedAt,
 	}).Execute()
@@ -118,6 +125,7 @@ func (s *TicketStore) IssueTicket(authRecord map[string]interface{}, isAdmin boo
 		IsAdmin:        isAdmin,
 		TokenHash:      tokenHash,
 		TokenExpiresAt: tokenExpiresAt,
+		RevealFields:   revealFields,
 		ExpiresAt:      row.ExpiresAt,
 		CreatedAt:      row.CreatedAt,
 	}, nil
@@ -173,6 +181,7 @@ func (s *TicketStore) ConsumeTicket(ticketID string) (*Ticket, error) {
 			IsAdmin:        row.IsAdmin == 1,
 			TokenHash:      row.TokenHash.String,
 			TokenExpiresAt: row.TokenExpiresAt.String,
+			RevealFields:   row.RevealFields.String,
 			ExpiresAt:      row.ExpiresAt,
 			CreatedAt:      row.CreatedAt,
 		}

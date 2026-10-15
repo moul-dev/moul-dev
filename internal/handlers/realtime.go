@@ -59,6 +59,11 @@ func (h *RealtimeHandler) CreateTicket(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to request a realtime ticket")
 	}
 
+	revealParam := c.QueryParam("reveal")
+	if revealParam != "" && !isAdmin {
+		return echo.NewHTTPError(http.StatusBadRequest, "The reveal parameter is not permitted on realtime broadcast streams")
+	}
+
 	if h.TicketStore == nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
 	}
@@ -74,7 +79,7 @@ func (h *RealtimeHandler) CreateTicket(c *echo.Context) error {
 		expStr = tokenExp.UTC().Format(time.RFC3339)
 	}
 
-	ticket, err := h.TicketStore.IssueTicket(authUser, isAdmin, 30*time.Second, tokenHash, expStr)
+	ticket, err := h.TicketStore.IssueTicket(authUser, isAdmin, 30*time.Second, tokenHash, expStr, revealParam)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to issue realtime ticket: %v", err))
 	}
@@ -102,6 +107,7 @@ func (h *RealtimeHandler) SubscribeCollection(c *echo.Context) error {
 	tokenHash, tokenExpiresAt := extractTokenCredentials(c)
 
 	// Consume ticket if provided in query string
+	var ticketReveal string
 	if ticketID := c.QueryParam("ticket"); ticketID != "" {
 		if h.TicketStore == nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
@@ -124,6 +130,20 @@ func (h *RealtimeHandler) SubscribeCollection(c *echo.Context) error {
 				tokenExpiresAt = parsedExp
 			}
 		}
+		ticketReveal = ticket.RevealFields
+	}
+
+	revealParam := c.QueryParam("reveal")
+	if revealParam == "" {
+		revealParam = ticketReveal
+	}
+	if revealParam != "" && !isAdmin {
+		return echo.NewHTTPError(http.StatusBadRequest, "The reveal parameter is not permitted on realtime broadcast streams")
+	}
+
+	var revealFieldsMap map[string]bool
+	if isAdmin && revealParam != "" {
+		revealFieldsMap = parseRevealString(revealParam)
 	}
 
 	// Access rule selection
@@ -148,6 +168,7 @@ func (h *RealtimeHandler) SubscribeCollection(c *echo.Context) error {
 	clientOpts := realtime.ClientOptions{
 		TokenHash:      tokenHash,
 		TokenExpiresAt: tokenExpiresAt,
+		RevealFields:   revealFieldsMap,
 	}
 	client := realtime.NewClient(moulName, authUser, isAdmin, rule, eventFilter, recordIDFilter, clientOpts)
 	return h.serveSSE(c, client, moulName)
@@ -172,6 +193,7 @@ func (h *RealtimeHandler) SubscribeGlobal(c *echo.Context) error {
 	tokenHash, tokenExpiresAt := extractTokenCredentials(c)
 
 	// Consume ticket if provided in query string
+	var ticketReveal string
 	if ticketID := c.QueryParam("ticket"); ticketID != "" {
 		if h.TicketStore == nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Realtime ticket store unavailable")
@@ -194,6 +216,20 @@ func (h *RealtimeHandler) SubscribeGlobal(c *echo.Context) error {
 				tokenExpiresAt = parsedExp
 			}
 		}
+		ticketReveal = ticket.RevealFields
+	}
+
+	revealParam := c.QueryParam("reveal")
+	if revealParam == "" {
+		revealParam = ticketReveal
+	}
+	if revealParam != "" && !isAdmin {
+		return echo.NewHTTPError(http.StatusBadRequest, "The reveal parameter is not permitted on realtime broadcast streams")
+	}
+
+	var revealFieldsMap map[string]bool
+	if isAdmin && revealParam != "" {
+		revealFieldsMap = parseRevealString(revealParam)
 	}
 
 	eventFilter := c.QueryParam("event")
@@ -205,6 +241,7 @@ func (h *RealtimeHandler) SubscribeGlobal(c *echo.Context) error {
 	clientOpts := realtime.ClientOptions{
 		TokenHash:      tokenHash,
 		TokenExpiresAt: tokenExpiresAt,
+		RevealFields:   revealFieldsMap,
 	}
 	client := realtime.NewClient(moulName, authUser, isAdmin, "", eventFilter, recordIDFilter, clientOpts)
 	return h.serveSSE(c, client, moulName)
