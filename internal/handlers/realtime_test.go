@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/pocketbase/dbx"
@@ -779,4 +781,131 @@ func TestRealtime_CloakFieldMaskingEndToEnd(t *testing.T) {
 	if _, exists := adminEvt.Record["ssnHash"]; exists {
 		t.Errorf("Companion ssnHash should still be stripped for admin subscriber: %v", adminEvt.Record["ssnHash"])
 	}
+}
+
+func TestRealtimeSSE_SlowConsumerEviction(t *testing.T) {
+	server, _, cleanup := setupRealtimeTestServer(t)
+	defer cleanup()
+
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to connect to SSE endpoint: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Read initial connected handshake
+	eventLine, err := reader.ReadString('\n')
+	if err != nil || !strings.HasPrefix(eventLine, "event: connected") {
+		t.Fatalf("Expected event: connected, got %q (err: %v)", eventLine, err)
+	}
+	_, _ = reader.ReadString('\n') // data
+	_, _ = reader.ReadString('\n') // newline
+
+	// Flood the hub with large events to fill both OS socket buffer and the 128-event client channel
+	largePayload := strings.Repeat("A", 1024)
+	for i := 0; i < 500; i++ {
+		realtime.DefaultHub.Publish(realtime.Event{
+			Action: "create",
+			Moul:   "sse_posts",
+			Record: map[string]interface{}{"id": fmt.Sprintf("flood_%d", i), "title": "Flood Post", "data": largePayload},
+		}, nil)
+	}
+
+	// Read until we encounter the slow_consumer event
+	foundSlowConsumer := false
+	for {
+		line, readErr := reader.ReadString('\n')
+		if readErr != nil {
+			break
+		}
+		if strings.HasPrefix(line, "event: slow_consumer") {
+			foundSlowConsumer = true
+			dataLine, _ := reader.ReadString('\n')
+			if !strings.Contains(dataLine, "slow_consumer") {
+				t.Errorf("Expected slow_consumer data line, got %q", dataLine)
+			}
+			break
+		}
+	}
+
+	if !foundSlowConsumer {
+		t.Fatal("Expected to receive event: slow_consumer before stream termination")
+	}
+}
+
+func TestRealtimeSSE_ConcurrentConnectionLimit(t *testing.T) {
+	server, _, cleanup := setupRealtimeTestServer(t)
+	defer cleanup()
+
+	middleware.ResetActiveConnections()
+
+	// Update DB settings to configure a rule for sse_posts:subscribe with maxConcurrent: 2
+	rulesJSON := `[{"label":"sse_posts:subscribe","maxRequests":100,"interval":60,"targetedUsers":"all","maxConcurrent":2}]`
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+
+	// Enable rate limiting with our rule via settings API
+	updateSettingsReq, err := http.NewRequest(http.MethodPatch, server.URL+"/api/settings", strings.NewReader(fmt.Sprintf(`{"rate_limiting_enabled":"true","rate_limiting_rules":%q}`, rulesJSON)))
+	if err != nil {
+		t.Fatalf("Failed to create settings request: %v", err)
+	}
+	updateSettingsReq.Header.Set("Content-Type", "application/json")
+	updateSettingsReq.Header.Set("X-Admin-Key", "admin-secret-key")
+	settingsResp, err := httpClient.Do(updateSettingsReq)
+	if err != nil || settingsResp.StatusCode != http.StatusOK {
+		t.Fatalf("Failed to update settings: %v, status: %d", err, settingsResp.StatusCode)
+	}
+	settingsResp.Body.Close()
+
+	// Establish connection 1
+	req1, _ := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	resp1, err := httpClient.Do(req1)
+	if err != nil || resp1.StatusCode != http.StatusOK {
+		t.Fatalf("Connection 1 failed: %v, status: %d", err, resp1.StatusCode)
+	}
+	defer resp1.Body.Close()
+
+	// Establish connection 2
+	req2, _ := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	resp2, err := httpClient.Do(req2)
+	if err != nil || resp2.StatusCode != http.StatusOK {
+		t.Fatalf("Connection 2 failed: %v, status: %d", err, resp2.StatusCode)
+	}
+	defer resp2.Body.Close()
+
+	// Attempt connection 3 (must be rejected with HTTP 429)
+	req3, _ := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	resp3, err := httpClient.Do(req3)
+	if err != nil {
+		t.Fatalf("Connection 3 request failed: %v", err)
+	}
+	defer resp3.Body.Close()
+
+	if resp3.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("Expected HTTP 429 Too Many Requests for connection 3, got status %d", resp3.StatusCode)
+	}
+
+	// Close connection 1, freeing up a slot
+	resp1.Body.Close()
+	// Allow small window for defer release to execute
+	time.Sleep(50 * time.Millisecond)
+
+	// Attempt connection 4 (must now succeed with HTTP 200)
+	req4, _ := http.NewRequest(http.MethodGet, server.URL+"/api/moul/sse_posts/subscribe", nil)
+	resp4, err := httpClient.Do(req4)
+	if err != nil || resp4.StatusCode != http.StatusOK {
+		t.Fatalf("Connection 4 should succeed after slot release: %v, status: %d", err, resp4.StatusCode)
+	}
+	defer resp4.Body.Close()
 }

@@ -424,3 +424,35 @@ func TestHubCloakFieldMaskingAndHashStripping(t *testing.T) {
 		t.Fatal("Timeout waiting for admin reveal client event")
 	}
 }
+
+func TestHubSlowConsumerEviction(t *testing.T) {
+	hub := NewHub()
+	client := NewClient("posts", nil, true, "", "*", "")
+	hub.Subscribe(client)
+	defer hub.Unsubscribe(client)
+
+	// Publish DefaultClientBufferSize events to completely fill the buffer without reading
+	for i := 0; i < DefaultClientBufferSize; i++ {
+		hub.Publish(Event{
+			Action: "create",
+			Moul:   "posts",
+			Record: map[string]interface{}{"id": "rec", "index": i},
+		}, nil)
+	}
+
+	// Channel buffer is now full. The next event must trigger slow-consumer eviction.
+	hub.Publish(Event{
+		Action: "create",
+		Moul:   "posts",
+		Record: map[string]interface{}{"id": "rec_overflow", "index": 9999},
+	}, nil)
+
+	select {
+	case reason := <-client.Disconnect:
+		if reason != "slow_consumer" {
+			t.Fatalf("Expected Disconnect reason 'slow_consumer', got '%s'", reason)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Expected client to be disconnected due to slow consumer eviction")
+	}
+}

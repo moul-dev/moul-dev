@@ -169,3 +169,150 @@ func TestJsonRulesValidation(t *testing.T) {
 		t.Errorf("Parsed rules structural mismatch: %+v", rules)
 	}
 }
+
+func TestAcquireRealtimeConnection_BaselineCaps(t *testing.T) {
+	e := echo.New()
+	ResetActiveConnections()
+
+	globalState.Lock()
+	globalState.enabled = true
+	globalState.rules = nil
+	globalState.Unlock()
+
+	// 1. Test Per-User Quota (Max 15)
+	user := map[string]interface{}{"id": "user_cap_test", "moul": "users"}
+	var releases []func()
+
+	for i := 0; i < DefaultMaxConcurrentPerUser; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/api/moul/posts/subscribe", nil)
+		req.Header.Set("X-Real-IP", "10.0.0."+string(rune('1'+i)))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		rel, err := AcquireRealtimeConnection(c, "posts", user, false)
+		if err != nil {
+			t.Fatalf("Connection %d should have been acquired, got err: %v", i+1, err)
+		}
+		releases = append(releases, rel)
+	}
+
+	// 16th connection for same user must be rejected
+	req16 := httptest.NewRequest(http.MethodGet, "/api/moul/posts/subscribe", nil)
+	req16.Header.Set("X-Real-IP", "10.0.0.99")
+	rec16 := httptest.NewRecorder()
+	c16 := e.NewContext(req16, rec16)
+
+	_, err := AcquireRealtimeConnection(c16, "posts", user, false)
+	if err == nil {
+		t.Fatal("16th user connection should have exceeded quota")
+	}
+	httpErr, ok := err.(*echo.HTTPError)
+	if !ok || httpErr.Code != http.StatusTooManyRequests {
+		t.Fatalf("Expected HTTP 429, got %v", err)
+	}
+
+	// Release one connection and verify slot is freed
+	releases[0]()
+	relRetry, errRetry := AcquireRealtimeConnection(c16, "posts", user, false)
+	if errRetry != nil {
+		t.Fatalf("Acquiring connection after slot release should succeed, got err: %v", errRetry)
+	}
+	releases[0] = relRetry
+
+	// Clean up all user connections
+	for _, rel := range releases {
+		rel()
+	}
+
+	// 2. Test Per-IP Quota (Max 30)
+	ResetActiveConnections()
+	var ipReleases []func()
+	targetIP := "192.168.1.100"
+
+	for i := 0; i < DefaultMaxConcurrentPerIP; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/api/moul/posts/subscribe", nil)
+		req.Header.Set("X-Real-IP", targetIP)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		rel, err := AcquireRealtimeConnection(c, "posts", nil, false)
+		if err != nil {
+			t.Fatalf("IP connection %d should have been acquired, got err: %v", i+1, err)
+		}
+		ipReleases = append(ipReleases, rel)
+	}
+
+	// 31st connection for same IP must be rejected
+	req31 := httptest.NewRequest(http.MethodGet, "/api/moul/posts/subscribe", nil)
+	req31.Header.Set("X-Real-IP", targetIP)
+	rec31 := httptest.NewRecorder()
+	c31 := e.NewContext(req31, rec31)
+
+	_, err = AcquireRealtimeConnection(c31, "posts", nil, false)
+	if err == nil {
+		t.Fatal("31st IP connection should have exceeded quota")
+	}
+
+	// Clean up all IP connections
+	for _, rel := range ipReleases {
+		rel()
+	}
+}
+
+func TestAcquireRealtimeConnection_CustomRuleAndAdminBypass(t *testing.T) {
+	e := echo.New()
+	ResetActiveConnections()
+
+	globalState.Lock()
+	globalState.enabled = true
+	globalState.rules = []schema.RateLimitRule{
+		{
+			Label:         "chat:subscribe",
+			MaxRequests:   100,
+			Interval:      60,
+			TargetedUsers: "all",
+			MaxConcurrent: 2,
+		},
+	}
+	globalState.Unlock()
+
+	user := map[string]interface{}{"id": "chat_user_1", "moul": "users"}
+
+	// Open 2 connections to chat
+	req1 := httptest.NewRequest(http.MethodGet, "/api/moul/chat/subscribe", nil)
+	rec1 := httptest.NewRecorder()
+	c1 := e.NewContext(req1, rec1)
+	rel1, err1 := AcquireRealtimeConnection(c1, "chat", user, false)
+	if err1 != nil {
+		t.Fatalf("Connection 1 should succeed: %v", err1)
+	}
+	defer rel1()
+
+	req2 := httptest.NewRequest(http.MethodGet, "/api/moul/chat/subscribe", nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+	rel2, err2 := AcquireRealtimeConnection(c2, "chat", user, false)
+	if err2 != nil {
+		t.Fatalf("Connection 2 should succeed: %v", err2)
+	}
+	defer rel2()
+
+	// 3rd connection should be rejected by rule MaxConcurrent: 2
+	req3 := httptest.NewRequest(http.MethodGet, "/api/moul/chat/subscribe", nil)
+	rec3 := httptest.NewRecorder()
+	c3 := e.NewContext(req3, rec3)
+	_, err3 := AcquireRealtimeConnection(c3, "chat", user, false)
+	if err3 == nil {
+		t.Fatal("3rd connection should have been rejected by MaxConcurrent rule")
+	}
+
+	// Admin bypass: admin connecting to chat should bypass all limits
+	reqAdmin := httptest.NewRequest(http.MethodGet, "/api/moul/chat/subscribe", nil)
+	recAdmin := httptest.NewRecorder()
+	cAdmin := e.NewContext(reqAdmin, recAdmin)
+	relAdmin, errAdmin := AcquireRealtimeConnection(cAdmin, "chat", user, true)
+	if errAdmin != nil {
+		t.Fatalf("Admin connection should always bypass quotas, got err: %v", errAdmin)
+	}
+	relAdmin()
+}

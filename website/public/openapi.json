@@ -3600,7 +3600,7 @@
     "/api/moul/{name}/subscribe": {
       "get": {
         "summary": "Subscribe to Real-time Record Changes (SSE)",
-        "description": "Establishes a Server-Sent Events (SSE) stream for real-time record creations, updates, and deletions on the target collection.\nGoverned by continuous mid-stream per-event authorization re-evaluation against `subscribeRule` (or fallback to `viewRule`).\nTransition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed to remove it from UI state.\nImmediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.\n",
+        "description": "Establishes a Server-Sent Events (SSE) stream for real-time record creations, updates, and deletions on the target collection.\nGoverned by continuous mid-stream per-event authorization re-evaluation against `subscribeRule` (or fallback to `viewRule`).\nTransition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed to remove it from UI state.\nImmediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.\nSlow-consumer eviction: bounded 128-event ring buffer per client with write deadlines (5s flush timeout). Stalled consumers receive an `event: slow_consumer` frame before disconnection.\nConnection quotas: enforces per-user (default 15) and per-IP (default 30) concurrent stream limits when rate limiting is enabled.\n",
         "tags": [
           "Dynamic Records CRUD",
           "Realtime Subscriptions"
@@ -3668,6 +3668,9 @@
           },
           "404": {
             "description": "Collection not found."
+          },
+          "429": {
+            "description": "Too many concurrent realtime connections (per-user, per-IP, or rule maxConcurrent limit reached)."
           }
         }
       }
@@ -3675,7 +3678,7 @@
     "/api/moul/subscribe": {
       "get": {
         "summary": "Global Real-time Record Subscriptions (SSE)",
-        "description": "Establishes a Server-Sent Events (SSE) stream for real-time mutations across all collections or specified collections.\nGoverned by continuous mid-stream per-event authorization re-evaluation against each collection's `subscribeRule` / `viewRule`.\nTransition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed.\nImmediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.\n",
+        "description": "Establishes a Server-Sent Events (SSE) stream for real-time mutations across all collections or specified collections.\nGoverned by continuous mid-stream per-event authorization re-evaluation against each collection's `subscribeRule` / `viewRule`.\nTransition-aware: if a record update causes it to no longer satisfy the subscriber's rule, a synthetic `delete` event is pushed.\nImmediate disconnect: if an authenticated token is revoked or expires, an `event: auth_expired` frame is emitted and the stream closes immediately.\nSlow-consumer eviction: bounded 128-event ring buffer per client with write deadlines (5s flush timeout). Stalled consumers receive an `event: slow_consumer` frame before disconnection.\nConnection quotas: enforces per-user (default 15) and per-IP (default 30) concurrent stream limits when rate limiting is enabled.\n",
         "tags": [
           "Realtime Subscriptions"
         ],
@@ -3732,6 +3735,9 @@
           },
           "400": {
             "description": "Bad request (e.g. reveal parameter requested by a non-admin client)."
+          },
+          "429": {
+            "description": "Too many concurrent realtime connections (per-user, per-IP, or rule maxConcurrent limit reached)."
           }
         }
       }

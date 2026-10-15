@@ -740,6 +740,8 @@ Realtime subscriptions feature continuous mid-stream authorization re-evaluation
 - **Per-Event Rule Evaluation**: Every record mutation (`create`, `update`, `delete`) evaluates the collection's latest `subscribeRule` (or fallback `viewRule`) against the subscriber's auth context and the mutated record before dispatching frames.
 - **Transition-Aware State Sync**: When a record update causes an item to no longer satisfy the subscriber's view rule (e.g., status changed from public to draft), the server emits a synthetic `delete` event so client UIs immediately drop it.
 - **Immediate Disconnect on Revocation / Expiry**: Subscribed clients track JWT credentials. If a token is revoked (via `POST /api/moul/:name/logout` or `db.RevokeToken`) or expires during a connection, the server immediately emits an `event: auth_expired` frame and terminates the SSE connection.
+- **Slow-Consumer Eviction & Backpressure Defense**: Each client stream operates on a bounded 128-event ring buffer with 5-second write deadlines on all flushes. If a client stalls their TCP window or cannot keep up, an `event: slow_consumer` frame is emitted and the stream is cleanly closed to prevent memory exhaustion.
+- **Concurrent Connection Quotas**: When rate limiting is enabled, active SSE streams are capped at 15 concurrent connections per authenticated user and 30 per IP (with customizable `maxConcurrent` rate limiting rules), returning `HTTP 429 Too Many Requests` when limits are exceeded.
 
 ### Subscribing to Collection Events
 

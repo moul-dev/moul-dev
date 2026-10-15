@@ -130,4 +130,5 @@ type RateLimitRule struct {
 	MaxRequests   int    `json:"maxRequests"`
 	Interval      int    `json:"interval"`
 	TargetedUsers string `json:"targetedUsers"` // "all", "authenticated", "guest"
+	MaxConcurrent int    `json:"maxConcurrent,omitempty"`
 }

@@ -36,6 +36,8 @@ type ClientOptions struct {
 }
 
 type Client struct {
+	mu             sync.RWMutex
+	isClosed       bool
 	ID             string
 	MoulName       string                 // target collection name or "*"
 	Events         []string               // filter event actions e.g. ["create", "update"] or ["*"]
@@ -58,6 +60,10 @@ func generateID() string {
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
+
+// DefaultClientBufferSize is the bounded buffer size for client SSE event streams.
+// Provides headroom for database batch operations while bounding server memory.
+const DefaultClientBufferSize = 128
 
 func NewClient(moulName string, authUser map[string]interface{}, isAdmin bool, rule string, eventFilter string, recordID string, opts ...ClientOptions) *Client {
 	var events []string
@@ -94,7 +100,7 @@ func NewClient(moulName string, authUser map[string]interface{}, isAdmin bool, r
 		TokenHash:      tokenHash,
 		TokenExpiresAt: tokenExpiresAt,
 		RevealFields:   revealFields,
-		Send:           make(chan *Event, 128),
+		Send:           make(chan *Event, DefaultClientBufferSize),
 		Disconnect:     make(chan string, 1),
 		closed:         make(chan struct{}),
 	}
@@ -102,12 +108,20 @@ func NewClient(moulName string, authUser map[string]interface{}, isAdmin bool, r
 
 func (c *Client) Close() {
 	c.cancelOnce.Do(func() {
+		c.mu.Lock()
+		c.isClosed = true
 		close(c.closed)
 		close(c.Send)
+		c.mu.Unlock()
 	})
 }
 
 func (c *Client) DisconnectClient(reason string) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.isClosed {
+		return
+	}
 	select {
 	case <-c.closed:
 	case c.Disconnect <- reason:
@@ -541,10 +555,21 @@ func (h *Hub) sendEvent(client *Client, event Event, m *schema.Moul) {
 		eventCopy.OldRecord = CloneAndSanitizeRecord(m, event.OldRecord, client)
 	}
 
+	client.mu.RLock()
+	if client.isClosed {
+		client.mu.RUnlock()
+		return
+	}
+
 	select {
 	case <-client.closed:
+		client.mu.RUnlock()
+		return
 	case client.Send <- &eventCopy:
+		client.mu.RUnlock()
 	default:
-		// Buffer full, skip frame to prevent blocking
+		client.mu.RUnlock()
+		// Buffer full: evict slow consumer to protect server memory and prevent backpressure
+		client.DisconnectClient("slow_consumer")
 	}
 }

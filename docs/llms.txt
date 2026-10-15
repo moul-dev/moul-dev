@@ -23,6 +23,7 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 - **Programmatic Go Embedding & HTTP Hooks**: Embed the server via `pkg/app` with pre-built Web Admin Console (`pkg/ui`), custom HTTP routes (`RegisterRoute`, `OnRouterInit`), custom workers (`pkg/worker`), built-in MCP server (`ServeMCP`, `MCPServer`, `IsMCP`), and custom UI filesystem overrides without forking core engine logic.
 - **Feature Flags**: OpenFeature Go SDK provider supporting boolean switches, actor overrides, dynamic group rules, and percentage rollouts.
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
+- **Real-time SSE Streams & DoS Protection**: Server-Sent Events (SSE) subscriptions with per-event authorization, transition-aware record deletion events, slow-consumer eviction (128-event ring buffer, 5s write deadlines), and per-user (15) / per-IP (30) concurrent stream quotas.
 - **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with real-time field validation across all data types, tri-state system/light/dark theme toggle, embedded via public `pkg/ui` package.
 - **Built-in MCP Server**: Native MCP protocol server accessible via `moul mcp` (or `<custom-binary> mcp` in embedded mode) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
@@ -123,6 +124,6 @@ moul ctl -server http://localhost:8090 -admin-key test-admin-key-1234
 
 - **Strict camelCase Fields**: All collection custom fields must follow `camelCase` (regex `^[a-z][a-zA-Z0-9]*$`, e.g. `authorId`, `viewsCount`). Snake_case, PascalCase, or reserved words are rejected with HTTP 400.
 - **Universal System Timestamps**: Every table and record uses `createdAt` and `updatedAt` ISO 8601 strings.
-- **Rate Limit Config**: Rate limiting rules use camelCase properties: `{"label": "...", "maxRequests": 10, "interval": 3, "targetedUsers": "all"}`.
+- **Rate Limit Config**: Rate limiting rules use camelCase properties: `{"label": "...", "maxRequests": 10, "interval": 3, "targetedUsers": "all", "maxConcurrent": 5}`. When rate limiting is enabled, active SSE connections are capped with default baselines (15 per authenticated user, 30 per IP) or rule-specific `maxConcurrent` limits.
 - **Cloak Encrypted Fields**: Dynamic field type `cloak` encrypts values at rest using AES-256-GCM (`BLOB`). If `searchable: true`, an indexed HMAC-SHA256 blind index column (`<fieldName>Hash`) is maintained for exact match queries (`=` and `!=`). Values are masked by default (`••••` + last 4 chars) and unmasked via `?reveal=fieldName` (or `?reveal=all`). Requires `MOUL_ENCRYPTION_KEY`.
 

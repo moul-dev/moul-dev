@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -247,8 +248,32 @@ func (h *RealtimeHandler) SubscribeGlobal(c *echo.Context) error {
 	return h.serveSSE(c, client, moulName)
 }
 
+// flushWithTimeout flushes the response with a write deadline to protect against stalled slowloris TCP sockets.
+func flushWithTimeout(rc *http.ResponseController, timeout time.Duration) error {
+	if timeout > 0 {
+		if err := rc.SetWriteDeadline(time.Now().Add(timeout)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			return fmt.Errorf("set write deadline: %w", err)
+		}
+	}
+	if err := rc.Flush(); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return fmt.Errorf("flush sse response: %w", err)
+	}
+	if timeout > 0 {
+		if err := rc.SetWriteDeadline(time.Time{}); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			logger.Warn("Failed to reset write deadline", "err", err)
+		}
+	}
+	return nil
+}
+
 // serveSSE establishes the SSE stream, sends the connection handshake, and monitors client lifecycle.
 func (h *RealtimeHandler) serveSSE(c *echo.Context, client *realtime.Client, moulName string) error {
+	release, err := middleware.AcquireRealtimeConnection(c, moulName, client.AuthUser, client.IsAdmin)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	realtime.DefaultHub.Subscribe(client)
 	defer realtime.DefaultHub.Unsubscribe(client)
 
@@ -261,16 +286,23 @@ func (h *RealtimeHandler) serveSSE(c *echo.Context, client *realtime.Client, mou
 	w.WriteHeader(http.StatusOK)
 
 	rc := http.NewResponseController(w)
-	_ = rc.Flush()
+	if err := flushWithTimeout(rc, 5*time.Second); err != nil {
+		return nil
+	}
 
 	// Initial handshake payload
-	handshakeData, _ := json.Marshal(map[string]string{
+	handshakeData, err := json.Marshal(map[string]string{
 		"client_id": client.ID,
 		"moul":      moulName,
 		"status":    "connected",
 	})
+	if err != nil {
+		return fmt.Errorf("marshal realtime handshake: %w", err)
+	}
 	fmt.Fprintf(w, "event: connected\ndata: %s\n\n", handshakeData)
-	_ = rc.Flush()
+	if err := flushWithTimeout(rc, 5*time.Second); err != nil {
+		return nil
+	}
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
@@ -282,38 +314,59 @@ func (h *RealtimeHandler) serveSSE(c *echo.Context, client *realtime.Client, mou
 			return nil
 
 		case reason := <-client.Disconnect:
-			expiredData, _ := json.Marshal(map[string]string{
-				"message": "Token has expired or was revoked",
+			eventName := "auth_expired"
+			message := "Token has expired or was revoked"
+			if reason == "slow_consumer" {
+				eventName = "slow_consumer"
+				message = "Connection terminated due to slow consumer backpressure"
+				logger.Warn("Realtime client evicted due to slow consumer backpressure", "client_id", client.ID, "moul", moulName)
+			}
+			evictData, err := json.Marshal(map[string]string{
+				"message": message,
 				"reason":  reason,
 			})
-			fmt.Fprintf(w, "event: auth_expired\ndata: %s\n\n", expiredData)
-			_ = rc.Flush()
+			if err == nil {
+				fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventName, evictData)
+				if flushErr := flushWithTimeout(rc, 2*time.Second); flushErr != nil {
+					logger.Warn("Failed to flush eviction notice to client", "client_id", client.ID, "err", flushErr)
+				}
+			}
 			return nil
 
 		case <-ticker.C:
 			// Mid-stream heartbeat check: token expiry & revocation
 			if !client.IsAdmin && client.TokenHash != "" {
 				if !client.TokenExpiresAt.IsZero() && time.Now().After(client.TokenExpiresAt) {
-					expiredData, _ := json.Marshal(map[string]string{
+					expiredData, err := json.Marshal(map[string]string{
 						"message": "Token has expired or was revoked",
 						"reason":  "auth_expired",
 					})
-					fmt.Fprintf(w, "event: auth_expired\ndata: %s\n\n", expiredData)
-					_ = rc.Flush()
+					if err == nil {
+						fmt.Fprintf(w, "event: auth_expired\ndata: %s\n\n", expiredData)
+						if flushErr := flushWithTimeout(rc, 2*time.Second); flushErr != nil {
+							logger.Warn("Failed to flush token expiration to client", "client_id", client.ID, "err", flushErr)
+						}
+					}
 					return nil
 				}
 				if h.DB != nil && db.IsTokenRevokedByHash(h.DB, client.TokenHash) {
-					expiredData, _ := json.Marshal(map[string]string{
+					expiredData, err := json.Marshal(map[string]string{
 						"message": "Token has expired or was revoked",
 						"reason":  "auth_expired",
 					})
-					fmt.Fprintf(w, "event: auth_expired\ndata: %s\n\n", expiredData)
-					_ = rc.Flush()
+					if err == nil {
+						fmt.Fprintf(w, "event: auth_expired\ndata: %s\n\n", expiredData)
+						if flushErr := flushWithTimeout(rc, 2*time.Second); flushErr != nil {
+							logger.Warn("Failed to flush token revocation to client", "client_id", client.ID, "err", flushErr)
+						}
+					}
 					return nil
 				}
 			}
 			fmt.Fprintf(w, ": ping\n\n")
-			_ = rc.Flush()
+			if err := flushWithTimeout(rc, 5*time.Second); err != nil {
+				return nil
+			}
 
 		case msg, ok := <-client.Send:
 			if !ok {
@@ -324,7 +377,9 @@ func (h *RealtimeHandler) serveSSE(c *echo.Context, client *realtime.Client, mou
 				continue
 			}
 			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", msg.Action, jsonBytes)
-			_ = rc.Flush()
+			if err := flushWithTimeout(rc, 5*time.Second); err != nil {
+				return nil
+			}
 		}
 	}
 }
