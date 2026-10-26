@@ -231,3 +231,90 @@ func TestSort_RelationInjectionAndVisibility(t *testing.T) {
 		t.Fatalf("relation sort is not quoted/aliased: %v", exprs)
 	}
 }
+
+// nestedFixture: teams have an owner; posts belong to a team (ListRule through the relation) and
+// may have a parent post; comments point at posts.
+func nestedFixture(t *testing.T) (*dbx.DB, map[string]*schema.Moul) {
+	t.Helper()
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("InitDB: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := dbConn.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	rel := func(target string) *schema.RelationConfig {
+		return &schema.RelationConfig{TargetMoul: target, Cardinality: "1:N"}
+	}
+	mouls := map[string]*schema.Moul{
+		"teams": {ID: "t", Name: "teams", Type: "base", Fields: []schema.MoulField{{Name: "owner", Type: "text"}}},
+		"posts": {ID: "p", Name: "posts", Type: "base",
+			Fields: []schema.MoulField{
+				{Name: "title", Type: "text"},
+				{Name: "team", Type: "relation", RelationConfig: rel("teams")},
+				{Name: "parent", Type: "relation", RelationConfig: rel("posts")},
+			},
+			Rules: schema.MoulRules{ListRule: "team.owner = @request.auth.id"},
+		},
+		"comments": {ID: "c", Name: "comments", Type: "base",
+			Fields: []schema.MoulField{{Name: "post", Type: "relation", RelationConfig: rel("posts")}}},
+	}
+	for _, name := range []string{"teams", "posts", "comments"} {
+		if err := db.CreateMoulTable(dbConn, mouls[name]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert := func(table string, p dbx.Params) {
+		p["createdAt"], p["updatedAt"] = "x", "x"
+		if _, err := dbConn.Insert(table, p).Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("teams", dbx.Params{"id": "t_alice", "owner": "alice"})
+	insert("teams", dbx.Params{"id": "t_bob", "owner": "bob"})
+	insert("posts", dbx.Params{"id": "p_bob", "title": "TOP-SECRET", "team": "t_bob"})
+	insert("posts", dbx.Params{"id": "p_alice", "title": "mine", "team": "t_alice", "parent": "p_bob"})
+	insert("comments", dbx.Params{"id": "c1", "post": "p_bob"})
+	insert("comments", dbx.Params{"id": "c2", "post": "p_alice"})
+	return dbConn, mouls
+}
+
+func TestUntrustedFilter_NestedRuleThroughRelations(t *testing.T) {
+	dbConn, mouls := nestedFixture(t)
+	alice := map[string]interface{}{"id": "alice"}
+	opts := FilterOptions{ParamPrefix: "f_", Untrusted: true, LoadMoul: loaderFor(mouls)}
+	ruleSQL, ruleParams, err := BuildFilterSQLWithOptions(mouls["posts"].Rules.ListRule, mouls["posts"], alice, nil, FilterOptions{ParamPrefix: "r_", LoadMoul: loaderFor(mouls)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Self-relation: alice's own post points at bob's hidden post; its title must stay hidden.
+	where, params, err := BuildFilterSQLWithOptions("parent.title ~ 'TOP-SECRET'", mouls["posts"], alice, nil, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range ruleParams {
+		params[k] = v
+	}
+	if got := listIDs(t, dbConn, "posts", "("+ruleSQL+") AND ("+where+")", params); len(got) != 0 {
+		t.Fatalf("hidden parent title leaked through a self-relation: %v", got)
+	}
+
+	// Cross-collection: the target's rule itself goes through a relation.
+	where, params, err = BuildFilterSQLWithOptions("post.title ~ 'mine'", mouls["comments"], alice, nil, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := listIDs(t, dbConn, "comments", where, params); len(got) != 1 || got[0] != "c2" {
+		t.Fatalf("relation filter through a nested relation rule: %v", got)
+	}
+	where, params, err = BuildFilterSQLWithOptions("post.title ~ 'TOP'", mouls["comments"], alice, nil, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := listIDs(t, dbConn, "comments", where, params); len(got) != 0 {
+		t.Fatalf("hidden post matched through a comment: %v", got)
+	}
+}

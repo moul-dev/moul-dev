@@ -100,8 +100,9 @@ func IsSecretField(fieldName string, moul *schema.Moul) bool {
 	return lower == "email" && (moul == nil || moul.Type == "auth")
 }
 
-// subqueryAlias names the table of a relation or @collection subquery, so columns qualified with
-// the outer table name keep referring to the outer row even when both tables are the same.
+// subqueryAlias names the table of a top-level relation or @collection subquery, so columns
+// qualified with the outer table name keep referring to the outer row even when both tables are
+// the same. Subqueries nested inside a target's rule get their own alias per depth (subAlias).
 const subqueryAlias = "_sub"
 
 // identPattern matches a plain column name that is safe to quote into SQL.
@@ -277,6 +278,19 @@ type sqlBuilder struct {
 	opts       FilterOptions
 	state      *paramState
 	params     dbx.Params
+	// depth is 0 for the top-level expression and grows for each nested target rule.
+	depth int
+	// selfRef is how this builder's own table is referenced: "" at the top level (the query's
+	// table, qualified by name), or the alias of the subquery a nested rule is translated into.
+	selfRef string
+}
+
+// subAlias is the alias of the subqueries this builder creates.
+func (b *sqlBuilder) subAlias() string {
+	if b.depth == 0 {
+		return subqueryAlias
+	}
+	return fmt.Sprintf("%s%d", subqueryAlias, b.depth)
 }
 
 func newSQLBuilder(tokens []Token, moul *schema.Moul, authRecord map[string]interface{}, reqContext map[string]interface{}) *sqlBuilder {
@@ -370,6 +384,8 @@ func (b *sqlBuilder) nestedRuleSQL(rule string, target *schema.Moul) (string, er
 		opts:       FilterOptions{LoadMoul: b.opts.LoadMoul},
 		state:      b.state,
 		params:     b.state.params,
+		depth:      b.depth + 1,
+		selfRef:    b.subAlias(),
 	}
 	expr, err := nested.parseLogicalOr()
 	if err != nil {
@@ -566,14 +582,22 @@ func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 		}
 	}
 
-	subquery := fmt.Sprintf("EXISTS (SELECT 1 FROM %s AS %s WHERE %s.%s %s %s)", db.QuoteIdentifier(targetTable), subqueryAlias, subqueryAlias, db.QuoteIdentifier(targetField), sqlOp, rightCond)
+	alias := b.subAlias()
+	subquery := fmt.Sprintf("EXISTS (SELECT 1 FROM %s AS %s WHERE %s.%s %s %s)", db.QuoteIdentifier(targetTable), alias, alias, db.QuoteIdentifier(targetField), sqlOp, rightCond)
 	return subquery, nil
 }
 
-// qualifiedOuter qualifies a bare column of the builder's collection with its table name, so it
-// keeps referring to the outer row inside a subquery on another table.
+// qualifiedOuter qualifies a bare column of the builder's own table (its name at the top level,
+// its subquery alias inside a nested rule), so it keeps referring to that row inside a deeper
+// subquery.
 func (b *sqlBuilder) qualifiedOuter(col string) string {
-	if b.moul == nil || !identPattern.MatchString(col) {
+	if !identPattern.MatchString(col) {
+		return col
+	}
+	if b.selfRef != "" {
+		return b.selfRef + "." + db.QuoteIdentifier(col)
+	}
+	if b.moul == nil {
 		return col
 	}
 	return db.QuoteIdentifier(b.moul.Name) + "." + db.QuoteIdentifier(col)
@@ -650,12 +674,10 @@ func (b *sqlBuilder) parseRelationalComparison() (string, error) {
 		}
 	}
 
-	target := db.QuoteIdentifier(targetMoul.Name) + " AS " + subqueryAlias
-	targetCol := subqueryAlias + "." + db.QuoteIdentifier(targetField)
+	alias := b.subAlias()
+	target := db.QuoteIdentifier(targetMoul.Name) + " AS " + alias
+	targetCol := alias + "." + db.QuoteIdentifier(targetField)
 	outerCol := b.qualifiedOuter(relFieldName)
-	if b.moul == nil {
-		outerCol = db.QuoteIdentifier(relFieldName)
-	}
 
 	sqlOp := b.mapOperator(opTok.Value)
 
@@ -678,15 +700,15 @@ func (b *sqlBuilder) parseRelationalComparison() (string, error) {
 			if sqlOp == "=" {
 				nullCheck = "IS NULL"
 			}
-			return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s%s)", target, subqueryAlias, outerCol, targetCol, nullCheck, visibility), nil
+			return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s%s)", target, alias, outerCol, targetCol, nullCheck, visibility), nil
 		}
 	}
 
 	card := relField.RelationConfig.Cardinality
 	if card == "1:1" || card == "1:N" {
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s %s%s)", target, subqueryAlias, outerCol, targetCol, sqlOp, rightCond, visibility), nil
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s %s%s)", target, alias, outerCol, targetCol, sqlOp, rightCond, visibility), nil
 	} else if card == "M:N" {
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value AND %s %s %s%s)", target, outerCol, subqueryAlias, targetCol, sqlOp, rightCond, visibility), nil
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value AND %s %s %s%s)", target, outerCol, alias, targetCol, sqlOp, rightCond, visibility), nil
 	}
 
 	return "", fmt.Errorf("unsupported relation cardinality %q", card)
