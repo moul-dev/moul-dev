@@ -149,6 +149,7 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
 | `MOUL_ADMIN_KEY` | Required | Master admin key for administrative endpoints and MCP access. |
 | `MOUL_DB_PATH` | `moul-local.db` | Path to the SQLite database file. |
+| `MOUL_DB_MAX_CONNS` | max(4, CPUs) | SQLite connection pool size. Every pooled connection gets WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`; idle connections are kept open. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
 

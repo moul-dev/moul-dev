@@ -888,6 +888,7 @@ Set the following environment variables on your production server or container:
 | `MOUL_API_PREFIX` | No | Base URL path prefix for API endpoints (default: /api, use `""` for root) | `/v1` or `""` |
 | `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
+| `MOUL_DB_MAX_CONNS` | No | SQLite connection pool size; every connection is opened with WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`, and idle connections are kept (default: max(4, CPU count)) | `8` |
 | `MOUL_ENCRYPTION_KEY` | Optional* | Master key (min 16 bytes) for `cloak` field encryption and blind indexes (*required if any collection has a `cloak` field) | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |

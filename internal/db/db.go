@@ -364,12 +364,25 @@ func EnsureSystemTables(db *dbx.DB) error {
 	return nil
 }
 
-// InitDB initializes the SQLite database, configures pragmas, and ensures all system tables exist.
+// InitDB initializes the SQLite database, configures every pooled connection (WAL, busy_timeout,
+// synchronous, foreign_keys), sizes the pool, and ensures all system tables exist.
 func InitDB(dbPath string) (*dbx.DB, error) {
-	db, err := dbx.Open("sqlite", dbPath)
+	db, err := dbx.Open("sqlite", buildDSN(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
+
+	// Keep idle connections instead of closing all but two: with the default pool, overlapping
+	// requests reopen (and reconfigure) connections on every burst.
+	size := poolSize()
+	if isPrivateMemoryDB(dbPath) {
+		size = 1
+	}
+	sqlDB := db.DB()
+	sqlDB.SetMaxOpenConns(size)
+	sqlDB.SetMaxIdleConns(size)
+	sqlDB.SetConnMaxIdleTime(0)
+	sqlDB.SetConnMaxLifetime(0)
 
 	if os.Getenv("MOUL_DEBUG_SQL") == "true" || os.Getenv("MOUL_DEBUG") == "true" {
 		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, rows *sql.Rows, err error) {
@@ -380,17 +393,12 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		}
 	}
 
-	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
-	pragmas := []string{
-		"PRAGMA journal_mode=WAL;",
-		"PRAGMA busy_timeout=5000;",
-		"PRAGMA synchronous=NORMAL;",
-		"PRAGMA foreign_keys=ON;",
-	}
-	for _, pragma := range pragmas {
-		if _, err := db.NewQuery(pragma).Execute(); err != nil {
-			return nil, fmt.Errorf("failed to execute pragma (%s): %w", pragma, err)
+	// Opening is lazy; ping so a bad path or pragma fails here rather than on the first query.
+	if err := sqlDB.Ping(); err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to open sqlite database: %w (close: %v)", err, closeErr)
 		}
+		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
 
 	if err := EnsureSystemTables(db); err != nil {
