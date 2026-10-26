@@ -8,7 +8,6 @@ import (
 	"github.com/moul-dev/moul-dev/internal/logger"
 
 	"github.com/labstack/echo/v5"
-	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/pocketbase/dbx"
 )
 
@@ -22,11 +21,7 @@ func NewVisitsHandler(dbConn *dbx.DB) *VisitsHandler {
 
 // ListVisits lists visits recorded with pagination support, requiring authentication.
 func (h *VisitsHandler) ListVisits(c *echo.Context) error {
-	authUser := middleware.GetAuthRecord(c)
-	if authUser == nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access visits log")
-	}
-
+	// Access is enforced by the route (root user token or admin key).
 	pageParam := c.QueryParam("page")
 	perPageParam := c.QueryParam("perPage")
 
@@ -139,11 +134,7 @@ func (h *VisitsHandler) ListVisits(c *echo.Context) error {
 
 // GetVisit retrieves a single visit record by ID, requiring authentication.
 func (h *VisitsHandler) GetVisit(c *echo.Context) error {
-	authUser := middleware.GetAuthRecord(c)
-	if authUser == nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access visit details")
-	}
-
+	// Access is enforced by the route (root user token or admin key).
 	id := c.Param("id")
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Visit ID is required")

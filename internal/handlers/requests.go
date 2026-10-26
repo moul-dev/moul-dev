@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/moul-dev/moul-dev/internal/logger"
-	"github.com/moul-dev/moul-dev/internal/middleware"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
@@ -24,11 +23,7 @@ func NewRequestsHandler(dbConn *dbx.DB) *RequestsHandler {
 
 // ListRequests lists tracked HTTP requests with pagination, requiring authentication.
 func (h *RequestsHandler) ListRequests(c *echo.Context) error {
-	authUser := middleware.GetAuthRecord(c)
-	if authUser == nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access request logs")
-	}
-
+	// Access is enforced by the route (root user token or admin key).
 	// Parse pagination params
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	if page < 1 {
@@ -88,11 +83,7 @@ func (h *RequestsHandler) ListRequests(c *echo.Context) error {
 
 // GetRequest retrieves a single tracked request by ID, requiring authentication.
 func (h *RequestsHandler) GetRequest(c *echo.Context) error {
-	authUser := middleware.GetAuthRecord(c)
-	if authUser == nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to access request details")
-	}
-
+	// Access is enforced by the route (root user token or admin key).
 	id := c.Param("id")
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Request ID is required")
