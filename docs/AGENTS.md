@@ -286,6 +286,7 @@ When developing or refactoring backend Go code:
 - **SQL & Data Access Safety**: Never construct raw SQL strings with dynamic variable concatenation. Always use `safesql` validation and parameterized PocketBase `dbx` builders (`dbx.Params`, `dbx.HashExp`, `dbx.NewExp`).
 - **Synchronous OpenAPI & API Documentation**: Whenever adding, modifying, or deleting HTTP endpoints in `internal/handlers/router.go`, synchronously update `docs/openapi.json` and `docs/openapi.yml`, then run `make sync-docs`.
 - **Concurrency & State Safety**: Stateful services, in-memory caches, and background workers must ensure thread safety with appropriate synchronization primitives (`sync.RWMutex` / `sync.Mutex`).
+- **SQLite Write Transactions**: Every connection is opened with `busy_timeout=5000` and every transaction starts with `BEGIN IMMEDIATE`. Code that reads and then writes must run inside `db.WriteTx` (embedders: `app.WriteTx`), which retries on `SQLITE_BUSY`; prefer single statements (`UPDATE … RETURNING`) over select-then-update.
 
 ---
 

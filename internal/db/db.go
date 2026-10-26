@@ -849,7 +849,7 @@ func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) e
 		}
 	}
 
-	return db.Transactional(func(tx *dbx.Tx) error {
+	return WriteTx(db, func(tx *dbx.Tx) error {
 		if _, err := tx.NewQuery("PRAGMA foreign_keys = OFF;").Execute(); err != nil {
 			return fmt.Errorf("failed to disable foreign keys: %w", err)
 		}

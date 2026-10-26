@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/tls"
@@ -98,24 +100,22 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"oauth_redirect_url":             true,
 	}
 
-	tx, err := h.DB.Begin()
+	err := db.WriteTx(h.DB, func(tx *dbx.Tx) error {
+		for k, v := range body {
+			if !allowedKeys[k] {
+				continue
+			}
+			if _, err := tx.Update("_settings", dbx.Params{"value": v}, dbx.HashExp{"key": k}).Execute(); err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update setting "+k+": "+err.Error())
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to start transaction: "+err.Error())
-	}
-	defer tx.Rollback()
-
-	for k, v := range body {
-		if !allowedKeys[k] {
-			continue
+		var httpErr *echo.HTTPError
+		if errors.As(err, &httpErr) {
+			return httpErr
 		}
-
-		_, err = tx.Update("_settings", dbx.Params{"value": v}, dbx.HashExp{"key": k}).Execute()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update setting "+k+": "+err.Error())
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit settings: "+err.Error())
 	}
 

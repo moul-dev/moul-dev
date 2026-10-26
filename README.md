@@ -38,6 +38,7 @@
   - [1. Register and Start Worker Engine](#1-register-and-start-worker-engine)
   - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
   - [3. Programmatic Analytics API](#3-programmatic-analytics-api)
+  - [5. Write Transactions (`app.WriteTx`)](#5-write-transactions-appwritetx)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
 - [Deployment Information](#deployment-information)
@@ -570,6 +571,21 @@ params := &analytics.EventParams{
 event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```
 
+### 5. Write Transactions (`app.WriteTx`)
+
+Every transaction Moul opens starts with `BEGIN IMMEDIATE`, so it owns SQLite's write lock before its first read. Use `app.WriteTx` for any code that reads and then writes: it cannot fail with `SQLITE_BUSY` because another connection committed between the read and the write, and it re-runs the transaction (with backoff) if the lock stays busy past the 5 s busy timeout. `fn` may run more than once, so keep it free of side effects outside `tx`, and keep it short.
+
+```go
+err := moulApp.WriteTx(func(tx *dbx.Tx) error {
+	var stock int
+	if err := tx.NewQuery("SELECT stock FROM products WHERE id = {:id}").Bind(dbx.Params{"id": id}).Row(&stock); err != nil {
+		return err
+	}
+	_, err := tx.Update("products", dbx.Params{"stock": stock - 1}, dbx.HashExp{"id": id}).Execute()
+	return err
+})
+```
+
 ---
 
 ## Built-in Model Context Protocol (MCP) Server
@@ -811,6 +827,7 @@ To subscribe across all collections or specific multi-collections, use `GET /api
 - **State Transitions**: Jobs navigate states (`available` -> `executing` -> `completed` / `discarded`). Historical execution records are retained for metric inspections.
 - **Failures & Exponential Backoffs**: If a job handler returns an error or panics, the engine logs error details, increments `attempt`, and reschedules execution with an exponential backoff (`(attempt^2 * 10) + 10` seconds + jitter) until reaching `max_attempts` (default: 20), after which it transitions to `discarded`.
 - **Immediate Dispatch**: Enqueuing a job via HTTP or Go API immediately signals the worker engine over an in-memory channel, executing available jobs without waiting for polling tickers.
+- **Atomic Claims**: A worker claims its next job with a single `UPDATE … RETURNING` statement, so claims never collide with concurrent writes and no job is claimed twice.
 - **Graceful Shutdown**: On OS interrupt signals (`SIGINT`/`SIGTERM`), worker fetching halts immediately while existing running task handlers are given a graceful timeout to finish execution cleanly.
 
 ---

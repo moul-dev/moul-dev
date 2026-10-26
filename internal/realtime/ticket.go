@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/pocketbase/dbx"
 )
 
@@ -143,7 +144,7 @@ func (s *TicketStore) ConsumeTicket(ticketID string) (*Ticket, error) {
 	var res *Ticket
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 
-	err := s.db.Transactional(func(tx *dbx.Tx) error {
+	err := db.WriteTx(s.db, func(tx *dbx.Tx) error {
 		var row ticketRow
 		err := tx.Select("*").
 			From("_realtime_tickets").

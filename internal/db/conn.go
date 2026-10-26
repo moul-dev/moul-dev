@@ -26,11 +26,15 @@ var connectionPragmas = []string{
 
 // buildDSN appends the per-connection settings to dbPath. dbPath may be a plain file path,
 // ":memory:" or a "file:" URI that already carries query parameters.
+//
+// _txlock=immediate makes every transaction start with BEGIN IMMEDIATE, so it holds the write lock
+// before its first read (see WriteTx).
 func buildDSN(dbPath string) string {
 	params := url.Values{}
 	for _, p := range connectionPragmas {
 		params.Add("_pragma", p)
 	}
+	params.Set("_txlock", "immediate")
 	sep := "?"
 	if strings.Contains(dbPath, "?") {
 		sep = "&"

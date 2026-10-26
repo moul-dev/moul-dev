@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -371,7 +373,7 @@ func (e *Engine) pollAndRunJobs() {
 				if err != nil {
 					// Release slot immediately if we didn't get a job
 					<-e.activeJobs
-					if err.Error() != "sql: no rows in result set" {
+					if !errors.Is(err, sql.ErrNoRows) {
 						e.logger.Error("Failed to claim background job", "table", tableName, "error", err)
 					}
 					// Exit loop for this table since no jobs are available or there's a DB error
@@ -388,41 +390,35 @@ func (e *Engine) pollAndRunJobs() {
 	}
 }
 
+// claimNextJob claims the next available job of tableName in one UPDATE … RETURNING statement.
+// A select-then-update transaction took a read snapshot first and failed at once with SQLITE_BUSY
+// whenever another connection wrote in between, which the busy timeout cannot help with; a single
+// statement takes the write lock up front and waits for it like any other write.
+// It returns sql.ErrNoRows when no job is available.
 func (e *Engine) claimNextJob(tableName string) (*Job, error) {
-	// Start transaction to claim job atomically
-	tx, err := e.db.Begin()
-	if err != nil {
-		return nil, err
+	if err := db.ValidateTableName(tableName); err != nil && tableName != "_workers" {
+		return nil, fmt.Errorf("invalid worker table %q: %w", tableName, err)
 	}
-	defer tx.Rollback()
-
+	quoted := db.QuoteIdentifier(tableName)
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 
+	claimSQL := fmt.Sprintf(`UPDATE %s
+		SET state = 'executing', attempt = attempt + 1, attempted_at = {:now}, attempted_by = {:node}
+		WHERE id = (
+			SELECT id FROM %s
+			WHERE state = 'available' AND scheduled_at <= {:now}
+			ORDER BY priority ASC, scheduled_at ASC, id ASC
+			LIMIT 1
+		)
+		RETURNING id, state, queue, worker, args, meta, tags, errors, attempt, max_attempts, priority, inserted_at, scheduled_at`,
+		quoted, quoted)
+
 	var row JobRow
-	err = tx.Select("id", "state", "queue", "worker", "args", "meta", "tags", "errors", "attempt", "max_attempts", "priority", "inserted_at", "scheduled_at").
-		From(tableName).
-		Where(dbx.NewExp("state = 'available' AND scheduled_at <= {:now}", dbx.Params{"now": nowStr})).
-		OrderBy("priority ASC", "scheduled_at ASC", "id ASC").
-		Limit(1).
-		One(&row)
+	err := e.db.NewQuery(claimSQL).Bind(dbx.Params{"now": nowStr, "node": e.nodeID}).One(&row)
 	if err != nil {
 		return nil, err
 	}
-
-	newAttempt := row.Attempt + 1
-	_, err = tx.Update(tableName, dbx.Params{
-		"state":        "executing",
-		"attempt":      newAttempt,
-		"attempted_at": nowStr,
-		"attempted_by": e.nodeID,
-	}, dbx.HashExp{"id": row.ID}).Execute()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
+	newAttempt := row.Attempt
 
 	// Parse JSON fields
 	var args map[string]interface{}
