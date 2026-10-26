@@ -466,9 +466,17 @@
     "/api/moul": {
       "get": {
         "summary": "List Moul",
-        "description": "Lists the metadata schemas of all registered collections.",
+        "description": "Lists the metadata schemas of all registered collections. Requires a root user token or the admin key.",
         "tags": [
           "Moul Schema Management"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
+          }
         ],
         "responses": {
           "200": {
@@ -483,6 +491,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
           },
           "500": {
             "$ref": "#/components/responses/500InternalError"
@@ -1485,7 +1499,7 @@
     "/api/upload": {
       "get": {
         "summary": "List Uploaded Files",
-        "description": "Returns a list of all stored files and their metadata (including thumbnail maps and thumbhashes), sorted newest first.",
+        "description": "Returns a list of all stored files and their metadata (including thumbnail maps and thumbhashes), sorted newest first. Requires a root user token or the admin key.",
         "tags": [
           "File Storage"
         ],
@@ -1521,7 +1535,7 @@
       },
       "post": {
         "summary": "Upload File",
-        "description": "Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg).",
+        "description": "Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg). The uploader is recorded; only they (or an admin) may attach the file to a record. Members may not upload HTML, SVG, XML, scripts or CSS, and are limited to the `file_allowed_types` setting when it is set. The returned URLs carry a `sig` signature so the uploader can preview the file.",
         "tags": [
           "File Storage"
         ],
@@ -1568,7 +1582,7 @@
             }
           },
           "400": {
-            "description": "Missing file in multipart form-data."
+            "description": "Missing file in multipart form-data, or a file type members may not upload."
           },
           "401": {
             "description": "Authorization failed (requires either a valid authenticated user or admin key)."
@@ -1582,7 +1596,7 @@
     "/api/upload/{path}": {
       "delete": {
         "summary": "Delete Uploaded File",
-        "description": "Deletes an uploaded file and all associated thumbnails and metadata by file ID or path.",
+        "description": "Deletes an uploaded file and all associated thumbnails and metadata by file ID or path. Requires a root user token or the admin key.",
         "tags": [
           "File Storage"
         ],
@@ -1635,6 +1649,55 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalError"
+          }
+        }
+      }
+    },
+    "/storage/{id}/{name}": {
+      "get": {
+        "summary": "Download Stored File",
+        "description": "Serves an upload (or redirects to a presigned S3 URL). Served without a signature only when a guest could view a record that references the file; otherwise it needs a valid `sig` (as returned in record and upload responses), the admin key, a root user, the uploader, or a caller who may view a referencing record. Every answer carries `X-Content-Type-Options: nosniff` and a sandboxing Content-Security-Policy; files other than images, audio and video are served as attachments.",
+        "tags": [
+          "File Storage"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Upload ID (15 letters and digits).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Stored file name (`original.<ext>`, `sm.<ext>`, `md.<ext>`, `lg.<ext>`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": false,
+            "description": "File URL signature (`<expiry>.<hmac>`), valid at least `MOUL_FILE_URL_TTL` (default 1h).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content."
+          },
+          "302": {
+            "description": "Redirect to a presigned S3 URL (S3 storage enabled)."
+          },
+          "404": {
+            "description": "File not found, or not readable by the caller (indistinguishable)."
           }
         }
       }
@@ -2081,6 +2144,9 @@
           },
           "400": {
             "description": "Invalid OTP, expired OTP, or input errors."
+          },
+          "429": {
+            "description": "Too many guesses: 5 per issued code (the code is then voided), 20 failures per account per day, or 30 failures per client network per 10 minutes. Carries a Retry-After header."
           },
           "500": {
             "$ref": "#/components/responses/500InternalError"
@@ -2983,7 +3049,7 @@
             "name": "sort",
             "in": "query",
             "required": false,
-            "description": "Field sort order (e.g. `title` or `-createdAt`).",
+            "description": "Field sort order (e.g. `title`, `-createdAt`, `-author.name`). Non-admin callers may not sort by secret columns (password hashes, tokens, the email of auth collections) or through relations whose target is not publicly listable.",
             "schema": {
               "type": "string"
             }
@@ -2992,7 +3058,7 @@
             "name": "filter",
             "in": "query",
             "required": false,
-            "description": "Dynamic filter expression (e.g. `price > 50 && active = true`).",
+            "description": "Dynamic filter expression (e.g. `price > 50 && active = true`), ANDed with the collection's listRule. For non-admin callers it may not use `@collection` or secret columns, and relation paths (`author.name = 'x'`) only match target records the caller may list.",
             "schema": {
               "type": "string"
             }
@@ -3001,7 +3067,7 @@
             "name": "search",
             "in": "query",
             "required": false,
-            "description": "Substring search across text, username, and email fields.",
+            "description": "Substring search across text and username fields (and email, for admins).",
             "schema": {
               "type": "string"
             }
@@ -3010,7 +3076,7 @@
             "name": "expand",
             "in": "query",
             "required": false,
-            "description": "Comma-separated relational fields to expand inline.",
+            "description": "Comma-separated relational fields to expand inline. Targets the caller may not view are null (to-one) or omitted (to-many).",
             "schema": {
               "type": "string"
             }
@@ -3132,7 +3198,7 @@
     "/api/moul/{name}/records/{id}": {
       "get": {
         "summary": "Get Record",
-        "description": "Retrieves a single record by ID, restricted by `viewRule` constraints.",
+        "description": "Retrieves a single record by ID, restricted by `viewRule` constraints. A record the caller may not view answers 404 exactly like a missing one (401 for both when the bearer token was rejected).",
         "tags": [
           "Dynamic Records CRUD"
         ],
@@ -3745,7 +3811,7 @@
     "/api/realtime/ticket": {
       "post": {
         "summary": "Exchange Credentials for Single-Use Realtime Ticket",
-        "description": "Exchanges an authenticated JWT Bearer token or X-Admin-Key header for a 30-second, single-use opaque ticket. Use this ticket ID in `?ticket=tkt_...` when connecting via standard browser EventSource without leaking credentials in URL logs.",
+        "description": "Exchanges an authenticated JWT Bearer token or X-Admin-Key header for a 30-second, single-use opaque ticket.\nUse this ticket ID in `?ticket=tkt_...` when connecting via standard browser EventSource without leaking credentials in URL logs.\n",
         "tags": [
           "Realtime Subscriptions"
         ],
@@ -4412,6 +4478,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
           }
         ],
         "responses": {
@@ -4447,6 +4516,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
           }
         ],
         "parameters": [
@@ -4492,6 +4564,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
           }
         ],
         "parameters": [
@@ -4565,6 +4640,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "AdminKeyAuth": []
           }
         ],
         "parameters": [
@@ -5212,10 +5290,20 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "User bearer token for authentication."
+        "description": "User bearer token for authentication. Admin endpoints (schemas, settings, files list/delete, workers, visits, requests, feature flag management, metrics, rules sandbox, MCP) accept only a root user (`_rootUsers`) token or the admin key; tokens of other auth collections get 403."
       }
     },
     "responses": {
+      "403Forbidden": {
+        "description": "Authenticated, but not a root user or admin key holder.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HTTPError"
+            }
+          }
+        }
+      },
       "401Unauthorized": {
         "description": "Authentication required or invalid key provided.",
         "content": {
