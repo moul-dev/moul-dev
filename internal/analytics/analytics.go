@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -72,6 +71,9 @@ type Engine struct {
 	// Request log settings (_settings), reloaded by ReloadSettings.
 	settingsMu  sync.RWMutex
 	logSettings RequestLogSettings
+
+	// Known visits, so requests that bring one do no SQL.
+	visits *visitCache
 }
 
 // NewEngine instantiates a new analytics Engine.
@@ -95,6 +97,7 @@ func NewEngine(dbConn *dbx.DB, geoIPPath string) (*Engine, error) {
 		logger:      l,
 		requestCh:   make(chan RequestData, requestChannelSize),
 		logSettings: DefaultRequestLogSettings(),
+		visits:      newVisitCache(),
 	}
 	if err := e.ReloadSettings(); err != nil {
 		l.Warn("Request log settings could not be fully loaded; defaults apply", "err", err)
@@ -114,19 +117,13 @@ func (e *Engine) Close() error {
 // EnsureVisit creates a new visit session or retrieves an existing one.
 // It uses the visitor_token cookie/header for deduplication.
 func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, referrer, landingPage string) (*VisitResult, error) {
-	// If visitToken is provided, check if the visit exists
+	// If visitToken is provided, check if the visit exists (cached; attaches userID when missing)
 	if visitToken != "" {
-		var count int
-		err := e.db.Select("COUNT(*)").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&count)
-		if err == nil && count > 0 {
-			// Visit exists, update user_id if needed
-			if userID != "" {
-				var currentUserID sql.NullString
-				err := e.db.Select("user_id").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&currentUserID)
-				if err == nil && (!currentUserID.Valid || currentUserID.String == "") {
-					_, _ = e.db.Update("_visits", dbx.Params{"user_id": userID}, dbx.HashExp{"id": visitToken}).Execute()
-				}
-			}
+		exists, err := e.resolveVisit(visitToken, userID)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
 			return &VisitResult{
 				VisitID:      visitToken,
 				VisitorToken: visitorToken,
@@ -179,6 +176,7 @@ func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, re
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert visit: %w", err)
 	}
+	e.visits.put(visitToken, userID, time.Now())
 
 	return &VisitResult{
 		VisitID:      visitToken,
@@ -306,11 +304,11 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 	// If visitToken is provided, look up the visit to see if it exists
 	var visitExists bool
 	if visitToken != "" {
-		var count int
-		err := e.db.Select("COUNT(*)").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&count)
-		if err == nil && count > 0 {
-			visitExists = true
+		exists, err := e.resolveVisit(visitToken, userID)
+		if err != nil {
+			return nil, err
 		}
+		visitExists = exists
 	}
 
 	// If visitToken doesn't exist or is empty, create a new visit record
@@ -358,15 +356,7 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert visit: %w", err)
 		}
-	} else {
-		// Visit exists, check if we need to update user_id
-		if userID != "" {
-			var currentUserID sql.NullString
-			err := e.db.Select("user_id").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&currentUserID)
-			if err == nil && (!currentUserID.Valid || currentUserID.String == "") {
-				_, _ = e.db.Update("_visits", dbx.Params{"user_id": userID}, dbx.HashExp{"id": visitToken}).Execute()
-			}
-		}
+		e.visits.put(visitToken, userID, time.Now())
 	}
 
 	// Insert event into dynamic table

@@ -194,7 +194,11 @@ func insertRequests(dbConn *dbx.DB, batch []RequestData) error {
 				}
 				fmt.Fprintf(&sb, "({:id%[1]d}, {:visit%[1]d}, {:method%[1]d}, {:path%[1]d}, {:status%[1]d}, {:ms%[1]d}, {:at%[1]d})", i)
 				params[fmt.Sprintf("id%d", i)] = "req-" + util.RandomID()
-				params[fmt.Sprintf("visit%d", i)] = req.VisitID
+				var visitID interface{}
+				if req.VisitID != "" {
+					visitID = req.VisitID // requests that cannot hold a visit are logged without one (NULL)
+				}
+				params[fmt.Sprintf("visit%d", i)] = visitID
 				params[fmt.Sprintf("method%d", i)] = req.Method
 				params[fmt.Sprintf("path%d", i)] = req.Path
 				params[fmt.Sprintf("status%d", i)] = req.StatusCode

@@ -835,6 +835,10 @@ Every request outside the built-in excludes (docs, MCP, OAuth, the admin console
 | `request_log_retention_days` | `30` | Days `_requests` rows are kept by the daily cleanup job. |
 | `visit_retention_days` | `30` | Days `_visits` rows are kept by the daily cleanup job. |
 
+**Visits.** A request that brings a visit (`moul_visit` / `moul_visitor` cookie, or `X-Visit-Token` / `X-Visitor-Token` header) is attributed to it; known visits are cached in memory, so repeat requests run no SQL for tracking. A request that brings none starts a new visit only when the browser will keep the cookie (`Sec-Fetch-Site: same-origin` or `none`: the admin console, a page or link opened on the API's own origin). API clients, SSR, cross-origin fetches without credentials and probes never create `_visits` rows; their requests are logged with a `NULL` `visit_id`.
+
+**Token revocation checks** answer from an in-memory copy of `_revoked_tokens`: a token revoked in this process (logout, `db.RevokeToken`) is rejected at once, and the copy is re-read every 60 seconds to honour revocations made by other processes (MCP stdio, CLI).
+
 ---
 
 ## Worker Engine Architecture & Operations

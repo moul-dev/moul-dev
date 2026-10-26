@@ -307,7 +307,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _requests (
 			id TEXT PRIMARY KEY,
-			visit_id TEXT NOT NULL,
+			visit_id TEXT,
 			method TEXT NOT NULL,
 			path TEXT NOT NULL,
 			status_code INTEGER NOT NULL,
@@ -1194,6 +1194,7 @@ func RevokeToken(dbConn *dbx.DB, tokenString string, expiresAt time.Time) error 
 	if err != nil {
 		return fmt.Errorf("failed to insert revoked token: %w", err)
 	}
+	revokedSetFor(dbConn).add(tokenHash, expiresAt)
 	notifyTokenRevoked(tokenHash)
 	return nil
 }
@@ -1206,22 +1207,18 @@ func IsTokenRevoked(dbConn *dbx.DB, tokenString string) bool {
 	return IsTokenRevokedByHash(dbConn, HashToken(tokenString))
 }
 
-// IsTokenRevokedByHash checks if a token hash has been recorded in _revoked_tokens and remains unexpired.
+// IsTokenRevokedByHash checks if a token hash has been recorded in _revoked_tokens and remains
+// unexpired. It answers from an in-memory copy of the table (no SQL per request): revocations made
+// with RevokeToken in this process apply at once, and the copy is re-read every
+// revokedRefreshInterval to pick up revocations made by other processes.
 func IsTokenRevokedByHash(dbConn *dbx.DB, tokenHash string) bool {
 	if dbConn == nil || tokenHash == "" {
 		return false
 	}
-	var count int
-	nowStr := time.Now().UTC().Format(time.RFC3339)
-	err := dbConn.Select("COUNT(*)").From("_revoked_tokens").
-		Where(dbx.And(
-			dbx.HashExp{"token_hash": tokenHash},
-			dbx.NewExp("expires_at > {:now}", dbx.Params{"now": nowStr}),
-		)).Row(&count)
-	if err != nil {
-		return false
-	}
-	return count > 0
+	now := time.Now()
+	set := revokedSetFor(dbConn)
+	set.refresh(dbConn, now)
+	return set.contains(tokenHash, now)
 }
 
 // CleanupExpiredRevokedTokens deletes expired tokens from the _revoked_tokens table.
@@ -1229,13 +1226,14 @@ func CleanupExpiredRevokedTokens(dbConn *dbx.DB) (int64, error) {
 	if dbConn == nil {
 		return 0, nil
 	}
-	nowStr := time.Now().UTC().Format(time.RFC3339)
+	now := time.Now()
 	res, err := dbConn.NewQuery("DELETE FROM _revoked_tokens WHERE expires_at <= {:now}").
-		Bind(dbx.Params{"now": nowStr}).
+		Bind(dbx.Params{"now": now.UTC().Format(time.RFC3339)}).
 		Execute()
 	if err != nil {
 		return 0, err
 	}
+	revokedSetFor(dbConn).pruneExpired(now)
 	return res.RowsAffected()
 }
 
