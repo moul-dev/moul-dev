@@ -68,6 +68,10 @@ type Engine struct {
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
 	stopped   bool
+
+	// Request log settings (_settings), reloaded by ReloadSettings.
+	settingsMu  sync.RWMutex
+	logSettings RequestLogSettings
 }
 
 // NewEngine instantiates a new analytics Engine.
@@ -85,12 +89,17 @@ func NewEngine(dbConn *dbx.DB, geoIPPath string) (*Engine, error) {
 		}
 	}
 
-	return &Engine{
-		db:        dbConn,
-		geoReader: reader,
-		logger:    l,
-		requestCh: make(chan RequestData, requestChannelSize),
-	}, nil
+	e := &Engine{
+		db:          dbConn,
+		geoReader:   reader,
+		logger:      l,
+		requestCh:   make(chan RequestData, requestChannelSize),
+		logSettings: DefaultRequestLogSettings(),
+	}
+	if err := e.ReloadSettings(); err != nil {
+		l.Warn("Request log settings could not be fully loaded; defaults apply", "err", err)
+	}
+	return e, nil
 }
 
 // Close releases any resources associated with the analytics engine.
@@ -178,9 +187,13 @@ func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, re
 	}, nil
 }
 
-// TrackRequest enqueues a request record for async batch insertion.
-// This is non-blocking; if the channel is full, the request is dropped with a warning.
+// TrackRequest enqueues a request record for async batch insertion, unless the request log is
+// disabled, the path is excluded, or the request falls outside the sample rate (request_log_*
+// settings). This is non-blocking; if the channel is full, the request is dropped with a warning.
 func (e *Engine) TrackRequest(data RequestData) {
+	if !e.shouldLogRequest(data.Path) {
+		return
+	}
 	select {
 	case e.requestCh <- data:
 	default:
@@ -262,26 +275,15 @@ func (e *Engine) runFlusher(ctx context.Context) {
 	}
 }
 
-// flushRequests batch-inserts request records into the _requests table.
+// flushRequests writes a batch of request records to _requests in one transaction.
 func (e *Engine) flushRequests(batch []RequestData) {
 	if len(batch) == 0 {
 		return
 	}
 
-	for _, req := range batch {
-		reqID := fmt.Sprintf("req-%s", util.RandomID())
-		_, err := e.db.Insert("_requests", dbx.Params{
-			"id":               reqID,
-			"visit_id":         req.VisitID,
-			"method":           req.Method,
-			"path":             req.Path,
-			"status_code":      req.StatusCode,
-			"response_time_ms": req.ResponseTimeMs,
-			"createdAt":        req.CreatedAt,
-		}).Execute()
-		if err != nil {
-			e.logger.Error("Failed to insert request record", "path", req.Path, "err", err)
-		}
+	if err := insertRequests(e.db, batch); err != nil {
+		e.logger.Error("Failed to insert request records", "count", len(batch), "err", err)
+		return
 	}
 
 	e.logger.Debug("Flushed request records", "count", len(batch))

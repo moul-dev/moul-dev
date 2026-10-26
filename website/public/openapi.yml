@@ -1115,6 +1115,11 @@ paths:
                 file_s3_enabled: "true"
                 file_s3_bucket: "my-uploads-bucket"
                 rate_limiting_enabled: "true"
+                request_log_enabled: "true"
+                request_log_sample_rate: "0.25"
+                request_log_exclude_paths: "/custom/poll"
+                request_log_retention_days: "30"
+                visit_retention_days: "30"
       responses:
         '200':
           description: Settings updated successfully, returns full settings map.

@@ -5,11 +5,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pocketbase/dbx"
+
+	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/pkg/worker"
 )
+
+// retentionPeriod returns how long _visits (visits=true) or _requests rows are kept, from the
+// visit_retention_days / request_log_retention_days settings. Invalid values keep the default
+// and are logged.
+func retentionPeriod(dbConn *dbx.DB, visits bool) time.Duration {
+	s, err := analytics.LoadRequestLogSettings(dbConn)
+	if err != nil {
+		logger.Warn("Invalid log retention settings; defaults apply", "err", err)
+	}
+	days := s.RetentionDays
+	if visits {
+		days = s.VisitRetentionDays
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
 
 // RegisterBuiltinWorkers registers standard moul background workers like SendEmail and CleanupRevokedTokens.
 func (a *App) RegisterBuiltinWorkers() {
@@ -62,9 +80,9 @@ func (a *App) RegisterBuiltinWorkers() {
 		return nil
 	})
 
-	// Register periodic old requests garbage collection worker (keep 30 days)
+	// Register periodic old requests garbage collection worker (request_log_retention_days, default 30)
 	a.workerEngine.RegisterPeriodicTask(24*time.Hour, "CleanupOldRequests", func(ctx context.Context, job *worker.Job) error {
-		count, err := db.CleanupOldRequests(a.dbConn, 30*24*time.Hour)
+		count, err := db.CleanupOldRequests(a.dbConn, retentionPeriod(a.dbConn, false))
 		if err != nil {
 			logger.Error("Failed to cleanup old requests", "err", err)
 			return err
@@ -75,9 +93,9 @@ func (a *App) RegisterBuiltinWorkers() {
 		return nil
 	})
 
-	// Register periodic old visits garbage collection worker (keep 30 days)
+	// Register periodic old visits garbage collection worker (visit_retention_days, default 30)
 	a.workerEngine.RegisterPeriodicTask(24*time.Hour, "CleanupOldVisits", func(ctx context.Context, job *worker.Job) error {
-		count, err := db.CleanupOldVisits(a.dbConn, 30*24*time.Hour)
+		count, err := db.CleanupOldVisits(a.dbConn, retentionPeriod(a.dbConn, true))
 		if err != nil {
 			logger.Error("Failed to cleanup old visits", "err", err)
 			return err

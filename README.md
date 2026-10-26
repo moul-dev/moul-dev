@@ -39,6 +39,7 @@
   - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
   - [3. Programmatic Analytics API](#3-programmatic-analytics-api)
   - [5. Write Transactions (`app.WriteTx`)](#5-write-transactions-appwritetx)
+- [Request Log & Visit Tracking](#request-log--visit-tracking)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
 - [Deployment Information](#deployment-information)
@@ -59,7 +60,7 @@
 5. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 6. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment. On first startup, all reserved system tables prefixed with `_*` (`_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`, `_workers`) are automatically created.
 7. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
-8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
+8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability. The request log can be turned off, sampled, or scoped with [request log settings](#request-log--visit-tracking).
 9. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Native Host System Monitoring**: Lightweight, zero-dependency host system metrics collector (CPU, memory, disk space, goroutines, system load) for real-time observability in the TUI console and REST API.
@@ -819,6 +820,20 @@ const unsubscribe = subscribeWithFetch({
 
 To subscribe across all collections or specific multi-collections, use `GET /api/moul/subscribe`:
 `GET /api/moul/subscribe?mouls=posts,comments&ticket=tkt_...`
+
+---
+
+## Request Log & Visit Tracking
+
+Every request outside the built-in excludes (docs, MCP, OAuth, the admin console, `/api/visits`, `/api/requests`, `/api/workers`) is logged to `_requests` (about 290 bytes per row), written in batches of up to 100 rows, one transaction per batch. The log is controlled by these `_settings` keys (`PATCH /api/settings`, applied immediately; `POST /api/settings/reload` picks up changes made by another process):
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `request_log_enabled` | `true` | Turn the `_requests` log on or off. |
+| `request_log_sample_rate` | `1` | Fraction of eligible requests logged, from `0` to `1` (e.g. `0.1` logs one in ten). |
+| `request_log_exclude_paths` | `""` | Comma-separated path prefixes never logged, in addition to the built-in excludes (e.g. `/custom/poll,/api/health`). |
+| `request_log_retention_days` | `30` | Days `_requests` rows are kept by the daily cleanup job. |
+| `visit_retention_days` | `30` | Days `_visits` rows are kept by the daily cleanup job. |
 
 ---
 

@@ -266,6 +266,11 @@ func EnsureSystemTables(db *dbx.DB) error {
 		"oauth_apple_key_id":             "",
 		"oauth_apple_private_key":        "",
 		"oauth_redirect_url":             "",
+		"request_log_enabled":            "true",
+		"request_log_sample_rate":        "1",
+		"request_log_exclude_paths":      "",
+		"request_log_retention_days":     "30",
+		"visit_retention_days":           "30",
 	}
 	for k, v := range defaultSettings {
 		var exists int

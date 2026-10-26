@@ -153,6 +153,18 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
 
+### Runtime Settings: Request Log & Retention
+
+These `_settings` keys are changed with `PATCH /api/settings` (validated, applied immediately) or reloaded with `POST /api/settings/reload`:
+
+| Setting | Default | Description |
+|---|---|---|
+| `request_log_enabled` | `true` | Turn the `_requests` log on or off. |
+| `request_log_sample_rate` | `1` | Fraction of eligible requests logged (`0`–`1`). |
+| `request_log_exclude_paths` | `""` | Comma-separated path prefixes never logged, on top of the built-in excludes. |
+| `request_log_retention_days` | `30` | Days `_requests` rows are kept. |
+| `visit_retention_days` | `30` | Days `_visits` rows are kept. |
+
 ---
 
 ## 5. Built-in MCP Server Tools Reference
