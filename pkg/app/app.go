@@ -63,6 +63,14 @@ type Config struct {
 	// ClientIPHeader names a single-value client address header set by the trusted edge proxy
 	// (e.g. "CF-Connecting-IP"). Empty reads MOUL_CLIENT_IP_HEADER, else X-Forwarded-For is used.
 	ClientIPHeader string
+	// TokenTTL is the lifetime of auth tokens (zero reads MOUL_TOKEN_TTL, default 24h).
+	TokenTTL time.Duration
+	// CollectionTokenTTL overrides TokenTTL per auth collection ("_rootUsers" for root users;
+	// MOUL_ROOT_TOKEN_TTL also sets the latter).
+	CollectionTokenTTL map[string]time.Duration
+	// TokenRefreshGrace is how long after expiry a token may still be refreshed (nil reads
+	// MOUL_TOKEN_REFRESH_GRACE, default 7 days; zero disables refreshing expired tokens).
+	TokenRefreshGrace *time.Duration
 }
 
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
@@ -145,6 +153,29 @@ func (a *App) WithTrustedProxies(proxies ...string) *App {
 // proxies set to the client address.
 func (a *App) WithClientIPHeader(header string) *App {
 	a.config.ClientIPHeader = header
+	return a
+}
+
+// WithTokenTTL sets the lifetime of auth tokens issued for every collection without its own.
+func (a *App) WithTokenTTL(ttl time.Duration) *App {
+	a.config.TokenTTL = ttl
+	return a
+}
+
+// WithCollectionTokenTTL sets the lifetime of auth tokens issued for one auth collection
+// ("_rootUsers" for root users).
+func (a *App) WithCollectionTokenTTL(collection string, ttl time.Duration) *App {
+	if a.config.CollectionTokenTTL == nil {
+		a.config.CollectionTokenTTL = map[string]time.Duration{}
+	}
+	a.config.CollectionTokenTTL[collection] = ttl
+	return a
+}
+
+// WithTokenRefreshGrace sets how long after expiry a token may still be refreshed (zero disables
+// refreshing expired tokens).
+func (a *App) WithTokenRefreshGrace(grace time.Duration) *App {
+	a.config.TokenRefreshGrace = &grace
 	return a
 }
 
@@ -302,6 +333,7 @@ func (a *App) Bootstrap() error {
 		}
 	}
 	auth.InitJWT(jwtSecret)
+	a.configureTokenLifetime()
 
 	adminKey := a.config.AdminKey
 	if adminKey == "" {
@@ -659,6 +691,20 @@ func (a *App) StartServer(ctx context.Context) error {
 
 	logger.Info("Server stopped gracefully")
 	return nil
+}
+
+// configureTokenLifetime applies the environment, then explicit configuration, to token lifetimes.
+func (a *App) configureTokenLifetime() {
+	auth.ConfigureLifetimeFromEnv()
+	if a.config.TokenTTL > 0 {
+		auth.SetTokenTTL(a.config.TokenTTL)
+	}
+	for collection, ttl := range a.config.CollectionTokenTTL {
+		auth.SetCollectionTokenTTL(collection, ttl)
+	}
+	if a.config.TokenRefreshGrace != nil {
+		auth.SetRefreshGrace(*a.config.TokenRefreshGrace)
+	}
 }
 
 func isTesting() bool {
