@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -76,9 +77,57 @@ func IsValidField(fieldName string, moul *schema.Moul) bool {
 	return false
 }
 
+// secretFields are columns no client-supplied filter, sort or search may reference: credentials,
+// one-time codes, reset tokens and linked OAuth identities.
+var secretFields = map[string]bool{
+	"passwordhash":        true,
+	"tokenkey":            true,
+	"otpcode":             true,
+	"otpexpiresat":        true,
+	"passkeys":            true,
+	"resettoken":          true,
+	"resettokenexpiresat": true,
+	"oauthproviders":      true,
+}
+
+// IsSecretField reports whether a column of moul may never be probed by a non-admin caller:
+// credentials and tokens on every collection, and the email of auth collections.
+func IsSecretField(fieldName string, moul *schema.Moul) bool {
+	lower := strings.ToLower(fieldName)
+	if secretFields[lower] {
+		return true
+	}
+	return lower == "email" && (moul == nil || moul.Type == "auth")
+}
+
+// subqueryAlias names the table of a relation or @collection subquery, so columns qualified with
+// the outer table name keep referring to the outer row even when both tables are the same.
+const subqueryAlias = "_sub"
+
+// identPattern matches a plain column name that is safe to quote into SQL.
+var identPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// SortOptions tunes BuildSortSQLWithOptions.
+type SortOptions struct {
+	// Untrusted marks a client-supplied sort (?sort=): secret columns are refused, and so is a
+	// relation path into a collection whose rows are not publicly listable.
+	Untrusted bool
+	// LoadMoul resolves relation targets so their columns can be validated. Without it relation
+	// paths are refused.
+	LoadMoul func(name string) (*schema.Moul, error)
+}
+
 // BuildSortSQL converts a comma-separated sort string (e.g. "-created,title", "@random", "-author.name")
-// into sanitized SQL ORDER BY expressions.
+// into sanitized SQL ORDER BY expressions. It trusts its input (admin-defined); client-supplied
+// sorts must use BuildSortSQLWithOptions with Untrusted set.
 func BuildSortSQL(sortStr string, moul *schema.Moul) ([]string, error) {
+	return BuildSortSQLWithOptions(sortStr, moul, SortOptions{})
+}
+
+// BuildSortSQLWithOptions converts a comma-separated sort string into quoted SQL ORDER BY
+// expressions. Every column, including the column of a relation target, is validated against its
+// schema before it is quoted into the statement.
+func BuildSortSQLWithOptions(sortStr string, moul *schema.Moul, opts SortOptions) ([]string, error) {
 	if strings.TrimSpace(sortStr) == "" {
 		return nil, nil
 	}
@@ -104,47 +153,130 @@ func BuildSortSQL(sortStr string, moul *schema.Moul) ([]string, error) {
 			continue
 		}
 
-		if !IsValidField(fieldName, moul) {
+		if strings.Contains(fieldName, ".") {
+			expr, err := relationSortExpr(fieldName, direction, moul, opts)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, expr)
+			continue
+		}
+
+		if !identPattern.MatchString(fieldName) || !IsValidField(fieldName, moul) {
 			return nil, fmt.Errorf("invalid sort field %q", fieldName)
 		}
-
-		if strings.Contains(fieldName, ".") && moul != nil {
-			relParts := strings.Split(fieldName, ".")
-			var targetField *schema.MoulField
-			for _, f := range moul.Fields {
-				if f.Name == relParts[0] && f.Type == "relation" && f.RelationConfig != nil {
-					tf := f
-					targetField = &tf
-					break
-				}
-			}
-			if targetField != nil {
-				targetMoul := targetField.RelationConfig.TargetMoul
-				card := targetField.RelationConfig.Cardinality
-				subCol := relParts[1]
-				if card == "1:1" || card == "1:N" {
-					result = append(result, fmt.Sprintf("(SELECT %s FROM %s WHERE %s.id = %s) %s", subCol, targetMoul, targetMoul, relParts[0], direction))
-				} else if card == "M:N" {
-					result = append(result, fmt.Sprintf("(SELECT %s FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value LIMIT 1) %s", subCol, targetMoul, relParts[0], targetMoul, direction))
-				}
-				continue
-			}
+		if opts.Untrusted && IsSecretField(fieldName, moul) {
+			return nil, fmt.Errorf("sorting by %q is not allowed", fieldName)
 		}
-
+		// identPattern and the schema check make the bare name safe to emit as is.
 		result = append(result, fmt.Sprintf("%s %s", fieldName, direction))
 	}
 
 	return result, nil
 }
 
+// relationSortExpr builds the ORDER BY subquery of a "relation.column" sort term.
+func relationSortExpr(path, direction string, moul *schema.Moul, opts SortOptions) (string, error) {
+	relParts := strings.Split(path, ".")
+	if len(relParts) != 2 || !identPattern.MatchString(relParts[0]) || !identPattern.MatchString(relParts[1]) {
+		return "", fmt.Errorf("invalid sort field %q", path)
+	}
+	relField := findRelationField(moul, relParts[0])
+	if relField == nil {
+		return "", fmt.Errorf("invalid sort field %q", path)
+	}
+	targetMoul, err := loadTarget(opts.LoadMoul, relField.RelationConfig.TargetMoul)
+	if err != nil {
+		return "", fmt.Errorf("invalid sort field %q: %w", path, err)
+	}
+	subCol := relParts[1]
+	if !IsValidField(subCol, targetMoul) {
+		return "", fmt.Errorf("invalid sort field %q", path)
+	}
+	if opts.Untrusted {
+		if IsSecretField(subCol, targetMoul) {
+			return "", fmt.Errorf("sorting by %q is not allowed", path)
+		}
+		if strings.TrimSpace(targetMoul.Rules.ListRule) != "" {
+			return "", fmt.Errorf("sorting by %q is not allowed: %s records are not public", path, targetMoul.Name)
+		}
+	}
+
+	target := db.QuoteIdentifier(targetMoul.Name)
+	outer := db.QuoteIdentifier(relParts[0])
+	if moul != nil {
+		outer = db.QuoteIdentifier(moul.Name) + "." + outer
+	}
+	col := subqueryAlias + "." + db.QuoteIdentifier(subCol)
+	switch relField.RelationConfig.Cardinality {
+	case "1:1", "1:N":
+		return fmt.Sprintf("(SELECT %s FROM %s AS %s WHERE %s.id = %s) %s", col, target, subqueryAlias, subqueryAlias, outer, direction), nil
+	case "M:N":
+		return fmt.Sprintf("(SELECT %s FROM %s AS %s JOIN json_each(%s) WHERE %s.id = json_each.value LIMIT 1) %s", col, target, subqueryAlias, outer, subqueryAlias, direction), nil
+	}
+	return "", fmt.Errorf("unsupported relation cardinality %q", relField.RelationConfig.Cardinality)
+}
+
+// findRelationField returns the relation field named name of moul, or nil.
+func findRelationField(moul *schema.Moul, name string) *schema.MoulField {
+	if moul == nil {
+		return nil
+	}
+	for _, f := range moul.Fields {
+		if f.Name == name && f.Type == "relation" && f.RelationConfig != nil {
+			tf := f
+			return &tf
+		}
+	}
+	return nil
+}
+
+// loadTarget resolves a relation target collection through load.
+func loadTarget(load func(string) (*schema.Moul, error), name string) (*schema.Moul, error) {
+	if load == nil {
+		return nil, fmt.Errorf("relation paths are not supported here")
+	}
+	if err := db.ValidateTableName(name); err != nil {
+		return nil, err
+	}
+	target, err := load(name)
+	if err != nil {
+		return nil, fmt.Errorf("unknown relation target %q: %w", name, err)
+	}
+	return target, nil
+}
+
+// FilterOptions tunes BuildFilterSQLWithOptions.
+type FilterOptions struct {
+	// ParamPrefix namespaces placeholder names ("<prefix>p1", ...) so several translated
+	// expressions can be bound in one query without overwriting each other's values.
+	ParamPrefix string
+	// Untrusted marks a client-supplied filter (?filter=). It may not reference other collections
+	// (@collection) or secret columns, and a relation path only matches target rows the caller may
+	// list (the target's ListRule is added to the subquery).
+	Untrusted bool
+	// LoadMoul resolves relation targets so their columns can be validated. Without it relation
+	// paths are refused.
+	LoadMoul func(name string) (*schema.Moul, error)
+}
+
+// paramState is shared by a builder and the builders of nested rules, so placeholder names stay
+// unique across the whole expression.
+type paramState struct {
+	prefix  string
+	counter int
+	params  dbx.Params
+}
+
 type sqlBuilder struct {
-	tokens       []Token
-	pos          int
-	moul         *schema.Moul
-	authRecord   map[string]interface{}
-	reqContext   map[string]interface{}
-	paramCounter int
-	params       dbx.Params
+	tokens     []Token
+	pos        int
+	moul       *schema.Moul
+	authRecord map[string]interface{}
+	reqContext map[string]interface{}
+	opts       FilterOptions
+	state      *paramState
+	params     dbx.Params
 }
 
 func newSQLBuilder(tokens []Token, moul *schema.Moul, authRecord map[string]interface{}, reqContext map[string]interface{}) *sqlBuilder {
@@ -155,26 +287,46 @@ func newSQLBuilder(tokens []Token, moul *schema.Moul, authRecord map[string]inte
 	for k, v := range reqContext {
 		reqMap[k] = v
 	}
+	state := &paramState{params: make(dbx.Params)}
 	return &sqlBuilder{
 		tokens:     tokens,
 		moul:       moul,
 		authRecord: authRecord,
 		reqContext: reqMap,
-		params:     make(dbx.Params),
+		state:      state,
+		params:     state.params,
 	}
 }
 
 func (b *sqlBuilder) nextParamName() string {
-	b.paramCounter++
-	return fmt.Sprintf("p%d", b.paramCounter)
+	b.state.counter++
+	return fmt.Sprintf("%sp%d", b.state.prefix, b.state.counter)
 }
 
-// BuildFilterSQL parses a filter string into a parameterized SQL WHERE expression and dbx.Params map.
+// BuildFilterSQL parses a trusted (admin-defined) filter string into a parameterized SQL WHERE
+// expression and dbx.Params map. Client-supplied filters must use BuildFilterSQLWithOptions with
+// Untrusted set.
 func BuildFilterSQL(
 	filterStr string,
 	moul *schema.Moul,
 	authRecord map[string]interface{},
 	requestContext ...map[string]interface{},
+) (string, dbx.Params, error) {
+	var reqCtx map[string]interface{}
+	if len(requestContext) > 0 {
+		reqCtx = requestContext[0]
+	}
+	return BuildFilterSQLWithOptions(filterStr, moul, authRecord, reqCtx, FilterOptions{})
+}
+
+// BuildFilterSQLWithOptions parses a filter string into a parameterized SQL WHERE expression and
+// dbx.Params map according to opts.
+func BuildFilterSQLWithOptions(
+	filterStr string,
+	moul *schema.Moul,
+	authRecord map[string]interface{},
+	reqCtx map[string]interface{},
+	opts FilterOptions,
 ) (string, dbx.Params, error) {
 	if strings.TrimSpace(filterStr) == "" {
 		return "", nil, nil
@@ -188,12 +340,9 @@ func BuildFilterSQL(
 		return "", nil, nil
 	}
 
-	var reqCtx map[string]interface{}
-	if len(requestContext) > 0 {
-		reqCtx = requestContext[0]
-	}
-
 	builder := newSQLBuilder(tokens, moul, authRecord, reqCtx)
+	builder.opts = opts
+	builder.state.prefix = opts.ParamPrefix
 	sqlWhere, err := builder.parseLogicalOr()
 	if err != nil {
 		return "", nil, err
@@ -204,6 +353,32 @@ func BuildFilterSQL(
 	}
 
 	return sqlWhere, builder.params, nil
+}
+
+// nestedRuleSQL translates a target collection's (trusted) rule inside this builder's parameter
+// namespace, for use within a relation subquery.
+func (b *sqlBuilder) nestedRuleSQL(rule string, target *schema.Moul) (string, error) {
+	tokens, err := Tokenize(rule)
+	if err != nil {
+		return "", fmt.Errorf("failed to tokenize %s list rule: %w", target.Name, err)
+	}
+	nested := &sqlBuilder{
+		tokens:     tokens,
+		moul:       target,
+		authRecord: b.authRecord,
+		reqContext: b.reqContext,
+		opts:       FilterOptions{LoadMoul: b.opts.LoadMoul},
+		state:      b.state,
+		params:     b.state.params,
+	}
+	expr, err := nested.parseLogicalOr()
+	if err != nil {
+		return "", fmt.Errorf("failed to translate %s list rule: %w", target.Name, err)
+	}
+	if nested.pos < len(nested.tokens) {
+		return "", fmt.Errorf("unexpected token %q in %s list rule", nested.tokens[nested.pos].Value, target.Name)
+	}
+	return expr, nil
 }
 
 func (b *sqlBuilder) parseLogicalOr() (string, error) {
@@ -335,6 +510,9 @@ func (b *sqlBuilder) parseComparison() (string, error) {
 
 func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 	leftTok := b.tokens[b.pos]
+	if b.opts.Untrusted {
+		return "", fmt.Errorf("@collection references are not allowed in filters")
+	}
 	b.pos++
 
 	if b.pos >= len(b.tokens) || b.tokens[b.pos].Type != TokenOperator {
@@ -356,6 +534,12 @@ func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 	}
 	targetTable := parts[0]
 	targetField := parts[1]
+	if err := db.ValidateTableName(targetTable); err != nil {
+		return "", fmt.Errorf("invalid @collection identifier %q: %w", leftTok.Value, err)
+	}
+	if !identPattern.MatchString(targetField) {
+		return "", fmt.Errorf("invalid @collection identifier %q", leftTok.Value)
+	}
 
 	rightExpr, rightVal, rightIsCol, err := b.resolveToken(rightTok)
 	if err != nil {
@@ -364,7 +548,7 @@ func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 
 	var rightCond string
 	if rightIsCol {
-		rightCond = rightExpr
+		rightCond = b.qualifiedOuter(rightExpr)
 	} else if rightVal != nil {
 		pName := b.nextParamName()
 		b.params[pName] = rightVal
@@ -382,8 +566,17 @@ func (b *sqlBuilder) parseCollectionSubquery() (string, error) {
 		}
 	}
 
-	subquery := fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.%s %s %s)", targetTable, targetTable, targetField, sqlOp, rightCond)
+	subquery := fmt.Sprintf("EXISTS (SELECT 1 FROM %s AS %s WHERE %s.%s %s %s)", db.QuoteIdentifier(targetTable), subqueryAlias, subqueryAlias, db.QuoteIdentifier(targetField), sqlOp, rightCond)
 	return subquery, nil
+}
+
+// qualifiedOuter qualifies a bare column of the builder's collection with its table name, so it
+// keeps referring to the outer row inside a subquery on another table.
+func (b *sqlBuilder) qualifiedOuter(col string) string {
+	if b.moul == nil || !identPattern.MatchString(col) {
+		return col
+	}
+	return db.QuoteIdentifier(b.moul.Name) + "." + db.QuoteIdentifier(col)
 }
 
 func (b *sqlBuilder) isRelationPath(fieldName string) bool {
@@ -424,31 +617,51 @@ func (b *sqlBuilder) parseRelationalComparison() (string, error) {
 	}
 
 	parts := strings.Split(leftTok.Value, ".")
-	relFieldName := parts[0]
-
-	var relField *schema.MoulField
-	if b.moul != nil {
-		for _, f := range b.moul.Fields {
-			if f.Name == relFieldName && f.Type == "relation" && f.RelationConfig != nil {
-				tf := f
-				relField = &tf
-				break
-			}
-		}
+	if len(parts) != 2 || !identPattern.MatchString(parts[1]) {
+		return "", fmt.Errorf("invalid relational path %q", leftTok.Value)
 	}
+	relFieldName := parts[0]
+	relField := findRelationField(b.moul, relFieldName)
 	if relField == nil {
 		return "", fmt.Errorf("invalid relation field %q in path %q", relFieldName, leftTok.Value)
 	}
 
-	targetMoul := relField.RelationConfig.TargetMoul
-	card := relField.RelationConfig.Cardinality
-	targetField := strings.Join(parts[1:], ".")
+	targetMoul, err := loadTarget(b.opts.LoadMoul, relField.RelationConfig.TargetMoul)
+	if err != nil {
+		return "", fmt.Errorf("invalid relational path %q: %w", leftTok.Value, err)
+	}
+	targetField := parts[1]
+	if !IsValidField(targetField, targetMoul) {
+		return "", fmt.Errorf("invalid field %q in path %q", targetField, leftTok.Value)
+	}
+	if b.opts.Untrusted && IsSecretField(targetField, targetMoul) {
+		return "", fmt.Errorf("filtering by %q is not allowed", leftTok.Value)
+	}
+
+	// A client filter only matches target rows the caller may list.
+	visibility := ""
+	if b.opts.Untrusted {
+		if rule := strings.TrimSpace(targetMoul.Rules.ListRule); rule != "" {
+			ruleSQL, err := b.nestedRuleSQL(rule, targetMoul)
+			if err != nil {
+				return "", err
+			}
+			visibility = fmt.Sprintf(" AND (%s)", ruleSQL)
+		}
+	}
+
+	target := db.QuoteIdentifier(targetMoul.Name) + " AS " + subqueryAlias
+	targetCol := subqueryAlias + "." + db.QuoteIdentifier(targetField)
+	outerCol := b.qualifiedOuter(relFieldName)
+	if b.moul == nil {
+		outerCol = db.QuoteIdentifier(relFieldName)
+	}
 
 	sqlOp := b.mapOperator(opTok.Value)
 
 	var rightCond string
 	if rightIsCol {
-		rightCond = rightExpr
+		rightCond = b.qualifiedOuter(rightExpr)
 	} else if rightVal != nil {
 		pName := b.nextParamName()
 		if sqlOp == "LIKE" || sqlOp == "NOT LIKE" {
@@ -461,17 +674,19 @@ func (b *sqlBuilder) parseRelationalComparison() (string, error) {
 		if rightExpr != "" {
 			rightCond = rightExpr
 		} else {
+			nullCheck := "IS NOT NULL"
 			if sqlOp == "=" {
-				return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s IS NULL)", targetMoul, targetMoul, relFieldName, targetMoul, targetField), nil
+				nullCheck = "IS NULL"
 			}
-			return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s IS NOT NULL)", targetMoul, targetMoul, relFieldName, targetMoul, targetField), nil
+			return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s%s)", target, subqueryAlias, outerCol, targetCol, nullCheck, visibility), nil
 		}
 	}
 
+	card := relField.RelationConfig.Cardinality
 	if card == "1:1" || card == "1:N" {
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s.%s %s %s)", targetMoul, targetMoul, relFieldName, targetMoul, targetField, sqlOp, rightCond), nil
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.id = %s AND %s %s %s%s)", target, subqueryAlias, outerCol, targetCol, sqlOp, rightCond, visibility), nil
 	} else if card == "M:N" {
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value AND %s.%s %s %s)", targetMoul, relFieldName, targetMoul, targetMoul, targetField, sqlOp, rightCond), nil
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s JOIN json_each(%s) WHERE %s.id = json_each.value AND %s %s %s%s)", target, outerCol, subqueryAlias, targetCol, sqlOp, rightCond, visibility), nil
 	}
 
 	return "", fmt.Errorf("unsupported relation cardinality %q", card)
@@ -571,8 +786,11 @@ func (b *sqlBuilder) resolveToken(tok Token) (expr string, val interface{}, isCo
 			parts := strings.SplitN(tok.Value, ":", 2)
 			baseCol := parts[0]
 			mod := parts[1]
-			if !IsValidField(baseCol, b.moul) {
+			if !identPattern.MatchString(baseCol) || !IsValidField(baseCol, b.moul) {
 				return "", nil, false, fmt.Errorf("invalid field %q", baseCol)
+			}
+			if b.opts.Untrusted && IsSecretField(baseCol, b.moul) {
+				return "", nil, false, fmt.Errorf("filtering by %q is not allowed", baseCol)
 			}
 			switch mod {
 			case "lower":
@@ -585,7 +803,10 @@ func (b *sqlBuilder) resolveToken(tok Token) (expr string, val interface{}, isCo
 		}
 
 		// Validate column name
-		if IsValidField(tok.Value, b.moul) {
+		if identPattern.MatchString(tok.Value) && IsValidField(tok.Value, b.moul) {
+			if b.opts.Untrusted && IsSecretField(tok.Value, b.moul) {
+				return "", nil, false, fmt.Errorf("filtering by %q is not allowed", tok.Value)
+			}
 			return tok.Value, nil, true, nil
 		}
 
@@ -748,4 +969,44 @@ func (b *sqlBuilder) formatComparison(
 	}
 
 	return fmt.Sprintf("%s %s %s", leftCond, sqlOp, rightCond), nil
+}
+
+// OwnerFields returns the columns a rule pins to the caller: every direct comparison
+// "<column> = @request.auth.id" (or auth.id / @auth.id, in either order). A non-admin write may
+// only set such a column to the caller's own id.
+func OwnerFields(rule string) []string {
+	tokens, err := Tokenize(rule)
+	if err != nil {
+		return nil
+	}
+	isAuthID := func(t Token) bool {
+		return t.Type == TokenIdentifier && (t.Value == "@request.auth.id" || t.Value == "auth.id" || t.Value == "@auth.id")
+	}
+	isColumn := func(t Token) bool {
+		return t.Type == TokenIdentifier && identPattern.MatchString(t.Value) && !strings.EqualFold(t.Value, "id") &&
+			!strings.EqualFold(t.Value, "true") && !strings.EqualFold(t.Value, "false") && !strings.EqualFold(t.Value, "null")
+	}
+	seen := map[string]bool{}
+	var fields []string
+	for i := 0; i+2 < len(tokens); i++ {
+		op := tokens[i+1]
+		if op.Type != TokenOperator || (op.Value != "=" && op.Value != "==") {
+			continue
+		}
+		left, right := tokens[i], tokens[i+2]
+		var col string
+		switch {
+		case isColumn(left) && isAuthID(right):
+			col = left.Value
+		case isAuthID(left) && isColumn(right):
+			col = right.Value
+		default:
+			continue
+		}
+		if !seen[col] {
+			seen[col] = true
+			fields = append(fields, col)
+		}
+	}
+	return fields
 }

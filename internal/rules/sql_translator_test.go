@@ -120,7 +120,7 @@ func TestBuildFilterSQL(t *testing.T) {
 		{
 			name:    "subquery collection filter",
 			filter:  "@collection.posts.author_id = id",
-			wantSub: "EXISTS (SELECT 1 FROM posts WHERE posts.author_id = id)",
+			wantSub: "EXISTS (SELECT 1 FROM `posts` AS _sub WHERE _sub.`author_id` = `posts`.`id`)",
 		},
 	}
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
@@ -20,8 +21,8 @@ import (
 type ExportOptions struct {
 	Format        string   // "csv" or "json" (default: "json")
 	IncludeSchema bool     // If true, JSON export will include schema envelope
-	Filter        string   // Optional filter SQL or rule expression
-	Sort          string   // Optional ORDER BY clause (e.g. "createdAt DESC")
+	Filter        string   // Optional filter rule expression (e.g. "status = 'active'")
+	Sort          string   // Optional sort expression (e.g. "-createdAt,title")
 	Fields        []string // Optional column subset to export
 }
 
@@ -75,13 +76,24 @@ func ExportCollection(dbConn *dbx.DB, moul *schema.Moul, opts ExportOptions, w i
 		return fmt.Errorf("unsupported export format %q: only 'csv' and 'json' are supported", format)
 	}
 
-	// Build query
+	// Build query; sort and filter go through the rules translator so neither is pasted into SQL.
+	loadMoul := func(name string) (*schema.Moul, error) { return db.LoadMoulByName(dbConn, name) }
 	query := dbConn.Select("*").From(moul.Name)
-	if strings.TrimSpace(opts.Sort) != "" {
-		query.OrderBy(opts.Sort)
-	} else {
-		query.OrderBy("createdAt DESC")
+	if strings.TrimSpace(opts.Filter) != "" {
+		where, params, err := rules.BuildFilterSQLWithOptions(opts.Filter, moul, nil, nil, rules.FilterOptions{LoadMoul: loadMoul})
+		if err != nil {
+			return fmt.Errorf("invalid export filter: %w", err)
+		}
+		query.Where(dbx.NewExp(where, params))
 	}
+	sortExprs, err := rules.BuildSortSQLWithOptions(opts.Sort, moul, rules.SortOptions{LoadMoul: loadMoul})
+	if err != nil {
+		return fmt.Errorf("invalid export sort: %w", err)
+	}
+	if len(sortExprs) == 0 {
+		sortExprs = []string{"createdAt DESC"}
+	}
+	query.OrderBy(sortExprs...)
 
 	var rawRecords []dbx.NullStringMap
 	if err := query.All(&rawRecords); err != nil && err != sql.ErrNoRows {
