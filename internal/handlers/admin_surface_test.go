@@ -98,4 +98,10 @@ func TestFeatureFlagEval_MemberIdentityIsPinned(t *testing.T) {
 	if adminRes["value"] == memberRes["value"] {
 		t.Fatalf("member evaluated the flag as user_id=vip: admin=%v member=%v", adminRes, memberRes)
 	}
+	// org_id is an actor key the token cannot vouch for.
+	orgProbe := map[string]interface{}{"context": map[string]interface{}{"org_id": "vip"}}
+	orgRes := decode[map[string]interface{}](t, env.do(http.MethodPost, "/api/feature-flags/beta/eval", orgProbe, bearer(env.memberToken("member1"))))
+	if orgRes["value"] == true {
+		t.Fatalf("member matched an actor gate through org_id: %v", orgRes)
+	}
 }

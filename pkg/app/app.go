@@ -56,8 +56,9 @@ type Config struct {
 	APIPrefix         *string
 	DisableAdminUI    bool
 	DisableCLIParsing bool
-	// TrustedProxies lists the reverse proxies (IPs, CIDRs, "private" or "none") allowed to forward
-	// the client address. Nil reads MOUL_TRUSTED_PROXIES; the default trusts loopback and private networks.
+	// TrustedProxies lists the reverse proxies (IPs, CIDRs, "loopback", "private" or "none")
+	// allowed to forward the client address. Nil reads MOUL_TRUSTED_PROXIES; the default trusts
+	// loopback only.
 	TrustedProxies []string
 	// ClientIPHeader names a single-value client address header set by the trusted edge proxy
 	// (e.g. "CF-Connecting-IP"). Empty reads MOUL_CLIENT_IP_HEADER, else X-Forwarded-For is used.
@@ -134,7 +135,7 @@ func (a *App) WithAPIPrefix(prefix string) *App {
 }
 
 // WithTrustedProxies configures the reverse proxies allowed to forward the client address
-// (IPs, CIDRs, "private" for loopback and private networks, or "none").
+// (IPs, CIDRs, "loopback", "private" for every private network, or "none").
 func (a *App) WithTrustedProxies(proxies ...string) *App {
 	a.config.TrustedProxies = append([]string{}, proxies...)
 	return a

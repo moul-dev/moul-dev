@@ -1144,7 +1144,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	// Columns the UpdateRule pins to the caller (owner = @request.auth.id) cannot be reassigned.
 	if !isAdmin {
-		if field := reassignedOwnerField(moul, body, authUser); field != "" {
+		if field := reassignedOwnerField(moul, body, authUser, recordMap); field != "" {
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("You are not allowed to set %q to another user", field))
 		}
 	}
@@ -2049,7 +2049,8 @@ func (h *RecordHandler) canView(c *echo.Context, moul *schema.Moul, record map[s
 // recordNotFound is the single answer for a missing record and for one the caller may not view.
 // A request whose bearer token was rejected gets 401 for both, so clients notice an expired session.
 func (h *RecordHandler) recordNotFound(c *echo.Context) error {
-	if middleware.IsAuthRejected(c) {
+	// The admin key sent as a bearer token is not a JWT; it must not read as a rejected session.
+	if middleware.IsAuthRejected(c) && !h.isRootOrAdmin(c) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to view this record")
 	}
 	return echo.NewHTTPError(http.StatusNotFound, "Record not found")
@@ -2068,16 +2069,24 @@ func (h *RecordHandler) checkRelationTarget(targetMoul string, id string) error 
 	return nil
 }
 
-// reassignedOwnerField returns the first column the UpdateRule pins to the caller that body sets
-// to anything other than the caller's id, or "".
-func reassignedOwnerField(moul *schema.Moul, body map[string]interface{}, authUser map[string]interface{}) string {
+// reassignedOwnerField returns the first column the UpdateRule pins to the caller that body
+// changes to anything other than the caller's id, or "". Sending the stored value unchanged (a
+// client that PATCHes the whole record) is not a change.
+func reassignedOwnerField(moul *schema.Moul, body map[string]interface{}, authUser map[string]interface{}, stored map[string]interface{}) string {
 	callerID, _ := authUser["id"].(string)
 	for _, field := range rules.OwnerFields(moul.Rules.UpdateRule) {
 		val, present := body[field]
 		if !present {
 			continue
 		}
-		if s, ok := val.(string); !ok || s != callerID || callerID == "" {
+		s, ok := val.(string)
+		if !ok {
+			return field
+		}
+		if current, _ := stored[field].(string); s == current {
+			continue
+		}
+		if s != callerID || callerID == "" {
 			return field
 		}
 	}
@@ -2175,10 +2184,11 @@ func (h *RecordHandler) syncFileRefs(moul *schema.Moul, record map[string]interf
 // signFiles signs the file URLs of a record a guest may not view, so the caller's browser can
 // load them without credentials.
 func (h *RecordHandler) signFiles(c *echo.Context, moul *schema.Moul, record map[string]interface{}) {
-	signRecordFiles(h.DB, h.Files, moul, record, buildRequestContext(c, nil))
+	signRecordFiles(h.DB, h.Files, moul, record, nil)
 }
 
-// signRecordFiles signs the file URLs of record when a guest may not view it.
+// signRecordFiles signs the file URLs of record when a guest (without any request context) may
+// not view it, matching how /storage decides a file is public.
 func signRecordFiles(dbConn *dbx.DB, gate *filegate.Gate, moul *schema.Moul, record map[string]interface{}, reqCtx map[string]interface{}) {
 	fields := fileFields(moul)
 	if gate == nil || len(fields) == 0 || record == nil {

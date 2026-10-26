@@ -249,7 +249,7 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 	// Bound guesses per code, per account and per client network before comparing anything.
 	account := moulName + "|" + email
 	network := otpNetworkKey(c.RealIP())
-	if ok, retryAfter := otpLimiter.allow(account, network); !ok {
+	if ok, retryAfter := otpLimiter.reserve(account, network); !ok {
 		c.Response().Header().Set("Retry-After", strconv.Itoa(int(retryAfter.Seconds())+1))
 		return echo.NewHTTPError(http.StatusTooManyRequests, "Too many sign-in attempts. Request a new code or try again later.")
 	}
@@ -260,9 +260,9 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			otpLimiter.failed(account, network)
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid email or OTP code")
 		}
+		otpLimiter.refund(account, network)
 		logger.Error("Failed to query auth record during OTP verification", "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
@@ -277,7 +277,7 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 
 	dbOtpCode, ok := dbOtpVal.(string)
 	if !ok || subtle.ConstantTimeCompare([]byte(dbOtpCode), []byte(code)) != 1 {
-		if exhausted := otpLimiter.failed(account, network); exhausted {
+		if otpLimiter.codeExhausted(account) {
 			// The code has used up its guesses: void it so only a new code can sign in.
 			if _, err := h.DB.Update(moulName, dbx.Params{"otpCode": nil, "otpExpiresAt": nil}, dbx.HashExp{"email": email}).Execute(); err != nil {
 				logger.Error("Failed to void an exhausted OTP code", "moul", moulName, "err", err)
@@ -298,6 +298,7 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 
 	expiresTime, err := time.Parse(time.RFC3339, dbExpiresStr)
 	if err != nil {
+		otpLimiter.refund(account, network)
 		logger.Error("Failed to parse OTP expiration timestamp from DB", "expires", dbExpiresStr, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
@@ -306,7 +307,7 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "OTP code has expired. Please request a new one.")
 	}
 
-	otpLimiter.succeeded(account)
+	otpLimiter.succeeded(account, network)
 
 	// Clear OTP fields in the database
 	_, err = h.DB.Update(moulName, dbx.Params{

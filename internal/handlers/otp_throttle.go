@@ -87,11 +87,15 @@ func (t *otpThrottle) network(key string) *otpNetworkState {
 	return state
 }
 
-// allow reports whether a verification attempt may proceed, and when to retry if not.
-func (t *otpThrottle) allow(account, network string) (bool, time.Duration) {
+// reserve takes one attempt from every budget, atomically with the check, so concurrent guesses
+// cannot overrun a budget. It returns false and when to retry if a budget is spent. The attempt
+// counts as a failure until succeeded or refund gives it back.
+func (t *otpThrottle) reserve(account, network string) (bool, time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.prune()
 	acc := t.account(account)
+	netState := t.network(network)
 	if acc.dayFailures >= otpMaxDailyFailures {
 		return false, otpDay - t.now().Sub(acc.dayStart)
 	}
@@ -99,22 +103,33 @@ func (t *otpThrottle) allow(account, network string) (bool, time.Duration) {
 		// Only a new code helps; it is requested, not waited for.
 		return false, time.Minute
 	}
-	if net := t.network(network); net.failures >= otpMaxNetworkFailures {
-		return false, otpNetworkWindow - t.now().Sub(net.windowStart)
+	if netState.failures >= otpMaxNetworkFailures {
+		return false, otpNetworkWindow - t.now().Sub(netState.windowStart)
 	}
+	acc.codeFailures++
+	acc.dayFailures++
+	netState.failures++
 	return true, 0
 }
 
-// failed records a wrong code and reports whether the current code has used up its attempts.
-func (t *otpThrottle) failed(account, network string) bool {
+// codeExhausted reports whether the account's current code has used up its attempts.
+func (t *otpThrottle) codeExhausted(account string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.prune()
-	acc := t.account(account)
-	acc.codeFailures++
-	acc.dayFailures++
-	t.network(network).failures++
-	return acc.codeFailures >= otpMaxCodeAttempts
+	return t.account(account).codeFailures >= otpMaxCodeAttempts
+}
+
+// refund gives back an attempt that compared no code (an internal error).
+func (t *otpThrottle) refund(account, network string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if acc, ok := t.accounts[account]; ok {
+		acc.codeFailures = max(0, acc.codeFailures-1)
+		acc.dayFailures = max(0, acc.dayFailures-1)
+	}
+	if netState, ok := t.networks[network]; ok {
+		netState.failures = max(0, netState.failures-1)
+	}
 }
 
 // newCode gives the account fresh per-code attempts (the daily budget is kept).
@@ -124,11 +139,14 @@ func (t *otpThrottle) newCode(account string) {
 	t.account(account).codeFailures = 0
 }
 
-// succeeded forgets the account's failures.
-func (t *otpThrottle) succeeded(account string) {
+// succeeded forgets the account's failures and returns the network's attempt.
+func (t *otpThrottle) succeeded(account, network string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	delete(t.accounts, account)
+	if netState, ok := t.networks[network]; ok {
+		netState.failures = max(0, netState.failures-1)
+	}
 }
 
 // prune drops idle state once many keys are tracked. Called with t.mu held.

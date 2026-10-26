@@ -24,7 +24,7 @@ func mustNew(t *testing.T, cfg Config) *Resolver {
 	return r
 }
 
-func TestClientIP_DefaultTrustsOnlyPrivatePeers(t *testing.T) {
+func TestClientIP_DefaultTrustsOnlyLoopback(t *testing.T) {
 	r := mustNew(t, Config{})
 
 	cases := []struct {
@@ -36,10 +36,9 @@ func TestClientIP_DefaultTrustsOnlyPrivatePeers(t *testing.T) {
 		{"direct client, spoofed XFF ignored", "203.0.113.7:5000", map[string]string{"X-Forwarded-For": "1.2.3.4"}, "203.0.113.7"},
 		{"local proxy appends client", "127.0.0.1:4000", map[string]string{"X-Forwarded-For": "1.2.3.4, 198.51.100.9"}, "198.51.100.9"},
 		{"local proxy, single hop", "127.0.0.1:4000", map[string]string{"X-Forwarded-For": "198.51.100.9"}, "198.51.100.9"},
-		{"private chain then client", "10.0.0.2:1", map[string]string{"X-Forwarded-For": "198.51.100.9, 10.0.0.5"}, "198.51.100.9"},
+		{"NATed client on a private address cannot spoof", "172.17.0.1:1", map[string]string{"X-Forwarded-For": "1.2.3.4"}, "172.17.0.1"},
 		{"local proxy, no header", "127.0.0.1:4000", nil, "127.0.0.1"},
 		{"unparsable hop stops the walk", "127.0.0.1:4000", map[string]string{"X-Forwarded-For": "1.2.3.4, garbage"}, "127.0.0.1"},
-		{"all hops private", "127.0.0.1:4000", map[string]string{"X-Forwarded-For": "192.168.1.20"}, "192.168.1.20"},
 		{"ipv6 peer", "[2001:db8::1]:443", map[string]string{"X-Forwarded-For": "1.2.3.4"}, "2001:db8::1"},
 	}
 	for _, tc := range cases {
@@ -48,6 +47,16 @@ func TestClientIP_DefaultTrustsOnlyPrivatePeers(t *testing.T) {
 				t.Fatalf("ClientIP = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestClientIP_PrivateKeyword(t *testing.T) {
+	r := mustNew(t, Config{TrustedProxies: []string{KeywordPrivate}})
+	if got := r.ClientIP(request("10.0.0.2:1", map[string]string{"X-Forwarded-For": "198.51.100.9, 10.0.0.5"})); got != "198.51.100.9" {
+		t.Fatalf("private chain then client: ClientIP = %q", got)
+	}
+	if got := r.ClientIP(request("127.0.0.1:1", map[string]string{"X-Forwarded-For": "192.168.1.20"})); got != "192.168.1.20" {
+		t.Fatalf("all hops private: ClientIP = %q", got)
 	}
 }
 

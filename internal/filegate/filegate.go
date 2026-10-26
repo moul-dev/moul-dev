@@ -140,9 +140,19 @@ func (g *Gate) RecordRefs(moul, recordID string) (map[string][]string, error) {
 	return out, nil
 }
 
-// SetRecordRefs replaces the references of record (moul, recordID) with fieldFiles.
+// SetRecordRefs replaces the references of record (moul, recordID) with fieldFiles. Cached
+// public decisions of the files it referenced before and after are dropped.
 func (g *Gate) SetRecordRefs(moul, recordID string, fieldFiles map[string][]string) error {
-	err := g.db.Transactional(func(tx *dbx.Tx) error {
+	previous, err := g.RecordRefs(moul, recordID)
+	if err != nil {
+		return err
+	}
+	for _, ids := range previous {
+		for _, id := range ids {
+			g.forgetPublic(id)
+		}
+	}
+	err = g.db.Transactional(func(tx *dbx.Tx) error {
 		if _, err := tx.Delete(refsTable, dbx.HashExp{"moul": moul, "recordId": recordID}).Execute(); err != nil {
 			return err
 		}
@@ -174,10 +184,15 @@ func (g *Gate) DeleteMoulRefs(moul string) error {
 	if _, err := g.db.Delete(refsTable, dbx.HashExp{"moul": moul}).Execute(); err != nil {
 		return fmt.Errorf("failed to delete file references of %s: %w", moul, err)
 	}
-	g.publicMu.Lock()
-	g.publicCache = map[string]time.Time{}
-	g.publicMu.Unlock()
+	g.ForgetAllPublic()
 	return nil
+}
+
+// ForgetAllPublic drops every cached public decision (a collection's rules changed).
+func (g *Gate) ForgetAllPublic() {
+	g.publicMu.Lock()
+	defer g.publicMu.Unlock()
+	g.publicCache = map[string]time.Time{}
 }
 
 // RebuildMoulRefs recomputes the references of every record of m from its stored file fields

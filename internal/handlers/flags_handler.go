@@ -138,10 +138,11 @@ func (h *FlagsHandler) EvaluateFlag(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
 	}
 
-	// A signed-in member evaluates flags as themself: identity attributes come from the token, so a
-	// member cannot probe another user's rollout or targeting.
+	// A signed-in member evaluates flags as themself: identity attributes (and the attribute a
+	// percentage rollout hashes) come from the token, so a member cannot probe another user's or
+	// organization's rollout or targeting. Other attributes (groups, role) stay client-asserted.
 	if authUser := middleware.GetAuthRecord(c); authUser != nil && !middleware.IsRoot(c) {
-		payload.Context = pinEvaluationIdentity(payload.Context, authUser)
+		payload.Context = pinEvaluationIdentity(payload.Context, authUser, flag)
 	}
 
 	res := flags.Evaluate(flag, payload.Context)
@@ -151,8 +152,10 @@ func (h *FlagsHandler) EvaluateFlag(c *echo.Context) error {
 // identityAttributes are the evaluation context keys flags use to identify the subject.
 var identityAttributes = []string{"target_id", "user_id", "actor_id", "actor", "user", "id"}
 
-// pinEvaluationIdentity overwrites the identity attributes of an evaluation context with the caller's.
-func pinEvaluationIdentity(ctx map[string]interface{}, authUser map[string]interface{}) map[string]interface{} {
+// pinEvaluationIdentity overwrites the identity attributes of an evaluation context with the
+// caller's, drops actor keys the token cannot vouch for (org_id), and pins the attribute a
+// percentage rollout of flag hashes.
+func pinEvaluationIdentity(ctx map[string]interface{}, authUser map[string]interface{}, flag *flags.Flag) map[string]interface{} {
 	pinned := make(map[string]interface{}, len(ctx)+len(identityAttributes)+1)
 	for k, v := range ctx {
 		pinned[k] = v
@@ -163,5 +166,9 @@ func pinEvaluationIdentity(ctx map[string]interface{}, authUser map[string]inter
 		pinned[key] = id
 	}
 	pinned["email"] = email
+	delete(pinned, "org_id")
+	if flag != nil && flag.Gates.Percentage != nil && flag.Gates.Percentage.Attribute != "" {
+		pinned[flag.Gates.Percentage.Attribute] = id
+	}
 	return pinned
 }

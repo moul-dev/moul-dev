@@ -546,9 +546,12 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 				if len(event.OldRecord) > 0 {
 					oldAllowed, errOld := rules.EvaluateRule(dbConn, evalRule, authUser, event.OldRecord)
 					if errOld == nil && oldAllowed {
-						// Emit synthetic delete action so client drops the record
+						// Emit synthetic delete action so client drops the record. It carries the
+						// last version the client could see, never the new, now hidden, one.
 						syntheticDelete := event
 						syntheticDelete.Action = "delete"
+						syntheticDelete.Record = event.OldRecord
+						syntheticDelete.OldRecord = nil
 						h.sendEvent(client, syntheticDelete, m)
 						continue
 					}

@@ -212,7 +212,9 @@ func (h *UploadHandler) fileAccess(c *echo.Context, id string) (allowed bool, pu
 			return false, false, err
 		}
 		record := normalizeRecord(m, nullStringMapToMap(raw))
-		if ok, err := rules.EvaluateRule(h.DB, m.Rules.ViewRule, nil, record, reqCtx); err == nil && ok {
+		// "Public" means any guest may view the record: judged without this request's headers or
+		// query, so one caller cannot make a file public for everyone.
+		if ok, err := rules.EvaluateRule(h.DB, m.Rules.ViewRule, nil, record, nil); err == nil && ok {
 			h.Files.RememberPublic(id)
 			return true, true, nil
 		}

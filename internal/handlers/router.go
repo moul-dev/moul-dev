@@ -36,7 +36,7 @@ type RouterConfig struct {
 	DisableAdminUI bool
 	MCPServer      *moulmcp.Server
 	// ClientIP selects the reverse proxies trusted to forward the client address. Nil reads
-	// MOUL_TRUSTED_PROXIES and MOUL_CLIENT_IP_HEADER (default: loopback and private networks).
+	// MOUL_TRUSTED_PROXIES and MOUL_CLIENT_IP_HEADER (default: loopback only).
 	ClientIP *clientip.Config
 }
 
@@ -150,6 +150,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 
 	docsHandler := NewDocsHandler(dbConn, appVersion)
 	docsHandler.SetAPIPrefix(apiPrefix)
+	docsHandler.AdminKey = adminKey
 
 	// ── Global Middleware ────────────────────────────────────────────
 
@@ -219,6 +220,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	fileGate := filegate.New(dbConn, fileURLKey(), fileURLTTL())
 
 	moulHandler := NewMoulHandler(dbConn)
+	moulHandler.Files = fileGate
 	recordHandler := NewRecordHandler(dbConn, adminKey)
 	recordHandler.Files = fileGate
 	recordHandler.Engine = workerEngine

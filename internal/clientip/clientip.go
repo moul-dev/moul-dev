@@ -20,7 +20,11 @@ const (
 
 // Keywords accepted in a trusted proxy list in addition to IPs and CIDRs.
 const (
-	// KeywordPrivate expands to loopback, link-local and private-use ranges (the default).
+	// KeywordLoopback trusts a proxy on the same host (the default).
+	KeywordLoopback = "loopback"
+	// KeywordPrivate expands to loopback, link-local and private-use ranges. Use it only when
+	// every private peer is a proxy: behind NAT (Docker Desktop, rootless containers, Kubernetes
+	// SNAT) clients themselves may arrive from a private address.
 	KeywordPrivate = "private"
 	// KeywordNone trusts no proxy: the TCP peer address is always the client address.
 	KeywordNone = "none"
@@ -28,8 +32,8 @@ const (
 
 // Config selects which peers may forward a client address and how they forward it.
 type Config struct {
-	// TrustedProxies lists IPs, CIDRs and keywords ("private", "none"). Nil means the default,
-	// "private": a proxy on the same host or private network (Caddy, nginx, a tunnel agent).
+	// TrustedProxies lists IPs, CIDRs and keywords ("loopback", "private", "none"). Nil means the
+	// default, "loopback": a proxy on the same host (Caddy, nginx, a tunnel agent).
 	TrustedProxies []string
 	// Header is an optional single-value header the trusted edge proxy sets to the client address
 	// (for example "CF-Connecting-IP" or "X-Real-IP"). When empty, X-Forwarded-For is used.
@@ -62,9 +66,10 @@ func splitList(raw string) []string {
 
 // Resolver extracts the client IP of a request according to a Config.
 type Resolver struct {
-	trustPrivate bool
-	ranges       []*net.IPNet
-	header       string
+	trustLoopback bool
+	trustPrivate  bool
+	ranges        []*net.IPNet
+	header        string
 }
 
 // New builds a Resolver, rejecting entries that are neither an IP, a CIDR nor a keyword.
@@ -72,14 +77,18 @@ func New(cfg Config) (*Resolver, error) {
 	r := &Resolver{header: http.CanonicalHeaderKey(strings.TrimSpace(cfg.Header))}
 	entries := cfg.TrustedProxies
 	if entries == nil {
-		entries = []string{KeywordPrivate}
+		entries = []string{KeywordLoopback}
 	}
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		switch strings.ToLower(entry) {
 		case "":
 			continue
+		case KeywordLoopback:
+			r.trustLoopback = true
+			continue
 		case KeywordPrivate:
+			r.trustLoopback = true
 			r.trustPrivate = true
 			continue
 		case KeywordNone:
@@ -112,7 +121,10 @@ func (r *Resolver) Trusts(ip net.IP) bool {
 	if ip == nil {
 		return false
 	}
-	if r.trustPrivate && (ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsPrivate()) {
+	if r.trustLoopback && ip.IsLoopback() {
+		return true
+	}
+	if r.trustPrivate && (ip.IsLinkLocalUnicast() || ip.IsPrivate()) {
 		return true
 	}
 	for _, ipNet := range r.ranges {

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/schema"
 )
 
@@ -235,5 +236,49 @@ func TestFiles_FieldValuesMustBeOwnUploads(t *testing.T) {
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("file value %v accepted: %d %s", v, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+func TestFiles_PublicDecisionFollowsChanges(t *testing.T) {
+	env := newSecurityEnv(t, fileCollections()...)
+	defer os.RemoveAll("storage")
+	env.insertUser("alice", "alice@example.com")
+	alice := bearer(env.memberToken("alice"))
+
+	img := uploaded(t, env.upload("build.png", "image/png", pngBytes(t), alice))
+	rec := env.do(http.MethodPost, "/api/moul/builds/records", map[string]interface{}{"author": "alice", "images": []interface{}{img}}, alice)
+	expectStatus(t, rec, http.StatusCreated)
+	build := decode[map[string]interface{}](t, rec)
+	plain := storagePathOf(img["url"].(string))
+	expectStatus(t, env.do(http.MethodGet, plain, nil, guest), http.StatusOK) // public, now cached
+
+	// Deleting the only public record makes the file private at once, not after the cache expires.
+	expectStatus(t, env.do(http.MethodDelete, "/api/moul/builds/records/"+build["id"].(string), nil, withAdminKey()), http.StatusNoContent)
+	expectStatus(t, env.do(http.MethodGet, plain, nil, guest), http.StatusNotFound)
+
+	// A request header cannot make a file public for everyone.
+	shared := &schema.Moul{ID: "moul_shared", Name: "shared", Type: "base",
+		Fields: []schema.MoulField{{Name: "doc", Type: "file"}},
+		Rules:  schema.MoulRules{ViewRule: "@request.headers.x_share = 'yes'"}}
+	if err := db.SaveMoulMetadata(env.db, shared); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.CreateMoulTable(env.db, shared); err != nil {
+		t.Fatal(err)
+	}
+	doc := uploaded(t, env.upload("doc.png", "image/png", pngBytes(t), withAdminKey()))
+	expectStatus(t, env.do(http.MethodPost, "/api/moul/shared/records", map[string]interface{}{"doc": doc}, withAdminKey()), http.StatusCreated)
+	docPath := storagePathOf(doc["url"].(string))
+	expectStatus(t, env.do(http.MethodGet, docPath, nil, caller{headers: map[string]string{"X-Share": "yes"}}), http.StatusNotFound)
+	expectStatus(t, env.do(http.MethodGet, docPath, nil, guest), http.StatusNotFound)
+
+	// Deleting a collection drops its file references.
+	expectStatus(t, env.do(http.MethodDelete, "/api/moul/shared", nil, withAdminKey()), http.StatusNoContent)
+	var count int
+	if err := env.db.NewQuery("SELECT COUNT(*) FROM _file_refs WHERE moul = 'shared'").Row(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("%d file references survived the collection", count)
 	}
 }

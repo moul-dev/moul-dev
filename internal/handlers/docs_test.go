@@ -225,13 +225,30 @@ func TestDynamicLiveDocsSpec(t *testing.T) {
 
 	e := echo.New()
 	docsHandler := handlers.NewDocsHandler(dbConn, "v2026.7")
+	docsHandler.AdminKey = "docs-admin-key"
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
 	e.GET("/openapi.json", docsHandler.ServeOpenAPISpecJSON)
 
 	server := httptest.NewServer(e)
 	defer server.Close()
 
-	client := server.Client()
+	// Collection schemas (fields and rules) are part of the admin surface: guests get the static spec.
+	guestResp, err := server.Client().Get(server.URL + "/openapi.json")
+	if err != nil {
+		t.Fatalf("GET /openapi.json as guest failed: %v", err)
+	}
+	guestBody, err := io.ReadAll(guestResp.Body)
+	if closeErr := guestResp.Body.Close(); closeErr != nil {
+		t.Fatalf("close body: %v", closeErr)
+	}
+	if err != nil {
+		t.Fatalf("read guest spec: %v", err)
+	}
+	if strings.Contains(string(guestBody), "Collection: products") || strings.Contains(string(guestBody), "/api/moul/products/records") {
+		t.Fatal("guest OpenAPI spec exposes collections or rules")
+	}
+
+	client := &http.Client{Transport: adminKeyTransport{key: "docs-admin-key", base: server.Client().Transport}}
 
 	t.Run("Live OpenAPI spec dynamically includes created collection and endpoints", func(t *testing.T) {
 		resp, err := client.Get(server.URL + "/openapi.yml")
@@ -344,4 +361,16 @@ func TestDynamicLiveDocsSpec(t *testing.T) {
 			t.Errorf("Expected live JSON spec to contain '/moul/products/records' when APIPrefix is empty")
 		}
 	})
+}
+
+// adminKeyTransport adds the admin key header to every request.
+type adminKeyTransport struct {
+	key  string
+	base http.RoundTripper
+}
+
+func (t adminKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
+	clone.Header.Set("X-Admin-Key", t.key)
+	return t.base.RoundTrip(clone)
 }

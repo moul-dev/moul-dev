@@ -230,6 +230,22 @@ func TestUpdateRecord_OwnerCannotBeReassigned(t *testing.T) {
 	expectStatus(t, env.do(http.MethodPatch, "/api/moul/garages/records/g_alice", map[string]interface{}{"owner": "bob"}, withAdminKey()), http.StatusOK)
 }
 
+func TestUpdateRecord_UnchangedOwnerIsAllowed(t *testing.T) {
+	shared := &schema.Moul{ID: "moul_docs", Name: "docs", Type: "base",
+		Fields: []schema.MoulField{{Name: "title", Type: "text"}, {Name: "owner", Type: "text"}, {Name: "coowner", Type: "text"}},
+		Rules:  schema.MoulRules{ViewRule: "", UpdateRule: "owner = @request.auth.id || coowner = @request.auth.id"}}
+	env := newSecurityEnv(t, shared)
+	env.insertUser("alice", "alice@example.com")
+	env.insertUser("bob", "bob@example.com")
+	env.insert("docs", dbx.Params{"id": "d1", "title": "t", "owner": "alice", "coowner": "bob"})
+	bob := bearer(env.memberToken("bob"))
+
+	// The co-owner PATCHes the whole record, owner unchanged.
+	expectStatus(t, env.do(http.MethodPatch, "/api/moul/docs/records/d1", map[string]interface{}{"title": "x", "owner": "alice", "coowner": "bob"}, bob), http.StatusOK)
+	// Changing the owner to someone else is still refused.
+	expectStatus(t, env.do(http.MethodPatch, "/api/moul/docs/records/d1", map[string]interface{}{"owner": "mallory"}, bob), http.StatusForbidden)
+}
+
 func TestRecords_NumberFieldsAreCanonical(t *testing.T) {
 	env := newSecurityEnv(t, garagesAndBuilds()...)
 	seedGarages(env)
@@ -258,4 +274,10 @@ func TestListRecords_CursorIgnoresHiddenRecords(t *testing.T) {
 	if len(withHidden) != len(withMissing) {
 		t.Fatalf("hidden cursor shaped the page: hidden=%v missing=%v", withHidden, withMissing)
 	}
+}
+
+func TestRecords_AdminKeyAsBearerGets404(t *testing.T) {
+	env := newSecurityEnv(t, garagesAndBuilds()...)
+	rec := env.do(http.MethodGet, "/api/moul/garages/records/missing", nil, bearer(securityTestAdminKey))
+	expectStatus(t, rec, http.StatusNotFound)
 }

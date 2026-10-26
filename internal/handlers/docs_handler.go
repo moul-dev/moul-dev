@@ -11,6 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/docs"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
+	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/pocketbase/dbx"
 	"gopkg.in/yaml.v3"
@@ -22,6 +23,23 @@ type DocsHandler struct {
 	apiPrefix string
 	spec      []byte
 	DB        *dbx.DB
+	// AdminKey lets admin callers receive the live spec, which describes every collection with
+	// its fields and rules; everyone else gets the static spec.
+	AdminKey string
+}
+
+// specFor returns the spec for the caller: the live spec (every collection, its fields and rules)
+// for root users and the admin key, the static engine spec for everyone else, since collection
+// schemas are part of the admin surface.
+func (h *DocsHandler) specFor(c *echo.Context) (map[string]interface{}, error) {
+	if middleware.IsRootOrAdmin(c, h.AdminKey) {
+		return h.BuildLiveSpec()
+	}
+	var root map[string]interface{}
+	if err := yaml.Unmarshal(h.spec, &root); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal base openapi spec: %w", err)
+	}
+	return root, nil
 }
 
 // NewDocsHandler creates a new instance of DocsHandler.
@@ -81,7 +99,7 @@ func (h *DocsHandler) ServeLLMSFullTxt(c *echo.Context) error {
 
 // ServeOpenAPISpec serves the dynamic live openapi.yml spec file.
 func (h *DocsHandler) ServeOpenAPISpec(c *echo.Context) error {
-	specMap, err := h.BuildLiveSpec()
+	specMap, err := h.specFor(c)
 	if err != nil {
 		return c.Blob(http.StatusOK, "text/yaml; charset=utf-8", h.spec)
 	}
@@ -97,7 +115,7 @@ func (h *DocsHandler) ServeOpenAPISpec(c *echo.Context) error {
 
 // ServeOpenAPISpecJSON serves the dynamic live openapi.json spec file.
 func (h *DocsHandler) ServeOpenAPISpecJSON(c *echo.Context) error {
-	specMap, err := h.BuildLiveSpec()
+	specMap, err := h.specFor(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate openapi JSON spec")
 	}
