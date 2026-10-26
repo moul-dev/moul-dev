@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/filegate"
+	"github.com/moul-dev/moul-dev/internal/hooks"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/realtime"
@@ -44,6 +46,42 @@ type RecordHandler struct {
 	SecureCookies   bool // Set to true in production, false in development
 	// Files tracks which records reference which uploads and signs file URLs; nil skips both.
 	Files *filegate.Gate
+	// Hooks runs Go callbacks around record changes; nil runs none.
+	Hooks *hooks.Registry
+}
+
+// internalAdminKey marks a context dispatched in process with admin rights (see RecordDispatcher).
+const internalAdminKey = "moulInternalAdmin"
+
+// hookActor is who makes a record change, for hooks.
+type hookActor struct {
+	auth  map[string]interface{}
+	admin bool
+}
+
+func (h *RecordHandler) actor(c *echo.Context) hookActor {
+	return hookActor{auth: middleware.GetAuthRecord(c), admin: h.isRootOrAdmin(c)}
+}
+
+func (a hookActor) event(ctx context.Context, action hooks.Action, collection string, record, old map[string]interface{}) *hooks.Event {
+	return &hooks.Event{Context: ctx, Action: action, Collection: collection, Record: record, OldRecord: old, Auth: a.auth, Admin: a.admin}
+}
+
+// hookError maps a before-hook error to the HTTP answer: an *echo.HTTPError as is, anything
+// else as 400 with its message.
+func hookError(err error) error {
+	var he *echo.HTTPError
+	if errors.As(err, &he) {
+		return he
+	}
+	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+}
+
+// runAfterHooks runs the after hooks of a change that already happened, logging their errors.
+func (h *RecordHandler) runAfterHooks(e *hooks.Event) {
+	if err := h.Hooks.RunAfter(e); err != nil {
+		logger.Error("Record hook failed", "action", e.Action, "moul", e.Collection, "err", err)
+	}
 }
 
 func NewRecordHandler(dbConn *dbx.DB, adminKey ...string) *RecordHandler {
@@ -54,8 +92,12 @@ func NewRecordHandler(dbConn *dbx.DB, adminKey ...string) *RecordHandler {
 	return &RecordHandler{DB: dbConn, AdminKey: key, SecureCookies: true}
 }
 
-// isRootOrAdmin returns true if the request is authenticated as a root user (_rootUsers) or carries a valid admin key.
+// isRootOrAdmin returns true if the request is authenticated as a root user (_rootUsers), carries a
+// valid admin key, or was dispatched in process with admin rights.
 func (h *RecordHandler) isRootOrAdmin(c *echo.Context) bool {
+	if internal, _ := c.Get(internalAdminKey).(bool); internal {
+		return true
+	}
 	authUser := middleware.GetAuthRecord(c)
 	if authUser != nil && authUser["moul"] == "_rootUsers" {
 		return true
@@ -728,6 +770,10 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		}
 	}
 
+	if err := h.Hooks.RunBefore(h.actor(c).event(c.Request().Context(), hooks.Create, moulName, insertData, nil)); err != nil {
+		return hookError(err)
+	}
+
 	// Dispatch create:before webhook
 	if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
 		Event:     "create:before",
@@ -779,6 +825,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		Record:    copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
+	h.runAfterHooks(h.actor(c).event(c.Request().Context(), hooks.Create, moulName, copyRecord(recordMap), nil))
 
 	return c.JSON(http.StatusCreated, h.present(c, moul, recordMap))
 }
@@ -1395,6 +1442,10 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	if len(updateParams) > 0 {
 		updateParams["updatedAt"] = time.Now().UTC().Format(time.RFC3339)
 
+		if err := h.Hooks.RunBefore(h.actor(c).event(c.Request().Context(), hooks.Update, moulName, updateParams, recordMap)); err != nil {
+			return hookError(err)
+		}
+
 		// Dispatch update:before webhook
 		if err := webhooks.DispatchBefore(c.Request().Context(), moul.Webhooks, webhooks.Payload{
 			Event:     "update:before",
@@ -1445,6 +1496,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		OldRecord: copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
+	h.runAfterHooks(h.actor(c).event(c.Request().Context(), hooks.Update, moulName, copyRecord(updatedRecordMap), recordMap))
 
 	return c.JSON(http.StatusOK, h.present(c, moul, updatedRecordMap))
 }
@@ -1505,7 +1557,11 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
 	}
 
-	if err := h.deleteRecordAndCascade(c.Request().Context(), moul, recordMap, id); err != nil {
+	if err := h.deleteRecordAndCascade(c.Request().Context(), h.actor(c), moul, recordMap, id); err != nil {
+		var he *echo.HTTPError
+		if errors.As(err, &he) {
+			return he
+		}
 		if strings.Contains(err.Error(), "RESTRICT constraint") {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -1516,7 +1572,7 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema.Moul, recordMap map[string]interface{}, id string) error {
+func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, actor hookActor, moul *schema.Moul, recordMap map[string]interface{}, id string) error {
 	moulName := moul.Name
 
 	// 1. Check RESTRICT constraints across all collections
@@ -1562,7 +1618,10 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 		}
 	}
 
-	// 2. Dispatch delete:before webhook
+	// 2. Run before hooks, then dispatch the delete:before webhook
+	if err := h.Hooks.RunBefore(actor.event(ctx, hooks.Delete, moulName, recordMap, recordMap)); err != nil {
+		return hookError(err)
+	}
 	if err := webhooks.DispatchBefore(ctx, moul.Webhooks, webhooks.Payload{
 		Event:     "delete:before",
 		Moul:      moulName,
@@ -1601,6 +1660,7 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 		OldRecord: copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
+	h.runAfterHooks(actor.event(ctx, hooks.Delete, moulName, copyRecord(recordMap), recordMap))
 
 	// 5. Handle CASCADE and SET_NULL for referencing collections
 	for _, otherMoul := range allMouls {
@@ -1652,7 +1712,9 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 						var childRec dbx.NullStringMap
 						if childErr := h.DB.Select("*").From(targetOtherMoul.Name).Where(dbx.HashExp{"id": childID}).One(&childRec); childErr == nil {
 							childMap := normalizeRecord(targetOtherMoul, nullStringMapToMap(childRec))
-							_ = h.deleteRecordAndCascade(ctx, targetOtherMoul, childMap, childID)
+							if err := h.deleteRecordAndCascade(ctx, actor, targetOtherMoul, childMap, childID); err != nil {
+								logger.Error("Failed to cascade delete", "moul", targetOtherMoul.Name, "record", childID, "err", err)
+							}
 						}
 					}
 				} else if onDel == schema.OnDeleteSetNull {

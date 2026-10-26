@@ -432,14 +432,19 @@ func (h *AuthHandler) RefreshToken(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Token does not belong to this collection")
 	}
 
-	// Revoke old token
-	var expTime time.Time
-	if claims.ExpiresAt != nil {
-		expTime = claims.ExpiresAt.Time
-	} else {
-		expTime = time.Now().Add(24 * time.Hour)
+	// An expired token may be exchanged only within the refresh grace period.
+	if claims.ExpiresAt == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token: missing expiry")
 	}
-	_ = db.RevokeToken(h.DB, tokenString, expTime)
+	if time.Since(claims.ExpiresAt.Time) > auth.RefreshGrace() {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Token expired too long ago; sign in again")
+	}
+
+	// Revoke the old token for as long as it could still be refreshed, so it is exchanged once.
+	if err := db.RevokeToken(h.DB, tokenString, claims.ExpiresAt.Time.Add(auth.RefreshGrace())); err != nil {
+		logger.Error("Failed to revoke refreshed token", "moul", moulName, "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
 
 	// Handle special root user refresh (_rootUsers)
 	if moulName == "_rootUsers" {
@@ -544,14 +549,16 @@ func (h *AuthHandler) Logout(c *echo.Context) error {
 		})
 	}
 
-	var expTime time.Time
+	// Keep the token revoked for as long as it could still be refreshed, so a logged-out session
+	// cannot be revived through the refresh endpoint after the token expires.
+	expTime := time.Now().Add(auth.TokenTTL(claims.MoulName))
 	if claims.ExpiresAt != nil {
 		expTime = claims.ExpiresAt.Time
-	} else {
-		expTime = time.Now().Add(24 * time.Hour)
 	}
-
-	_ = db.RevokeToken(h.DB, tokenString, expTime)
+	if err := db.RevokeToken(h.DB, tokenString, expTime.Add(auth.RefreshGrace())); err != nil && !db.IsTokenRevoked(h.DB, tokenString) {
+		logger.Error("Failed to revoke token on logout", "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Logged out successfully",

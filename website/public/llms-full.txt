@@ -40,6 +40,9 @@ The engine reads environment variables from `.env` in the current working direct
 | `MOUL_TRUSTED_PROXIES` | `loopback` | Reverse proxies allowed to forward the client IP (IPs, CIDRs, `loopback`, `private`, `none`). |
 | `MOUL_CLIENT_IP_HEADER` | `""` | Single-value client IP header set by the trusted edge proxy (e.g. `CF-Connecting-IP`). |
 | `MOUL_FILE_URL_TTL` | `1h` | Minimum validity of signed file URLs (`?sig=`). |
+| `MOUL_TOKEN_TTL` | `24h` | Lifetime of auth tokens. |
+| `MOUL_ROOT_TOKEN_TTL` | `MOUL_TOKEN_TTL` | Lifetime of root user tokens. |
+| `MOUL_TOKEN_REFRESH_GRACE` | `168h` | How long after expiry a token may still be refreshed (once); `0s` disables. |
 
 ---
 
@@ -299,6 +302,9 @@ The built-in MCP server provides 17 tools accessible over stdio (`moul mcp` or `
 `moul` provides a public Go package `github.com/moul-dev/moul-dev/pkg/app` to embed the engine into custom applications and attach custom HTTP routes, background workers, or custom MCP tools without forking code.
 
 ### Core API Methods & Hooks
+- `app.OnRecordBeforeCreate/Update/Delete(fn, collections...)` and `app.OnRecordAfterCreate/Update/Delete(fn, collections...)`: Go record hooks that run for HTTP and programmatic writes alike (`*app.RecordEvent`: `Action`, `Collection`, `Record`, `OldRecord`, `Auth`, `Admin`, `Context`). A before hook's error refuses the change (`*echo.HTTPError` picks the status, 400 otherwise).
+- `app.Records()`: Go record API with admin rights (`Create`, `Update`, `Delete`, `Get`, `List`) running the full HTTP pipeline (validation, rules, webhooks, realtime events, file tracking, hooks); `.AsUser(collection, id)` applies collection rules as that user; `.Notify(ctx, app.RecordCreate|RecordUpdate|RecordDelete, collection, id, old)` announces raw SQL writes to hooks, webhooks and realtime subscribers.
+- `app.WithTokenTTL(d)`, `app.WithCollectionTokenTTL(collection, d)`, `app.WithTokenRefreshGrace(d)`: auth token lifetime (default 24h) and refresh grace (default 7 days).
 - `app.Config`: Holds engine configuration including `APIPrefix *string` (default `nil` resolves to `"/api"`, set to `&""` to mount at root), `AdminUIFS fs.FS`, `AdminUIPrefix string` (default `/_moul_`), and `DisableAdminUI bool`.
 - `app.WithAPIPrefix(prefix string) *app.App`: Sets the URL path prefix for API endpoints (e.g. `"/v1"` or `""` for root).
 - `app.WithAdminUI(fs fs.FS) *app.App`: Overrides the default embedded Web Admin Console with a custom frontend SPA distribution.

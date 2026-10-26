@@ -2,7 +2,9 @@ package auth
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -43,8 +45,14 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateToken creates a signed JWT token for an authenticated user.
+// GenerateToken creates a signed JWT token for an authenticated user, valid for the lifetime
+// configured for moulName (TokenTTL).
 func GenerateToken(id, email, username, moulName string) (string, error) {
+	return GenerateTokenWithTTL(id, email, username, moulName, TokenTTL(moulName))
+}
+
+// GenerateTokenWithTTL creates a signed JWT token for an authenticated user valid for ttl.
+func GenerateTokenWithTTL(id, email, username, moulName string, ttl time.Duration) (string, error) {
 	mustBeReady()
 
 	claims := Claims{
@@ -53,7 +61,10 @@ func GenerateToken(id, email, username, moulName string) (string, error) {
 		Username: username,
 		MoulName: moulName,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			// A unique token id keeps two tokens issued in the same second distinct, so revoking
+			// one (logout, refresh) never revokes the other.
+			ID:        newTokenID(),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -125,4 +136,13 @@ func DeriveKey(purpose string) []byte {
 // Ready reports whether InitJWT has been called.
 func Ready() bool {
 	return jwtReady
+}
+
+// newTokenID returns a random JWT id.
+func newTokenID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("failed to generate token id: %v", err))
+	}
+	return hex.EncodeToString(b)
 }
