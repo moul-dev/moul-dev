@@ -308,7 +308,7 @@ func canonicalStorageURL(u, s3Prefix string) string {
 }
 
 func withSignature(u, sig string) string {
-	if !strings.HasPrefix(u, "/storage/") {
+	if sig == "" || !strings.HasPrefix(u, "/storage/") {
 		return u
 	}
 	return u + "?" + filegate.SigParam + "=" + sig
@@ -322,6 +322,24 @@ func (h *UploadHandler) ListFiles(c *echo.Context) error {
 	}
 	if files == nil {
 		files = []*storage.FileInfo{}
+	}
+
+	// Admin previews load files through /storage like everyone else, so hand out signed URLs.
+	settings, err := storage.GetSettings(h.DB)
+	if err != nil {
+		logger.Error("Failed to load storage settings", "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+	s3Prefix := storage.PublicURLPrefix(settings)
+	for _, f := range files {
+		sig := ""
+		if h.Files != nil && filegate.ValidID(f.ID) {
+			sig = h.Files.Sign(f.ID)
+		}
+		f.URL = withSignature(canonicalStorageURL(f.URL, s3Prefix), sig)
+		for size, u := range f.Thumbs {
+			f.Thumbs[size] = withSignature(canonicalStorageURL(u, s3Prefix), sig)
+		}
 	}
 	return c.JSON(http.StatusOK, files)
 }
