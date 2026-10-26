@@ -22,6 +22,7 @@ import (
 // SystemTables defines all reserved internal engine tables starting with an underscore (_).
 var SystemTables = []string{
 	"_moul",
+	"_moul_version",
 	"_visits",
 	"_settings",
 	"_rootUsers",
@@ -82,6 +83,25 @@ func EnsureSystemTables(db *dbx.DB) error {
 	// Ensure webhooks column exists in _moul for backwards compatibility
 	if err := ensureColumnExists(db, "_moul", "webhooks", "TEXT"); err != nil {
 		return err
+	}
+
+	// _moul_version counts every change to _moul (maintained by triggers), so the in-process schema
+	// cache can tell when another process or raw SQL changed a collection.
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _moul_version (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			version INTEGER NOT NULL
+		);
+		INSERT OR IGNORE INTO _moul_version (id, version) VALUES (1, 0);
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_insert AFTER INSERT ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_update AFTER UPDATE ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_delete AFTER DELETE ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+	`).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create _moul_version table and triggers: %w", err)
 	}
 
 	// Create meta-table _visits
@@ -615,134 +635,9 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	if err != nil {
 		return fmt.Errorf("failed to insert metadata for moul %s: %w", m.Name, err)
 	}
+	InvalidateMoulCache(db)
 
 	return nil
-}
-
-// LoadAllMoul retrieves all defined mouls from the meta-table.
-func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
-	var rows []struct {
-		ID             string         `db:"id"`
-		Name           string         `db:"name"`
-		Type           string         `db:"type"`
-		Fields         string         `db:"fields"`
-		Rules          string         `db:"rules"`
-		EmailTemplates sql.NullString `db:"email_templates"`
-		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"createdAt"`
-		UpdatedAt      string         `db:"updatedAt"`
-	}
-
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
-		From("_moul").
-		All(&rows)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to fetch moul: %w", err)
-	}
-
-	var mouls []*schema.Moul
-	for _, row := range rows {
-		var fields []schema.MoulField
-		var rules schema.MoulRules
-		var templates *schema.EmailTemplates
-		var webhooks []schema.Webhook
-
-		if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
-			return nil, err
-		}
-		if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
-			var t schema.EmailTemplates
-			if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
-				templates = &t
-			}
-		}
-		if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
-			_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
-		}
-
-		if templates == nil && row.Type == "auth" {
-			defaults := schema.GetDefaultEmailTemplates()
-			templates = &defaults
-		}
-
-		mouls = append(mouls, &schema.Moul{
-			ID:             row.ID,
-			Name:           row.Name,
-			Type:           row.Type,
-			Fields:         fields,
-			Rules:          rules,
-			EmailTemplates: templates,
-			Webhooks:       webhooks,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-		})
-	}
-
-	return mouls, nil
-}
-
-// LoadMoulByName retrieves a single moul by name.
-func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
-	var row struct {
-		ID             string         `db:"id"`
-		Name           string         `db:"name"`
-		Type           string         `db:"type"`
-		Fields         string         `db:"fields"`
-		Rules          string         `db:"rules"`
-		EmailTemplates sql.NullString `db:"email_templates"`
-		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"createdAt"`
-		UpdatedAt      string         `db:"updatedAt"`
-	}
-
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
-		From("_moul").
-		Where(dbx.HashExp{"name": name}).
-		One(&row)
-	if err != nil {
-		return nil, err
-	}
-
-	var fields []schema.MoulField
-	var rules schema.MoulRules
-	var templates *schema.EmailTemplates
-	var webhooks []schema.Webhook
-
-	if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
-		return nil, err
-	}
-	if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
-		var t schema.EmailTemplates
-		if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
-			templates = &t
-		}
-	}
-	if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
-		_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
-	}
-
-	if templates == nil && row.Type == "auth" {
-		defaults := schema.GetDefaultEmailTemplates()
-		templates = &defaults
-	}
-
-	return &schema.Moul{
-		ID:             row.ID,
-		Name:           row.Name,
-		Type:           row.Type,
-		Fields:         fields,
-		Rules:          rules,
-		EmailTemplates: templates,
-		Webhooks:       webhooks,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-	}, nil
 }
 
 // UpdateMoulEmailTemplates updates the email templates in the _moul metadata table.
@@ -760,6 +655,7 @@ func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.Email
 	if err != nil {
 		return fmt.Errorf("failed to update email templates: %w", err)
 	}
+	InvalidateMoulCache(db)
 	return nil
 }
 
@@ -1138,6 +1034,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 	if err != nil {
 		return fmt.Errorf("failed to update metadata for moul %s: %w", m.Name, err)
 	}
+	InvalidateMoulCache(db)
 
 	return nil
 }

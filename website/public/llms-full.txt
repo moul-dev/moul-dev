@@ -45,6 +45,7 @@ The engine reads environment variables from `.env` in the current working direct
 
 1. **`_moul`**: Stores schema metadata for all dynamic collections.
    - Columns: `id` (TEXT PRIMARY KEY), `name` (TEXT UNIQUE), `type` (TEXT), `fields` (TEXT JSON), `rules` (TEXT JSON), `email_templates` (TEXT JSON), `webhooks` (TEXT JSON), `createdAt` (TEXT), `updatedAt` (TEXT).
+   - Parsed schemas are cached in process. Writes through Moul invalidate the cache at once; changes made by another process (or raw SQL) are detected within one second through `_moul_version`, a change counter maintained by triggers on `_moul`.
 2. **`_visits`**: Stores deduplicated visitor session analytics. A request without a visit cookie/header only starts a visit when the browser can keep the cookie (`Sec-Fetch-Site: same-origin` or `none`); API clients and cross-origin fetches are logged to `_requests` with a `NULL` `visit_id` instead.
 3. **`_requests`**: Log table storing HTTP request logs asynchronously (batched, one transaction per batch). Controlled by the `_settings` keys `request_log_enabled` (default `true`), `request_log_sample_rate` (`0`–`1`, default `1`), `request_log_exclude_paths` (comma-separated prefixes), `request_log_retention_days` (default `30`) and `visit_retention_days` (default `30`).
 4. **`_settings`**: Key-value store for app settings (e.g. SMTP, Litestream, S3, rate limiting config).

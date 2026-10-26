@@ -10,7 +10,6 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/util"
-	"github.com/pocketbase/dbx"
 )
 
 func (s *Server) registerCollectionTools() {
@@ -149,8 +148,7 @@ func (s *Server) handleDeleteCollection(ctx context.Context, req mcp.CallToolReq
 		return mcp.NewToolResultError(fmt.Sprintf("failed to drop table %q: %v", moul.Name, err)), nil
 	}
 
-	_, err = s.dbConn.Delete("_moul", dbx.HashExp{"name": name}).Execute()
-	if err != nil {
+	if err := db.DeleteMoulMetadata(s.dbConn, name); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to delete collection metadata %q: %v", name, err)), nil
 	}
 

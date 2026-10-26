@@ -320,18 +320,11 @@ func (h *Hub) getMoul(dbConn *dbx.DB, moulName string) (*schema.Moul, bool) {
 		return nil, false
 	}
 
-	if h.schemaCache != nil {
-		if cached, ok := h.schemaCache.Get(moulName); ok {
-			return cached, true
-		}
-	}
-
+	// db.LoadMoulByName is served from the db package's schema cache, which every schema write
+	// invalidates; a second, time-based cache here would only serve stale rules.
 	loaded, err := db.LoadMoulByName(dbConn, moulName)
 	if err != nil || loaded == nil {
 		return nil, false
-	}
-	if h.schemaCache != nil {
-		h.schemaCache.Set(moulName, loaded)
 	}
 	return loaded, true
 }
