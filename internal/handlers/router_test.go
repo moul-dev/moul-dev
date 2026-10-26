@@ -98,6 +98,7 @@ func TestRouter_APIPrefixConfigurations(t *testing.T) {
 
 		// /v1/moul should respond
 		req = httptest.NewRequest(http.MethodGet, "/v1/moul", nil)
+		req.Header.Set("X-Admin-Key", adminKey)
 		rec = httptest.NewRecorder()
 		r.ServeHTTP(rec, req)
 		if rec.Code != http.StatusOK {
@@ -130,6 +131,7 @@ func TestRouter_APIPrefixConfigurations(t *testing.T) {
 
 		// /moul should respond
 		req = httptest.NewRequest(http.MethodGet, "/moul", nil)
+		req.Header.Set("X-Admin-Key", adminKey)
 		rec = httptest.NewRecorder()
 		r.ServeHTTP(rec, req)
 		if rec.Code != http.StatusOK {

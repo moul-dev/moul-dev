@@ -9,6 +9,7 @@ import (
 
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/filegate"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/schema"
@@ -22,6 +23,9 @@ var camelCaseFieldRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
 type MoulHandler struct {
 	DB *dbx.DB
+	// Files, when set, forgets cached file visibility when rules change and drops the file
+	// references of deleted collections.
+	Files *filegate.Gate
 }
 
 func NewMoulHandler(dbConn *dbx.DB) *MoulHandler {
@@ -159,6 +163,11 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	}
 
 	realtime.DefaultHub.InvalidateCache(name)
+	if h.Files != nil {
+		if err := h.Files.DeleteMoulRefs(name); err != nil {
+			logger.Error("Failed to drop file references of deleted collection", "moul", name, "err", err)
+		}
+	}
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -255,6 +264,10 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	realtime.DefaultHub.InvalidateCache(name)
 	if updated.Name != name {
 		realtime.DefaultHub.InvalidateCache(updated.Name)
+	}
+	if h.Files != nil {
+		// A changed viewRule changes which files are public.
+		h.Files.ForgetAllPublic()
 	}
 
 	return c.JSON(http.StatusOK, updated)

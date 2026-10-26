@@ -31,6 +31,8 @@ var SystemTables = []string{
 	"_revoked_tokens",
 	"_requests",
 	"_workers",
+	"_files",
+	"_file_refs",
 }
 
 // IsSystemTable returns true if the table name has the reserved system prefix "_".
@@ -387,6 +389,27 @@ func EnsureSystemTables(db *dbx.DB) error {
 		return fmt.Errorf("failed to create _workers table: %w", err)
 	}
 
+	// Uploaded files and the records that reference them (file access control, see internal/filegate)
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _files (
+			id TEXT PRIMARY KEY,
+			ownerMoul TEXT NOT NULL DEFAULT '',
+			ownerId TEXT NOT NULL DEFAULT '',
+			createdAt TEXT NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS _file_refs (
+			fileId TEXT NOT NULL,
+			moul TEXT NOT NULL,
+			recordId TEXT NOT NULL,
+			field TEXT NOT NULL,
+			PRIMARY KEY (fileId, moul, recordId, field)
+		);
+		CREATE INDEX IF NOT EXISTS idx_file_refs_record ON _file_refs (moul, recordId);
+	`).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create file tracking tables: %w", err)
+	}
+
 	return nil
 }
 
@@ -673,6 +696,10 @@ func RenameMoulTable(db *dbx.DB, oldName, newName string) error {
 	_, err := db.NewQuery(query).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to rename table %s to %s: %w", oldName, newName, err)
+	}
+	// File references follow the collection, so its files keep their visibility.
+	if _, err := db.Update("_file_refs", dbx.Params{"moul": newName}, dbx.HashExp{"moul": oldName}).Execute(); err != nil {
+		return fmt.Errorf("failed to move file references from %s to %s: %w", oldName, newName, err)
 	}
 	return nil
 }

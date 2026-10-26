@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moul-dev/moul-dev/internal/analytics"
+	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/moul-dev/moul-dev/internal/middleware"
@@ -45,8 +46,8 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 	// Register Routes
 	e.POST("/api/moul", moulHandler.CreateMoul)
 	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
-	e.GET("/api/visits", visitsHandler.ListVisits)
-	e.GET("/api/visits/:id", visitsHandler.GetVisit)
+	e.GET("/api/visits", visitsHandler.ListVisits, middleware.RequireAdmin("analytics-admin-key"))
+	e.GET("/api/visits/:id", visitsHandler.GetVisit, middleware.RequireAdmin("analytics-admin-key"))
 	e.POST("/api/moul/:name/auth-with-password", authHandler.AuthWithPassword)
 
 	server := httptest.NewServer(e)
@@ -148,6 +149,16 @@ func TestAnalyticsHTTPFlow(t *testing.T) {
 		t.Errorf("Expected 401 Unauthorized for anonymous visits access, got %d", resp.StatusCode)
 	}
 
+	resp = getJSON(t, client, server.URL+"/api/visits", token)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("Expected 403 Forbidden for member visits access, got %d", resp.StatusCode)
+	}
+
+	rootToken, err := auth.GenerateToken("root1", "root@example.com", "root", "_rootUsers")
+	if err != nil {
+		t.Fatalf("Failed to sign root token: %v", err)
+	}
+	token = rootToken
 	resp = getJSON(t, client, server.URL+"/api/visits", token)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for authorized visits access, got %d", resp.StatusCode)

@@ -171,8 +171,7 @@ func DynamicRateLimiter(adminKey string) echo.MiddlewareFunc {
 			}
 
 			// Admin requests bypass all rate limits
-			providedAdminKey := c.Request().Header.Get("X-Admin-Key")
-			if providedAdminKey != "" && providedAdminKey == adminKey {
+			if CheckAdminKey(c, adminKey) {
 				return next(c)
 			}
 

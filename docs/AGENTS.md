@@ -153,6 +153,9 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
 | `MOUL_IMAGE_CONCURRENCY` | max(1, CPUs/2) | How many uploaded images are decoded and resized at once; further uploads wait. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
+| `MOUL_TRUSTED_PROXIES` | `loopback` | Reverse proxies allowed to forward the client IP (IPs, CIDRs, `loopback`, `private`, `none`). |
+| `MOUL_CLIENT_IP_HEADER` | `""` | Single-value client IP header set by the trusted edge proxy (e.g. `CF-Connecting-IP`); empty uses `X-Forwarded-For`. |
+| `MOUL_FILE_URL_TTL` | `1h` | Minimum validity of signed file URLs (`?sig=`). |
 
 ### Runtime Settings: Image Uploads
 
@@ -237,8 +240,33 @@ When creating an `auth` collection, default access rules are automatically confi
 - `update`: `id = @request.auth.id` (users can only edit their own profile)
 - `delete`: `id = @request.auth.id` (users can only delete their own account)
 
+### Owner Pinning
+A column the `updateRule` compares to the caller (`owner = @request.auth.id`) can only be set to the caller's own id by non-admin updates; anything else answers `403`.
+
+### Email Visibility
+The `email` of an auth record is returned only to admins and to the user themself, unless the collection defines a bool field named `emailVisibility` and the record sets it to `true`.
+
+### Client Filter Restrictions
+Client `?filter=` / `?sort=` / `?search=` values from non-admin callers may not use `@collection` or secret columns (`passwordHash`, `tokenKey`, OTP and reset columns, `oauthProviders`, the `email` of auth collections). Relation paths only match target records the caller may list, and relation sorts require a publicly listable target. See README "Security Defaults" for the full list.
+
 ### System Table Protection
-All internal tables starting with `_*` (`_workers`, `_moul`, `_settings`, `_rootUsers`, `_visits`, `_requests`, `_feature_flags`, `_certmagic`, `_revoked_tokens`) are reserved and protected against dynamic record endpoints (`/api/moul/:name/*`). Requests to dynamic record routes for system tables immediately return `404 Not Found`. Use dedicated authenticated endpoints instead (e.g. `/api/workers` for worker jobs, `/api/requests` for request logs, `/api/visits` for visitor analytics, `/api/settings` for settings, `/api/setup` / `/api/admin` for root accounts).
+All internal tables starting with `_*` (`_workers`, `_moul`, `_settings`, `_rootUsers`, `_visits`, `_requests`, `_feature_flags`, `_certmagic`, `_revoked_tokens`, `_files`, `_file_refs`) are reserved and protected against dynamic record endpoints (`/api/moul/:name/*`). Requests to dynamic record routes for system tables immediately return `404 Not Found`. Use dedicated authenticated endpoints instead (e.g. `/api/workers` for worker jobs, `/api/requests` for request logs, `/api/visits` for visitor analytics, `/api/settings` for settings, `/api/setup` / `/api/admin` for root accounts).
+
+---
+
+## 6a. Security Defaults
+
+Moul ships secure by default. The behaviors below apply to every caller that is neither a root user (`_rootUsers` token) nor the admin key.
+
+- **Admin surface**: schemas (`/api/moul`, `/api/moul/:name`, webhooks, email templates, export/import), settings, file listing and deletion, workers, retry-jobs, visits, requests, feature flag management, system metrics, the rules sandbox and MCP accept only a root user token or the admin key, and only they get collection schemas in `/openapi.json` / `/openapi.yml` (others get the static engine spec). Guests get `401` (with the OAuth discovery challenge), members of other auth collections `403`. Members keep `POST /api/upload` and `POST /api/feature-flags/:key/eval` (identity attributes and a percentage rollout's attribute are pinned to the caller and `org_id` is dropped; other attributes such as `groups` and `role` remain client-asserted, so flags are not an authorization mechanism).
+- **Client IP**: forwarding headers are honored only from trusted proxies. By default only loopback is trusted (a reverse proxy or tunnel agent on the same host). A proxy in another container or on the LAN needs `MOUL_TRUSTED_PROXIES` (IPs, CIDRs, `loopback`, `private` for every private network, or `none`); use `private` only when no client can reach Moul from a private address (NAT setups such as Docker Desktop or Kubernetes SNAT). Optionally set `MOUL_CLIENT_IP_HEADER` (e.g. `CF-Connecting-IP`). Rate limits, the root IP allowlist, OTP throttling, the request log and visits all use this address.
+- **Hidden records answer like missing ones**: `GET`, `PATCH` and `DELETE` on `/api/moul/:name/records/:id` check the `viewRule` first; a record the caller may not view answers `404 Record not found`, byte for byte the answer for an unknown id (`401` for both when the presented bearer token was rejected, so clients still notice an expired session). Relation targets of a create are validated only after the `createRule` passes.
+- **Filters, sorts and search**: the `listRule` and `?filter=` bind their values under separate placeholders, so a filter can never rewrite the rule. Client filters may not use `@collection`, and neither filters nor sorts may reference secret columns (`passwordHash`, `tokenKey`, OTP and reset columns, `oauthProviders`, and the `email` of auth collections). Relation paths (`author.name = 'x'`) only match target records the caller may list; sorting through a relation requires a publicly listable target. Every column, including relation targets, is validated against the schema before it reaches SQL. `?search=` skips emails, and the `?after=` cursor is read under the caller's `listRule`.
+- **Responses**: secrets (`passwordHash`, `tokenKey`, OTP, `resetToken`, `resetTokenExpiresAt`, `oauthProviders`, cloak blind indexes) never leave the server. The `email` of an auth record reaches only admins and the user themself, unless the collection has a bool field `emailVisibility` and the record sets it. `?expand=` applies the target collection's `viewRule`: hidden to-one targets are `null`, hidden to-many targets are omitted. Realtime events are redacted per subscriber.
+- **Ownership**: a column the `updateRule` pins to the caller (`owner = @request.auth.id`) cannot be changed to anyone else on update (`403`); resending the stored value is fine. Number fields store canonical numbers; strings must be plain decimals of at most 32 bytes.
+- **Files**: Moul records who uploaded each file and which record fields reference it. `/storage/<id>/<name>` is served without a signature only when a guest could view a record that references the file; otherwise it needs a `?sig=` signature (returned in record responses, expands, realtime events and the upload response, valid at least `MOUL_FILE_URL_TTL`, default `1h`), the uploader, or a caller who may view a referencing record. Anything else answers the same `404` as a missing file. With S3 enabled, `/storage` presigns a short redirect, so the bucket can be private. File field values must point to their own upload under `/storage`, and members may attach only files they uploaded (or files the record already holds).
+- **Uploads**: members may not upload HTML, SVG, XML, scripts or CSS (by extension, declared or sniffed type); the `file_allowed_types` setting (e.g. `image/*,application/pdf`) narrows uploads further. Stored files are served with `X-Content-Type-Options: nosniff`, a sandboxing Content-Security-Policy, a type taken from the extension, and as an attachment unless they are images, audio or video.
+- **OTP sign-in**: each issued code allows 5 guesses (then it is voided), each account 20 failures per day, and each client network (IPv4 address or IPv6 /64) 30 failures per 10 minutes; exceeding one answers `429` with `Retry-After`. Codes are compared in constant time and never logged when a mailer or worker can deliver them.
 
 ---
 

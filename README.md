@@ -43,6 +43,7 @@
 - [Request Log & Visit Tracking](#request-log--visit-tracking)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
+- [Security Defaults](#security-defaults)
 - [Deployment Information](#deployment-information)
   - [Single-Binary Production Build](#single-binary-production-build)
   - [Production Environment Variables](#production-environment-variables)
@@ -873,7 +874,7 @@ Moul supports 11 dynamic field types for schema definitions with automatic SQLit
 | `datetime` | Date and time timestamp string | `TEXT` | Enforces ISO 8601 / RFC 3339 format | `type: string`, `format: date-time` |
 | `json` | Arbitrary JSON object or array structure | `TEXT` | Validates valid JSON syntax; unmarshals back to JSON | `type: object` |
 | `url` | Web address link string | `TEXT` | Enforces valid HTTP/HTTPS URL format | `type: string`, `format: uri` |
-| `file` | File path or upload metadata | `TEXT` | Validates file metadata structure | `type: string` |
+| `file` | Upload metadata (one file object or a list) | `TEXT` | File objects pointing to own uploads under `/storage`; members may attach only their own uploads; `max` bounds a list | `type: object` or `type: array` |
 | `select` | Enum string with constrained allowed values | `TEXT` | Restricts value to one of predefined `options` | `type: string`, `enum: [...]` |
 | `relation` | Foreign key association to another collection | `TEXT` | Validates target record existence (`1:1`, `1:N`, or `M:N` array) | `type: string` or `type: array` |
 | `cloak` | Authenticated encrypted binary with optional blind-index | `BLOB` | AES-256-GCM; requires `MOUL_ENCRYPTION_KEY`; optional blind index | `type: string` |
@@ -904,6 +905,22 @@ Each Moul (table) supports five HCL-like expression rules evaluated on client AP
 - **Field Modifiers**: `:lower`, `:length`, `:isset`, `:changed`, `:each`
 - **Helper Functions**: `geoDistance(lonA, latA, lonB, latB)`, `strftime(format, timeVal)`
 - **Cross-Collection Join Queries**: `@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = 'admin'`
+
+Rules are written by admins and may use every construct above. Client `?filter=` expressions use the same syntax with the restrictions listed under [Security Defaults](#security-defaults).
+
+## Security Defaults
+
+Moul ships secure by default. The behaviors below apply to every caller that is neither a root user (`_rootUsers` token) nor the admin key.
+
+- **Admin surface**: schemas (`/api/moul`, `/api/moul/:name`, webhooks, email templates, export/import), settings, file listing and deletion, workers, retry-jobs, visits, requests, feature flag management, system metrics, the rules sandbox and MCP accept only a root user token or the admin key, and only they get collection schemas in `/openapi.json` / `/openapi.yml` (others get the static engine spec). Guests get `401` (with the OAuth discovery challenge), members of other auth collections `403`. Members keep `POST /api/upload` and `POST /api/feature-flags/:key/eval` (identity attributes and a percentage rollout's attribute are pinned to the caller and `org_id` is dropped; other attributes such as `groups` and `role` remain client-asserted, so flags are not an authorization mechanism).
+- **Client IP**: forwarding headers are honored only from trusted proxies. By default only loopback is trusted (a reverse proxy or tunnel agent on the same host). A proxy in another container or on the LAN needs `MOUL_TRUSTED_PROXIES` (IPs, CIDRs, `loopback`, `private` for every private network, or `none`); use `private` only when no client can reach Moul from a private address (NAT setups such as Docker Desktop or Kubernetes SNAT). Optionally set `MOUL_CLIENT_IP_HEADER` (e.g. `CF-Connecting-IP`). Rate limits, the root IP allowlist, OTP throttling, the request log and visits all use this address.
+- **Hidden records answer like missing ones**: `GET`, `PATCH` and `DELETE` on `/api/moul/:name/records/:id` check the `viewRule` first; a record the caller may not view answers `404 Record not found`, byte for byte the answer for an unknown id (`401` for both when the presented bearer token was rejected, so clients still notice an expired session). Relation targets of a create are validated only after the `createRule` passes.
+- **Filters, sorts and search**: the `listRule` and `?filter=` bind their values under separate placeholders, so a filter can never rewrite the rule. Client filters may not use `@collection`, and neither filters nor sorts may reference secret columns (`passwordHash`, `tokenKey`, OTP and reset columns, `oauthProviders`, and the `email` of auth collections). Relation paths (`author.name = 'x'`) only match target records the caller may list; sorting through a relation requires a publicly listable target. Every column, including relation targets, is validated against the schema before it reaches SQL. `?search=` skips emails, and the `?after=` cursor is read under the caller's `listRule`.
+- **Responses**: secrets (`passwordHash`, `tokenKey`, OTP, `resetToken`, `resetTokenExpiresAt`, `oauthProviders`, cloak blind indexes) never leave the server. The `email` of an auth record reaches only admins and the user themself, unless the collection has a bool field `emailVisibility` and the record sets it. `?expand=` applies the target collection's `viewRule`: hidden to-one targets are `null`, hidden to-many targets are omitted. Realtime events are redacted per subscriber.
+- **Ownership**: a column the `updateRule` pins to the caller (`owner = @request.auth.id`) cannot be changed to anyone else on update (`403`); resending the stored value is fine. Number fields store canonical numbers; strings must be plain decimals of at most 32 bytes.
+- **Files**: Moul records who uploaded each file and which record fields reference it. `/storage/<id>/<name>` is served without a signature only when a guest could view a record that references the file; otherwise it needs a `?sig=` signature (returned in record responses, expands, realtime events and the upload response, valid at least `MOUL_FILE_URL_TTL`, default `1h`), the uploader, or a caller who may view a referencing record. Anything else answers the same `404` as a missing file. With S3 enabled, `/storage` presigns a short redirect, so the bucket can be private. File field values must point to their own upload under `/storage`, and members may attach only files they uploaded (or files the record already holds).
+- **Uploads**: members may not upload HTML, SVG, XML, scripts or CSS (by extension, declared or sniffed type); the `file_allowed_types` setting (e.g. `image/*,application/pdf`) narrows uploads further. Stored files are served with `X-Content-Type-Options: nosniff`, a sandboxing Content-Security-Policy, a type taken from the extension, and as an attachment unless they are images, audio or video.
+- **OTP sign-in**: each issued code allows 5 guesses (then it is voided), each account 20 failures per day, and each client network (IPv4 address or IPv6 /64) 30 failures per 10 minutes; exceeding one answers `429` with `Retry-After`. Codes are compared in constant time and never logged when a mailer or worker can deliver them.
 
 ---
 
@@ -937,6 +954,9 @@ Set the following environment variables on your production server or container:
 | `MOUL_DB_MAX_CONNS` | No | SQLite connection pool size; every connection is opened with WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`, and idle connections are kept (default: max(4, CPU count)) | `8` |
 | `MOUL_ENCRYPTION_KEY` | Optional* | Master key (min 16 bytes) for `cloak` field encryption and blind indexes (*required if any collection has a `cloak` field) | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
+| `MOUL_TRUSTED_PROXIES` | No | Reverse proxies allowed to forward the client IP: IPs, CIDRs, `loopback` (default), `private` or `none` | `loopback,172.18.0.0/16` |
+| `MOUL_CLIENT_IP_HEADER` | No | Single-value client IP header set by the trusted edge proxy (default: `X-Forwarded-For`) | `CF-Connecting-IP` |
+| `MOUL_FILE_URL_TTL` | No | Minimum validity of signed file URLs (Go duration, default `1h`) | `30m` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |
 
 ### Litestream Automated S3 Backup & Disaster Recovery

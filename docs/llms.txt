@@ -25,6 +25,7 @@ Moul (`moul`) provides an all-in-one backend platform combining dynamic schema c
 - **System Observability**: Real-time host CPU, Memory, Disk, and Load telemetry via native host collector.
 - **Real-time SSE Streams & DoS Protection**: Server-Sent Events (SSE) subscriptions with per-event authorization, transition-aware record deletion events, slow-consumer eviction (128-event ring buffer, 5s write deadlines), and per-user (15) / per-IP (30) concurrent stream quotas.
 - **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built with TanStack Router, Meta StyleX, Phosphor Icons, Moul UI (`@moul-dev/ui`) with real-time field validation across all data types, tri-state system/light/dark theme toggle, embedded via public `pkg/ui` package.
+- **Secure Defaults**: Admin surface limited to root users and the admin key, trusted-proxy client IPs, hidden records answering like missing ones, injection-safe client filters (no `@collection`, no secret columns), email and secret redaction, rule-checked expands, owner pinning, signed URLs for files of non-public records, active-content upload blocking, and OTP guess limits.
 - **Built-in MCP Server**: Native MCP protocol server accessible via `moul mcp` (or `<custom-binary> mcp` in embedded mode) and `/api/mcp` (Streamable HTTP & SSE transport modes).
 
 ## Built-in MCP Server Tools Summary

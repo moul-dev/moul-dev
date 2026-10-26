@@ -46,7 +46,7 @@ func TestListRequests_RequiresAuth(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	err = handler.ListRequests(c)
+	err = middleware.RequireAdmin("admin-key")(handler.ListRequests)(c)
 	if err == nil {
 		t.Fatal("Expected error for unauthenticated request")
 	}
@@ -128,7 +128,7 @@ func TestGetRequest_RequiresAuth(t *testing.T) {
 		{Name: "id", Value: "req-123"},
 	})
 
-	err = handler.GetRequest(c)
+	err = middleware.RequireAdmin("admin-key")(handler.GetRequest)(c)
 	if err == nil {
 		t.Fatal("Expected error for unauthenticated request")
 	}

@@ -472,6 +472,7 @@ func TestAppAPIPrefix(t *testing.T) {
 	}
 	// GET /moul should respond at root
 	req = httptest.NewRequest(http.MethodGet, "/moul", nil)
+	req.Header.Set("X-Admin-Key", "test-admin-key")
 	rec = httptest.NewRecorder()
 	emptyApp.Router().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

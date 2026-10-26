@@ -22,6 +22,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/analytics"
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/backup"
+	"github.com/moul-dev/moul-dev/internal/clientip"
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
@@ -55,6 +56,13 @@ type Config struct {
 	APIPrefix         *string
 	DisableAdminUI    bool
 	DisableCLIParsing bool
+	// TrustedProxies lists the reverse proxies (IPs, CIDRs, "loopback", "private" or "none")
+	// allowed to forward the client address. Nil reads MOUL_TRUSTED_PROXIES; the default trusts
+	// loopback only.
+	TrustedProxies []string
+	// ClientIPHeader names a single-value client address header set by the trusted edge proxy
+	// (e.g. "CF-Connecting-IP"). Empty reads MOUL_CLIENT_IP_HEADER, else X-Forwarded-For is used.
+	ClientIPHeader string
 }
 
 // WorkerInitFunc is a hook callback invoked when the worker engine is initialized.
@@ -123,6 +131,20 @@ func (a *App) WithAdminPrefix(prefix string) *App {
 // Pass "" to mount API endpoints at the root level without a prefix.
 func (a *App) WithAPIPrefix(prefix string) *App {
 	a.config.APIPrefix = &prefix
+	return a
+}
+
+// WithTrustedProxies configures the reverse proxies allowed to forward the client address
+// (IPs, CIDRs, "loopback", "private" for every private network, or "none").
+func (a *App) WithTrustedProxies(proxies ...string) *App {
+	a.config.TrustedProxies = append([]string{}, proxies...)
+	return a
+}
+
+// WithClientIPHeader configures a single-value header (e.g. "CF-Connecting-IP") that trusted
+// proxies set to the client address.
+func (a *App) WithClientIPHeader(header string) *App {
+	a.config.ClientIPHeader = header
 	return a
 }
 
@@ -420,6 +442,14 @@ func (a *App) Bootstrap() error {
 	}
 	normalizedAPIPrefix := handlers.NormalizeAPIPrefix(a.config.APIPrefix)
 
+	clientIPConfig := clientip.FromEnv()
+	if a.config.TrustedProxies != nil {
+		clientIPConfig.TrustedProxies = a.config.TrustedProxies
+	}
+	if a.config.ClientIPHeader != "" {
+		clientIPConfig.Header = a.config.ClientIPHeader
+	}
+
 	a.router = handlers.NewRouterWithOptions(
 		a.dbConn,
 		a.workerEngine,
@@ -435,6 +465,7 @@ func (a *App) Bootstrap() error {
 			DisableAdminUI: a.config.DisableAdminUI,
 			MCPServer:      a.mcpServer,
 			APIPrefix:      a.config.APIPrefix,
+			ClientIP:       &clientIPConfig,
 			AdminUIOptions: handlers.AdminUIOptions{
 				Prefix:     adminPrefix,
 				FileSystem: adminFS,

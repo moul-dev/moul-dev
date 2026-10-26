@@ -191,6 +191,9 @@ func TestHubPerEventRuleEvaluation_DynamicAndTransitionAware(t *testing.T) {
 		if msg.Record["id"] != "art_1" {
 			t.Fatalf("Expected record ID art_1, got %v", msg.Record["id"])
 		}
+		if msg.Record["title"] != "Alice Post" || msg.OldRecord != nil {
+			t.Fatalf("Synthetic delete leaked the now-hidden record: %+v / %+v", msg.Record, msg.OldRecord)
+		}
 	case <-time.After(200 * time.Millisecond):
 		t.Fatal("Expected transition-aware delete event for art_1")
 	}

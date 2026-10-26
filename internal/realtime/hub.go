@@ -233,6 +233,18 @@ type Hub struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*Client]struct{}
 	schemaCache *SchemaCache
+	recordHook  RecordHook
+}
+
+// RecordHook adjusts an event record after it has been sanitized for a subscriber (for example,
+// signing the URLs of files that are not public).
+type RecordHook func(m *schema.Moul, record map[string]interface{})
+
+// SetRecordHook installs fn to run on every record sent to subscribers.
+func (h *Hub) SetRecordHook(fn RecordHook) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.recordHook = fn
 }
 
 func NewHub() *Hub {
@@ -342,11 +354,10 @@ func CloneAndSanitizeRecord(m *schema.Moul, rawRecord map[string]interface{}, cl
 		clean[k] = v
 	}
 
-	// Always delete internal auth credentials
-	delete(clean, "passwordHash")
-	delete(clean, "otpCode")
-	delete(clean, "otpExpiresAt")
-	delete(clean, "passkeys")
+	// Always delete credentials, reset tokens and linked identities, and never forward an expand
+	// block: it was built for the writer, not for this subscriber.
+	schema.StripSecrets(m, clean)
+	delete(clean, "expand")
 
 	if m != nil {
 		// 1. Strip companion hash columns for all cloak fields unconditionally
@@ -419,6 +430,17 @@ func CloneAndSanitizeRecord(m *schema.Moul, rawRecord map[string]interface{}, cl
 				delete(clean, k)
 			}
 		}
+	}
+
+	// The email of an auth record reaches only admins, that user, or everyone when published.
+	if m != nil {
+		var viewer map[string]interface{}
+		isAdmin := false
+		if client != nil {
+			viewer = client.AuthUser
+			isAdmin = client.IsAdmin
+		}
+		schema.RedactForViewer(m, clean, viewer, isAdmin)
 	}
 
 	return clean
@@ -517,9 +539,12 @@ func (h *Hub) Publish(event Event, dbConn *dbx.DB) {
 				if len(event.OldRecord) > 0 {
 					oldAllowed, errOld := rules.EvaluateRule(dbConn, evalRule, authUser, event.OldRecord)
 					if errOld == nil && oldAllowed {
-						// Emit synthetic delete action so client drops the record
+						// Emit synthetic delete action so client drops the record. It carries the
+						// last version the client could see, never the new, now hidden, one.
 						syntheticDelete := event
 						syntheticDelete.Action = "delete"
+						syntheticDelete.Record = event.OldRecord
+						syntheticDelete.OldRecord = nil
 						h.sendEvent(client, syntheticDelete, m)
 						continue
 					}
@@ -546,6 +571,15 @@ func (h *Hub) sendEvent(client *Client, event Event, m *schema.Moul) {
 	eventCopy.Record = CloneAndSanitizeRecord(m, event.Record, client)
 	if len(event.OldRecord) > 0 {
 		eventCopy.OldRecord = CloneAndSanitizeRecord(m, event.OldRecord, client)
+	}
+	h.mu.RLock()
+	hook := h.recordHook
+	h.mu.RUnlock()
+	if hook != nil && m != nil {
+		hook(m, eventCopy.Record)
+		if eventCopy.OldRecord != nil {
+			hook(m, eventCopy.OldRecord)
+		}
 	}
 
 	client.mu.RLock()
