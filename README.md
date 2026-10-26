@@ -38,6 +38,9 @@
   - [1. Register and Start Worker Engine](#1-register-and-start-worker-engine)
   - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
   - [3. Programmatic Analytics API](#3-programmatic-analytics-api)
+  - [5. Write Transactions (`app.WriteTx`)](#5-write-transactions-appwritetx)
+- [Image Uploads](#image-uploads)
+- [Request Log & Visit Tracking](#request-log--visit-tracking)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
 - [Deployment Information](#deployment-information)
@@ -58,7 +61,7 @@
 5. **Background Worker Engine**: High-performance, SQLite-backed asynchronous background job processor (inspired by Elixir's Oban) with queue priorities, automatic retries with exponential backoffs, and immediate dispatch triggers.
 6. **Single Binary SQLite**: Driven by `github.com/pocketbase/dbx` and the CGO-free `modernc.org/sqlite` driver for lightweight, zero-configuration local development and deployment. On first startup, all reserved system tables prefixed with `_*` (`_moul`, `_visits`, `_requests`, `_settings`, `_rootUsers`, `_feature_flags`, `_certmagic`, `_revoked_tokens`, `_workers`) are automatically created.
 7. **First-Party Analytics & Session Tracking**: Create `analytic` moul that automatically track events and sessions. Parses client headers (IP, User-Agent, Referrer, UTM parameters) to resolve browser, OS, device, referring domain, and marketing campaign parameters, including optional MaxMind GeoIP2 resolution.
-8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability.
+8. **Default Request Tracking**: All HTTP requests are automatically tracked via a global middleware. Visitor sessions are deduplicated in `_visits`, and per-request data (method, path, status code, response time) is batch-inserted asynchronously into `_requests` for zero-latency-impact observability. The request log can be turned off, sampled, or scoped with [request log settings](#request-log--visit-tracking).
 9. **TUI Admin Console**: Full-featured Terminal User Interface (TUI) built with Charm's Bubble Tea to manage schemas, records, worker queues, analytics, email templates, and system settings without requiring a browser.
 10. **Feature Flags & OpenFeature SDK**: Integrated OpenFeature Go SDK provider with multi-level gate targeting (master boolean switches, actor overrides, dynamic group rules, and deterministic percentage rollouts) backed by SQLite storage and fast thread-safe in-memory caching.
 11. **Native Host System Monitoring**: Lightweight, zero-dependency host system metrics collector (CPU, memory, disk space, goroutines, system load) for real-time observability in the TUI console and REST API.
@@ -570,6 +573,21 @@ params := &analytics.EventParams{
 event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```
 
+### 5. Write Transactions (`app.WriteTx`)
+
+Every transaction Moul opens starts with `BEGIN IMMEDIATE`, so it owns SQLite's write lock before its first read. Use `app.WriteTx` for any code that reads and then writes: it cannot fail with `SQLITE_BUSY` because another connection committed between the read and the write, and it re-runs the transaction (with backoff) if the lock stays busy past the 5 s busy timeout. `fn` may run more than once, so keep it free of side effects outside `tx`, and keep it short.
+
+```go
+err := moulApp.WriteTx(func(tx *dbx.Tx) error {
+	var stock int
+	if err := tx.NewQuery("SELECT stock FROM products WHERE id = {:id}").Bind(dbx.Params{"id": id}).Row(&stock); err != nil {
+		return err
+	}
+	_, err := tx.Update("products", dbx.Params{"stock": stock - 1}, dbx.HashExp{"id": id}).Execute()
+	return err
+})
+```
+
 ---
 
 ## Built-in Model Context Protocol (MCP) Server
@@ -806,11 +824,38 @@ To subscribe across all collections or specific multi-collections, use `GET /api
 
 ---
 
+## Image Uploads
+
+`POST /api/upload` stores the original and, for images, returns `width`, `height`, a `thumbhash` and `thumbs` with `sm` (256 px), `md` (1024 px) and `lg` (2048 px) renditions; a size that is not smaller than the original points at the original. Each rendition is cut from the next larger one with a Linear filter, at most `MOUL_IMAGE_CONCURRENCY` images are processed at once, and images above 40 megapixels are refused from their header, before anything is stored or decoded.
+
+Set the `file_thumbs_async` setting to `"true"` to return as soon as the original is stored: the upload response then has `width` and `height` and every thumb pointing at the original, and the built-in `GenerateImageSizes` job makes the renditions and thumbhash and records them in the upload's `meta.json` (as listed by `GET /api/upload`).
+
+---
+
+## Request Log & Visit Tracking
+
+Every request outside the built-in excludes (docs, MCP, OAuth, the admin console, `/api/visits`, `/api/requests`, `/api/workers`) is logged to `_requests` (about 290 bytes per row), written in batches of up to 100 rows, one transaction per batch. The log is controlled by these `_settings` keys (`PATCH /api/settings`, applied immediately; `POST /api/settings/reload` picks up changes made by another process):
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `request_log_enabled` | `true` | Turn the `_requests` log on or off. |
+| `request_log_sample_rate` | `1` | Fraction of eligible requests logged, from `0` to `1` (e.g. `0.1` logs one in ten). |
+| `request_log_exclude_paths` | `""` | Comma-separated path prefixes never logged, in addition to the built-in excludes (e.g. `/custom/poll,/api/health`). |
+| `request_log_retention_days` | `30` | Days `_requests` rows are kept by the daily cleanup job. |
+| `visit_retention_days` | `30` | Days `_visits` rows are kept by the daily cleanup job. |
+
+**Visits.** A request that brings a visit (`moul_visit` / `moul_visitor` cookie, or `X-Visit-Token` / `X-Visitor-Token` header) is attributed to it; known visits are cached in memory, so repeat requests run no SQL for tracking. A request that brings none starts a new visit only when the browser will keep the cookie (`Sec-Fetch-Site: same-origin` or `none`: the admin console, a page or link opened on the API's own origin). API clients, SSR, cross-origin fetches without credentials and probes never create `_visits` rows; their requests are logged with a `NULL` `visit_id`.
+
+**Token revocation checks** answer from an in-memory copy of `_revoked_tokens`: a token revoked in this process (logout, `db.RevokeToken`) is rejected at once, and the copy is re-read every 60 seconds to honour revocations made by other processes (MCP stdio, CLI).
+
+---
+
 ## Worker Engine Architecture & Operations
 
 - **State Transitions**: Jobs navigate states (`available` -> `executing` -> `completed` / `discarded`). Historical execution records are retained for metric inspections.
 - **Failures & Exponential Backoffs**: If a job handler returns an error or panics, the engine logs error details, increments `attempt`, and reschedules execution with an exponential backoff (`(attempt^2 * 10) + 10` seconds + jitter) until reaching `max_attempts` (default: 20), after which it transitions to `discarded`.
 - **Immediate Dispatch**: Enqueuing a job via HTTP or Go API immediately signals the worker engine over an in-memory channel, executing available jobs without waiting for polling tickers.
+- **Atomic Claims**: A worker claims its next job with a single `UPDATE … RETURNING` statement, so claims never collide with concurrent writes and no job is claimed twice.
 - **Graceful Shutdown**: On OS interrupt signals (`SIGINT`/`SIGTERM`), worker fetching halts immediately while existing running task handlers are given a graceful timeout to finish execution cleanly.
 
 ---
@@ -888,6 +933,8 @@ Set the following environment variables on your production server or container:
 | `MOUL_API_PREFIX` | No | Base URL path prefix for API endpoints (default: /api, use `""` for root) | `/v1` or `""` |
 | `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
+| `MOUL_IMAGE_CONCURRENCY` | No | How many uploaded images are decoded and resized at once (default: max(1, CPU count / 2)); further uploads wait | `2` |
+| `MOUL_DB_MAX_CONNS` | No | SQLite connection pool size; every connection is opened with WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`, and idle connections are kept (default: max(4, CPU count)) | `8` |
 | `MOUL_ENCRYPTION_KEY` | Optional* | Master key (min 16 bytes) for `cloak` field encryption and blind indexes (*required if any collection has a `cloak` field) | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |

@@ -48,6 +48,7 @@ func TestRequestTracker_CreatesVisitOnFirstRequest(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/api/moul/test/records", nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0")
+	req.Header.Set("Sec-Fetch-Site", "none") // a page opened directly in the browser keeps the cookie
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -88,6 +89,7 @@ func TestRequestTracker_ReusesVisitOnSubsequentRequest(t *testing.T) {
 	})
 
 	req1 := httptest.NewRequest(http.MethodGet, "/first", nil)
+	req1.Header.Set("Sec-Fetch-Site", "same-origin")
 	rec1 := httptest.NewRecorder()
 	c1 := e.NewContext(req1, rec1)
 	_ = handler(c1)
@@ -179,6 +181,7 @@ func TestRequestTracker_AttachesAuthUserID(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 

@@ -22,6 +22,7 @@ import (
 // SystemTables defines all reserved internal engine tables starting with an underscore (_).
 var SystemTables = []string{
 	"_moul",
+	"_moul_version",
 	"_visits",
 	"_settings",
 	"_rootUsers",
@@ -82,6 +83,25 @@ func EnsureSystemTables(db *dbx.DB) error {
 	// Ensure webhooks column exists in _moul for backwards compatibility
 	if err := ensureColumnExists(db, "_moul", "webhooks", "TEXT"); err != nil {
 		return err
+	}
+
+	// _moul_version counts every change to _moul (maintained by triggers), so the in-process schema
+	// cache can tell when another process or raw SQL changed a collection.
+	_, err = db.NewQuery(`
+		CREATE TABLE IF NOT EXISTS _moul_version (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			version INTEGER NOT NULL
+		);
+		INSERT OR IGNORE INTO _moul_version (id, version) VALUES (1, 0);
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_insert AFTER INSERT ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_update AFTER UPDATE ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+		CREATE TRIGGER IF NOT EXISTS _moul_version_after_delete AFTER DELETE ON _moul
+		BEGIN UPDATE _moul_version SET version = version + 1 WHERE id = 1; END;
+	`).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create _moul_version table and triggers: %w", err)
 	}
 
 	// Create meta-table _visits
@@ -226,6 +246,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 		"file_s3_access_key":             "",
 		"file_s3_secret_key":             "",
 		"file_s3_force_path_style":       "false",
+		"file_thumbs_async":              "false",
 		"litestream_enabled":             "false",
 		"litestream_s3_bucket":           "",
 		"litestream_s3_endpoint":         "",
@@ -266,6 +287,11 @@ func EnsureSystemTables(db *dbx.DB) error {
 		"oauth_apple_key_id":             "",
 		"oauth_apple_private_key":        "",
 		"oauth_redirect_url":             "",
+		"request_log_enabled":            "true",
+		"request_log_sample_rate":        "1",
+		"request_log_exclude_paths":      "",
+		"request_log_retention_days":     "30",
+		"visit_retention_days":           "30",
 	}
 	for k, v := range defaultSettings {
 		var exists int
@@ -302,7 +328,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 	_, err = db.NewQuery(`
 		CREATE TABLE IF NOT EXISTS _requests (
 			id TEXT PRIMARY KEY,
-			visit_id TEXT NOT NULL,
+			visit_id TEXT,
 			method TEXT NOT NULL,
 			path TEXT NOT NULL,
 			status_code INTEGER NOT NULL,
@@ -364,12 +390,25 @@ func EnsureSystemTables(db *dbx.DB) error {
 	return nil
 }
 
-// InitDB initializes the SQLite database, configures pragmas, and ensures all system tables exist.
+// InitDB initializes the SQLite database, configures every pooled connection (WAL, busy_timeout,
+// synchronous, foreign_keys), sizes the pool, and ensures all system tables exist.
 func InitDB(dbPath string) (*dbx.DB, error) {
-	db, err := dbx.Open("sqlite", dbPath)
+	db, err := dbx.Open("sqlite", buildDSN(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
+
+	// Keep idle connections instead of closing all but two: with the default pool, overlapping
+	// requests reopen (and reconfigure) connections on every burst.
+	size := poolSize()
+	if isPrivateMemoryDB(dbPath) {
+		size = 1
+	}
+	sqlDB := db.DB()
+	sqlDB.SetMaxOpenConns(size)
+	sqlDB.SetMaxIdleConns(size)
+	sqlDB.SetConnMaxIdleTime(0)
+	sqlDB.SetConnMaxLifetime(0)
 
 	if os.Getenv("MOUL_DEBUG_SQL") == "true" || os.Getenv("MOUL_DEBUG") == "true" {
 		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sqlStr string, rows *sql.Rows, err error) {
@@ -380,17 +419,12 @@ func InitDB(dbPath string) (*dbx.DB, error) {
 		}
 	}
 
-	// Configure SQLite PRAGMAs to prevent SQLITE_BUSY errors
-	pragmas := []string{
-		"PRAGMA journal_mode=WAL;",
-		"PRAGMA busy_timeout=5000;",
-		"PRAGMA synchronous=NORMAL;",
-		"PRAGMA foreign_keys=ON;",
-	}
-	for _, pragma := range pragmas {
-		if _, err := db.NewQuery(pragma).Execute(); err != nil {
-			return nil, fmt.Errorf("failed to execute pragma (%s): %w", pragma, err)
+	// Opening is lazy; ping so a bad path or pragma fails here rather than on the first query.
+	if err := sqlDB.Ping(); err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to open sqlite database: %w (close: %v)", err, closeErr)
 		}
+		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
 
 	if err := EnsureSystemTables(db); err != nil {
@@ -602,134 +636,9 @@ func SaveMoulMetadata(db *dbx.DB, m *schema.Moul) error {
 	if err != nil {
 		return fmt.Errorf("failed to insert metadata for moul %s: %w", m.Name, err)
 	}
+	InvalidateMoulCache(db)
 
 	return nil
-}
-
-// LoadAllMoul retrieves all defined mouls from the meta-table.
-func LoadAllMoul(db *dbx.DB) ([]*schema.Moul, error) {
-	var rows []struct {
-		ID             string         `db:"id"`
-		Name           string         `db:"name"`
-		Type           string         `db:"type"`
-		Fields         string         `db:"fields"`
-		Rules          string         `db:"rules"`
-		EmailTemplates sql.NullString `db:"email_templates"`
-		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"createdAt"`
-		UpdatedAt      string         `db:"updatedAt"`
-	}
-
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
-		From("_moul").
-		All(&rows)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to fetch moul: %w", err)
-	}
-
-	var mouls []*schema.Moul
-	for _, row := range rows {
-		var fields []schema.MoulField
-		var rules schema.MoulRules
-		var templates *schema.EmailTemplates
-		var webhooks []schema.Webhook
-
-		if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
-			return nil, err
-		}
-		if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
-			var t schema.EmailTemplates
-			if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
-				templates = &t
-			}
-		}
-		if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
-			_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
-		}
-
-		if templates == nil && row.Type == "auth" {
-			defaults := schema.GetDefaultEmailTemplates()
-			templates = &defaults
-		}
-
-		mouls = append(mouls, &schema.Moul{
-			ID:             row.ID,
-			Name:           row.Name,
-			Type:           row.Type,
-			Fields:         fields,
-			Rules:          rules,
-			EmailTemplates: templates,
-			Webhooks:       webhooks,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-		})
-	}
-
-	return mouls, nil
-}
-
-// LoadMoulByName retrieves a single moul by name.
-func LoadMoulByName(db *dbx.DB, name string) (*schema.Moul, error) {
-	var row struct {
-		ID             string         `db:"id"`
-		Name           string         `db:"name"`
-		Type           string         `db:"type"`
-		Fields         string         `db:"fields"`
-		Rules          string         `db:"rules"`
-		EmailTemplates sql.NullString `db:"email_templates"`
-		Webhooks       sql.NullString `db:"webhooks"`
-		CreatedAt      string         `db:"createdAt"`
-		UpdatedAt      string         `db:"updatedAt"`
-	}
-
-	err := db.Select("id", "name", "type", "fields", "rules", "email_templates", "webhooks", "createdAt", "updatedAt").
-		From("_moul").
-		Where(dbx.HashExp{"name": name}).
-		One(&row)
-	if err != nil {
-		return nil, err
-	}
-
-	var fields []schema.MoulField
-	var rules schema.MoulRules
-	var templates *schema.EmailTemplates
-	var webhooks []schema.Webhook
-
-	if err := json.Unmarshal([]byte(row.Fields), &fields); err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal([]byte(row.Rules), &rules); err != nil {
-		return nil, err
-	}
-	if row.EmailTemplates.Valid && row.EmailTemplates.String != "" && row.EmailTemplates.String != "{}" {
-		var t schema.EmailTemplates
-		if err := json.Unmarshal([]byte(row.EmailTemplates.String), &t); err == nil {
-			templates = &t
-		}
-	}
-	if row.Webhooks.Valid && row.Webhooks.String != "" && row.Webhooks.String != "[]" {
-		_ = json.Unmarshal([]byte(row.Webhooks.String), &webhooks)
-	}
-
-	if templates == nil && row.Type == "auth" {
-		defaults := schema.GetDefaultEmailTemplates()
-		templates = &defaults
-	}
-
-	return &schema.Moul{
-		ID:             row.ID,
-		Name:           row.Name,
-		Type:           row.Type,
-		Fields:         fields,
-		Rules:          rules,
-		EmailTemplates: templates,
-		Webhooks:       webhooks,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-	}, nil
 }
 
 // UpdateMoulEmailTemplates updates the email templates in the _moul metadata table.
@@ -747,6 +656,7 @@ func UpdateMoulEmailTemplates(db *dbx.DB, moulID string, templates *schema.Email
 	if err != nil {
 		return fmt.Errorf("failed to update email templates: %w", err)
 	}
+	InvalidateMoulCache(db)
 	return nil
 }
 
@@ -841,7 +751,7 @@ func rebuildMoulTable(db *dbx.DB, m *schema.Moul, existingRows []tableInfoRow) e
 		}
 	}
 
-	return db.Transactional(func(tx *dbx.Tx) error {
+	return WriteTx(db, func(tx *dbx.Tx) error {
 		if _, err := tx.NewQuery("PRAGMA foreign_keys = OFF;").Execute(); err != nil {
 			return fmt.Errorf("failed to disable foreign keys: %w", err)
 		}
@@ -1125,6 +1035,7 @@ func UpdateMoulMetadata(db *dbx.DB, origName string, m *schema.Moul) error {
 	if err != nil {
 		return fmt.Errorf("failed to update metadata for moul %s: %w", m.Name, err)
 	}
+	InvalidateMoulCache(db)
 
 	return nil
 }
@@ -1181,6 +1092,7 @@ func RevokeToken(dbConn *dbx.DB, tokenString string, expiresAt time.Time) error 
 	if err != nil {
 		return fmt.Errorf("failed to insert revoked token: %w", err)
 	}
+	revokedSetFor(dbConn).add(tokenHash, expiresAt)
 	notifyTokenRevoked(tokenHash)
 	return nil
 }
@@ -1193,22 +1105,18 @@ func IsTokenRevoked(dbConn *dbx.DB, tokenString string) bool {
 	return IsTokenRevokedByHash(dbConn, HashToken(tokenString))
 }
 
-// IsTokenRevokedByHash checks if a token hash has been recorded in _revoked_tokens and remains unexpired.
+// IsTokenRevokedByHash checks if a token hash has been recorded in _revoked_tokens and remains
+// unexpired. It answers from an in-memory copy of the table (no SQL per request): revocations made
+// with RevokeToken in this process apply at once, and the copy is re-read every
+// revokedRefreshInterval to pick up revocations made by other processes.
 func IsTokenRevokedByHash(dbConn *dbx.DB, tokenHash string) bool {
 	if dbConn == nil || tokenHash == "" {
 		return false
 	}
-	var count int
-	nowStr := time.Now().UTC().Format(time.RFC3339)
-	err := dbConn.Select("COUNT(*)").From("_revoked_tokens").
-		Where(dbx.And(
-			dbx.HashExp{"token_hash": tokenHash},
-			dbx.NewExp("expires_at > {:now}", dbx.Params{"now": nowStr}),
-		)).Row(&count)
-	if err != nil {
-		return false
-	}
-	return count > 0
+	now := time.Now()
+	set := revokedSetFor(dbConn)
+	set.refresh(dbConn, now)
+	return set.contains(tokenHash, now)
 }
 
 // CleanupExpiredRevokedTokens deletes expired tokens from the _revoked_tokens table.
@@ -1216,13 +1124,14 @@ func CleanupExpiredRevokedTokens(dbConn *dbx.DB) (int64, error) {
 	if dbConn == nil {
 		return 0, nil
 	}
-	nowStr := time.Now().UTC().Format(time.RFC3339)
+	now := time.Now()
 	res, err := dbConn.NewQuery("DELETE FROM _revoked_tokens WHERE expires_at <= {:now}").
-		Bind(dbx.Params{"now": nowStr}).
+		Bind(dbx.Params{"now": now.UTC().Format(time.RFC3339)}).
 		Execute()
 	if err != nil {
 		return 0, err
 	}
+	revokedSetFor(dbConn).pruneExpired(now)
 	return res.RowsAffected()
 }
 

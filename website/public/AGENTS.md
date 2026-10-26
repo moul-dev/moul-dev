@@ -149,8 +149,26 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_JWT_SECRET` | Required | Secret key used for signing JWT tokens. |
 | `MOUL_ADMIN_KEY` | Required | Master admin key for administrative endpoints and MCP access. |
 | `MOUL_DB_PATH` | `moul-local.db` | Path to the SQLite database file. |
+| `MOUL_DB_MAX_CONNS` | max(4, CPUs) | SQLite connection pool size. Every pooled connection gets WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`; idle connections are kept open. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
+| `MOUL_IMAGE_CONCURRENCY` | max(1, CPUs/2) | How many uploaded images are decoded and resized at once; further uploads wait. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
+
+### Runtime Settings: Image Uploads
+
+`POST /api/upload` returns `width` and `height` for images, a thumbhash and `thumbs` (`sm` 256, `md` 1024, `lg` 2048 px, each cut from the next larger one; a size not smaller than the original points at the original). Images above 40 megapixels are refused before anything is stored. Set `file_thumbs_async` to `"true"` to return right after storing the original: the sizes and thumbhash are then made by the built-in `GenerateImageSizes` job, which updates the upload's `meta.json` (listed by `GET /api/upload`), while the upload response keeps every thumb pointing at the original.
+
+### Runtime Settings: Request Log & Retention
+
+These `_settings` keys are changed with `PATCH /api/settings` (validated, applied immediately) or reloaded with `POST /api/settings/reload`:
+
+| Setting | Default | Description |
+|---|---|---|
+| `request_log_enabled` | `true` | Turn the `_requests` log on or off. |
+| `request_log_sample_rate` | `1` | Fraction of eligible requests logged (`0`–`1`). |
+| `request_log_exclude_paths` | `""` | Comma-separated path prefixes never logged, on top of the built-in excludes. |
+| `request_log_retention_days` | `30` | Days `_requests` rows are kept. |
+| `visit_retention_days` | `30` | Days `_visits` rows are kept. |
 
 ---
 
@@ -285,6 +303,8 @@ When developing or refactoring backend Go code:
 - **SQL & Data Access Safety**: Never construct raw SQL strings with dynamic variable concatenation. Always use `safesql` validation and parameterized PocketBase `dbx` builders (`dbx.Params`, `dbx.HashExp`, `dbx.NewExp`).
 - **Synchronous OpenAPI & API Documentation**: Whenever adding, modifying, or deleting HTTP endpoints in `internal/handlers/router.go`, synchronously update `docs/openapi.json` and `docs/openapi.yml`, then run `make sync-docs`.
 - **Concurrency & State Safety**: Stateful services, in-memory caches, and background workers must ensure thread safety with appropriate synchronization primitives (`sync.RWMutex` / `sync.Mutex`).
+- **Collection Schema Cache**: `db.LoadMoulByName` / `db.LoadAllMoul` serve parsed schemas from an in-process cache and return copies. Write `_moul` only through the `db` helpers (`SaveMoulMetadata`, `UpdateMoulMetadata`, `UpdateMoulEmailTemplates`, `DeleteMoulMetadata`), which invalidate it; after raw SQL on `_moul` call `db.InvalidateMoulCache` (other processes are picked up within one second via `_moul_version`).
+- **SQLite Write Transactions**: Every connection is opened with `busy_timeout=5000` and every transaction starts with `BEGIN IMMEDIATE`. Code that reads and then writes must run inside `db.WriteTx` (embedders: `app.WriteTx`), which retries on `SQLITE_BUSY`; prefer single statements (`UPDATE … RETURNING`) over select-then-update.
 
 ---
 

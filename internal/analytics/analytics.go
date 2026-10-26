@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -68,6 +67,13 @@ type Engine struct {
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
 	stopped   bool
+
+	// Request log settings (_settings), reloaded by ReloadSettings.
+	settingsMu  sync.RWMutex
+	logSettings RequestLogSettings
+
+	// Known visits, so requests that bring one do no SQL.
+	visits *visitCache
 }
 
 // NewEngine instantiates a new analytics Engine.
@@ -85,12 +91,18 @@ func NewEngine(dbConn *dbx.DB, geoIPPath string) (*Engine, error) {
 		}
 	}
 
-	return &Engine{
-		db:        dbConn,
-		geoReader: reader,
-		logger:    l,
-		requestCh: make(chan RequestData, requestChannelSize),
-	}, nil
+	e := &Engine{
+		db:          dbConn,
+		geoReader:   reader,
+		logger:      l,
+		requestCh:   make(chan RequestData, requestChannelSize),
+		logSettings: DefaultRequestLogSettings(),
+		visits:      newVisitCache(),
+	}
+	if err := e.ReloadSettings(); err != nil {
+		l.Warn("Request log settings could not be fully loaded; defaults apply", "err", err)
+	}
+	return e, nil
 }
 
 // Close releases any resources associated with the analytics engine.
@@ -105,19 +117,13 @@ func (e *Engine) Close() error {
 // EnsureVisit creates a new visit session or retrieves an existing one.
 // It uses the visitor_token cookie/header for deduplication.
 func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, referrer, landingPage string) (*VisitResult, error) {
-	// If visitToken is provided, check if the visit exists
+	// If visitToken is provided, check if the visit exists (cached; attaches userID when missing)
 	if visitToken != "" {
-		var count int
-		err := e.db.Select("COUNT(*)").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&count)
-		if err == nil && count > 0 {
-			// Visit exists, update user_id if needed
-			if userID != "" {
-				var currentUserID sql.NullString
-				err := e.db.Select("user_id").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&currentUserID)
-				if err == nil && (!currentUserID.Valid || currentUserID.String == "") {
-					_, _ = e.db.Update("_visits", dbx.Params{"user_id": userID}, dbx.HashExp{"id": visitToken}).Execute()
-				}
-			}
+		exists, err := e.resolveVisit(visitToken, userID)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
 			return &VisitResult{
 				VisitID:      visitToken,
 				VisitorToken: visitorToken,
@@ -170,6 +176,7 @@ func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, re
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert visit: %w", err)
 	}
+	e.visits.put(visitToken, userID, time.Now())
 
 	return &VisitResult{
 		VisitID:      visitToken,
@@ -178,9 +185,13 @@ func (e *Engine) EnsureVisit(visitToken, visitorToken, userID, ip, userAgent, re
 	}, nil
 }
 
-// TrackRequest enqueues a request record for async batch insertion.
-// This is non-blocking; if the channel is full, the request is dropped with a warning.
+// TrackRequest enqueues a request record for async batch insertion, unless the request log is
+// disabled, the path is excluded, or the request falls outside the sample rate (request_log_*
+// settings). This is non-blocking; if the channel is full, the request is dropped with a warning.
 func (e *Engine) TrackRequest(data RequestData) {
+	if !e.shouldLogRequest(data.Path) {
+		return
+	}
 	select {
 	case e.requestCh <- data:
 	default:
@@ -262,26 +273,15 @@ func (e *Engine) runFlusher(ctx context.Context) {
 	}
 }
 
-// flushRequests batch-inserts request records into the _requests table.
+// flushRequests writes a batch of request records to _requests in one transaction.
 func (e *Engine) flushRequests(batch []RequestData) {
 	if len(batch) == 0 {
 		return
 	}
 
-	for _, req := range batch {
-		reqID := fmt.Sprintf("req-%s", util.RandomID())
-		_, err := e.db.Insert("_requests", dbx.Params{
-			"id":               reqID,
-			"visit_id":         req.VisitID,
-			"method":           req.Method,
-			"path":             req.Path,
-			"status_code":      req.StatusCode,
-			"response_time_ms": req.ResponseTimeMs,
-			"createdAt":        req.CreatedAt,
-		}).Execute()
-		if err != nil {
-			e.logger.Error("Failed to insert request record", "path", req.Path, "err", err)
-		}
+	if err := insertRequests(e.db, batch); err != nil {
+		e.logger.Error("Failed to insert request records", "count", len(batch), "err", err)
+		return
 	}
 
 	e.logger.Debug("Flushed request records", "count", len(batch))
@@ -304,11 +304,11 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 	// If visitToken is provided, look up the visit to see if it exists
 	var visitExists bool
 	if visitToken != "" {
-		var count int
-		err := e.db.Select("COUNT(*)").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&count)
-		if err == nil && count > 0 {
-			visitExists = true
+		exists, err := e.resolveVisit(visitToken, userID)
+		if err != nil {
+			return nil, err
 		}
+		visitExists = exists
 	}
 
 	// If visitToken doesn't exist or is empty, create a new visit record
@@ -356,15 +356,7 @@ func (e *Engine) Track(ctx context.Context, tableName string, params *EventParam
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert visit: %w", err)
 		}
-	} else {
-		// Visit exists, check if we need to update user_id
-		if userID != "" {
-			var currentUserID sql.NullString
-			err := e.db.Select("user_id").From("_visits").Where(dbx.HashExp{"id": visitToken}).Row(&currentUserID)
-			if err == nil && (!currentUserID.Valid || currentUserID.String == "") {
-				_, _ = e.db.Update("_visits", dbx.Params{"user_id": userID}, dbx.HashExp{"id": visitToken}).Execute()
-			}
-		}
+		e.visits.put(visitToken, userID, time.Now())
 	}
 
 	// Insert event into dynamic table

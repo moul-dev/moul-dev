@@ -153,8 +153,7 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	}
 
 	// Delete from _moul metadata
-	_, err = h.DB.Delete("_moul", dbx.HashExp{"name": name}).Execute()
-	if err != nil {
+	if err := db.DeleteMoulMetadata(h.DB, name); err != nil {
 		logger.Error("Failed to delete metadata for moul", "moul", name, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete moul metadata")
 	}

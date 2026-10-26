@@ -175,24 +175,20 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 		logger.Warn("No mailer or worker engine configured for OTP delivery. OTP logged to console above.", "email", email)
 	}
 
-	// If worker Engine is available, enqueue a SendEmail job
+	// If worker Engine is available, enqueue a SendEmail job (retried while SQLite is busy)
 	sent := false
 	if h.Engine != nil {
 		tableName, err := findWorkerTable(h.DB)
 		if err != nil {
 			logger.Error("Failed to find worker table for background OTP email job", "err", err)
 		} else if tableName != "" {
-			_, err = h.Engine.Enqueue(c.Request().Context(), tableName, map[string]interface{}{
-				"worker":   "SendEmail",
-				"priority": 1,
-				"args": map[string]interface{}{
-					"to":      email,
-					"subject": subject,
-					"body":    body,
-				},
+			err = enqueueSendEmail(c.Request().Context(), h.Engine, tableName, map[string]interface{}{
+				"to":      email,
+				"subject": subject,
+				"body":    body,
 			})
 			if err != nil {
-				logger.Error("Failed to enqueue OTP SendEmail job", "err", err)
+				logger.Error("Failed to enqueue OTP SendEmail job; sending synchronously", "err", err)
 			} else {
 				sent = true
 			}
@@ -202,12 +198,14 @@ func (h *AuthHandler) RequestOTP(c *echo.Context) error {
 	}
 
 	if !sent && h.Mailer != nil {
-		_ = h.Mailer.Send(c.Request().Context(), &mailer.Email{
+		if err := h.Mailer.Send(c.Request().Context(), &mailer.Email{
 			To:       []string{email},
 			Subject:  subject,
 			HTMLBody: body,
 			TextBody: body,
-		})
+		}); err != nil {
+			logger.Error("Failed to send OTP email", "moul", moulName, "err", err)
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{

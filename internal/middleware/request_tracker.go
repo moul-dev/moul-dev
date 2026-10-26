@@ -76,6 +76,18 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 				}
 			}
 
+			// A request that brings no visit and cannot keep the visit cookie (an API client, SSR, a
+			// cross-origin fetch without credentials, a probe) would create a new _visits row on every
+			// call. It is logged without a visit instead.
+			if visitToken == "" && visitorToken == "" && !canHoldVisitCookie(req) {
+				err := next(c)
+				if err != nil {
+					c.Echo().HTTPErrorHandler(c, err)
+				}
+				trackRequest(engine, c, "", req.Method, path, start)
+				return err
+			}
+
 			cleanLandingPage := sanitizeSensitiveURL(req.URL.String())
 			cleanReferer := sanitizeSensitiveURL(req.Referer())
 
@@ -127,23 +139,40 @@ func RequestTracker(engine *analytics.Engine, secureCookies bool, opts ...Tracke
 			}
 
 			// Capture response data and enqueue for async tracking
-			latency := time.Since(start)
-			statusCode := 200
-			if resp, err := echo.UnwrapResponse(c.Response()); err == nil {
-				statusCode = resp.Status
-			}
-			engine.TrackRequest(analytics.RequestData{
-				VisitID:        result.VisitID,
-				Method:         req.Method,
-				Path:           path,
-				StatusCode:     statusCode,
-				ResponseTimeMs: latency.Milliseconds(),
-				CreatedAt:      time.Now().UTC().Format(time.RFC3339),
-			})
+			trackRequest(engine, c, result.VisitID, req.Method, path, start)
 
 			return err
 		}
 	}
+}
+
+// trackRequest enqueues the request's method, path, status and latency for the _requests log.
+func trackRequest(engine *analytics.Engine, c *echo.Context, visitID, method, path string, start time.Time) {
+	statusCode := 200
+	if resp, err := echo.UnwrapResponse(c.Response()); err == nil {
+		statusCode = resp.Status
+	}
+	engine.TrackRequest(analytics.RequestData{
+		VisitID:        visitID,
+		Method:         method,
+		Path:           path,
+		StatusCode:     statusCode,
+		ResponseTimeMs: time.Since(start).Milliseconds(),
+		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// canHoldVisitCookie reports whether the client will store the moul_visit cookie and send it back:
+// a browser request from a page on this origin or a direct navigation (Sec-Fetch-Site
+// "same-origin" or "none", e.g. the admin console or a link opened in the browser). Cross-site
+// fetches, server-to-server calls and probes cannot, and would otherwise start a new visit on
+// every request. Requests that already carry a moul cookie are handled before this check.
+func canHoldVisitCookie(req *http.Request) bool {
+	switch strings.ToLower(req.Header.Get("Sec-Fetch-Site")) {
+	case "same-origin", "none":
+		return true
+	}
+	return false
 }
 
 // sanitizeSensitiveURL parses a URL and replaces values of sensitive query parameters with [REDACTED].

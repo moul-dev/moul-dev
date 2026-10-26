@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+	"github.com/moul-dev/moul-dev/internal/analytics"
+	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/tls"
@@ -11,9 +15,10 @@ import (
 )
 
 type SettingsHandler struct {
-	DB         *dbx.DB
-	Mailer     *mailer.Mailer
-	TLSManager *tls.Manager
+	DB              *dbx.DB
+	Mailer          *mailer.Mailer
+	TLSManager      *tls.Manager
+	AnalyticsEngine *analytics.Engine
 }
 
 func NewSettingsHandler(dbConn *dbx.DB) *SettingsHandler {
@@ -45,6 +50,11 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")
 	}
+	for k, v := range body {
+		if err := analytics.ValidateRequestLogSetting(k, v); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+	}
 
 	// Update only existing settings keys for security
 	allowedKeys := map[string]bool{
@@ -56,6 +66,7 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"file_s3_access_key":             true,
 		"file_s3_secret_key":             true,
 		"file_s3_force_path_style":       true,
+		"file_thumbs_async":              true,
 		"litestream_enabled":             true,
 		"litestream_s3_bucket":           true,
 		"litestream_s3_endpoint":         true,
@@ -96,26 +107,29 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"oauth_apple_key_id":             true,
 		"oauth_apple_private_key":        true,
 		"oauth_redirect_url":             true,
+		"request_log_enabled":            true,
+		"request_log_sample_rate":        true,
+		"request_log_exclude_paths":      true,
+		"request_log_retention_days":     true,
+		"visit_retention_days":           true,
 	}
 
-	tx, err := h.DB.Begin()
+	err := db.WriteTx(h.DB, func(tx *dbx.Tx) error {
+		for k, v := range body {
+			if !allowedKeys[k] {
+				continue
+			}
+			if _, err := tx.Update("_settings", dbx.Params{"value": v}, dbx.HashExp{"key": k}).Execute(); err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update setting "+k+": "+err.Error())
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to start transaction: "+err.Error())
-	}
-	defer tx.Rollback()
-
-	for k, v := range body {
-		if !allowedKeys[k] {
-			continue
+		var httpErr *echo.HTTPError
+		if errors.As(err, &httpErr) {
+			return httpErr
 		}
-
-		_, err = tx.Update("_settings", dbx.Params{"value": v}, dbx.HashExp{"key": k}).Execute()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update setting "+k+": "+err.Error())
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit settings: "+err.Error())
 	}
 
@@ -127,6 +141,11 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 	}
 	if h.TLSManager != nil {
 		_ = h.TLSManager.Reload(h.DB)
+	}
+	if h.AnalyticsEngine != nil {
+		if err := h.AnalyticsEngine.ReloadSettings(); err != nil {
+			logger.Warn("Request log settings reloaded with invalid values", "err", err)
+		}
 	}
 
 	// Return updated settings
@@ -150,6 +169,11 @@ func (h *SettingsHandler) ReloadSettings(c *echo.Context) error {
 	if h.TLSManager != nil {
 		if err := h.TLSManager.Reload(h.DB); err != nil {
 			errs = append(errs, "tls: "+err.Error())
+		}
+	}
+	if h.AnalyticsEngine != nil {
+		if err := h.AnalyticsEngine.ReloadSettings(); err != nil {
+			errs = append(errs, "request_log: "+err.Error())
 		}
 	}
 

@@ -178,6 +178,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	settingsHandler := NewSettingsHandler(dbConn)
 	settingsHandler.Mailer = mailService
 	settingsHandler.TLSManager = tlsManager
+	settingsHandler.AnalyticsEngine = analyticsEngine
 	uploadHandler := NewUploadHandler(dbConn)
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)
