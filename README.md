@@ -571,6 +571,44 @@ params := &analytics.EventParams{
 event, err := analyticsEngine.Track(context.Background(), "events", params)
 ```
 
+### 5. Record Hooks & the Records API
+
+Record hooks run for every record write, whether it arrives over HTTP or from Go code, so application logic lives in one place. Register them before `Bootstrap`:
+
+```go
+a.OnRecordBeforeCreate(func(e *app.RecordEvent) error {
+	// e.Record holds the values about to be stored; change them or return an error to refuse.
+	// Return an *echo.HTTPError to choose the status (400 otherwise).
+	return nil
+}, "posts")
+
+a.OnRecordAfterCreate(func(e *app.RecordEvent) error {
+	// e.Record is the stored record; e.Auth is the caller (nil for admins and Go code).
+	return notifyFollowers(e.Context, e.Record)
+}, "posts", "comments")
+```
+
+`OnRecordBefore{Create,Update,Delete}` and `OnRecordAfter{Create,Update,Delete}` take the collections to watch (none = all). Before hooks of a delete also run for cascaded deletes.
+
+`a.Records()` writes through the same pipeline as the HTTP API (validation, rules, webhooks, realtime events, file tracking and hooks), with admin rights; `AsUser(collection, id)` applies the collection rules as that user:
+
+```go
+post, err := a.Records().Create(ctx, "posts", map[string]interface{}{"title": "Hi", "author": userID})
+alice, err := a.Records().AsUser("users", "alice")
+page, err := alice.List(ctx, "posts", url.Values{"filter": {"status = 'draft'"}})
+```
+
+Writes your code makes with raw SQL or in its own transaction can be announced after commit, so hooks, webhooks and realtime subscribers see them like API writes:
+
+```go
+err := a.Records().Notify(ctx, app.RecordCreate, "notifications", id, nil)
+err = a.Records().Notify(ctx, app.RecordDelete, "notifications", id, deletedRecord)
+```
+
+### 6. Token Lifetime
+
+Auth tokens live 24 hours by default. Configure them with `Config.TokenTTL` / `app.WithTokenTTL` (or `MOUL_TOKEN_TTL`), per collection with `app.WithCollectionTokenTTL("users", 30*24*time.Hour)` (root users: `MOUL_ROOT_TOKEN_TTL`), and the refresh grace with `app.WithTokenRefreshGrace` (or `MOUL_TOKEN_REFRESH_GRACE`, default 7 days): an expired token can be exchanged at `POST /api/moul/:name/refresh` only within the grace period, and only once.
+
 ---
 
 ## Built-in Model Context Protocol (MCP) Server
@@ -910,6 +948,9 @@ Set the following environment variables on your production server or container:
 | `MOUL_TRUSTED_PROXIES` | No | Reverse proxies allowed to forward the client IP: IPs, CIDRs, `loopback` (default), `private` or `none` | `loopback,172.18.0.0/16` |
 | `MOUL_CLIENT_IP_HEADER` | No | Single-value client IP header set by the trusted edge proxy (default: `X-Forwarded-For`) | `CF-Connecting-IP` |
 | `MOUL_FILE_URL_TTL` | No | Minimum validity of signed file URLs (Go duration, default `1h`) | `30m` |
+| `MOUL_TOKEN_TTL` | No | Lifetime of auth tokens (Go duration, default `24h`) | `720h` |
+| `MOUL_ROOT_TOKEN_TTL` | No | Lifetime of root user tokens (default: `MOUL_TOKEN_TTL`) | `8h` |
+| `MOUL_TOKEN_REFRESH_GRACE` | No | How long after expiry a token may still be refreshed, once (default `168h`; `0s` disables) | `72h` |
 | `GEOIP_DB_PATH` | No | Path to MaxMind GeoIP2 `.mmdb` database | `/var/lib/moul/GeoLite2-City.mmdb` |
 
 ### Litestream Automated S3 Backup & Disaster Recovery

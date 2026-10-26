@@ -154,6 +154,9 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_TRUSTED_PROXIES` | `loopback` | Reverse proxies allowed to forward the client IP (IPs, CIDRs, `loopback`, `private`, `none`). |
 | `MOUL_CLIENT_IP_HEADER` | `""` | Single-value client IP header set by the trusted edge proxy (e.g. `CF-Connecting-IP`); empty uses `X-Forwarded-For`. |
 | `MOUL_FILE_URL_TTL` | `1h` | Minimum validity of signed file URLs (`?sig=`). |
+| `MOUL_TOKEN_TTL` | `24h` | Lifetime of auth tokens. |
+| `MOUL_ROOT_TOKEN_TTL` | `MOUL_TOKEN_TTL` | Lifetime of root user tokens. |
+| `MOUL_TOKEN_REFRESH_GRACE` | `168h` | How long after expiry a token may still be refreshed (once); `0s` disables. |
 
 ---
 

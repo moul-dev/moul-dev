@@ -26,6 +26,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/handlers"
+	"github.com/moul-dev/moul-dev/internal/hooks"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
@@ -102,6 +103,10 @@ type App struct {
 	onMCPInit       []MCPInitFunc
 	isDev           bool
 	litestreamStore *backup.LitestreamStore
+	// hooks holds the record hooks registered with OnRecord*.
+	hooks *hooks.Registry
+	// recordDispatcher runs record operations for Records().
+	recordDispatcher *handlers.RecordDispatcher
 }
 
 // New creates a new Mould App instance with the given configuration.
@@ -114,6 +119,7 @@ func New(cfg Config) *App {
 	}
 	return &App{
 		config: cfg,
+		hooks:  hooks.NewRegistry(),
 	}
 }
 
@@ -498,6 +504,10 @@ func (a *App) Bootstrap() error {
 			MCPServer:      a.mcpServer,
 			APIPrefix:      a.config.APIPrefix,
 			ClientIP:       &clientIPConfig,
+			Hooks:          a.recordHooks(),
+			RecordDispatcher: func(d *handlers.RecordDispatcher) {
+				a.recordDispatcher = d
+			},
 			AdminUIOptions: handlers.AdminUIOptions{
 				Prefix:     adminPrefix,
 				FileSystem: adminFS,

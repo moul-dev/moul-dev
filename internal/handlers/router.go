@@ -15,6 +15,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/clientip"
 	"github.com/moul-dev/moul-dev/internal/filegate"
+	"github.com/moul-dev/moul-dev/internal/hooks"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
@@ -38,6 +39,11 @@ type RouterConfig struct {
 	// ClientIP selects the reverse proxies trusted to forward the client address. Nil reads
 	// MOUL_TRUSTED_PROXIES and MOUL_CLIENT_IP_HEADER (default: loopback only).
 	ClientIP *clientip.Config
+	// Hooks runs Go callbacks around every record change; nil runs none.
+	Hooks *hooks.Registry
+	// RecordDispatcher, when set, receives a dispatcher over the router's record handler so Go
+	// code can create, update and delete records through the same pipeline.
+	RecordDispatcher func(*RecordDispatcher)
 }
 
 // NormalizeAPIPrefix normalizes the API path prefix.
@@ -223,6 +229,10 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	moulHandler.Files = fileGate
 	recordHandler := NewRecordHandler(dbConn, adminKey)
 	recordHandler.Files = fileGate
+	recordHandler.Hooks = cfg.Hooks
+	if cfg.RecordDispatcher != nil {
+		cfg.RecordDispatcher(NewRecordDispatcher(recordHandler))
+	}
 	recordHandler.Engine = workerEngine
 	recordHandler.AnalyticsEngine = analyticsEngine
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev

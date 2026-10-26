@@ -1427,7 +1427,10 @@ paths:
   /api/moul/{name}/refresh:
     post:
       summary: Refresh JWT Token
-      description: Issues a fresh JWT token for an active authentication session, revoking the previous JWT token.
+      description: >-
+        Issues a fresh JWT token and revokes the presented one. An expired token is accepted only within
+        MOUL_TOKEN_REFRESH_GRACE of its expiry (default 7 days), and each token can be refreshed once.
+        Token lifetime is MOUL_TOKEN_TTL (default 24h).
       tags:
         - User Authentication
       parameters:
@@ -1447,7 +1450,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Unauthorized or revoked token.
+          description: Invalid or revoked token, or a token expired longer ago than the refresh grace.
         '404':
           description: Not found.
         '500':
