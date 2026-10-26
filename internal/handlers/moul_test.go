@@ -552,9 +552,10 @@ func TestHandlersEdgeCases(t *testing.T) {
 		t.Errorf("Expected 404 for nonexistent record, got %d", resp.StatusCode)
 	}
 	// Unauthorized: view other user's record (view rule `id = @request.auth.id`)
+	// A record the caller may not view answers like a missing one.
 	resp = getJSON(t, client, server.URL+"/api/moul/users/records/"+userID, "")
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected 401 for unauthorized GetRecord, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 404 for hidden GetRecord, got %d", resp.StatusCode)
 	}
 	// Success (users record with auth token)
 	resp = getJSON(t, client, server.URL+"/api/moul/users/records/"+userID, token)
@@ -733,6 +734,7 @@ func TestMoulAssociations(t *testing.T) {
 	moulHandler := &handlers.MoulHandler{DB: dbConn}
 
 	e := echo.New()
+	e.Use(middleware.LoadAuthContextMiddleware(dbConn))
 	e.POST("/api/moul", moulHandler.CreateMoul)
 	e.POST("/api/moul/:name/records", recordHandler.CreateRecord)
 	e.GET("/api/moul/:name/records", recordHandler.ListRecords)
@@ -855,7 +857,8 @@ func TestMoulAssociations(t *testing.T) {
 	}
 	resp = postJSON(t, client, server.URL+"/api/moul/products/records", validProdPayload, "")
 	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Expected 201 Created for valid product, got %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 201 Created for valid product, got %d: %s", resp.StatusCode, body)
 	}
 	var productRecord map[string]interface{}
 	parseJSON(t, resp, &productRecord)
@@ -891,6 +894,21 @@ func TestMoulAssociations(t *testing.T) {
 		t.Fatalf("Expected expanded category with name 'Electronics', got %v", expandMap["category"])
 	}
 
+	// users only see themselves (default auth ViewRule), so a guest's expand leaves the buyer out.
+	if hidden, ok := expandMap["buyers"].([]interface{}); !ok || len(hidden) != 0 {
+		t.Fatalf("Expected guest expand to hide the buyer, got %v", expandMap["buyers"])
+	}
+
+	johnToken, err := auth.GenerateToken(userID, "john@assoc.com", "john_assoc", "users")
+	if err != nil {
+		t.Fatalf("GenerateToken: %v", err)
+	}
+	resp = getJSON(t, client, server.URL+"/api/moul/products/records/"+productID+"?expand=category,buyers", johnToken)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
+	}
+	parseJSON(t, resp, &prodExpanded)
+	expandMap = prodExpanded["expand"].(map[string]interface{})
 	expandedBuyers, ok := expandMap["buyers"].([]interface{})
 	if !ok || len(expandedBuyers) != 1 {
 		t.Fatalf("Expected expanded buyers list with 1 buyer, got %v", expandMap["buyers"])
@@ -918,8 +936,12 @@ func TestMoulAssociations(t *testing.T) {
 		t.Fatalf("Expected category to be cleared, got %q", catVal)
 	}
 
-	// Delete user
+	// Delete user (a guest cannot see the record, so it answers 404; the user themself can delete it)
 	resp = deleteJSON(t, client, server.URL+"/api/moul/users/records/"+userID, "")
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Expected 404 for a guest deleting a hidden user, got %d", resp.StatusCode)
+	}
+	resp = deleteJSON(t, client, server.URL+"/api/moul/users/records/"+userID, johnToken)
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Expected 204 No Content, got %d", resp.StatusCode)
 	}

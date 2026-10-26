@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -179,5 +178,3 @@ func expectStatus(t *testing.T, rec *httptest.ResponseRecorder, want int) {
 		t.Fatalf("status = %d, want %d; body: %s", rec.Code, want, rec.Body.String())
 	}
 }
-
-var _ = http.MethodGet

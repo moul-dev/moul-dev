@@ -349,11 +349,10 @@ func CloneAndSanitizeRecord(m *schema.Moul, rawRecord map[string]interface{}, cl
 		clean[k] = v
 	}
 
-	// Always delete internal auth credentials
-	delete(clean, "passwordHash")
-	delete(clean, "otpCode")
-	delete(clean, "otpExpiresAt")
-	delete(clean, "passkeys")
+	// Always delete credentials, reset tokens and linked identities, and never forward an expand
+	// block: it was built for the writer, not for this subscriber.
+	schema.StripSecrets(m, clean)
+	delete(clean, "expand")
 
 	if m != nil {
 		// 1. Strip companion hash columns for all cloak fields unconditionally
@@ -426,6 +425,17 @@ func CloneAndSanitizeRecord(m *schema.Moul, rawRecord map[string]interface{}, cl
 				delete(clean, k)
 			}
 		}
+	}
+
+	// The email of an auth record reaches only admins, that user, or everyone when published.
+	if m != nil {
+		var viewer map[string]interface{}
+		isAdmin := false
+		if client != nil {
+			viewer = client.AuthUser
+			isAdmin = client.IsAdmin
+		}
+		schema.RedactForViewer(m, clean, viewer, isAdmin)
 	}
 
 	return clean

@@ -57,6 +57,16 @@ func getRootIPsConfig() (bool, string) {
 // AuthContextKey is the context key for storing the auth record map.
 const AuthContextKey = "auth"
 
+// AuthRejectedKey is set in the context when a request presented a bearer token that was not
+// accepted (invalid, expired or revoked). The request continues as a guest.
+const AuthRejectedKey = "authRejected"
+
+// IsAuthRejected reports whether the request presented a bearer token that was not accepted.
+func IsAuthRejected(c *echo.Context) bool {
+	rejected, _ := c.Get(AuthRejectedKey).(bool)
+	return rejected
+}
+
 // LoadAuthContextMiddleware reads the Authorization header, validates the JWT,
 // checks token revocation status, and maps the verified user details into the Echo context.
 // Requests attempting to pass credentials via query parameters are rejected with HTTP 400 Bad Request.
@@ -85,15 +95,16 @@ func LoadAuthContextMiddleware(dbConn ...*dbx.DB) echo.MiddlewareFunc {
 
 			if len(dbConn) > 0 && dbConn[0] != nil {
 				if db.IsTokenRevoked(dbConn[0], tokenString) {
+					c.Set(AuthRejectedKey, true)
 					return next(c)
 				}
 			}
 
 			claims, err := auth.VerifyToken(tokenString)
 			if err != nil {
-				// Invalid token is ignored or left as unauthenticated.
-				// Alternatively, you could return an error, but PocketBase
-				// falls back to unauthenticated if token is invalid or expired.
+				// An invalid or expired token leaves the request unauthenticated (as PocketBase
+				// does); handlers that hide records answer 401 instead of 404 so clients notice.
+				c.Set(AuthRejectedKey, true)
 				return next(c)
 			}
 

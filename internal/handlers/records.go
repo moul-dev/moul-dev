@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +60,23 @@ func (h *RecordHandler) isRootOrAdmin(c *echo.Context) bool {
 		return true
 	}
 	return false
+}
+
+// loadMoul resolves a collection schema for relation validation in rules.
+func (h *RecordHandler) loadMoul(name string) (*schema.Moul, error) {
+	return db.LoadMoulByName(h.DB, name)
+}
+
+// listRuleSQL translates moul's ListRule for the caller under the "rule_" placeholder prefix.
+// An empty rule yields no clause.
+func (h *RecordHandler) listRuleSQL(moul *schema.Moul, authUser map[string]interface{}, reqCtx map[string]interface{}) (string, dbx.Params, error) {
+	if strings.TrimSpace(moul.Rules.ListRule) == "" {
+		return "", nil, nil
+	}
+	return rules.BuildFilterSQLWithOptions(moul.Rules.ListRule, moul, authUser, reqCtx, rules.FilterOptions{
+		ParamPrefix: "rule_",
+		LoadMoul:    h.loadMoul,
+	})
 }
 
 // Convert dbx.NullStringMap to map[string]interface{}
@@ -379,11 +397,13 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 			Expires:  time.Now().AddDate(2, 0, 0),
 		})
 
-		return c.JSON(http.StatusCreated, normalizeRecord(moul, res))
+		return c.JSON(http.StatusCreated, h.present(c, moul, normalizeRecord(moul, res)))
 	}
 
-	// Prepare data map for db insert
+	// Prepare data map for db insert. Relation targets are checked only after the CreateRule
+	// passes, so a caller who may not create cannot use the answer to probe for records.
 	insertData := make(map[string]interface{})
+	var relationChecks []func() error
 
 	// Validate fields in body against schema
 	for _, field := range moul.Fields {
@@ -426,6 +446,12 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 				} else {
 					insertData[field.Name] = val
 				}
+			} else if field.Type == "number" {
+				num, err := canonicalNumber(val)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q %s", field.Name, err))
+				}
+				insertData[field.Name] = num
 			} else if field.Type == "select" {
 				if val == nil || val == "" {
 					insertData[field.Name] = ""
@@ -491,20 +517,20 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 							return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Relation field %s must be a string ID", field.Name))
 						}
 						if strVal != "" {
-							exists, err := h.recordExists(targetMoul, strVal)
-							if err != nil {
-								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
-							}
-							if !exists {
-								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", strVal, targetMoul))
-							}
-							if card == "1:1" {
-								var count int
-								err := h.DB.Select("COUNT(1)").From(moulName).Where(dbx.HashExp{field.Name: strVal}).Row(&count)
-								if err == nil && count > 0 {
-									return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("1:1 relation field %s already references record %s", field.Name, strVal))
+							fieldName, uniqueTarget := field.Name, card == "1:1"
+							relationChecks = append(relationChecks, func() error {
+								if err := h.checkRelationTarget(targetMoul, strVal); err != nil {
+									return err
 								}
-							}
+								if uniqueTarget {
+									var count int
+									err := h.DB.Select("COUNT(1)").From(moulName).Where(dbx.HashExp{fieldName: strVal}).Row(&count)
+									if err == nil && count > 0 {
+										return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("1:1 relation field %s already references record %s", fieldName, strVal))
+									}
+								}
+								return nil
+							})
 						}
 						insertData[field.Name] = strVal
 					} else if card == "M:N" {
@@ -533,13 +559,10 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 						}
 
 						for _, id := range ids {
-							exists, err := h.recordExists(targetMoul, id)
-							if err != nil {
-								return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation: "+err.Error())
-							}
-							if !exists {
-								return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", id, targetMoul))
-							}
+							id := id
+							relationChecks = append(relationChecks, func() error {
+								return h.checkRelationTarget(targetMoul, id)
+							})
 						}
 
 						bytes, err := json.Marshal(ids)
@@ -679,13 +702,20 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.CreateRule, authUser, insertData, buildRequestContext(c, body))
 	}
 	if ruleErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
+		logger.Error("Failed to evaluate CreateRule", "moul", moulName, "err", ruleErr)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 	if !allowed {
 		if authUser == nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to perform this action")
 		}
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
+	}
+
+	for _, check := range relationChecks {
+		if err := check(); err != nil {
+			return err
+		}
 	}
 
 	// Dispatch create:before webhook
@@ -722,8 +752,6 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	}
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record), NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)})
-	expandParam := c.QueryParam("expand")
-	h.expandRelations(moul, recordMap, expandParam)
 
 	// Dispatch create:after webhook
 	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
@@ -733,15 +761,15 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// Broadcast SSE realtime event
+	// Broadcast SSE realtime event (each subscriber gets its own redacted copy)
 	realtime.DefaultHub.Publish(realtime.Event{
 		Action:    "create",
 		Moul:      moulName,
-		Record:    recordMap,
+		Record:    copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
 
-	return c.JSON(http.StatusCreated, recordMap)
+	return c.JSON(http.StatusCreated, h.present(c, moul, recordMap))
 }
 
 // ListRecords queries records using server-side filtering, sorting, and pagination.
@@ -782,24 +810,31 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 
 	isAdmin := h.isRootOrAdmin(c)
 
-	// 1. Build ListRule SQL
+	// 1. Build ListRule SQL. The rule and the client filter bind their values under separate
+	// placeholder prefixes, so a filter's literals can never replace the rule's.
 	var ruleSQL string
 	var ruleParams dbx.Params
-	if moul.Rules.ListRule != "" && !isAdmin {
-		rSQL, rParams, err := rules.BuildFilterSQL(moul.Rules.ListRule, moul, authUser, reqCtx)
+	if !isAdmin {
+		rSQL, rParams, err := h.listRuleSQL(moul, authUser, reqCtx)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ListRule expression: "+err.Error())
+			logger.Error("Failed to translate ListRule", "moul", moulName, "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 		}
 		ruleSQL = rSQL
 		ruleParams = rParams
 	}
 
-	// 2. Build Filter Param SQL
+	// 2. Build Filter Param SQL. A non-admin filter is untrusted: no @collection, no secret
+	// columns, and relation paths only match target rows the caller may list.
 	var filterSQL string
 	var filterParams dbx.Params
 	filterParam := c.QueryParam("filter")
 	if filterParam != "" {
-		fSQL, fParams, err := rules.BuildFilterSQL(filterParam, moul, authUser, reqCtx)
+		fSQL, fParams, err := rules.BuildFilterSQLWithOptions(filterParam, moul, authUser, reqCtx, rules.FilterOptions{
+			ParamPrefix: "filter_",
+			Untrusted:   !isAdmin,
+			LoadMoul:    h.loadMoul,
+		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid filter parameter: "+err.Error())
 		}
@@ -830,13 +865,19 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 		searchVal := "%" + searchParam + "%"
 		searchConditions = append(searchConditions, "id LIKE {:search_term}")
 		if moul.Type == "auth" {
-			searchConditions = append(searchConditions, "username LIKE {:search_term}", "email LIKE {:search_term}")
+			searchConditions = append(searchConditions, "username LIKE {:search_term}")
+			if isAdmin {
+				searchConditions = append(searchConditions, "email LIKE {:search_term}")
+			}
 		} else if moul.Type == "worker" {
 			searchConditions = append(searchConditions, "worker LIKE {:search_term}", "queue LIKE {:search_term}", "state LIKE {:search_term}")
 		}
 		for _, f := range moul.Fields {
 			if f.Type == "text" || f.Type == "email" || f.Type == "url" || f.Type == "" {
-				searchConditions = append(searchConditions, fmt.Sprintf("%s LIKE {:search_term}", f.Name))
+				if !isAdmin && rules.IsSecretField(f.Name, moul) {
+					continue
+				}
+				searchConditions = append(searchConditions, fmt.Sprintf("%s LIKE {:search_term}", db.QuoteIdentifier(f.Name)))
 			}
 		}
 		if len(searchConditions) > 0 {
@@ -852,7 +893,7 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 
 	// 3. Build Sort SQL
 	sortParam := c.QueryParam("sort")
-	sortExprs, err := rules.BuildSortSQL(sortParam, moul)
+	sortExprs, err := rules.BuildSortSQLWithOptions(sortParam, moul, rules.SortOptions{Untrusted: !isAdmin, LoadMoul: h.loadMoul})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid sort parameter: "+err.Error())
 	}
@@ -889,7 +930,7 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 
 	after := c.QueryParam("after")
 	if after != "" {
-		cSQL, cParams := buildCursorWhere(h.DB, moulName, moul, sortExprs, after)
+		cSQL, cParams := buildCursorWhere(h.DB, moulName, moul, sortExprs, after, ruleSQL, ruleParams)
 		if cSQL != "" {
 			dataWhereSQLs = append(dataWhereSQLs, fmt.Sprintf("(%s)", cSQL))
 			for k, v := range cParams {
@@ -925,12 +966,10 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 	}
 
 	items := make([]map[string]interface{}, 0, len(rawRecords))
-	expandParam := c.QueryParam("expand")
-	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: isAdmin}
 	for _, rec := range rawRecords {
 		record := normalizeRecord(moul, nullStringMapToMap(rec), normOpts)
-		h.expandRelations(moul, record, expandParam)
-		items = append(items, record)
+		items = append(items, h.present(c, moul, record))
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -943,7 +982,9 @@ func (h *RecordHandler) ListRecords(c *echo.Context) error {
 }
 
 // buildCursorWhere builds a WHERE SQL clause and parameters for cursor-based pagination (?after=<id>).
-func buildCursorWhere(dbEn dbx.Builder, moulName string, moul *schema.Moul, sortExprs []string, after string) (string, dbx.Params) {
+// The cursor record is read under the caller's list rule (ruleSQL), so a hidden record's sort
+// values never shape the page.
+func buildCursorWhere(dbEn dbx.Builder, moulName string, moul *schema.Moul, sortExprs []string, after string, ruleSQL string, ruleParams dbx.Params) (string, dbx.Params) {
 	if after == "" {
 		return "", nil
 	}
@@ -957,7 +998,11 @@ func buildCursorWhere(dbEn dbx.Builder, moulName string, moul *schema.Moul, sort
 
 	// Load record with id = after for cursor comparison values
 	var cursorRec dbx.NullStringMap
-	err := dbEn.Select("*").From(moulName).Where(dbx.HashExp{"id": after}).One(&cursorRec)
+	cursorQuery := dbEn.Select("*").From(moulName).Where(dbx.HashExp{"id": after})
+	if ruleSQL != "" {
+		cursorQuery.AndWhere(dbx.NewExp(ruleSQL, ruleParams))
+	}
+	err := cursorQuery.One(&cursorRec)
 	if err != nil {
 		// Fallback to id > after if cursor record not found
 		return "id > {:cursor_after}", dbx.Params{"cursor_after": after}
@@ -1007,35 +1052,22 @@ func (h *RecordHandler) GetRecord(c *echo.Context) error {
 	err = h.DB.Select("*").From(moulName).Where(dbx.HashExp{"id": id}).One(&record)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
+			return h.recordNotFound(c)
 		}
 		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
+	isAdmin := h.isRootOrAdmin(c)
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: isAdmin}
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record), normOpts)
-	expandParam := c.QueryParam("expand")
-	h.expandRelations(moul, recordMap, expandParam)
-	authUser := middleware.GetAuthRecord(c)
-	var allowed bool
-	var ruleErr error
-	if h.isRootOrAdmin(c) {
-		allowed = true
-	} else {
-		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.ViewRule, authUser, recordMap, buildRequestContext(c, nil))
-	}
-	if ruleErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
-	}
-	if !allowed {
-		if authUser == nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to view this record")
-		}
-		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to view this record")
+
+	// A record the caller may not view answers exactly like a missing id.
+	if !isAdmin && !h.canView(c, moul, recordMap) {
+		return h.recordNotFound(c)
 	}
 
-	return c.JSON(http.StatusOK, recordMap)
+	return c.JSON(http.StatusOK, h.present(c, moul, recordMap))
 }
 
 // UpdateRecord handles partial updates on fields.
@@ -1060,13 +1092,19 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	err = h.DB.Select("*").From(moulName).Where(dbx.HashExp{"id": id}).One(&record)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
+			return h.recordNotFound(c)
 		}
 		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	isAdmin := h.isRootOrAdmin(c)
+
+	// A record the caller may not view answers like a missing id, before anything else is checked.
+	if !isAdmin && !h.canView(c, moul, recordMap) {
+		return h.recordNotFound(c)
+	}
 
 	body := make(map[string]interface{})
 	if err := c.Bind(&body); err != nil {
@@ -1077,19 +1115,27 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if h.isRootOrAdmin(c) {
+	if isAdmin {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.UpdateRule, authUser, recordMap, buildRequestContext(c, body))
 	}
 	if ruleErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
+		logger.Error("Failed to evaluate UpdateRule", "moul", moulName, "err", ruleErr)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 	if !allowed {
 		if authUser == nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to perform this action")
 		}
 		return echo.NewHTTPError(http.StatusForbidden, "You are not allowed to perform this action")
+	}
+
+	// Columns the UpdateRule pins to the caller (owner = @request.auth.id) cannot be reassigned.
+	if !isAdmin {
+		if field := reassignedOwnerField(moul, body, authUser); field != "" {
+			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("You are not allowed to set %q to another user", field))
+		}
 	}
 
 	// Build update params
@@ -1130,6 +1176,12 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 				} else {
 					updateParams[field.Name] = val
 				}
+			} else if field.Type == "number" {
+				num, err := canonicalNumber(val)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q %s", field.Name, err))
+				}
+				updateParams[field.Name] = num
 			} else if field.Type == "select" {
 				if val == nil || val == "" {
 					updateParams[field.Name] = ""
@@ -1355,10 +1407,8 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)}
+	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: isAdmin}
 	updatedRecordMap := normalizeRecord(moul, nullStringMapToMap(updatedRecord), normOpts)
-	expandParam := c.QueryParam("expand")
-	h.expandRelations(moul, updatedRecordMap, expandParam)
 
 	// Dispatch update:after webhook
 	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
@@ -1369,16 +1419,16 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// Broadcast SSE realtime event
+	// Broadcast SSE realtime event (each subscriber gets its own redacted copy)
 	realtime.DefaultHub.Publish(realtime.Event{
 		Action:    "update",
 		Moul:      moulName,
-		Record:    updatedRecordMap,
-		OldRecord: recordMap,
+		Record:    copyRecord(updatedRecordMap),
+		OldRecord: copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
 
-	return c.JSON(http.StatusOK, updatedRecordMap)
+	return c.JSON(http.StatusOK, h.present(c, moul, updatedRecordMap))
 }
 
 // DeleteRecord deletes a record by ID.
@@ -1403,25 +1453,32 @@ func (h *RecordHandler) DeleteRecord(c *echo.Context) error {
 	err = h.DB.Select("*").From(moulName).Where(dbx.HashExp{"id": id}).One(&record)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return echo.NewHTTPError(http.StatusNotFound, "Record not found")
+			return h.recordNotFound(c)
 		}
 		logger.Error("Failed to fetch record", "record", id, "moul", moulName, "err", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record))
+	isAdmin := h.isRootOrAdmin(c)
+
+	// A record the caller may not view answers like a missing id.
+	if !isAdmin && !h.canView(c, moul, recordMap) {
+		return h.recordNotFound(c)
+	}
 
 	// Validate rule
 	authUser := middleware.GetAuthRecord(c)
 	var allowed bool
 	var ruleErr error
-	if h.isRootOrAdmin(c) {
+	if isAdmin {
 		allowed = true
 	} else {
 		allowed, ruleErr = rules.EvaluateRule(h.DB, moul.Rules.DeleteRule, authUser, recordMap, buildRequestContext(c, nil))
 	}
 	if ruleErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Rule evaluation error: "+ruleErr.Error())
+		logger.Error("Failed to evaluate DeleteRule", "moul", moulName, "err", ruleErr)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 	if !allowed {
 		if authUser == nil {
@@ -1517,8 +1574,8 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 	realtime.DefaultHub.Publish(realtime.Event{
 		Action:    "delete",
 		Moul:      moulName,
-		Record:    recordMap,
-		OldRecord: recordMap,
+		Record:    copyRecord(recordMap),
+		OldRecord: copyRecord(recordMap),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}, h.DB)
 
@@ -1614,6 +1671,58 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 	return nil
 }
 
+// numberStringMaxBytes bounds a number sent as a string.
+const numberStringMaxBytes = 32
+
+// decimalPattern is the only string form a number field accepts: optional sign, digits with an
+// optional fraction, optional exponent. Hex floats, underscores, "Inf" and "NaN" are refused.
+var decimalPattern = regexp.MustCompile(`^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$`)
+
+// canonicalNumber converts a number field value to the float64 that is stored, so the column
+// never holds an arbitrary string. nil and "" clear the field.
+func canonicalNumber(val interface{}) (interface{}, error) {
+	var f float64
+	switch v := val.(type) {
+	case nil:
+		return nil, nil
+	case float64:
+		f = v
+	case float32:
+		f = float64(v)
+	case int:
+		f = float64(v)
+	case int64:
+		f = float64(v)
+	case int32:
+		f = float64(v)
+	case json.Number:
+		parsed, err := v.Float64()
+		if err != nil {
+			return nil, fmt.Errorf("must be a number")
+		}
+		f = parsed
+	case string:
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			return nil, nil
+		}
+		if len(trimmed) > numberStringMaxBytes || !decimalPattern.MatchString(trimmed) {
+			return nil, fmt.Errorf("must be a decimal number")
+		}
+		parsed, err := strconv.ParseFloat(trimmed, 64)
+		if err != nil {
+			return nil, fmt.Errorf("must be a decimal number")
+		}
+		f = parsed
+	default:
+		return nil, fmt.Errorf("must be a number")
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil, fmt.Errorf("must be a finite number")
+	}
+	return f, nil
+}
+
 // Helper to safely convert interface to int
 func toInt(v interface{}) (int, error) {
 	switch val := v.(type) {
@@ -1664,17 +1773,8 @@ func normalizeRecord(moul *schema.Moul, record map[string]interface{}, opts ...N
 		opt = opts[0]
 	}
 
-	delete(record, "passwordHash")
-	delete(record, "otpCode")
-	delete(record, "otpExpiresAt")
-	delete(record, "passkeys")
-
-	// Delete any companion hash columns for cloak fields
-	for _, field := range moul.Fields {
-		if field.Type == "cloak" {
-			delete(record, field.Name+"Hash")
-		}
-	}
+	// Credentials, reset tokens, linked identities and cloak blind indexes never leave the server.
+	schema.StripSecrets(moul, record)
 
 	// Convert database strings to correct JSON types based on moul fields schema
 	for _, field := range moul.Fields {
@@ -1812,12 +1912,31 @@ func (h *RecordHandler) recordExists(targetMoul string, id string) (bool, error)
 	return count > 0, nil
 }
 
-func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]interface{}, expandParam string) {
+// expandRelations adds the records named by ?expand= relation fields to recordMap["expand"]. A
+// non-admin caller only gets target records that pass the target collection's ViewRule (hidden
+// to-one targets become null, hidden to-many targets are left out), each redacted for the caller.
+func (h *RecordHandler) expandRelations(c *echo.Context, moul *schema.Moul, recordMap map[string]interface{}, expandParam string) {
 	if expandParam == "" {
 		return
 	}
+	authUser := middleware.GetAuthRecord(c)
+	isAdmin := h.isRootOrAdmin(c)
 	expands := strings.Split(expandParam, ",")
 	expandMap := make(map[string]interface{})
+
+	// loadVisible returns the target record id of targetMoul as the caller may see it, or nil.
+	loadVisible := func(targetMoul *schema.Moul, id string) map[string]interface{} {
+		var targetRec dbx.NullStringMap
+		if err := h.DB.Select("*").From(targetMoul.Name).Where(dbx.HashExp{"id": id}).One(&targetRec); err != nil {
+			return nil
+		}
+		target := normalizeRecord(targetMoul, nullStringMapToMap(targetRec))
+		if !isAdmin && !h.canView(c, targetMoul, target) {
+			return nil
+		}
+		schema.RedactForViewer(targetMoul, target, authUser, isAdmin)
+		return target
+	}
 
 	for _, exp := range expands {
 		exp = strings.TrimSpace(exp)
@@ -1848,10 +1967,8 @@ func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]
 		if card == "1:1" || card == "1:N" {
 			val, ok := recordMap[exp].(string)
 			if ok && val != "" {
-				var targetRec dbx.NullStringMap
-				err = h.DB.Select("*").From(targetMoulName).Where(dbx.HashExp{"id": val}).One(&targetRec)
-				if err == nil {
-					expandMap[exp] = normalizeRecord(targetMoul, nullStringMapToMap(targetRec))
+				if target := loadVisible(targetMoul, val); target != nil {
+					expandMap[exp] = target
 				} else {
 					expandMap[exp] = nil
 				}
@@ -1870,12 +1987,10 @@ func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]
 				}
 			}
 
-			var expandedRecs []map[string]interface{}
+			expandedRecs := []map[string]interface{}{}
 			for _, id := range ids {
-				var targetRec dbx.NullStringMap
-				err = h.DB.Select("*").From(targetMoulName).Where(dbx.HashExp{"id": id}).One(&targetRec)
-				if err == nil {
-					expandedRecs = append(expandedRecs, normalizeRecord(targetMoul, nullStringMapToMap(targetRec)))
+				if target := loadVisible(targetMoul, id); target != nil {
+					expandedRecs = append(expandedRecs, target)
 				}
 			}
 			expandMap[exp] = expandedRecs
@@ -1885,6 +2000,76 @@ func (h *RecordHandler) expandRelations(moul *schema.Moul, recordMap map[string]
 	if len(expandMap) > 0 {
 		recordMap["expand"] = expandMap
 	}
+}
+
+// present finishes a record for the response: requested relations are expanded under the
+// caller's view rules and fields the caller may not see are removed.
+func (h *RecordHandler) present(c *echo.Context, moul *schema.Moul, recordMap map[string]interface{}) map[string]interface{} {
+	h.expandRelations(c, moul, recordMap, c.QueryParam("expand"))
+	schema.RedactForViewer(moul, recordMap, middleware.GetAuthRecord(c), h.isRootOrAdmin(c))
+	return recordMap
+}
+
+// canView evaluates moul's ViewRule for the caller against record. A rule that fails to evaluate
+// hides the record (fail closed) and is logged.
+func (h *RecordHandler) canView(c *echo.Context, moul *schema.Moul, record map[string]interface{}) bool {
+	allowed, err := rules.EvaluateRule(h.DB, moul.Rules.ViewRule, middleware.GetAuthRecord(c), record, buildRequestContext(c, nil))
+	if err != nil {
+		logger.Error("Failed to evaluate ViewRule", "moul", moul.Name, "err", err)
+		return false
+	}
+	return allowed
+}
+
+// recordNotFound is the single answer for a missing record and for one the caller may not view.
+// A request whose bearer token was rejected gets 401 for both, so clients notice an expired session.
+func (h *RecordHandler) recordNotFound(c *echo.Context) error {
+	if middleware.IsAuthRejected(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication required to view this record")
+	}
+	return echo.NewHTTPError(http.StatusNotFound, "Record not found")
+}
+
+// checkRelationTarget answers 400 when record id of targetMoul does not exist.
+func (h *RecordHandler) checkRelationTarget(targetMoul string, id string) error {
+	exists, err := h.recordExists(targetMoul, id)
+	if err != nil {
+		logger.Error("Failed to validate relation", "moul", targetMoul, "err", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to validate relation")
+	}
+	if !exists {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Reference record %s in collection %s does not exist", id, targetMoul))
+	}
+	return nil
+}
+
+// reassignedOwnerField returns the first column the UpdateRule pins to the caller that body sets
+// to anything other than the caller's id, or "".
+func reassignedOwnerField(moul *schema.Moul, body map[string]interface{}, authUser map[string]interface{}) string {
+	callerID, _ := authUser["id"].(string)
+	for _, field := range rules.OwnerFields(moul.Rules.UpdateRule) {
+		val, present := body[field]
+		if !present {
+			continue
+		}
+		if s, ok := val.(string); !ok || s != callerID || callerID == "" {
+			return field
+		}
+	}
+	return ""
+}
+
+// copyRecord returns a shallow copy of record without its caller-specific expand block, for
+// events that are redacted again per recipient.
+func copyRecord(record map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(record))
+	for k, v := range record {
+		if k == "expand" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 func buildRequestContext(c *echo.Context, body map[string]interface{}) map[string]interface{} {
