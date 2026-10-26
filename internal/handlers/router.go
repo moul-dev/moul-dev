@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5"
 	echoMiddleware "github.com/labstack/echo/v5/middleware"
 	"github.com/moul-dev/moul-dev/internal/analytics"
+	"github.com/moul-dev/moul-dev/internal/clientip"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
@@ -28,6 +29,9 @@ type RouterConfig struct {
 	AdminUIOptions AdminUIOptions
 	DisableAdminUI bool
 	MCPServer      *moulmcp.Server
+	// ClientIP selects the reverse proxies trusted to forward the client address. Nil reads
+	// MOUL_TRUSTED_PROXIES and MOUL_CLIENT_IP_HEADER (default: loopback and private networks).
+	ClientIP *clientip.Config
 }
 
 // NormalizeAPIPrefix normalizes the API path prefix.
@@ -49,6 +53,21 @@ func NormalizeAPIPrefix(prefix *string) string {
 	return p
 }
 
+// newIPExtractor builds the client IP extractor from cfg (or the environment). An invalid
+// configuration is logged and trusts no proxy, so forwarding headers are never honored by mistake.
+func newIPExtractor(cfg *clientip.Config) echo.IPExtractor {
+	resolved := clientip.FromEnv()
+	if cfg != nil {
+		resolved = *cfg
+	}
+	resolver, err := clientip.New(resolved)
+	if err != nil {
+		logger.Error("Invalid trusted proxy configuration; using the peer address as the client IP", "err", err)
+		return echo.ExtractIPDirect()
+	}
+	return resolver.ClientIP
+}
+
 // NewRouter constructs and returns a fully configured Echo server instance with default options.
 func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, tlsManager *tls.Manager, adminKey string, isDev bool, version ...string) *echo.Echo {
 	appVersion := "dev"
@@ -67,7 +86,7 @@ func NewRouter(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *ana
 func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analyticsEngine *analytics.Engine, mailService *mailer.Mailer, sysmonCollector *sysmon.Collector, tlsManager *tls.Manager, adminKey string, isDev bool, cfg RouterConfig) *echo.Echo {
 	e := echo.New()
 	e.Logger = slog.New(logger.Default)
-	e.IPExtractor = echo.LegacyIPExtractor()
+	e.IPExtractor = newIPExtractor(cfg.ClientIP)
 
 	appVersion := cfg.Version
 	if appVersion == "" {
@@ -198,9 +217,9 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	// ── API Routes ──────────────────────────────────────────────────
 
 	// Built-in MCP Server endpoint (Admin-protected or OAuth Bearer)
-	e.Any(apiPath("/mcp*"), mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+	e.Any(apiPath("/mcp*"), mcpHandler.ServeHTTP, middleware.RequireAdmin(adminKey))
 	if p := apiPath("/mcp*"); p != "/mcp*" {
-		e.Any("/mcp*", mcpHandler.ServeHTTP, middleware.RequireAuthOrAdmin(adminKey))
+		e.Any("/mcp*", mcpHandler.ServeHTTP, middleware.RequireAdmin(adminKey))
 	}
 
 	// Root endpoint for health check / probe / Admin UI
@@ -256,7 +275,7 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	}
 
 	// Rule expression testing and validation sandbox
-	e.POST(apiPath("/rules/test"), rulesTestHandler.TestRule, middleware.RequireAuthOrAdmin(adminKey))
+	e.POST(apiPath("/rules/test"), rulesTestHandler.TestRule, middleware.RequireAdmin(adminKey))
 
 	// Documentation & AI Agent Specification endpoints
 	e.GET("/openapi.yml", docsHandler.ServeOpenAPISpec)
@@ -295,17 +314,17 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	e.PATCH(apiPath("/settings/password"), setupHandler.UpdateRootPassword, middleware.RequireAdminKey(adminKey))
 	e.POST(apiPath("/settings/reload"), settingsHandler.ReloadSettings, middleware.RequireAdminKey(adminKey))
 
-	// Feature flags management & evaluation (Admin-protected)
-	flagsGroup := e.Group(apiPath("/feature-flags"), middleware.RequireAuthOrAdmin(adminKey))
-	flagsGroup.GET("", flagsHandler.ListFlags)
-	flagsGroup.POST("", flagsHandler.CreateFlag)
-	flagsGroup.GET("/:key", flagsHandler.GetFlag)
-	flagsGroup.PATCH("/:key", flagsHandler.UpdateFlag)
-	flagsGroup.DELETE("/:key", flagsHandler.DeleteFlag)
-	flagsGroup.POST("/:key/eval", flagsHandler.EvaluateFlag)
+	// Feature flags management (Admin-protected) & evaluation (signed-in users)
+	flagsGroup := e.Group(apiPath("/feature-flags"))
+	flagsGroup.GET("", flagsHandler.ListFlags, middleware.RequireAdmin(adminKey))
+	flagsGroup.POST("", flagsHandler.CreateFlag, middleware.RequireAdmin(adminKey))
+	flagsGroup.GET("/:key", flagsHandler.GetFlag, middleware.RequireAdmin(adminKey))
+	flagsGroup.PATCH("/:key", flagsHandler.UpdateFlag, middleware.RequireAdmin(adminKey))
+	flagsGroup.DELETE("/:key", flagsHandler.DeleteFlag, middleware.RequireAdmin(adminKey))
+	flagsGroup.POST("/:key/eval", flagsHandler.EvaluateFlag, middleware.RequireAuthOrAdmin(adminKey))
 
 	// 1. Moul schema management (Admin-protected)
-	adminGroup := e.Group(apiPath("/moul"), middleware.RequireAuthOrAdmin(adminKey))
+	adminGroup := e.Group(apiPath("/moul"), middleware.RequireAdmin(adminKey))
 	adminGroup.POST("", moulHandler.CreateMoul)
 	adminGroup.GET("/:name", moulHandler.GetMoul)
 	adminGroup.PATCH("/:name", moulHandler.UpdateMoul)
@@ -326,22 +345,22 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	adminGroup.POST("/:name/import", exportImportHandler.ImportRecords)
 
 	// Admin settings management (Admin-protected)
-	adminSettingsGroup := e.Group(apiPath("/settings"), middleware.RequireAuthOrAdmin(adminKey))
+	adminSettingsGroup := e.Group(apiPath("/settings"), middleware.RequireAdmin(adminKey))
 	adminSettingsGroup.GET("", settingsHandler.GetSettings)
 	adminSettingsGroup.PATCH("", settingsHandler.UpdateSettings)
 
-	// File upload & storage management endpoints (Requires auth or admin key)
+	// File upload (signed-in users) & storage management (Admin-protected)
 	e.POST(apiPath("/upload"), uploadHandler.UploadFile, middleware.RequireAuthOrAdmin(adminKey))
-	e.GET(apiPath("/upload"), uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
-	e.GET(apiPath("/files"), uploadHandler.ListFiles, middleware.RequireAuthOrAdmin(adminKey))
-	e.DELETE(apiPath("/upload/*"), uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
-	e.DELETE(apiPath("/files/*"), uploadHandler.DeleteFile, middleware.RequireAuthOrAdmin(adminKey))
+	e.GET(apiPath("/upload"), uploadHandler.ListFiles, middleware.RequireAdmin(adminKey))
+	e.GET(apiPath("/files"), uploadHandler.ListFiles, middleware.RequireAdmin(adminKey))
+	e.DELETE(apiPath("/upload/*"), uploadHandler.DeleteFile, middleware.RequireAdmin(adminKey))
+	e.DELETE(apiPath("/files/*"), uploadHandler.DeleteFile, middleware.RequireAdmin(adminKey))
 
 	// Storage directory serving (local or S3 redirect)
 	e.GET("/storage/*", uploadHandler.ServeStorage)
 
-	// Public moul listing (read-only, no admin key needed)
-	e.GET(apiPath("/moul"), moulHandler.ListMoul)
+	// Moul schema listing (Admin-protected: schemas reveal rules and every field)
+	e.GET(apiPath("/moul"), moulHandler.ListMoul, middleware.RequireAdmin(adminKey))
 
 	// 2. Auth collections
 	authGroup := e.Group("")
@@ -377,23 +396,23 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	e.GET(apiPath("/moul/:name/records/:id"), recordHandler.GetRecord)
 	e.PATCH(apiPath("/moul/:name/records/:id"), recordHandler.UpdateRecord)
 	e.DELETE(apiPath("/moul/:name/records/:id"), recordHandler.DeleteRecord)
-	e.POST(apiPath("/moul/:name/retry-jobs"), recordHandler.RetryJobs, middleware.RequireAuthOrAdmin(adminKey))
+	e.POST(apiPath("/moul/:name/retry-jobs"), recordHandler.RetryJobs, middleware.RequireAdmin(adminKey))
 
 	// Real-time SSE record subscriptions and ticket exchange
 	e.POST(apiPath("/realtime/ticket"), realtimeHandler.CreateTicket)
 	e.GET(apiPath("/moul/:name/subscribe"), realtimeHandler.SubscribeCollection)
 	e.GET(apiPath("/moul/subscribe"), realtimeHandler.SubscribeGlobal)
 
-	// 4. Analytics visits log (JWT-protected)
-	e.GET(apiPath("/visits"), visitsHandler.ListVisits)
-	e.GET(apiPath("/visits/:id"), visitsHandler.GetVisit)
+	// 4. Analytics visits log (Admin-protected: visitor IPs and user agents)
+	e.GET(apiPath("/visits"), visitsHandler.ListVisits, middleware.RequireAdmin(adminKey))
+	e.GET(apiPath("/visits/:id"), visitsHandler.GetVisit, middleware.RequireAdmin(adminKey))
 
-	// 5. Request tracking log (JWT-protected)
-	e.GET(apiPath("/requests"), requestsHandler.ListRequests)
-	e.GET(apiPath("/requests/:id"), requestsHandler.GetRequest)
+	// 5. Request tracking log (Admin-protected)
+	e.GET(apiPath("/requests"), requestsHandler.ListRequests, middleware.RequireAdmin(adminKey))
+	e.GET(apiPath("/requests/:id"), requestsHandler.GetRequest, middleware.RequireAdmin(adminKey))
 
-	// 6. Background worker management (JWT/Admin-protected)
-	workersGroup := e.Group(apiPath("/workers"), middleware.RequireAuthOrAdmin(adminKey))
+	// 6. Background worker management (Admin-protected)
+	workersGroup := e.Group(apiPath("/workers"), middleware.RequireAdmin(adminKey))
 	workersGroup.GET("", workersHandler.ListJobs)
 	workersGroup.POST("", workersHandler.CreateJob)
 	workersGroup.GET("/:id", workersHandler.GetJob)
@@ -401,9 +420,9 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	workersGroup.DELETE("/:id", workersHandler.DeleteJob)
 	workersGroup.POST("/retry", workersHandler.RetryJobs)
 
-	// 7. System monitoring metrics (JWT/Admin-protected)
+	// 7. System monitoring metrics (Admin-protected)
 	sysmonHandler := NewSysmonHandler(sysmonCollector)
-	sysmonGroup := e.Group(apiPath("/system/metrics"), middleware.RequireAuthOrAdmin(adminKey))
+	sysmonGroup := e.Group(apiPath("/system/metrics"), middleware.RequireAdmin(adminKey))
 	sysmonGroup.GET("", sysmonHandler.GetMetrics)
 	sysmonGroup.POST("", sysmonHandler.PushMetrics)
 
