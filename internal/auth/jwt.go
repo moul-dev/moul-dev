@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"sync"
 	"time"
@@ -109,4 +111,18 @@ func VerifyTokenAllowExpired(tokenString string) (*Claims, error) {
 	}
 
 	return claims, nil
+}
+
+// DeriveKey returns a key for purpose derived from the JWT secret, so other signed values (such
+// as file URLs) never share a key with tokens.
+func DeriveKey(purpose string) []byte {
+	mustBeReady()
+	mac := hmac.New(sha256.New, jwtSecretKey)
+	mac.Write([]byte("moul:" + purpose))
+	return mac.Sum(nil)
+}
+
+// Ready reports whether InitJWT has been called.
+func Ready() bool {
+	return jwtReady
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/moul-dev/moul-dev/internal/dataio"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/filegate"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/pocketbase/dbx"
 )
@@ -19,6 +20,8 @@ import (
 // ExportImportHandler handles HTTP endpoints for bulk CSV and JSON data export and import.
 type ExportImportHandler struct {
 	DB *dbx.DB
+	// Files, when set, has its file references rebuilt after an import.
+	Files *filegate.Gate
 }
 
 // NewExportImportHandler creates a new ExportImportHandler instance.
@@ -166,6 +169,13 @@ func (h *ExportImportHandler) ImportRecords(c *echo.Context) error {
 			})
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Import error: %v", err))
+	}
+
+	if h.Files != nil {
+		if err := h.Files.RebuildMoulRefs(moul); err != nil {
+			logger.Error("Failed to rebuild file references after import", "moul", moulName, "err", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Imported records, but failed to index their files")
+		}
 	}
 
 	return c.JSON(http.StatusOK, result)

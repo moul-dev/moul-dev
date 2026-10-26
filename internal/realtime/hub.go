@@ -233,6 +233,18 @@ type Hub struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*Client]struct{}
 	schemaCache *SchemaCache
+	recordHook  RecordHook
+}
+
+// RecordHook adjusts an event record after it has been sanitized for a subscriber (for example,
+// signing the URLs of files that are not public).
+type RecordHook func(m *schema.Moul, record map[string]interface{})
+
+// SetRecordHook installs fn to run on every record sent to subscribers.
+func (h *Hub) SetRecordHook(fn RecordHook) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.recordHook = fn
 }
 
 func NewHub() *Hub {
@@ -563,6 +575,15 @@ func (h *Hub) sendEvent(client *Client, event Event, m *schema.Moul) {
 	eventCopy.Record = CloneAndSanitizeRecord(m, event.Record, client)
 	if len(event.OldRecord) > 0 {
 		eventCopy.OldRecord = CloneAndSanitizeRecord(m, event.OldRecord, client)
+	}
+	h.mu.RLock()
+	hook := h.recordHook
+	h.mu.RUnlock()
+	if hook != nil && m != nil {
+		hook(m, eventCopy.Record)
+		if eventCopy.OldRecord != nil {
+			hook(m, eventCopy.OldRecord)
+		}
 	}
 
 	client.mu.RLock()

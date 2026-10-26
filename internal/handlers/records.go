@@ -17,11 +17,13 @@ import (
 	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/cloak"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/filegate"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/realtime"
 	"github.com/moul-dev/moul-dev/internal/rules"
 	"github.com/moul-dev/moul-dev/internal/schema"
+	"github.com/moul-dev/moul-dev/internal/storage"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/moul-dev/moul-dev/internal/webhooks"
 
@@ -40,6 +42,8 @@ type RecordHandler struct {
 	AnalyticsEngine *analytics.Engine
 	AdminKey        string
 	SecureCookies   bool // Set to true in production, false in development
+	// Files tracks which records reference which uploads and signs file URLs; nil skips both.
+	Files *filegate.Gate
 }
 
 func NewRecordHandler(dbConn *dbx.DB, adminKey ...string) *RecordHandler {
@@ -415,11 +419,17 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 			return err
 		}
 		if ok {
-			if field.Type == "json" || field.Type == "file" {
+			if field.Type == "file" {
+				stored, err := h.storedFileValue(c, moul, field, val, "")
+				if err != nil {
+					return err
+				}
+				insertData[field.Name] = stored
+			} else if field.Type == "json" {
 				// Serialize JSON values to string
 				bytes, err := json.Marshal(val)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON/file field content for: "+field.Name)
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON field content for: "+field.Name)
 				}
 				insertData[field.Name] = string(bytes)
 			} else if field.Type == "bool" {
@@ -752,6 +762,7 @@ func (h *RecordHandler) CreateRecord(c *echo.Context) error {
 	}
 
 	recordMap := normalizeRecord(moul, nullStringMapToMap(record), NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: h.isRootOrAdmin(c)})
+	h.syncFileRefs(moul, recordMap)
 
 	// Dispatch create:after webhook
 	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
@@ -1147,10 +1158,16 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 			if err := validateFieldConstraints(field, val, true); err != nil {
 				return err
 			}
-			if field.Type == "json" || field.Type == "file" {
+			if field.Type == "file" {
+				stored, err := h.storedFileValue(c, moul, field, val, id)
+				if err != nil {
+					return err
+				}
+				updateParams[field.Name] = stored
+			} else if field.Type == "json" {
 				bytes, err := json.Marshal(val)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON/file field content for: "+field.Name)
+					return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON field content for: "+field.Name)
 				}
 				updateParams[field.Name] = string(bytes)
 			} else if field.Type == "bool" {
@@ -1409,6 +1426,7 @@ func (h *RecordHandler) UpdateRecord(c *echo.Context) error {
 
 	normOpts := NormalizeOptions{RevealFields: parseRevealParam(c), IsAdmin: isAdmin}
 	updatedRecordMap := normalizeRecord(moul, nullStringMapToMap(updatedRecord), normOpts)
+	h.syncFileRefs(moul, updatedRecordMap)
 
 	// Dispatch update:after webhook
 	webhooks.DispatchAfter(c.Request().Context(), moul.Webhooks, webhooks.Payload{
@@ -1559,6 +1577,11 @@ func (h *RecordHandler) deleteRecordAndCascade(ctx context.Context, moul *schema
 	_, err = h.DB.Delete(moulName, dbx.HashExp{"id": id}).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to delete record: %w", err)
+	}
+	if h.Files != nil {
+		if err := h.Files.DeleteRecordRefs(moulName, id); err != nil {
+			logger.Error("Failed to drop file references of deleted record", "moul", moulName, "record", id, "err", err)
+		}
 	}
 
 	// 4. Dispatch delete:after webhook
@@ -1934,6 +1957,7 @@ func (h *RecordHandler) expandRelations(c *echo.Context, moul *schema.Moul, reco
 		if !isAdmin && !h.canView(c, targetMoul, target) {
 			return nil
 		}
+		h.signFiles(c, targetMoul, target)
 		schema.RedactForViewer(targetMoul, target, authUser, isAdmin)
 		return target
 	}
@@ -2005,6 +2029,7 @@ func (h *RecordHandler) expandRelations(c *echo.Context, moul *schema.Moul, reco
 // present finishes a record for the response: requested relations are expanded under the
 // caller's view rules and fields the caller may not see are removed.
 func (h *RecordHandler) present(c *echo.Context, moul *schema.Moul, recordMap map[string]interface{}) map[string]interface{} {
+	h.signFiles(c, moul, recordMap)
 	h.expandRelations(c, moul, recordMap, c.QueryParam("expand"))
 	schema.RedactForViewer(moul, recordMap, middleware.GetAuthRecord(c), h.isRootOrAdmin(c))
 	return recordMap
@@ -2057,6 +2082,116 @@ func reassignedOwnerField(moul *schema.Moul, body map[string]interface{}, authUs
 		}
 	}
 	return ""
+}
+
+// fileFields returns the file fields of moul.
+func fileFields(moul *schema.Moul) []schema.MoulField {
+	var out []schema.MoulField
+	for _, f := range moul.Fields {
+		if f.Type == "file" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// storedFileValue validates a file field value from a request body and returns what is stored:
+// canonical /storage URLs without signatures. A non-admin may only attach files they uploaded or
+// files this record (recordID, "" on create) already holds in the same field.
+func (h *RecordHandler) storedFileValue(c *echo.Context, moul *schema.Moul, field schema.MoulField, val interface{}, recordID string) (interface{}, error) {
+	s3Prefix := ""
+	if settings, err := storage.GetSettings(h.DB); err == nil {
+		s3Prefix = storage.PublicURLPrefix(settings)
+	} else {
+		logger.Error("Failed to load storage settings", "err", err)
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+	maxItems := 0
+	if field.Max != nil {
+		maxItems = int(*field.Max)
+	}
+	normalized, ids, err := filegate.NormalizeValue(val, s3Prefix, maxItems)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q %s", field.Name, err))
+	}
+
+	if h.Files != nil && !h.isRootOrAdmin(c) && len(ids) > 0 {
+		authUser := middleware.GetAuthRecord(c)
+		callerID, _ := authUser["id"].(string)
+		callerMoul, _ := authUser["moul"].(string)
+		held := map[string]bool{}
+		if recordID != "" {
+			existing, err := h.Files.RecordRefs(moul.Name, recordID)
+			if err != nil {
+				logger.Error("Failed to read file references", "moul", moul.Name, "record", recordID, "err", err)
+				return nil, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+			}
+			for _, fid := range existing[field.Name] {
+				held[fid] = true
+			}
+		}
+		for _, fid := range ids {
+			if held[fid] {
+				continue
+			}
+			ownerMoul, ownerID, found, err := h.Files.Uploader(fid)
+			if err != nil {
+				logger.Error("Failed to look up upload", "file", fid, "err", err)
+				return nil, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+			}
+			if !found || callerID == "" || ownerID != callerID || ownerMoul != callerMoul {
+				return nil, echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Field %q references a file you did not upload", field.Name))
+			}
+		}
+	}
+
+	if normalized == nil {
+		return nil, nil
+	}
+	bytes, err := json.Marshal(normalized)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Invalid file field content for: "+field.Name)
+	}
+	return string(bytes), nil
+}
+
+// syncFileRefs records which uploads the file fields of a just-written record reference. A
+// failure is logged: the files then stay private, which fails closed.
+func (h *RecordHandler) syncFileRefs(moul *schema.Moul, record map[string]interface{}) {
+	fields := fileFields(moul)
+	if h.Files == nil || len(fields) == 0 {
+		return
+	}
+	id, _ := record["id"].(string)
+	refs := make(map[string][]string, len(fields))
+	for _, f := range fields {
+		refs[f.Name] = filegate.FileIDs(record[f.Name])
+	}
+	if err := h.Files.SetRecordRefs(moul.Name, id, refs); err != nil {
+		logger.Error("Failed to store file references", "moul", moul.Name, "record", id, "err", err)
+	}
+}
+
+// signFiles signs the file URLs of a record a guest may not view, so the caller's browser can
+// load them without credentials.
+func (h *RecordHandler) signFiles(c *echo.Context, moul *schema.Moul, record map[string]interface{}) {
+	signRecordFiles(h.DB, h.Files, moul, record, buildRequestContext(c, nil))
+}
+
+// signRecordFiles signs the file URLs of record when a guest may not view it.
+func signRecordFiles(dbConn *dbx.DB, gate *filegate.Gate, moul *schema.Moul, record map[string]interface{}, reqCtx map[string]interface{}) {
+	fields := fileFields(moul)
+	if gate == nil || len(fields) == 0 || record == nil {
+		return
+	}
+	if public, err := rules.EvaluateRule(dbConn, moul.Rules.ViewRule, nil, record, reqCtx); err == nil && public {
+		return
+	}
+	for _, f := range fields {
+		if v, ok := record[f.Name]; ok && v != nil {
+			record[f.Name] = gate.SignValue(v)
+		}
+	}
 }
 
 // copyRecord returns a shallow copy of record without its caller-specific expand block, for

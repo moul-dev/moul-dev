@@ -1,20 +1,26 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gobuffalo/envy"
 	"github.com/labstack/echo/v5"
 	echoMiddleware "github.com/labstack/echo/v5/middleware"
 	"github.com/moul-dev/moul-dev/internal/analytics"
+	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/clientip"
+	"github.com/moul-dev/moul-dev/internal/filegate"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
 	moulmcp "github.com/moul-dev/moul-dev/internal/mcp"
 	"github.com/moul-dev/moul-dev/internal/middleware"
 	"github.com/moul-dev/moul-dev/internal/realtime"
+	"github.com/moul-dev/moul-dev/internal/schema"
 	"github.com/moul-dev/moul-dev/internal/sysmon"
 	"github.com/moul-dev/moul-dev/internal/tls"
 	"github.com/moul-dev/moul-dev/pkg/worker"
@@ -66,6 +72,34 @@ func newIPExtractor(cfg *clientip.Config) echo.IPExtractor {
 		return echo.ExtractIPDirect()
 	}
 	return resolver.ClientIP
+}
+
+// fileURLKey returns the key that signs file URLs: derived from the JWT secret, or random for
+// this process when no secret is configured (signed URLs then die with the process).
+func fileURLKey() []byte {
+	if auth.Ready() {
+		return auth.DeriveKey("file-urls")
+	}
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		panic(fmt.Sprintf("failed to generate file URL key: %v", err))
+	}
+	return key
+}
+
+// fileURLTTL reads MOUL_FILE_URL_TTL (a Go duration such as "1h"); signed file URLs stay valid
+// at least this long.
+func fileURLTTL() time.Duration {
+	raw := strings.TrimSpace(envy.Get("MOUL_FILE_URL_TTL", ""))
+	if raw == "" {
+		return filegate.DefaultURLTTL
+	}
+	ttl, err := time.ParseDuration(raw)
+	if err != nil || ttl < time.Minute {
+		logger.Error("Invalid MOUL_FILE_URL_TTL; using the default", "value", raw, "default", filegate.DefaultURLTTL)
+		return filegate.DefaultURLTTL
+	}
+	return ttl
 }
 
 // NewRouter constructs and returns a fully configured Echo server instance with default options.
@@ -182,8 +216,11 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 
 	// ── Handlers initialization ─────────────────────────────────────
 
+	fileGate := filegate.New(dbConn, fileURLKey(), fileURLTTL())
+
 	moulHandler := NewMoulHandler(dbConn)
 	recordHandler := NewRecordHandler(dbConn, adminKey)
+	recordHandler.Files = fileGate
 	recordHandler.Engine = workerEngine
 	recordHandler.AnalyticsEngine = analyticsEngine
 	recordHandler.SecureCookies = !isDev // Secure cookies in production, insecure in dev
@@ -198,6 +235,8 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	settingsHandler.Mailer = mailService
 	settingsHandler.TLSManager = tlsManager
 	uploadHandler := NewUploadHandler(dbConn)
+	uploadHandler.AdminKey = adminKey
+	uploadHandler.Files = fileGate
 	setupHandler := NewSetupHandler(dbConn)
 	flagsHandler := NewFlagsHandler(dbConn)
 	webhookHandler := NewWebhookHandler(dbConn)
@@ -205,6 +244,10 @@ func NewRouterWithOptions(dbConn *dbx.DB, workerEngine *worker.Engine, analytics
 	realtimeHandler := NewRealtimeHandler(dbConn, ticketStore, adminKey)
 	rulesTestHandler := NewRulesTestHandler(dbConn)
 	exportImportHandler := NewExportImportHandler(dbConn)
+	exportImportHandler.Files = fileGate
+	realtime.DefaultHub.SetRecordHook(func(m *schema.Moul, record map[string]interface{}) {
+		signRecordFiles(dbConn, fileGate, m, record, nil)
+	})
 
 	// Built-in MCP Server
 	mcpServer := cfg.MCPServer
