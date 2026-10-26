@@ -151,7 +151,12 @@ The engine reads environment variables from a `.env` file in the current working
 | `MOUL_DB_PATH` | `moul-local.db` | Path to the SQLite database file. |
 | `MOUL_DB_MAX_CONNS` | max(4, CPUs) | SQLite connection pool size. Every pooled connection gets WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`; idle connections are kept open. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
+| `MOUL_IMAGE_CONCURRENCY` | max(1, CPUs/2) | How many uploaded images are decoded and resized at once; further uploads wait. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
+
+### Runtime Settings: Image Uploads
+
+`POST /api/upload` returns `width` and `height` for images, a thumbhash and `thumbs` (`sm` 256, `md` 1024, `lg` 2048 px, each cut from the next larger one; a size not smaller than the original points at the original). Images above 40 megapixels are refused before anything is stored. Set `file_thumbs_async` to `"true"` to return right after storing the original: the sizes and thumbhash are then made by the built-in `GenerateImageSizes` job, which updates the upload's `meta.json` (listed by `GET /api/upload`), while the upload response keeps every thumb pointing at the original.
 
 ### Runtime Settings: Request Log & Retention
 

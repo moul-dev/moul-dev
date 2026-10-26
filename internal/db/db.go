@@ -246,6 +246,7 @@ func EnsureSystemTables(db *dbx.DB) error {
 		"file_s3_access_key":             "",
 		"file_s3_secret_key":             "",
 		"file_s3_force_path_style":       "false",
+		"file_thumbs_async":              "false",
 		"litestream_enabled":             "false",
 		"litestream_s3_bucket":           "",
 		"litestream_s3_endpoint":         "",

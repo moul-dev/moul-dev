@@ -39,6 +39,7 @@
   - [2. Enqueue Job Programmatically from Go](#2-enqueue-job-programmatically-from-go)
   - [3. Programmatic Analytics API](#3-programmatic-analytics-api)
   - [5. Write Transactions (`app.WriteTx`)](#5-write-transactions-appwritetx)
+- [Image Uploads](#image-uploads)
 - [Request Log & Visit Tracking](#request-log--visit-tracking)
 - [Worker Engine Architecture & Operations](#worker-engine-architecture--operations)
 - [Access Rules & Filters Syntax](#access-rules--filters-syntax)
@@ -823,6 +824,14 @@ To subscribe across all collections or specific multi-collections, use `GET /api
 
 ---
 
+## Image Uploads
+
+`POST /api/upload` stores the original and, for images, returns `width`, `height`, a `thumbhash` and `thumbs` with `sm` (256 px), `md` (1024 px) and `lg` (2048 px) renditions; a size that is not smaller than the original points at the original. Each rendition is cut from the next larger one with a Linear filter, at most `MOUL_IMAGE_CONCURRENCY` images are processed at once, and images above 40 megapixels are refused from their header, before anything is stored or decoded.
+
+Set the `file_thumbs_async` setting to `"true"` to return as soon as the original is stored: the upload response then has `width` and `height` and every thumb pointing at the original, and the built-in `GenerateImageSizes` job makes the renditions and thumbhash and records them in the upload's `meta.json` (as listed by `GET /api/upload`).
+
+---
+
 ## Request Log & Visit Tracking
 
 Every request outside the built-in excludes (docs, MCP, OAuth, the admin console, `/api/visits`, `/api/requests`, `/api/workers`) is logged to `_requests` (about 290 bytes per row), written in batches of up to 100 rows, one transaction per batch. The log is controlled by these `_settings` keys (`PATCH /api/settings`, applied immediately; `POST /api/settings/reload` picks up changes made by another process):
@@ -924,6 +933,7 @@ Set the following environment variables on your production server or container:
 | `MOUL_API_PREFIX` | No | Base URL path prefix for API endpoints (default: /api, use `""` for root) | `/v1` or `""` |
 | `MOUL_PUBLIC_URL` | No | Base public URL for email links (default: http://localhost:8090) | `https://api.myapp.com` |
 | `MOUL_DB_PATH` | No | Path to SQLite database file | `/var/lib/moul/moul.db` |
+| `MOUL_IMAGE_CONCURRENCY` | No | How many uploaded images are decoded and resized at once (default: max(1, CPU count / 2)); further uploads wait | `2` |
 | `MOUL_DB_MAX_CONNS` | No | SQLite connection pool size; every connection is opened with WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`, and idle connections are kept (default: max(4, CPU count)) | `8` |
 | `MOUL_ENCRYPTION_KEY` | Optional* | Master key (min 16 bytes) for `cloak` field encryption and blind indexes (*required if any collection has a `cloak` field) | `your-secure-32-byte-master-key` |
 | `MOUL_CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `https://myapp.com,https://admin.myapp.com` |

@@ -11,6 +11,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/db"
 	"github.com/moul-dev/moul-dev/internal/logger"
 	"github.com/moul-dev/moul-dev/internal/mailer"
+	"github.com/moul-dev/moul-dev/internal/storage"
 	"github.com/moul-dev/moul-dev/pkg/worker"
 )
 
@@ -65,6 +66,21 @@ func (a *App) RegisterBuiltinWorkers() {
 			return a.mailService.Send(ctx, emailMsg)
 		}
 		return nil
+	})
+
+	// Register the image renditions worker used when the file_thumbs_async setting is "true"
+	a.workerEngine.Register("GenerateImageSizes", func(ctx context.Context, job *worker.Job) error {
+		fileID, _ := job.Args["id"].(string)
+		key, _ := job.Args["key"].(string)
+		return storage.GenerateImageSizes(ctx, a.dbConn, fileID, key)
+	})
+	engine := a.workerEngine
+	storage.SetImageSizesEnqueuer(func(ctx context.Context, fileID, key string) error {
+		_, err := engine.Enqueue(ctx, "_workers", map[string]interface{}{
+			"worker": "GenerateImageSizes",
+			"args":   map[string]interface{}{"id": fileID, "key": key},
+		})
+		return err
 	})
 
 	// Register periodic revoked token garbage collection worker

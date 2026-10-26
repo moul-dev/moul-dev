@@ -66,6 +66,7 @@ func (h *SettingsHandler) UpdateSettings(c *echo.Context) error {
 		"file_s3_access_key":             true,
 		"file_s3_secret_key":             true,
 		"file_s3_force_path_style":       true,
+		"file_thumbs_async":              true,
 		"litestream_enabled":             true,
 		"litestream_s3_bucket":           true,
 		"litestream_s3_endpoint":         true,

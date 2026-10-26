@@ -3,11 +3,8 @@ package storage
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -24,10 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/disintegration/imaging"
 	"github.com/moul-dev/moul-dev/internal/util"
 	"github.com/pocketbase/dbx"
-	"go.n16f.net/thumbhash"
 	_ "golang.org/x/image/webp"
 )
 
@@ -38,6 +33,8 @@ type FileInfo struct {
 	ThumbHash string            `json:"thumbhash,omitempty"`
 	Thumbs    map[string]string `json:"thumbs,omitempty"`
 	Size      int64             `json:"size,omitempty"`
+	Width     int               `json:"width,omitempty"`  // pixels, images only
+	Height    int               `json:"height,omitempty"` // pixels, images only
 	CreatedAt string            `json:"createdAt,omitempty"`
 }
 
@@ -126,9 +123,14 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 	lowerExt := strings.ToLower(ext)
 	isImage := strings.HasPrefix(contentType, "image/") ||
 		lowerExt == ".png" || lowerExt == ".jpg" || lowerExt == ".jpeg" || lowerExt == ".gif" || lowerExt == ".webp"
+	if isImage {
+		// Refuse oversized images from their header, before anything is stored or decoded.
+		if _, _, _, err := imageDimensions(fileData); err != nil {
+			return nil, err
+		}
+	}
 
 	var originalURL string
-	var thumbHashStr string
 
 	s3Enabled := settings["file_s3_enabled"] == "true"
 	s3Client, bucket, err := getS3Client(ctx, settings)
@@ -177,96 +179,12 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 		CreatedAt: createdAt,
 	}
 
-	// 2. Process image files (thumbnails & thumbhashes)
+	// 2. Process image files (dimensions, thumbhash and sm/md/lg renditions)
+	pendingSizes := false
 	if isImage {
-		info.Thumbs = make(map[string]string)
-		img, _, err := image.Decode(bytes.NewReader(fileData))
-		if err == nil {
-			// A. Generate ThumbHash
-			smallImg := imaging.Fit(img, 100, 100, imaging.Linear)
-			bounds := smallImg.Bounds()
-
-			rgba := image.NewRGBA(bounds)
-			draw.Draw(rgba, bounds, smallImg, bounds.Min, draw.Src)
-
-			hash := thumbhash.EncodeImage(rgba)
-			thumbHashStr = base64.StdEncoding.EncodeToString(hash)
-			info.ThumbHash = thumbHashStr
-
-			// B. Create semantic sizes
-			origBounds := img.Bounds()
-			origW := origBounds.Dx()
-			origH := origBounds.Dy()
-
-			targets := map[string]int{
-				"sm": 256,
-				"md": 1024,
-				"lg": 2048,
-			}
-
-			var targetExt string
-			var targetContentType string
-			var format imaging.Format
-
-			lowerExt := strings.ToLower(ext)
-			if lowerExt == ".png" {
-				targetExt = ".png"
-				targetContentType = "image/png"
-				format = imaging.PNG
-			} else if lowerExt == ".gif" {
-				targetExt = ".gif"
-				targetContentType = "image/gif"
-				format = imaging.GIF
-			} else {
-				targetExt = ".jpg"
-				targetContentType = "image/jpeg"
-				format = imaging.JPEG
-			}
-
-			for name, targetSize := range targets {
-				if origW <= targetSize && origH <= targetSize {
-					info.Thumbs[name] = originalURL
-				} else {
-					resizedImg := imaging.Fit(img, targetSize, targetSize, imaging.Lanczos)
-					sizeBuf := new(bytes.Buffer)
-					if err := imaging.Encode(sizeBuf, resizedImg, format); err != nil {
-						return nil, fmt.Errorf("failed to encode %s image: %w", name, err)
-					}
-					sizeBytes := sizeBuf.Bytes()
-					sizeKey := fmt.Sprintf("%s/%s%s", uniqueID, name, targetExt)
-
-					var sizeURL string
-					if s3Enabled {
-						_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
-							Bucket:      aws.String(bucket),
-							Key:         aws.String(sizeKey),
-							Body:        bytes.NewReader(sizeBytes),
-							ContentType: aws.String(targetContentType),
-						})
-						if err != nil {
-							return nil, fmt.Errorf("failed to upload %s file to S3: %w", name, err)
-						}
-
-						endpoint := settings["file_s3_endpoint"]
-						region := settings["file_s3_region"]
-						if endpoint != "" {
-							sizeURL = fmt.Sprintf("%s/%s/%s", strings.TrimSuffix(endpoint, "/"), bucket, sizeKey)
-						} else {
-							sizeURL = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucket, region, sizeKey)
-						}
-					} else {
-						sizePath := filepath.Join("storage", sizeKey)
-						if err := os.MkdirAll(filepath.Dir(sizePath), 0755); err != nil {
-							return nil, fmt.Errorf("failed to create local storage directory for %s: %w", name, err)
-						}
-						if err := os.WriteFile(sizePath, sizeBytes, 0644); err != nil {
-							return nil, fmt.Errorf("failed to save %s locally: %w", name, err)
-						}
-						sizeURL = fmt.Sprintf("/storage/%s", sizeKey)
-					}
-					info.Thumbs[name] = sizeURL
-				}
-			}
+		pendingSizes, err = processImageUpload(ctx, settings, s3Client, bucket, info, fileData, ext, originalURL)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -283,6 +201,11 @@ func UploadFile(ctx context.Context, db *dbx.DB, fileData []byte, originalFilena
 	} else {
 		metaPath := filepath.Join("storage", metaKey)
 		_ = os.WriteFile(metaPath, metaBytes, 0644)
+	}
+
+	// 4. Queue renditions deferred by file_thumbs_async (the job reads the meta.json written above)
+	if pendingSizes {
+		queueImageSizes(ctx, settings, s3Client, bucket, info, fileData, key)
 	}
 
 	return info, nil

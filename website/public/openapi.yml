@@ -1160,7 +1160,7 @@ paths:
           $ref: '#/components/responses/500InternalError'
     post:
       summary: Upload File
-      description: Uploads a media file. Automatically processes images to extract thumbhashes and generate semantic sizes (sm, md, lg).
+      description: Uploads a media file. Images get their width and height, a thumbhash and semantic sizes (sm 256, md 1024, lg 2048; a size not smaller than the original points at the original). At most MOUL_IMAGE_CONCURRENCY images are processed at once, and images above 40 megapixels are refused before anything is stored. With the file_thumbs_async setting the sizes are made by a background GenerateImageSizes job and every thumb points at the original until it finishes.
       tags:
         - File Storage
       security:
@@ -3746,6 +3746,12 @@ components:
           type: integer
           format: int64
           description: File size in bytes.
+        width:
+          type: integer
+          description: Image width in pixels (images only).
+        height:
+          type: integer
+          description: Image height in pixels (images only).
         createdAt:
           type: string
           format: date-time

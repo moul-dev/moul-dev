@@ -35,6 +35,7 @@ The engine reads environment variables from `.env` in the current working direct
 | `MOUL_DB_MAX_CONNS` | max(4, CPUs) | SQLite connection pool size. Every pooled connection gets WAL, `busy_timeout=5000`, `synchronous=NORMAL` and `foreign_keys=ON`; idle connections are kept open. |
 | `MOUL_ENCRYPTION_KEY` | `""` | Master encryption key (min 16 bytes) for `cloak` AES-256-GCM encryption and blind indexes. |
 | `MOUL_CORS_ORIGINS` | `*` (in dev) | Comma-separated list of allowed CORS origins. |
+| `MOUL_IMAGE_CONCURRENCY` | max(1, CPUs/2) | How many uploaded images are decoded and resized at once (renditions use a Linear filter, each cut from the next larger size; images above 40 MP are refused). Setting `file_thumbs_async=true` moves the sizes to a background `GenerateImageSizes` job. Upload responses include `width` and `height`. |
 | `GEOIP_DB_PATH` | `""` | Optional path to MaxMind GeoIP2 `.mmdb` database. |
 
 ---
