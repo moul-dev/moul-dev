@@ -273,6 +273,13 @@ func (a *App) DB() *dbx.DB {
 	return a.dbConn
 }
 
+// InvalidateSchemaCache makes the next request re-read the collection schemas. Moul's own schema
+// writes do this already; call it after writing _moul with raw SQL, which the cache otherwise picks
+// up only within a second.
+func (a *App) InvalidateSchemaCache() {
+	db.InvalidateMoulCache(a.dbConn)
+}
+
 // Mailer returns the mailer service instance.
 func (a *App) Mailer() *mailer.Mailer {
 	return a.mailService
@@ -529,6 +536,8 @@ func (a *App) Bootstrap() error {
 			return fmt.Errorf("before start hook failed: %w", err)
 		}
 	}
+	// Hooks may define collections by writing _moul directly; serve them from the first request.
+	db.InvalidateMoulCache(a.dbConn)
 
 	return nil
 }
@@ -603,6 +612,7 @@ func (a *App) ServeMCP(ctx context.Context) error {
 			return fmt.Errorf("before start hook failed: %w", err)
 		}
 	}
+	db.InvalidateMoulCache(a.dbConn)
 
 	return a.mcpServer.ServeStdio()
 }

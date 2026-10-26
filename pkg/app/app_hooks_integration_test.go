@@ -516,3 +516,45 @@ func TestHooksIntegration_ErrorHandling(t *testing.T) {
 		t.Errorf("Unexpected error for before start hook failure: %v", err3)
 	}
 }
+
+// A collection an OnBeforeStart hook defines by writing _moul with raw SQL is served from the first
+// request after Bootstrap, and InvalidateSchemaCache does the same for raw writes after boot; the
+// schema cache would otherwise pick them up only within a second.
+func TestHooksIntegration_RawSchemaWritesAreServedAtOnce(t *testing.T) {
+	a := newTestApp(t)
+	define := func(dbConn *dbx.DB, name string) error {
+		if _, err := dbConn.NewQuery("CREATE TABLE " + name + " (id TEXT PRIMARY KEY, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL)").Execute(); err != nil {
+			return err
+		}
+		fields, _ := json.Marshal([]schema.MoulField{})
+		rules, _ := json.Marshal(schema.MoulRules{})
+		now := time.Now().UTC().Format(time.RFC3339)
+		_, err := dbConn.Insert("_moul", dbx.Params{"id": "moul-" + name, "name": name, "type": "base",
+			"fields": string(fields), "rules": string(rules), "createdAt": now, "updatedAt": now}).Execute()
+		return err
+	}
+	a.OnBeforeStart(func(m *app.App) error {
+		// A request (or Moul's own boot) has already filled the cache.
+		if _, err := db.LoadAllMoul(m.DB()); err != nil {
+			return err
+		}
+		return define(m.DB(), "raw_boot")
+	})
+	if err := a.Bootstrap(); err != nil {
+		t.Fatalf("Bootstrap failed: %v", err)
+	}
+	if _, err := db.LoadMoulByName(a.DB(), "raw_boot"); err != nil {
+		t.Fatalf("collection defined in OnBeforeStart not served after Bootstrap: %v", err)
+	}
+
+	if _, err := db.LoadAllMoul(a.DB()); err != nil {
+		t.Fatal(err)
+	}
+	if err := define(a.DB(), "raw_later"); err != nil {
+		t.Fatal(err)
+	}
+	a.InvalidateSchemaCache()
+	if _, err := db.LoadMoulByName(a.DB(), "raw_later"); err != nil {
+		t.Fatalf("collection written after InvalidateSchemaCache not served: %v", err)
+	}
+}
