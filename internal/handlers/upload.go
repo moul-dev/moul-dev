@@ -265,6 +265,10 @@ func (h *UploadHandler) UploadFile(c *echo.Context) error {
 
 	info, err := storage.UploadFile(c.Request().Context(), h.DB, fileData, file.Filename, contentType)
 	if err != nil {
+		if errors.Is(err, storage.ErrImageTooLarge) {
+			return echo.NewHTTPError(http.StatusRequestEntityTooLarge,
+				fmt.Sprintf("Image is too large to process (at most %d megapixels)", storage.MaxImagePixels/1_000_000))
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "Storage upload failed: "+err.Error())
 	}
 

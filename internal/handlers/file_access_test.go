@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/gif"
 	"image/png"
 	"mime/multipart"
 	"net/http"
@@ -280,5 +281,39 @@ func TestFiles_PublicDecisionFollowsChanges(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("%d file references survived the collection", count)
+	}
+}
+
+// hugeGIF returns a valid 1×1 GIF whose logical screen claims 10000×10000 pixels (100 MP).
+func hugeGIF(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewPaletted(image.Rect(0, 0, 1, 1), []color.Color{color.Black, color.White})
+	var buf bytes.Buffer
+	if err := gif.Encode(&buf, img, nil); err != nil {
+		t.Fatalf("encode gif: %v", err)
+	}
+	data := buf.Bytes()
+	// Logical screen width and height follow the 6-byte "GIF89a" signature, little endian.
+	data[6], data[7] = 0x10, 0x27
+	data[8], data[9] = 0x10, 0x27
+	return data
+}
+
+func TestUploads_OversizedImageIs413(t *testing.T) {
+	env := newSecurityEnv(t)
+	defer os.RemoveAll("storage")
+	env.insertUser("alice", "alice@example.com")
+
+	rec := env.upload("bomb.gif", "image/gif", hugeGIF(t), bearer(env.memberToken("alice")))
+	expectStatus(t, rec, http.StatusRequestEntityTooLarge)
+	if !strings.Contains(rec.Body.String(), "megapixels") {
+		t.Fatalf("unexpected body: %s", rec.Body.String())
+	}
+	var stored int
+	if err := env.db.NewQuery("SELECT COUNT(*) FROM _files").Row(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != 0 {
+		t.Fatalf("%d uploads recorded for a refused image", stored)
 	}
 }

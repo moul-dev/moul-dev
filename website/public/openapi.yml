@@ -1204,6 +1204,8 @@ paths:
                   $ref: '#/components/schemas/FileInfo'
         '400':
           description: Missing file in multipart form-data, or a file type members may not upload.
+        '413':
+          description: Image whose dimensions exceed 40 megapixels; nothing is stored.
         '401':
           description: Authorization failed (requires either a valid authenticated user or admin key).
         '500':
