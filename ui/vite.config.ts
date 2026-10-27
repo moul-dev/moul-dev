@@ -20,6 +20,15 @@ export default defineConfig({
         target: 'http://localhost:8090',
         changeOrigin: true,
       },
+      // The API reference embedded by the docs page, and the spec it loads
+      '/docs': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
+      '^/openapi\\.(yml|json)$': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

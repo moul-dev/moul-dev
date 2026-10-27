@@ -31,7 +31,17 @@ StyleX or React-ecosystem dependency.
 - `queryClient.invalidateQueries(...)` → the `queryClient` exported by `src/lib/query.ts`.
 - `useNavigate()` / `<Link to>` → `router.navigate(path, { search })` / `<a href=${router.href(path)}>`.
 - `useParams()` / `useSearch()` → `this.route.params` / `this.route.search` from a `RouteController`.
-- `onPress` → `@press`; `onChange={setX}` on fields → `@input=${(e) => (this.x = e.target.value)}`.
+- `onPress` on `<Button>` → `@click=${onPress(() => …)}` (`src/lib/press.ts`), **not** `@press`:
+  2026.10.27's `<moul-button>` fires `press` twice per mouse click, so toggles flip back and
+  mutations repeat. `onPress` uses the native `click` and skips disabled or pending buttons.
+- `onChange={setX}` on fields → `@input=${(e) => (this.x = fieldValue(e))}` (`src/lib/forms.ts`).
+- Tables → `<admin-data-table>` (`src/components/data-table.ts`) with `render` per column;
+  `<moul-table>` can only print strings. Cell templates render in the table's shadow root, so use
+  its `.mono` / `.muted` / `.small` / `.nowrap` classes or inline styles.
+- Pickers: prefer `<moul-select>` over `<moul-combobox>` unless typing to filter matters. The
+  combobox does not show a preset `selected-key`'s text, and after a selection it lists only the
+  selected item when reopened.
+- Page layout → `pageStyles` and `pageHeader(title, subtitle, actions)` from `src/styles/page.ts`.
 - Badge/Alert/Toast `variant="success"` → `tone="success"`; old `variant="info"` → `tone="primary"`.
   There is no neutral tone; for the old `variant="neutral"` badge try `variant="bordered"`.
 - `<Card variant="default">` → `<moul-card>` with **no** `variant`: that is the neutral surface. Any
@@ -55,7 +65,8 @@ route's placeholder in `src/routes.ts`.
 - [x] **Phase 1: Foundation and shell.** Toolchain, router, query/store controllers, theme, auth,
   toasts, devtools event bus, `<admin-app>`, sidebar layout, header, mobile tab bar and drawer,
   theme toggle, logo, login and setup pages, placeholders for every other route.
-- [ ] **Phase 2: Dashboard pages.** `overview`, `analytics`, `realtime`, `docs`.
+- [x] **Phase 2: Dashboard pages.** `overview`, `analytics`, `realtime`, `docs`, plus
+  `<admin-data-table>` and the shared page styles.
 - [ ] **Phase 3: Collections.** `collections/index`, `collections/$moulName`, `FieldsBuilder`,
   `RulesEditor`, `RuleDocsModal`.
 - [ ] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`.

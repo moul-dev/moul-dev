@@ -1,5 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { logoIcon } from './components/layout/logo';
+import { onPress } from './lib/press';
+import { queryClient } from './lib/query';
 import { type Route, router } from './lib/router';
 import { StoreController } from './lib/store';
 import { auth } from './state/auth';
@@ -50,7 +52,7 @@ export class AdminApp extends LitElement {
         margin: 0 0 var(--spacing-3);
         max-width: 600px;
       }
-  `,
+    `,
   ];
 
   private readonly loads = new Map<Route, LoadState>();
@@ -61,11 +63,13 @@ export class AdminApp extends LitElement {
   constructor() {
     super();
     new StoreController(this, router, auth);
-    // Signing in or out changes what the guards allow; re-check the current URL.
+    // Signing in or out changes what the guards allow; re-check the current URL. Signing out
+    // also drops cached server data so the next session starts clean.
     let wasAuthenticated = auth.isAuthenticated;
     auth.addEventListener('change', () => {
       if (auth.isAuthenticated !== wasAuthenticated) {
         wasAuthenticated = auth.isAuthenticated;
+        if (!wasAuthenticated) queryClient.clear();
         router.refresh();
       }
     });
@@ -118,7 +122,7 @@ export class AdminApp extends LitElement {
       <div class="screen">
         <h2>Console Application Error</h2>
         <p>${message}</p>
-        <moul-button variant="primary" @press=${() => window.location.reload()}>Reload Console</moul-button>
+        <moul-button variant="primary" @click=${onPress(() => window.location.reload())}>Reload Console</moul-button>
       </div>
     `;
   }
@@ -128,7 +132,7 @@ export class AdminApp extends LitElement {
       <div class="screen">
         <span class="screen-logo">${logoIcon(32)}</span>
         <p>No console page lives at this address.</p>
-        <moul-button variant="primary" @press=${() => router.navigate('/overview')}>Go to Overview</moul-button>
+        <moul-button variant="primary" @click=${onPress(() => router.navigate('/overview'))}>Go to Overview</moul-button>
       </div>
     `;
   }

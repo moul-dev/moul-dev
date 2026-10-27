@@ -1,6 +1,7 @@
 import { html, LitElement } from 'lit';
 import { api } from '../api/client';
 import { fieldValue, submitOnEnter } from '../lib/forms';
+import { onPress } from '../lib/press';
 import { router } from '../lib/router';
 import { StoreController } from '../lib/store';
 import { auth } from '../state/auth';
@@ -125,7 +126,7 @@ export class AdminSetupPage extends LitElement {
       return html`
         ${keyStatus(this.onClearKey)}
         <moul-alert tone="primary" description="Root administrator already created. Please sign in with your credentials."></moul-alert>
-        <moul-button variant="primary" size="lg" @press=${() => router.navigate('/login')}>Go to Sign In</moul-button>
+        <moul-button variant="primary" size="lg" @click=${onPress(() => router.navigate('/login'))}>Go to Sign In</moul-button>
       `;
     }
 

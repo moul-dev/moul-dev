@@ -66,7 +66,7 @@ export class AdminHeader extends LitElement {
           gap: 4px;
         }
       }
-  `,
+    `,
   ];
 
   private readonly mobile = new MediaQueryController(this, '(max-width: 767px)');

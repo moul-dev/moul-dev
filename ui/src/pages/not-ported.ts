@@ -6,10 +6,6 @@ import { baseStyles } from '../styles/base';
 // Temporary: routes whose React page has not been rebuilt yet. Remove this element, and its
 // entries in src/routes.ts, as each phase of ui/MIGRATION.md lands.
 const PENDING: Record<string, { title: string; phase: number; source: string }> = {
-  '/overview': { title: 'Overview', phase: 2, source: 'routes/_auth/overview.tsx' },
-  '/analytics': { title: 'Analytics', phase: 2, source: 'routes/_auth/analytics.tsx' },
-  '/realtime': { title: 'Realtime Hub', phase: 2, source: 'routes/_auth/realtime.tsx' },
-  '/docs': { title: 'API Reference', phase: 2, source: 'routes/_auth/docs.tsx' },
   '/collections': { title: 'Collections', phase: 3, source: 'routes/_auth/collections/index.tsx' },
   '/collections/:moulName': { title: 'Collection', phase: 3, source: 'routes/_auth/collections/$moulName.tsx' },
   '/records/:moulName': { title: 'Records', phase: 4, source: 'routes/_auth/records/$moulName.tsx' },
@@ -31,7 +27,7 @@ export class AdminNotPortedPage extends LitElement {
         font-family: var(--font-family-mono);
         font-size: 0.8125rem;
       }
-  `,
+    `,
   ];
 
   constructor() {

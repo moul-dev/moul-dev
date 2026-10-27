@@ -1,4 +1,5 @@
 import { html, LitElement } from 'lit';
+import { onPress } from '../../lib/press';
 import { StoreController } from '../../lib/store';
 import { theme, type ThemeMode } from '../../state/theme';
 
@@ -24,7 +25,7 @@ export class AdminThemeToggle extends LitElement {
           variant="outline"
           is-icon
           aria-label=${`Current theme: ${current}. Click to switch to ${next} mode`}
-          @press=${() => theme.cycleTheme()}
+          @click=${onPress(() => theme.cycleTheme())}
         >
           <admin-icon name=${icon} weight="duotone" size="16"></admin-icon>
         </moul-button>

@@ -1,4 +1,5 @@
 import { css, html, LitElement } from 'lit';
+import { onPress } from '../../lib/press';
 import { router } from '../../lib/router';
 import { StoreController } from '../../lib/store';
 import { auth } from '../../state/auth';
@@ -266,7 +267,7 @@ export class AdminMoreMenuDrawer extends LitElement {
       <moul-drawer placement="bottom" size="lg" ?is-open=${this.isOpen} @openchange=${this.onOpenChange}>
         <div slot="header" class="header-row">
           <h2>Menu & System Tools</h2>
-          <moul-button variant="ghost" is-icon size="sm" aria-label="Close menu" @press=${() => this.close()}>
+          <moul-button variant="ghost" is-icon size="sm" aria-label="Close menu" @click=${onPress(() => this.close())}>
             <admin-icon name="x" size="16"></admin-icon>
           </moul-button>
         </div>
@@ -283,7 +284,7 @@ export class AdminMoreMenuDrawer extends LitElement {
                 <span class="user-sub">${subtitle}</span>
               </div>
             </div>
-            <moul-button variant="ghost" is-icon aria-label="Account Settings" @press=${() => this.go('/settings', { tab: 'account' })}>
+            <moul-button variant="ghost" is-icon aria-label="Account Settings" @click=${onPress(() => this.go('/settings', { tab: 'account' }))}>
               <admin-icon name="user-gear" size="18"></admin-icon>
             </moul-button>
           </div>

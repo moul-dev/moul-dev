@@ -143,7 +143,7 @@ export class AdminBottomTabBar extends LitElement {
       .active .label {
         font-weight: 600;
       }
-  `,
+    `,
   ];
 
   static override properties = {

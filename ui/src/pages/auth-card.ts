@@ -1,6 +1,7 @@
 import { css, html, type TemplateResult } from 'lit';
 import { logoIcon } from '../components/layout/logo';
 import '../components/layout/theme-toggle';
+import { onPress } from '../lib/press';
 import { baseStyles } from '../styles/base';
 
 /** Shared frame of the sign-in and setup pages: centered card with logo, title and theme toggle. */
@@ -139,7 +140,7 @@ export function keyStatus(onClear: () => void) {
         <moul-badge tone="success" is-dot aria-label="Verified"></moul-badge>
         Admin key verified
       </span>
-      <moul-button variant="ghost" size="sm" @press=${onClear}>Change Key</moul-button>
+      <moul-button variant="ghost" size="sm" @click=${onPress(() => onClear())}>Change Key</moul-button>
     </div>
   `;
 }
