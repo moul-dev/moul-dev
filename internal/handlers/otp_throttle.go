@@ -87,29 +87,37 @@ func (t *otpThrottle) network(key string) *otpNetworkState {
 	return state
 }
 
+// The budgets an OTP guess can run out of, named in the 429 answer (its "reason"), so a client can
+// tell "request a new code" (otpLimitCode) from "wait" (otpLimitAccount, otpLimitNetwork).
+const (
+	otpLimitCode    = "code"
+	otpLimitAccount = "account"
+	otpLimitNetwork = "network"
+)
+
 // reserve takes one attempt from every budget, atomically with the check, so concurrent guesses
-// cannot overrun a budget. It returns false and when to retry if a budget is spent. The attempt
-// counts as a failure until succeeded or refund gives it back.
-func (t *otpThrottle) reserve(account, network string) (bool, time.Duration) {
+// cannot overrun a budget. It returns false, the spent budget and when to retry if a budget is
+// spent. The attempt counts as a failure until succeeded or refund gives it back.
+func (t *otpThrottle) reserve(account, network string) (bool, string, time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.prune()
 	acc := t.account(account)
 	netState := t.network(network)
 	if acc.dayFailures >= otpMaxDailyFailures {
-		return false, otpDay - t.now().Sub(acc.dayStart)
+		return false, otpLimitAccount, otpDay - t.now().Sub(acc.dayStart)
 	}
 	if acc.codeFailures >= otpMaxCodeAttempts {
 		// Only a new code helps; it is requested, not waited for.
-		return false, time.Minute
+		return false, otpLimitCode, time.Minute
 	}
 	if netState.failures >= otpMaxNetworkFailures {
-		return false, otpNetworkWindow - t.now().Sub(netState.windowStart)
+		return false, otpLimitNetwork, otpNetworkWindow - t.now().Sub(netState.windowStart)
 	}
 	acc.codeFailures++
 	acc.dayFailures++
 	netState.failures++
-	return true, 0
+	return true, "", 0
 }
 
 // codeExhausted reports whether the account's current code has used up its attempts.

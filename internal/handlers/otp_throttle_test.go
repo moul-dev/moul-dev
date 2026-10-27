@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -16,15 +17,15 @@ func TestOTPThrottle_Limits(t *testing.T) {
 	th.now = func() time.Time { return now }
 
 	for i := 0; i < otpMaxCodeAttempts; i++ {
-		if ok, _ := th.reserve("users|a@x", "1.2.3.4"); !ok {
+		if ok, _, _ := th.reserve("users|a@x", "1.2.3.4"); !ok {
 			t.Fatalf("attempt %d refused", i)
 		}
 		if exhausted := th.codeExhausted("users|a@x"); exhausted != (i == otpMaxCodeAttempts-1) {
 			t.Fatalf("attempt %d: exhausted = %v", i, exhausted)
 		}
 	}
-	if ok, _ := th.reserve("users|a@x", "1.2.3.4"); ok {
-		t.Fatal("sixth guess on one code allowed")
+	if ok, reason, _ := th.reserve("users|a@x", "1.2.3.4"); ok || reason != otpLimitCode {
+		t.Fatalf("sixth guess on one code: allowed %v, reason %q", ok, reason)
 	}
 
 	// A refunded attempt (no code was compared) is given back.
@@ -43,11 +44,11 @@ func TestOTPThrottle_Limits(t *testing.T) {
 		}
 	}
 	th.newCode("users|a@x")
-	if ok, _ := th.reserve("users|a@x", "9.9.9.9"); ok {
-		t.Fatal("daily failure budget not enforced")
+	if ok, reason, _ := th.reserve("users|a@x", "9.9.9.9"); ok || reason != otpLimitAccount {
+		t.Fatalf("daily failure budget: allowed %v, reason %q", ok, reason)
 	}
 	now = now.Add(otpDay)
-	if ok, _ := th.reserve("users|a@x", "9.9.9.9"); !ok {
+	if ok, _, _ := th.reserve("users|a@x", "9.9.9.9"); !ok {
 		t.Fatal("daily budget did not reset")
 	}
 
@@ -55,8 +56,8 @@ func TestOTPThrottle_Limits(t *testing.T) {
 	for i := 0; i < otpMaxNetworkFailures; i++ {
 		th.reserve(fmt.Sprintf("users|victim%d@x", i), "5.5.5.5")
 	}
-	if ok, _ := th.reserve("users|fresh@x", "5.5.5.5"); ok {
-		t.Fatal("network budget not enforced")
+	if ok, reason, _ := th.reserve("users|fresh@x", "5.5.5.5"); ok || reason != otpLimitNetwork {
+		t.Fatalf("network budget: allowed %v, reason %q", ok, reason)
 	}
 	if otpNetworkKey("2001:db8:1:2:3:4:5:6") != otpNetworkKey("2001:db8:1:2:ffff::1") {
 		t.Fatal("IPv6 addresses of one /64 must share a budget")
@@ -72,7 +73,7 @@ func TestOTPThrottle_ConcurrentGuessesStayBounded(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if ok, _ := th.reserve("users|a@x", fmt.Sprintf("198.51.%d.%d", i/250, i%250)); ok {
+			if ok, _, _ := th.reserve("users|a@x", fmt.Sprintf("198.51.%d.%d", i/250, i%250)); ok {
 				mu.Lock()
 				allowed++
 				mu.Unlock()
@@ -106,6 +107,10 @@ func TestAuthWithOTP_GuessesAreBounded(t *testing.T) {
 	expectStatus(t, rec, http.StatusTooManyRequests)
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("missing Retry-After")
+	}
+	var body struct{ Message, Reason string }
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || body.Reason != otpLimitCode || body.Message == "" {
+		t.Fatalf("429 body = %s, want a message and reason %q", rec.Body.String(), otpLimitCode)
 	}
 
 	// The exhausted code was voided, so even the right code no longer works after a new budget.

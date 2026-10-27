@@ -247,9 +247,14 @@ func (h *AuthHandler) AuthWithOTP(c *echo.Context) error {
 	// Bound guesses per code, per account and per client network before comparing anything.
 	account := moulName + "|" + email
 	network := otpNetworkKey(c.RealIP())
-	if ok, retryAfter := otpLimiter.reserve(account, network); !ok {
+	if ok, reason, retryAfter := otpLimiter.reserve(account, network); !ok {
 		c.Response().Header().Set("Retry-After", strconv.Itoa(int(retryAfter.Seconds())+1))
-		return echo.NewHTTPError(http.StatusTooManyRequests, "Too many sign-in attempts. Request a new code or try again later.")
+		// reason names the spent budget: "code" (only a new code helps), "account" or "network"
+		// (only time helps).
+		return c.JSON(http.StatusTooManyRequests, map[string]string{
+			"message": "Too many sign-in attempts. Request a new code or try again later.",
+			"reason":  reason,
+		})
 	}
 
 	// Fetch record by email
