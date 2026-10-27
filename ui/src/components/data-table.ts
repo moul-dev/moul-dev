@@ -125,8 +125,13 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
         background-color: color-mix(in oklab, var(--color-surface) 10%, transparent);
       }
 
-      .empty-cell {
+      /* Outside the table so it spans the visible width, not the scroll width, on narrow screens */
+      .empty {
+        position: sticky;
+        inset-inline-start: 0;
         padding: var(--spacing-6);
+        border-radius: var(--_body-radius);
+        background-color: var(--color-surface);
         text-align: center;
         color: var(--color-muted);
       }
@@ -227,13 +232,6 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
         `,
       );
     }
-    if (this.rows.length === 0) {
-      return html`
-        <tr>
-          <td class="empty-cell" colspan=${this.columns.length}><slot name="empty">No data available</slot></td>
-        </tr>
-      `;
-    }
     return repeat(
       this.rows,
       this.rowKey,
@@ -269,6 +267,9 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
           ${this.renderBody()}
         </tbody>
       </table>
+      ${!this.loading && this.rows.length === 0
+        ? html`<div class="empty"><slot name="empty">No data available</slot></div>`
+        : nothing}
     `;
   }
 }

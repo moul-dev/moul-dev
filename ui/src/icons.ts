@@ -3,6 +3,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 // Phosphor icons as raw SVG strings: only the icons and weights listed here are bundled.
 // Add an import and a REGISTRY entry when a page needs a new icon or weight.
+import appleLogoFill from '@phosphor-icons/core/fill/apple-logo-fill.svg?raw';
 import arrowRight from '@phosphor-icons/core/regular/arrow-right.svg?raw';
 import arrowSquareOut from '@phosphor-icons/core/regular/arrow-square-out.svg?raw';
 import arrowsClockwise from '@phosphor-icons/core/regular/arrows-clockwise.svg?raw';
@@ -22,7 +23,10 @@ import chartLineUp from '@phosphor-icons/core/regular/chart-line-up.svg?raw';
 import chartLineUpFill from '@phosphor-icons/core/fill/chart-line-up-fill.svg?raw';
 import check from '@phosphor-icons/core/regular/check.svg?raw';
 import checkCircle from '@phosphor-icons/core/regular/check-circle.svg?raw';
+import checkCircleBold from '@phosphor-icons/core/bold/check-circle-bold.svg?raw';
+import checkCircleFill from '@phosphor-icons/core/fill/check-circle-fill.svg?raw';
 import clock from '@phosphor-icons/core/regular/clock.svg?raw';
+import cloud from '@phosphor-icons/core/regular/cloud.svg?raw';
 import cloudArrowUp from '@phosphor-icons/core/regular/cloud-arrow-up.svg?raw';
 import code from '@phosphor-icons/core/regular/code.svg?raw';
 import compass from '@phosphor-icons/core/regular/compass.svg?raw';
@@ -36,18 +40,25 @@ import dotsThreeOutlineVertical from '@phosphor-icons/core/regular/dots-three-ou
 import dotsThreeOutlineVerticalFill from '@phosphor-icons/core/fill/dots-three-outline-vertical-fill.svg?raw';
 import downloadSimple from '@phosphor-icons/core/regular/download-simple.svg?raw';
 import envelopeSimple from '@phosphor-icons/core/regular/envelope-simple.svg?raw';
+import eye from '@phosphor-icons/core/regular/eye.svg?raw';
 import file from '@phosphor-icons/core/regular/file.svg?raw';
 import fileCode from '@phosphor-icons/core/regular/file-code.svg?raw';
 import fileCsv from '@phosphor-icons/core/regular/file-csv.svg?raw';
 import flag from '@phosphor-icons/core/regular/flag.svg?raw';
+import flask from '@phosphor-icons/core/regular/flask.svg?raw';
 import floppyDisk from '@phosphor-icons/core/regular/floppy-disk.svg?raw';
 import funnel from '@phosphor-icons/core/regular/funnel.svg?raw';
+import gauge from '@phosphor-icons/core/regular/gauge.svg?raw';
 import gear from '@phosphor-icons/core/regular/gear.svg?raw';
+import githubLogoFill from '@phosphor-icons/core/fill/github-logo-fill.svg?raw';
 import globe from '@phosphor-icons/core/regular/globe.svg?raw';
+import globeHemisphereWest from '@phosphor-icons/core/regular/globe-hemisphere-west.svg?raw';
+import googleLogoBold from '@phosphor-icons/core/bold/google-logo-bold.svg?raw';
 import hardDrives from '@phosphor-icons/core/regular/hard-drives.svg?raw';
 import hash from '@phosphor-icons/core/regular/hash.svg?raw';
 import info from '@phosphor-icons/core/regular/info.svg?raw';
 import link from '@phosphor-icons/core/regular/link.svg?raw';
+import linkSimple from '@phosphor-icons/core/regular/link-simple.svg?raw';
 import listBullets from '@phosphor-icons/core/regular/list-bullets.svg?raw';
 import listDashes from '@phosphor-icons/core/regular/list-dashes.svg?raw';
 import lock from '@phosphor-icons/core/regular/lock.svg?raw';
@@ -58,6 +69,7 @@ import moonDuotone from '@phosphor-icons/core/duotone/moon-duotone.svg?raw';
 import paperclip from '@phosphor-icons/core/regular/paperclip.svg?raw';
 import pencilSimple from '@phosphor-icons/core/regular/pencil-simple.svg?raw';
 import play from '@phosphor-icons/core/regular/play.svg?raw';
+import playFill from '@phosphor-icons/core/fill/play-fill.svg?raw';
 import plus from '@phosphor-icons/core/regular/plus.svg?raw';
 import plusBold from '@phosphor-icons/core/bold/plus-bold.svg?raw';
 import prohibit from '@phosphor-icons/core/regular/prohibit.svg?raw';
@@ -88,10 +100,12 @@ import userGear from '@phosphor-icons/core/regular/user-gear.svg?raw';
 import users from '@phosphor-icons/core/regular/users.svg?raw';
 import warningCircle from '@phosphor-icons/core/regular/warning-circle.svg?raw';
 import x from '@phosphor-icons/core/regular/x.svg?raw';
+import xCircleBold from '@phosphor-icons/core/bold/x-circle-bold.svg?raw';
 
 export type IconWeight = 'regular' | 'bold' | 'fill' | 'duotone';
 
 const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
+  'apple-logo': { fill: appleLogoFill },
   'arrow-right': { regular: arrowRight },
   'arrow-square-out': { regular: arrowSquareOut },
   'arrows-clockwise': { regular: arrowsClockwise },
@@ -107,8 +121,9 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   'caret-up': { regular: caretUp },
   'chart-line-up': { regular: chartLineUp, fill: chartLineUpFill },
   check: { regular: check },
-  'check-circle': { regular: checkCircle },
+  'check-circle': { regular: checkCircle, bold: checkCircleBold, fill: checkCircleFill },
   clock: { regular: clock },
+  cloud: { regular: cloud },
   'cloud-arrow-up': { regular: cloudArrowUp },
   code: { regular: code },
   compass: { regular: compass },
@@ -119,18 +134,25 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   'dots-three-outline-vertical': { regular: dotsThreeOutlineVertical, fill: dotsThreeOutlineVerticalFill },
   'download-simple': { regular: downloadSimple },
   'envelope-simple': { regular: envelopeSimple },
+  eye: { regular: eye },
   file: { regular: file },
   'file-code': { regular: fileCode },
   'file-csv': { regular: fileCsv },
   flag: { regular: flag },
+  flask: { regular: flask },
   'floppy-disk': { regular: floppyDisk },
   funnel: { regular: funnel },
+  gauge: { regular: gauge },
   gear: { regular: gear },
+  'github-logo': { fill: githubLogoFill },
   globe: { regular: globe },
+  'globe-hemisphere-west': { regular: globeHemisphereWest },
+  'google-logo': { bold: googleLogoBold },
   'hard-drives': { regular: hardDrives },
   hash: { regular: hash },
   info: { regular: info },
   link: { regular: link },
+  'link-simple': { regular: linkSimple },
   'list-bullets': { regular: listBullets },
   'list-dashes': { regular: listDashes },
   lock: { regular: lock },
@@ -138,7 +160,7 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   moon: { regular: moon, fill: moonFill, duotone: moonDuotone },
   paperclip: { regular: paperclip },
   'pencil-simple': { regular: pencilSimple },
-  play: { regular: play },
+  play: { regular: play, fill: playFill },
   plus: { regular: plus, bold: plusBold },
   prohibit: { regular: prohibit },
   pulse: { regular: pulse },
@@ -162,6 +184,7 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   users: { regular: users },
   'warning-circle': { regular: warningCircle },
   x: { regular: x },
+  'x-circle': { bold: xCircleBold },
 };
 
 /**

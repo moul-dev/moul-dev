@@ -71,7 +71,9 @@ route's placeholder in `src/routes.ts`.
   `RulesEditor`, `RuleDocsModal`.
 - [x] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`, split into the page,
   `<admin-record-drawer>`, `<admin-file-field>` and `<admin-relation-field>`.
-- [ ] **Phase 5: System.** `settings`, `workers`, `flags`.
+- [x] **Phase 5: System.** `settings`, `workers`, `flags`. The eight plain-settings drawers (S3,
+  Litestream, root IPs, email, OAuth) are described as data in `pages/settings-sections.ts` and
+  rendered by one form; Save now enforces the fields they mark required.
 - [ ] **Phase 6: Finish.** Dev-only inspector panel, drop the `.tsx` exclude and any leftovers,
   rebuild and commit `pkg/ui/dist` (`make ui-check-sync`), update Makefile and README, browser QA
   on desktop and mobile in light and dark themes, delete this file.

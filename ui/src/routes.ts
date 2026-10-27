@@ -8,8 +8,6 @@ function page(path: string, tag: string, load: () => Promise<unknown>): Route {
   return { path, tag, load, layout: 'app', guard: requireAuth };
 }
 
-const notPorted = () => import('./pages/not-ported');
-
 // First match wins. Pages load on first visit, so each one is its own chunk.
 export const routes: Route[] = [
   { path: '/', redirect: '/overview' },
@@ -22,8 +20,8 @@ export const routes: Route[] = [
   page('/records/:moulName', 'admin-records-page', () => import('./pages/records')),
   page('/realtime', 'admin-realtime-page', () => import('./pages/realtime')),
   page('/analytics', 'admin-analytics-page', () => import('./pages/analytics')),
-  page('/workers', 'admin-not-ported-page', notPorted),
-  page('/flags', 'admin-not-ported-page', notPorted),
-  page('/settings', 'admin-not-ported-page', notPorted),
+  page('/workers', 'admin-workers-page', () => import('./pages/workers')),
+  page('/flags', 'admin-flags-page', () => import('./pages/flags')),
+  page('/settings', 'admin-settings-page', () => import('./pages/settings')),
   page('/docs', 'admin-docs-page', () => import('./pages/docs')),
 ];

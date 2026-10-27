@@ -60,6 +60,9 @@ export class QueryController<
   }
 
   hostConnected(): void {
+    // The constructor ran from a field initializer, before the host's constructor set its
+    // state; re-read the options so the first fetch doesn't use an undefined key.
+    this.observer.setOptions(this.defaultedOptions());
     this.unsubscribe = this.observer.subscribe((result) => {
       this.result = result;
       this.host.requestUpdate();
