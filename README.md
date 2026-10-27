@@ -48,6 +48,7 @@
 - [Security Defaults](#security-defaults)
 - [Deployment Information](#deployment-information)
   - [Single-Binary Production Build](#single-binary-production-build)
+  - [Versioning & Releases](#versioning--releases)
   - [Production Environment Variables](#production-environment-variables)
   - [Litestream Automated S3 Backup & Disaster Recovery](#litestream-automated-s3-backup--disaster-recovery)
   - [Systemd Service Deployment Example](#systemd-service-deployment-example)
@@ -964,6 +965,17 @@ To build the production binary with stripped debug symbols and version metadata:
 make build
 # Creates executable at bin/moul
 ```
+
+### Versioning & Releases
+
+Moul and `@moul-dev/ui` share one [CalVer](https://calver.org) scheme, `YYYY.MM.MICRO`: the UTC year, the UTC month without zero padding, and a release counter that starts at `0` each month. Release tags add a leading `v`, so the first release of November 2026 is `v2026.11.0` and the next is `v2026.11.1`. Every tag is valid SemVer.
+
+```bash
+make next-version   # Prints the next tag, e.g. v2026.11.0
+make release-tag    # Tags HEAD with it; publish with: git push origin <tag>
+```
+
+Pushing the tag runs `.github/workflows/release.yml`. It rejects any tag that is not `vYYYY.MM.MICRO`, then builds `moul` and `moul-ctl` for macOS and Linux and publishes them as a GitHub release. The tags from `v2026.07` to `v2026.09` predate the scheme.
 
 ### Production Environment Variables
 

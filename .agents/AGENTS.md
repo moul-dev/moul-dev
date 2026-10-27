@@ -3,6 +3,9 @@
 ## Documentation Integrity & Synchronization
 - **Synchronous Documentation Updates**: Always update relevant documentation (including `README.md`, API references, LLM guides such as `llms.txt` and `AGENTS.md`, OpenAPI specifications, and feature guides) whenever implementing feature changes, API additions, or relevant bugfixes.
 
+## Versioning
+- **CalVer `YYYY.MM.MICRO`**: Moul and `@moul-dev/ui` share one scheme. Release tags are `vYYYY.MM.MICRO` with an unpadded month (`v2026.9.0`, never `v2026.09`): the first release of a UTC month is `.0`, and each later release that month adds one to `MICRO`. Take the next tag from `make next-version` instead of writing one by hand.
+
 ## Go Backend Engineering Standards
 - **Strict Error Handling**: Never discard errors silently using blank identifiers (`_ = ...` or `_, _ = ...`). Always check and propagate errors with `%w` wrapping (`fmt.Errorf("...: %w", err)`) or map them to structured HTTP domain responses.
 - **Testing Completeness & Shared Helpers**: Every new package, service, or handler must be accompanied by comprehensive tests (`*_test.go`). Use `internal/testutil` (`testutil.NewTestDB(t)` and `testutil.NewTestServer(t)`) for all database and HTTP test setups instead of manual boilerplate.

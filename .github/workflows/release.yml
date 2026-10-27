@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-      - '[0-9]*.[0-9]*'
 
 permissions:
   contents: write
@@ -14,6 +13,14 @@ jobs:
     name: Build & Publish Release
     runs-on: ubuntu-latest
     steps:
+      - name: Check CalVer Tag
+        run: |
+          # Releases are tagged vYYYY.MM.MICRO with an unpadded month, e.g. v2026.11.0.
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v[0-9]{4}\.([1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not CalVer vYYYY.MM.MICRO (e.g. v2026.11.0). Get the next tag from 'make next-version'."
+            exit 1
+          fi
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -38,7 +45,7 @@ jobs:
 
       - name: Build Binaries
         run: |
-          # Extract version from tag (e.g. refs/tags/v2026.07 -> v2026.07)
+          # Extract version from tag (e.g. refs/tags/v2026.11.0 -> v2026.11.0)
           VERSION=${GITHUB_REF#refs/tags/}
           
           # We want to cross-compile for macOS (darwin) and Linux, both amd64 and arm64
