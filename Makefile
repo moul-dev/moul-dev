@@ -4,7 +4,7 @@ export MOUL_ADMIN_KEY ?= test-admin-key-1234
 export MOUL_ENCRYPTION_KEY ?= test-encryption-key-for-unit-tests-1234
 VERSION ?= dev
 
-.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage bench-sse bench-sse-engine bench-sse-network run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync fmt lint lint-fix install-hooks
+.PHONY: run restore dev dev-all build test-go test-e2e test-flow clean-db seed typegen test-worker test-analytics test-coverage bench-sse bench-sse-engine bench-sse-network run-tui build-tui minio-start minio-setup test-tui web-dev web-build web-install ui-install ui-dev ui-build ui-check-sync fmt lint lint-fix install-hooks next-version release-tag
 
 # Format Go source files
 fmt:
@@ -18,6 +18,20 @@ lint:
 lint-fix:
 	gofmt -w .
 	golangci-lint run --fix ./...
+
+# Print the next CalVer release tag, vYYYY.MM.MICRO (shared with @moul-dev/ui):
+# the first release of a UTC month is vYYYY.MM.0, each later one adds 1 to MICRO.
+next-version:
+	@month="v$$(date -u +%Y).$$(date -u +%m | sed 's/^0//')"; \
+	micro=$$(git tag --list "$$month.*" | sed "s/^$$month\.//" | grep -E '^(0|[1-9][0-9]*)$$' | sort -n | tail -1); \
+	if [ -z "$$micro" ]; then echo "$$month.0"; else echo "$$month.$$((micro + 1))"; fi
+
+# Tag HEAD as the next release; pushing the tag publishes it
+release-tag:
+	@git fetch --tags --quiet origin
+	@tag=$$($(MAKE) -s next-version); \
+	git tag -a "$$tag" -m "Release $$tag" && \
+	echo "Tagged $$tag. Publish it with: git push origin $$tag"
 
 # Install local git hooks
 install-hooks:
