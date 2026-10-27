@@ -645,7 +645,7 @@ Auth tokens live 24 hours by default. Configure them with `Config.TokenTTL` / `a
 When accessing `/api/mcp` over HTTP/SSE, two primary header authentication methods are supported:
 1. **Bearer Token Header (Recommended)**: `Authorization: Bearer <MOUL_ADMIN_KEY>` (standard for Cursor, Windsurf, Claude Code).
 2. **Admin Key Header**: `X-Admin-Key: <MOUL_ADMIN_KEY>` (ideal for API gateways, proxies, and cURL scripts).
-*(Fallback: `?adminKey=<MOUL_ADMIN_KEY>` query parameter).*
+Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) are rejected with `400 Bad Request` so they never land in proxy logs or browser history.
 
 ### Integration Examples
 
@@ -705,18 +705,6 @@ When accessing `/api/mcp` over HTTP/SSE, two primary header authentication metho
         "X-Admin-Key": "test-admin-key-1234"
       },
       "url": "http://localhost:8090/api/mcp"
-    }
-  }
-}
-```
-
-**URL Query Parameter Authentication**:
-```json
-{
-  "mcpServers": {
-    "moul": {
-      "type": "http",
-      "url": "http://localhost:8090/api/mcp?adminKey=test-admin-key-1234"
     }
   }
 }

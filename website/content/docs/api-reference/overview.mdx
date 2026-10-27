@@ -36,12 +36,12 @@ Obtained by logging into the root administrative account (`POST /api/moul/_rootU
 ### 2. Administrative Master Key
 Master API key configured via `MOUL_ADMIN_KEY`. Used for direct server-to-server calls, CLI operations, and MCP inspection without requiring an active user session.
 - **Header**: `X-Admin-Key: <MOUL_ADMIN_KEY>` (or `Authorization: Bearer <MOUL_ADMIN_KEY>`)
-- **Query Parameter** *(SSE / MCP)*: `?adminKey=<MOUL_ADMIN_KEY>`
+- Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`) are rejected with `400 Bad Request`.
 
 ### 3. User Bearer Token
 Returned upon successful end-user authentication (Password, Email OTP, WebAuthn Passkey, or OAuth2) against custom `auth` collections. Governed by the collection's row-level access rules.
 - **Header**: `Authorization: Bearer <USER_JWT_TOKEN>`
-- **Query Parameter** *(SSE EventSource)*: `?token=<USER_JWT_TOKEN>`
+- **Single-use ticket** *(SSE EventSource)*: exchange the token for a 30-second ticket with `POST /api/realtime/ticket`, then connect with `?ticket=<TICKET>`. `?token=` is rejected with `400 Bad Request`.
 
 ---
 

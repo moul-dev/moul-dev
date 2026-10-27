@@ -72,7 +72,7 @@ X-Admin-Key: admin-key-dev-secret-change-me
 Content-Type: application/json
 ```
 
-*(Optional fallback: If your client cannot supply custom request headers, you can pass the key as a query parameter: `http://localhost:8090/api/mcp?adminKey=admin-key-dev-secret-change-me`)*
+*(The key must travel in a header: `?adminKey=` and other query-string keys are rejected with `400 Bad Request`.)*
 
 ---
 

@@ -48,7 +48,7 @@ info:
     - **Authentication Options**:
       - Header: `X-Admin-Key: <MOUL_ADMIN_KEY>`
       - Header: `Authorization: Bearer <MOUL_ADMIN_KEY>`
-      - URL Query Parameter: `http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>`
+      - Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) are rejected with `400 Bad Request`.
     - **Client Setup & Configuration Examples**:
       - **Claude Desktop Setup**:
         - Config Path (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -76,16 +76,6 @@ info:
                 "headers": {
                   "X-Admin-Key": "<MOUL_ADMIN_KEY>"
                 }
-              }
-            }
-          }
-          ```
-        - *Streamable HTTP / SSE Mode (Query Param Auth)*:
-          ```json
-          {
-            "mcpServers": {
-              "moul-sse": {
-                "url": "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>"
               }
             }
           }
@@ -118,18 +108,12 @@ info:
           }
           ```
       - **cURL Streamable HTTP Execution Example**:
-        - *1. Direct POST JSON-RPC Request*:
+        - *Direct POST JSON-RPC Request*:
           ```bash
           curl -X POST "http://localhost:8090/api/mcp" \
             -H "X-Admin-Key: <MOUL_ADMIN_KEY>" \
             -H "Content-Type: application/json" \
             -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "curl", "version": "1.0"}}}'
-          ```
-        - *2. Query Param Auth Example*:
-          ```bash
-          curl -X POST "http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>" \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "moul_list_collections", "arguments": {}}}'
           ```
     - **Built-in MCP Tools Summary (17 Native Tools)**:
       - **Collections**: `moul_list_collections`, `moul_get_collection`, `moul_create_collection`, `moul_delete_collection`
@@ -188,7 +172,7 @@ tags:
       HTTP SSE requests support:
       - OAuth 2.0 / 2.1 Bearer access token (`Authorization: Bearer <access_token>`)
       - Master Admin Key: Header `X-Admin-Key: <MOUL_ADMIN_KEY>` or `Authorization: Bearer <MOUL_ADMIN_KEY>`.
-      - Query parameter: `?adminKey=<MOUL_ADMIN_KEY>`.
+      - Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) are rejected with `400 Bad Request`.
 
       #### Configuration Examples
       - **Google Gemini Custom Connected Apps** (`gemini.google.com/apps`):
@@ -3434,19 +3418,13 @@ paths:
         Requires master key authentication via:
         - Header `X-Admin-Key: <MOUL_ADMIN_KEY>`
         - Header `Authorization: Bearer <MOUL_ADMIN_KEY>`
-        - Query parameter `?adminKey=<MOUL_ADMIN_KEY>` (or `?token=...`, `?api_key=...`)
+
+        Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) are rejected with `400 Bad Request`.
       tags:
         - Model Context Protocol (MCP)
       security:
         - BearerAuth: []
         - AdminKeyAuth: []
-      parameters:
-        - in: query
-          name: adminKey
-          required: false
-          schema:
-            type: string
-          description: Master admin key passed in URL query parameter.
       responses:
         '200':
           description: SSE event stream connection established.
@@ -3475,12 +3453,6 @@ paths:
         - BearerAuth: []
         - AdminKeyAuth: []
       parameters:
-        - in: query
-          name: adminKey
-          required: false
-          schema:
-            type: string
-          description: Master admin key.
         - in: query
           name: sessionId
           required: false

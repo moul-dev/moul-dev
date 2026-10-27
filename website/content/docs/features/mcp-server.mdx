@@ -53,9 +53,8 @@ X-Admin-Key: <MOUL_ADMIN_KEY>
 Content-Type: application/json
 ```
 
-<Callout type="info" title="Query Parameter Fallback">
-For restricted clients or environments where custom request headers cannot be configured, Moul also accepts the admin key via URL query parameter:
-`http://localhost:8090/api/mcp?adminKey=<MOUL_ADMIN_KEY>`
+<Callout type="warn" title="No Query Parameter Keys">
+Moul rejects keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) with `400 Bad Request`, so they never land in proxy logs or browser history. Configure your client to send one of the headers above.
 </Callout>
 
 ---

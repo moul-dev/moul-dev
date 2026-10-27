@@ -44,7 +44,7 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
 
 2. **Streamable HTTP & SSE Transport (MCP 2025 Specification)**:
    - URL: `http://localhost:8090/api/mcp`
-   - Flexible Authentication: Pass via `Authorization: Bearer <ADMIN_SECRET_KEY>`, `X-Admin-Key` header, or URL query param `?adminKey=<ADMIN_SECRET_KEY>`.
+   - Authentication: Pass via `Authorization: Bearer <ADMIN_SECRET_KEY>` or the `X-Admin-Key` header. Keys in the query string (`?adminKey=`, `?admin_key=`, `?api_key=`, `?token=`) are rejected with `400 Bad Request`.
    - Bearer Token Auth Configuration (Recommended):
      ```json
      {
@@ -69,17 +69,6 @@ AI Agents (such as Claude Desktop, Cursor, or custom AI applications) can connec
              "X-Admin-Key": "<ADMIN_SECRET_KEY>"
            },
            "url": "http://localhost:8090/api/mcp"
-         }
-       }
-     }
-     ```
-   - URL Query Parameter Auth Configuration:
-     ```json
-     {
-       "mcpServers": {
-         "moul": {
-           "type": "http",
-           "url": "http://localhost:8090/api/mcp?adminKey=<ADMIN_SECRET_KEY>"
          }
        }
      }
