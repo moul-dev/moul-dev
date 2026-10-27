@@ -43,6 +43,7 @@ export const pageStyles = css`
   .page-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--spacing-2);
   }
 

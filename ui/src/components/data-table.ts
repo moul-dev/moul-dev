@@ -4,14 +4,15 @@ import { baseStyles } from '../styles/base';
 
 export interface DataColumn<Row> {
   key: string;
-  title: string;
+  /** Header content: text, or a template such as a select-all checkbox. */
+  title: unknown;
   /** `end` right-aligns the column with tabular figures, for numbers. */
   align?: 'start' | 'end';
   width?: string;
   /**
    * Cell content; defaults to `String(row[key])`. The template renders in the table's shadow
-   * root: use its `.mono`, `.muted`, `.small` and `.nowrap` classes or inline styles, not page
-   * classes.
+   * root: use its `.mono`, `.muted`, `.small`, `.nowrap`, `.truncate` and `.cell-link` classes
+   * or inline styles, not page classes.
    */
   render?: (row: Row, index: number) => unknown;
 }
@@ -120,6 +121,10 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
         }
       }
 
+      tbody tr.row[aria-selected='true'] td {
+        background-color: color-mix(in oklab, var(--color-surface) 10%, transparent);
+      }
+
       .empty-cell {
         padding: var(--spacing-6);
         text-align: center;
@@ -142,6 +147,42 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
       .nowrap {
         white-space: nowrap;
       }
+
+      /* One line, cut with an ellipsis; pair with a title attribute for the full value */
+      .truncate {
+        display: inline-block;
+        max-width: 260px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+
+      /* A cell value that opens something, e.g. the record ID that opens the editor */
+      .cell-link {
+        padding: 3px 7px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--color-primary-500);
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .cell-link:hover {
+        border-color: var(--color-border-subtle);
+        background-color: var(--color-bg-subtle);
+        color: var(--color-primary-400);
+      }
+
+      .cell-link:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
     `,
   ];
 
@@ -149,6 +190,7 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
     columns: { attribute: false },
     rows: { attribute: false },
     rowKey: { attribute: false },
+    isRowSelected: { attribute: false },
     loading: { type: Boolean },
     skeletonRows: { type: Number, attribute: 'skeleton-rows' },
     dense: { type: Boolean, reflect: true },
@@ -157,6 +199,8 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
   declare columns: DataColumn<Row>[];
   declare rows: Row[];
   declare rowKey: (row: Row, index: number) => string;
+  /** Marks rows as selected (`aria-selected`, tinted background). */
+  declare isRowSelected: ((row: Row) => boolean) | undefined;
   declare loading: boolean;
   declare skeletonRows: number;
   declare dense: boolean;
@@ -166,6 +210,7 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
     this.columns = [];
     this.rows = [];
     this.rowKey = (row, index) => String((row as { id?: unknown }).id ?? index);
+    this.isRowSelected = undefined;
     this.loading = false;
     this.skeletonRows = 5;
     this.dense = false;
@@ -193,7 +238,7 @@ export class AdminDataTable<Row = Record<string, unknown>> extends LitElement {
       this.rows,
       this.rowKey,
       (row, index) => html`
-        <tr class="row">
+        <tr class="row" aria-selected=${this.isRowSelected ? String(this.isRowSelected(row)) : nothing}>
           ${this.columns.map(
             (column) => html`
               <td class=${column.align === 'end' ? 'end' : ''}>

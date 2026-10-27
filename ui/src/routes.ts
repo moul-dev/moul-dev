@@ -19,7 +19,7 @@ export const routes: Route[] = [
   page('/overview', 'admin-overview-page', () => import('./pages/overview')),
   page('/collections', 'admin-collections-page', () => import('./pages/collections')),
   page('/collections/:moulName', 'admin-collection-page', () => import('./pages/collection')),
-  page('/records/:moulName', 'admin-not-ported-page', notPorted),
+  page('/records/:moulName', 'admin-records-page', () => import('./pages/records')),
   page('/realtime', 'admin-realtime-page', () => import('./pages/realtime')),
   page('/analytics', 'admin-analytics-page', () => import('./pages/analytics')),
   page('/workers', 'admin-not-ported-page', notPorted),

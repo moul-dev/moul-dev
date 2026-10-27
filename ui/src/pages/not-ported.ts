@@ -6,7 +6,6 @@ import { baseStyles } from '../styles/base';
 // Temporary: routes whose React page has not been rebuilt yet. Remove this element, and its
 // entries in src/routes.ts, as each phase of ui/MIGRATION.md lands.
 const PENDING: Record<string, { title: string; phase: number; source: string }> = {
-  '/records/:moulName': { title: 'Records', phase: 4, source: 'routes/_auth/records/$moulName.tsx' },
   '/settings': { title: 'Settings', phase: 5, source: 'routes/_auth/settings.tsx' },
   '/workers': { title: 'Worker Queue', phase: 5, source: 'routes/_auth/workers.tsx' },
   '/flags': { title: 'Feature Flags', phase: 5, source: 'routes/_auth/flags.tsx' },

@@ -6,6 +6,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import arrowRight from '@phosphor-icons/core/regular/arrow-right.svg?raw';
 import arrowSquareOut from '@phosphor-icons/core/regular/arrow-square-out.svg?raw';
 import arrowsClockwise from '@phosphor-icons/core/regular/arrows-clockwise.svg?raw';
+import arrowsCounterClockwise from '@phosphor-icons/core/regular/arrows-counter-clockwise.svg?raw';
 import article from '@phosphor-icons/core/regular/article.svg?raw';
 import bookOpen from '@phosphor-icons/core/regular/book-open.svg?raw';
 import bracketsCurly from '@phosphor-icons/core/regular/brackets-curly.svg?raw';
@@ -14,11 +15,15 @@ import broadcastBold from '@phosphor-icons/core/bold/broadcast-bold.svg?raw';
 import broadcastFill from '@phosphor-icons/core/fill/broadcast-fill.svg?raw';
 import calendarBlank from '@phosphor-icons/core/regular/calendar-blank.svg?raw';
 import caretDown from '@phosphor-icons/core/regular/caret-down.svg?raw';
+import caretLeft from '@phosphor-icons/core/regular/caret-left.svg?raw';
+import caretRight from '@phosphor-icons/core/regular/caret-right.svg?raw';
 import caretUp from '@phosphor-icons/core/regular/caret-up.svg?raw';
 import chartLineUp from '@phosphor-icons/core/regular/chart-line-up.svg?raw';
 import chartLineUpFill from '@phosphor-icons/core/fill/chart-line-up-fill.svg?raw';
 import check from '@phosphor-icons/core/regular/check.svg?raw';
+import checkCircle from '@phosphor-icons/core/regular/check-circle.svg?raw';
 import clock from '@phosphor-icons/core/regular/clock.svg?raw';
+import cloudArrowUp from '@phosphor-icons/core/regular/cloud-arrow-up.svg?raw';
 import code from '@phosphor-icons/core/regular/code.svg?raw';
 import compass from '@phosphor-icons/core/regular/compass.svg?raw';
 import copy from '@phosphor-icons/core/regular/copy.svg?raw';
@@ -29,9 +34,14 @@ import desktop from '@phosphor-icons/core/regular/desktop.svg?raw';
 import desktopFill from '@phosphor-icons/core/fill/desktop-fill.svg?raw';
 import dotsThreeOutlineVertical from '@phosphor-icons/core/regular/dots-three-outline-vertical.svg?raw';
 import dotsThreeOutlineVerticalFill from '@phosphor-icons/core/fill/dots-three-outline-vertical-fill.svg?raw';
+import downloadSimple from '@phosphor-icons/core/regular/download-simple.svg?raw';
 import envelopeSimple from '@phosphor-icons/core/regular/envelope-simple.svg?raw';
+import file from '@phosphor-icons/core/regular/file.svg?raw';
+import fileCode from '@phosphor-icons/core/regular/file-code.svg?raw';
+import fileCsv from '@phosphor-icons/core/regular/file-csv.svg?raw';
 import flag from '@phosphor-icons/core/regular/flag.svg?raw';
 import floppyDisk from '@phosphor-icons/core/regular/floppy-disk.svg?raw';
+import funnel from '@phosphor-icons/core/regular/funnel.svg?raw';
 import gear from '@phosphor-icons/core/regular/gear.svg?raw';
 import globe from '@phosphor-icons/core/regular/globe.svg?raw';
 import hardDrives from '@phosphor-icons/core/regular/hard-drives.svg?raw';
@@ -40,14 +50,17 @@ import info from '@phosphor-icons/core/regular/info.svg?raw';
 import link from '@phosphor-icons/core/regular/link.svg?raw';
 import listBullets from '@phosphor-icons/core/regular/list-bullets.svg?raw';
 import listDashes from '@phosphor-icons/core/regular/list-dashes.svg?raw';
+import lock from '@phosphor-icons/core/regular/lock.svg?raw';
 import lockKey from '@phosphor-icons/core/regular/lock-key.svg?raw';
 import moon from '@phosphor-icons/core/regular/moon.svg?raw';
 import moonFill from '@phosphor-icons/core/fill/moon-fill.svg?raw';
 import moonDuotone from '@phosphor-icons/core/duotone/moon-duotone.svg?raw';
 import paperclip from '@phosphor-icons/core/regular/paperclip.svg?raw';
+import pencilSimple from '@phosphor-icons/core/regular/pencil-simple.svg?raw';
 import play from '@phosphor-icons/core/regular/play.svg?raw';
 import plus from '@phosphor-icons/core/regular/plus.svg?raw';
 import plusBold from '@phosphor-icons/core/bold/plus-bold.svg?raw';
+import prohibit from '@phosphor-icons/core/regular/prohibit.svg?raw';
 import pulse from '@phosphor-icons/core/regular/pulse.svg?raw';
 import queue from '@phosphor-icons/core/regular/queue.svg?raw';
 import shareNetwork from '@phosphor-icons/core/regular/share-network.svg?raw';
@@ -69,6 +82,7 @@ import tag from '@phosphor-icons/core/regular/tag.svg?raw';
 import textAa from '@phosphor-icons/core/regular/text-aa.svg?raw';
 import toggleLeft from '@phosphor-icons/core/regular/toggle-left.svg?raw';
 import trash from '@phosphor-icons/core/regular/trash.svg?raw';
+import uploadSimple from '@phosphor-icons/core/regular/upload-simple.svg?raw';
 import user from '@phosphor-icons/core/regular/user.svg?raw';
 import userGear from '@phosphor-icons/core/regular/user-gear.svg?raw';
 import users from '@phosphor-icons/core/regular/users.svg?raw';
@@ -81,16 +95,21 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   'arrow-right': { regular: arrowRight },
   'arrow-square-out': { regular: arrowSquareOut },
   'arrows-clockwise': { regular: arrowsClockwise },
+  'arrows-counter-clockwise': { regular: arrowsCounterClockwise },
   article: { regular: article },
   'book-open': { regular: bookOpen },
   'brackets-curly': { regular: bracketsCurly },
   broadcast: { regular: broadcast, bold: broadcastBold, fill: broadcastFill },
   'calendar-blank': { regular: calendarBlank },
   'caret-down': { regular: caretDown },
+  'caret-left': { regular: caretLeft },
+  'caret-right': { regular: caretRight },
   'caret-up': { regular: caretUp },
   'chart-line-up': { regular: chartLineUp, fill: chartLineUpFill },
   check: { regular: check },
+  'check-circle': { regular: checkCircle },
   clock: { regular: clock },
+  'cloud-arrow-up': { regular: cloudArrowUp },
   code: { regular: code },
   compass: { regular: compass },
   copy: { regular: copy },
@@ -98,9 +117,14 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   database: { regular: database, fill: databaseFill },
   desktop: { regular: desktop, fill: desktopFill },
   'dots-three-outline-vertical': { regular: dotsThreeOutlineVertical, fill: dotsThreeOutlineVerticalFill },
+  'download-simple': { regular: downloadSimple },
   'envelope-simple': { regular: envelopeSimple },
+  file: { regular: file },
+  'file-code': { regular: fileCode },
+  'file-csv': { regular: fileCsv },
   flag: { regular: flag },
   'floppy-disk': { regular: floppyDisk },
+  funnel: { regular: funnel },
   gear: { regular: gear },
   globe: { regular: globe },
   'hard-drives': { regular: hardDrives },
@@ -109,11 +133,14 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   link: { regular: link },
   'list-bullets': { regular: listBullets },
   'list-dashes': { regular: listDashes },
+  lock: { regular: lock },
   'lock-key': { regular: lockKey },
   moon: { regular: moon, fill: moonFill, duotone: moonDuotone },
   paperclip: { regular: paperclip },
+  'pencil-simple': { regular: pencilSimple },
   play: { regular: play },
   plus: { regular: plus, bold: plusBold },
+  prohibit: { regular: prohibit },
   pulse: { regular: pulse },
   queue: { regular: queue },
   'share-network': { regular: shareNetwork },
@@ -129,6 +156,7 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   'text-aa': { regular: textAa },
   'toggle-left': { regular: toggleLeft },
   trash: { regular: trash },
+  'upload-simple': { regular: uploadSimple },
   user: { regular: user },
   'user-gear': { regular: userGear },
   users: { regular: users },

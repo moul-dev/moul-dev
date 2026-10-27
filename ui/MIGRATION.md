@@ -69,8 +69,8 @@ route's placeholder in `src/routes.ts`.
   `<admin-data-table>` and the shared page styles.
 - [x] **Phase 3: Collections.** `collections/index`, `collections/$moulName`, `FieldsBuilder`,
   `RulesEditor`, `RuleDocsModal`.
-- [ ] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`. The React page imports
-  field helpers from the deleted `FieldsBuilder.tsx`; they now live in `src/utils/fields.ts`.
+- [x] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`, split into the page,
+  `<admin-record-drawer>`, `<admin-file-field>` and `<admin-relation-field>`.
 - [ ] **Phase 5: System.** `settings`, `workers`, `flags`.
 - [ ] **Phase 6: Finish.** Dev-only inspector panel, drop the `.tsx` exclude and any leftovers,
   rebuild and commit `pkg/ui/dist` (`make ui-check-sync`), update Makefile and README, browser QA

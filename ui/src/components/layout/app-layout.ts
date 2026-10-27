@@ -351,7 +351,10 @@ export class AdminLayout extends LitElement {
   override render() {
     const identity = identityOf(this.account.data || auth.user);
     const { displayName, subtitle } = identity;
-    const selectedKey = allNavLinks.find((link) => router.isActive(link.to))?.to || '/overview';
+    // A collection's records belong under Collections, as in the mobile tab bar.
+    const selectedKey = router.isActive('/records')
+      ? '/collections'
+      : allNavLinks.find((link) => router.isActive(link.to))?.to || '/overview';
     const isMobile = this.mobile.matches;
 
     return html`
