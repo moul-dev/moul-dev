@@ -67,9 +67,10 @@ route's placeholder in `src/routes.ts`.
   theme toggle, logo, login and setup pages, placeholders for every other route.
 - [x] **Phase 2: Dashboard pages.** `overview`, `analytics`, `realtime`, `docs`, plus
   `<admin-data-table>` and the shared page styles.
-- [ ] **Phase 3: Collections.** `collections/index`, `collections/$moulName`, `FieldsBuilder`,
+- [x] **Phase 3: Collections.** `collections/index`, `collections/$moulName`, `FieldsBuilder`,
   `RulesEditor`, `RuleDocsModal`.
-- [ ] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`.
+- [ ] **Phase 4: Records.** `records/$moulName`, `ImportModal`, `ExportModal`. The React page imports
+  field helpers from the deleted `FieldsBuilder.tsx`; they now live in `src/utils/fields.ts`.
 - [ ] **Phase 5: System.** `settings`, `workers`, `flags`.
 - [ ] **Phase 6: Finish.** Dev-only inspector panel, drop the `.tsx` exclude and any leftovers,
   rebuild and commit `pkg/ui/dist` (`make ui-check-sync`), update Makefile and README, browser QA

@@ -1,6 +1,7 @@
 import { css, html, LitElement } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { api } from '../api/client';
+import { collectionTypeBadge } from '../components/collections/collection-type';
 import { onPress } from '../lib/press';
 import { QueryController } from '../lib/query';
 import { router } from '../lib/router';
@@ -8,14 +9,6 @@ import { baseStyles } from '../styles/base';
 import { pageHeader, pageStyles } from '../styles/page';
 
 const RECORDS_SEARCH = { page: 1, perPage: 30 };
-
-type BadgeTone = 'primary' | 'accent' | 'success' | 'warning' | 'error';
-
-const TYPE_TONES: Record<string, BadgeTone> = {
-  auth: 'primary',
-  worker: 'warning',
-  analytic: 'success',
-};
 
 /** One collection on the overview: name, type, live record count and quick actions. */
 export class AdminCollectionCard extends LitElement {
@@ -112,9 +105,7 @@ export class AdminCollectionCard extends LitElement {
                 <span>${name}</span>
               </a>
               <div class="badges">
-                ${TYPE_TONES[type]
-                  ? html`<moul-badge tone=${TYPE_TONES[type]}>${type}</moul-badge>`
-                  : html`<moul-badge variant="bordered">${type}</moul-badge>`}
+                ${collectionTypeBadge(type)}
                 <moul-badge variant="bordered">${isLoading ? '...' : `${totalCount} records`}</moul-badge>
               </div>
             </div>

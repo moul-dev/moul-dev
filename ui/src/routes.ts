@@ -17,8 +17,8 @@ export const routes: Route[] = [
   { path: '/setup', tag: 'admin-setup-page', load: () => import('./pages/setup'), layout: 'bare' },
 
   page('/overview', 'admin-overview-page', () => import('./pages/overview')),
-  page('/collections', 'admin-not-ported-page', notPorted),
-  page('/collections/:moulName', 'admin-not-ported-page', notPorted),
+  page('/collections', 'admin-collections-page', () => import('./pages/collections')),
+  page('/collections/:moulName', 'admin-collection-page', () => import('./pages/collection')),
   page('/records/:moulName', 'admin-not-ported-page', notPorted),
   page('/realtime', 'admin-realtime-page', () => import('./pages/realtime')),
   page('/analytics', 'admin-analytics-page', () => import('./pages/analytics')),

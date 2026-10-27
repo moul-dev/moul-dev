@@ -111,3 +111,17 @@ export function isReservedFieldName(name: string, collectionType: string = 'base
   }
   return false;
 }
+
+/**
+ * Fields as sent on save: names trimmed, and a relation without a target pointing back at
+ * `selfName` (the collection being saved).
+ */
+export function prepareFieldsForSave(fields: MoulField[], selfName: string): MoulField[] {
+  return fields.map((f) => {
+    const field = { ...f, name: f.name.trim() };
+    if (field.type === 'relation' && !field.relationConfig) {
+      field.relationConfig = { targetMoul: selfName, cardinality: '1:N', onDelete: 'SET_NULL' };
+    }
+    return field;
+  });
+}
