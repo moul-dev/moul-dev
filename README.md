@@ -331,6 +331,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 - **Styling**: Lit `css` scoped to each element's shadow root, built on the `@moul-dev/ui/style.css` design tokens (OKLCH colors with `light-dark()`).
 - **Data**: **TanStack Query core (`@tanstack/query-core`)** behind Lit reactive controllers (`QueryController`, `MutationController`) for caching and server synchronization.
 - **Iconography**: **Phosphor Icons (`@phosphor-icons/core`)** raw SVGs, rendered by `<admin-icon>`.
+- **Developer Tooling**: A dev-only **Moul Inspector** (`ui/src/devtools/`) for the event bus, query cache and router; `vite build` leaves it out.
 
 ### Local UI Development & Live Reloading
 
@@ -348,6 +349,8 @@ make ui-dev
 ```
 
 Open [http://localhost:5173/_moul_/](http://localhost:5173/_moul_/) in your browser.
+
+The dev server also loads the **Moul Inspector**: the round button at the bottom right opens a panel with the console's event log (auth changes, API requests and timings, app actions), the query cache (refetch, invalidate, remove) and the router state. It exists only under `make ui-dev`; production builds leave it out.
 
 ### Single-Binary Embedding in Production
 
@@ -835,7 +838,7 @@ evtSource.addEventListener('create', (e) => {
 
 #### Option 2: Direct Header Streaming via `moul-live` / `fetch()`
 ```javascript
-import { subscribeWithFetch } from '@moul-dev/ui'; // or ui/src/api/moul-live
+import { subscribeWithFetch } from './moul-live'; // copy ui/src/api/moul-live.ts into your app
 
 const unsubscribe = subscribeWithFetch({
   url: '/api/moul/posts/subscribe',

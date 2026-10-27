@@ -73,7 +73,7 @@ ui-dev:
 
 # Build the Admin UI (Lit + @moul-dev/ui web components) into pkg/ui/dist; fails if React creeps back in
 ui-build:
-	bun --cwd ui run build
+	bun run --cwd ui build
 
 # Verify that committed pkg/ui/dist matches a fresh build of ui
 ui-check-sync: ui-build

@@ -8,3 +8,6 @@ import { router } from './lib/router';
 import { routes } from './routes';
 
 router.start(routes);
+
+// The Moul Inspector is a development aid; `vite build` drops this branch and its chunk.
+if (import.meta.env.DEV) void import('./devtools/inspector');

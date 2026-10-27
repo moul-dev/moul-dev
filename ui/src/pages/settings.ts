@@ -266,6 +266,18 @@ export class AdminSettingsPage extends LitElement {
     return TABS.some((t) => t.key === tab) ? tab! : 's3';
   }
 
+  private scrolledToTab = '';
+
+  override async updated(): Promise<void> {
+    // A deep link or Back can select a tab past the edge of the scrolling tab strip.
+    const tab = this.tab;
+    const strip = this.renderRoot.querySelector('moul-tabs') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
+    if (tab === this.scrolledToTab || !strip) return;
+    this.scrolledToTab = tab;
+    await strip.updateComplete;
+    this.renderRoot.querySelector(`moul-tab[key="${tab}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
   private get saved(): Record<string, string> | undefined {
     return this.settings.data;
   }

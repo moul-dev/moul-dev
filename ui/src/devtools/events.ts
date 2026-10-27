@@ -1,5 +1,5 @@
-// In-page event bus for the Moul Inspector. It replaced the TanStack devtools event client;
-// the payloads are unchanged.
+// In-page event bus for the dev-only Moul Inspector (`inspector.ts`). It replaced the TanStack
+// devtools event client; the payloads are unchanged.
 
 export interface AuthStatePayload {
   isAuthenticated: boolean;
@@ -42,9 +42,19 @@ export type MoulDevtoolsEvent = {
   [K in keyof MoulDevtoolsEvents]: { type: K; payload: MoulDevtoolsEvents[K] };
 }[keyof MoulDevtoolsEvents];
 
+const HISTORY_LIMIT = 100;
+
 class MoulDevtoolsBus extends EventTarget {
+  /** Newest first. Kept in dev only, so the inspector, which loads after startup, sees the boot. */
+  readonly history: MoulDevtoolsEvent[] = [];
+
   emit<K extends keyof MoulDevtoolsEvents>(type: K, payload: MoulDevtoolsEvents[K]): void {
-    this.dispatchEvent(new CustomEvent<MoulDevtoolsEvent>('event', { detail: { type, payload } as MoulDevtoolsEvent }));
+    const event = { type, payload } as MoulDevtoolsEvent;
+    if (import.meta.env.DEV) {
+      this.history.unshift(event);
+      this.history.length = Math.min(this.history.length, HISTORY_LIMIT);
+    }
+    this.dispatchEvent(new CustomEvent<MoulDevtoolsEvent>('event', { detail: event }));
   }
 
   /** Subscribes to every event; returns the unsubscribe function. */

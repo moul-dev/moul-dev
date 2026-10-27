@@ -187,6 +187,11 @@ const REGISTRY: Record<string, Partial<Record<IconWeight, string>>> = {
   'x-circle': { bold: xCircleBold },
 };
 
+/** Adds icons from a lazily loaded module (the dev-only inspector), keeping them out of the main bundle. */
+export function registerIcons(icons: Record<string, Partial<Record<IconWeight, string>>>): void {
+  Object.assign(REGISTRY, icons);
+}
+
 /**
  * `<admin-icon name="database" size="18" weight="fill">` renders a Phosphor icon in
  * `currentColor`. Set `color` to tint it. Icons are decorative (`aria-hidden`); label

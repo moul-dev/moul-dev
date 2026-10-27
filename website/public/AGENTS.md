@@ -10,7 +10,7 @@ Welcome to `moul`. This document provides essential instructions, operating rule
 
 Key Capabilities:
 - **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`moul`) backed by SQLite.
-- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built with TanStack Router, Meta StyleX, Moul UI (`@moul-dev/ui`), tri-state system/light/dark theme toggle, and Phosphor Icons embedded via Go `embed.FS`.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built as Lit web components on Moul UI (`@moul-dev/ui`), with a tri-state system/light/dark theme toggle and Phosphor Icons, embedded via Go `embed.FS`.
 - **Configurable API Prefix**: All API endpoints default to `/api` but can be customized (e.g. `/v1`) or mounted directly at root (`""`) via `--api-prefix`, `MOUL_API_PREFIX`, or `WithAPIPrefix("")`.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
 - **Programmatic Go API & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
@@ -262,9 +262,9 @@ Moul ships secure by default. The behaviors below apply to every caller that is 
 
 ---
 
-## 7. Web Admin Console & TanStack DevTools Architecture
+## 7. Web Admin Console & Moul Inspector
 
-The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript application with an integrated **TanStack DevTools** ecosystem:
+The embedded Web Admin Console (`ui/`) is a Vite-built TypeScript application of Lit custom elements on `@moul-dev/ui`, with no React dependency (`bun run build` fails if one appears). It routes with a small History API router (`ui/src/lib/router.ts`), caches server state with `@tanstack/query-core` behind Lit reactive controllers, and ships a dev-only **Moul Inspector** (see the last subsection).
 
 ### Two-Context Console Authentication Architecture
 - **Master Admin Key Context (Step 1)**: The user establishes connectivity and authorization using their Master Admin Key (`MOUL_ADMIN_KEY`). Prevents unauthenticated `/api/setup` 401 calls and matches the terminal UX of `moul-ctl`.
@@ -279,18 +279,15 @@ The embedded Web Admin Console (`ui/`) is a Vite-powered React TypeScript applic
 ### Records Data Grid & Detail Drawer Capabilities
 - **Record ID Interactive Inspection**: Clicking any record ID opens a slide-over `Drawer` displaying full field attributes, relation associations, and system timestamps.
 - **In-Drawer Record Modification**: Supports direct live editing of schema fields, relations (1:1, 1:N, M:N), file attachments, JSON attributes, and auth fields with instant persistence.
-- **Comprehensive Field Validation**: Pre-submission and live blur validation for all field types (`text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `email`, `select`, `relation`, `file`, auth credentials) with inline error messages (`isInvalid`, `errorMessage`), constraint guidance, and payload sanitization (preventing empty numbers from coercing to 0).
+- **Comprehensive Field Validation**: Pre-submission and live blur validation for all field types (`text`, `number`, `bool`, `date`, `datetime`, `json`, `url`, `email`, `select`, `relation`, `file`, auth credentials) with inline error messages (`is-invalid`, `error-message`), constraint guidance, and payload sanitization (preventing empty numbers from coercing to 0).
 - **Worker Task Inspector & Retry Actions**: For worker job collections, the drawer features execution health cards (attempt count, queue, worker handler, priority, timestamps), an error trace box with one-click copy, and immediate task retry (`POST /api/moul/:name/retry-jobs`) and discard actions.
 
-### DevTools Architecture & Capabilities
-- **Unified Framework Adapter**: `<AppDevtools />` wraps `<TanStackDevtools />` from `@tanstack/react-devtools` mounted once at the root route (`__root.tsx`).
-- **Tabbed Plugin System**: Consolidates first-party library panels (`TanStackRouterDevtoolsPanel`, `ReactQueryDevtoolsPanel`) and product-specific panels (`MoulDevtoolsPanel`) into a single docked container.
-- **Typed Event Inspection (`@tanstack/devtools-event-client`)**: Uses namespaced, type-safe events (`auth:state-change`, `api:request`, `app:action`, `system:ping`) to monitor runtime state transitions, active authentication, and API latency.
-- **Vite Integration (`@tanstack/devtools-vite`)**:
-  - **Source Inspection**: Hold `Shift` + `Alt` + `Ctrl/Meta` and hover any DOM element to inspect and jump directly to its source file in the IDE.
-  - **Client/Server Console Piping**: Pipes browser console logs to the Vite dev terminal and vice versa.
-  - **Zero Production Overhead**: DevTools code, imports, and JSX are automatically stripped in production builds (`removeDevtoolsOnBuild: true`).
-
+### Moul Inspector (development only)
+- **Docked Panel**: `<admin-devtools>` (`ui/src/devtools/inspector.ts`) opens from a floating button and docks to the bottom of the window, remembering whether it was open and which tab was showing.
+- **Events**: A typed in-page event bus (`ui/src/devtools/events.ts`, an `EventTarget`) carries `auth:state-change`, `api:request`, `app:action` and `system:ping` events, with filters, request counts and average latency, and a JSON payload view. The bus keeps the last 100 events in development, so the boot sequence is visible when the panel loads.
+- **Queries**: Lists the query cache with fresh, stale, fetching and error states, observer counts and cached data, and refetches, invalidates or removes a query.
+- **Router**: Shows the current route, params and search, and lists the route table; clicking a static route navigates to it.
+- **Zero Production Overhead**: `ui/src/main.ts` imports the inspector only under `import.meta.env.DEV`, so `vite build` drops it and its icons from the bundle.
 ---
 
 ## 8. Developer CLI Tooling & Diagnostics

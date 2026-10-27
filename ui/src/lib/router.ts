@@ -62,7 +62,8 @@ function matchPath(pattern: string, pathname: string): Record<string, string> | 
  */
 export class Router extends Store {
   readonly base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-  private routes: Route[] = [];
+  /** The table passed to `start()`; the dev inspector lists it. */
+  routes: readonly Route[] = [];
   location: RouteLocation = { pathname: '/', search: new URLSearchParams(), params: {}, route: undefined };
 
   start(routes: Route[]): void {

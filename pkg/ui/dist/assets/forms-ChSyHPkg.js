@@ -1,0 +1,1 @@
+function e(e){e.key!==`Enter`||e.isComposing||e.defaultPrevented||e.composedPath()[0]instanceof HTMLInputElement&&(e.preventDefault(),e.currentTarget.requestSubmit())}function t(e){return e.target.value??``}export{e as n,t};
