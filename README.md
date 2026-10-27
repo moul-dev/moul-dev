@@ -316,7 +316,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 
 ### Frontend Architecture & Stack
 
-- **UI Component System**: **Moul UI (`@moul-dev/ui`)** built on **React Aria Components** and **StyleX** for accessible, zero-runtime atomic UI components.
+- **UI Component System**: **Moul UI (`@moul-dev/ui`)**, accessible `<moul-*>` Web Components (Lit, Shadow DOM, native `<dialog>`, Popover API and `ElementInternals`). The console itself is a set of Lit elements; it has no React dependency.
 - **Background Worker Engine & Jobs Queue Monitor**: Real-time worker jobs queue table with status filters (`available`, `executing`, `completed`, `retryable`, `discarded`), execution attempt metrics, job payload inspector drawer, and instant **Retry** and **Discard** actions.
 - **Visual Telemetry & Analytics Dashboard**: Built-in interactive **AreaChart** (requests over time categorized by success vs error) and **TopList** (top endpoints & referrers) powered by `@moul-dev/ui` alongside live server latency, throughput, and error rate stats.
 - **Real-Time Stream Viewer**: Server-Sent Events (SSE) listener integrated with `@moul-dev/ui`'s high-performance **`Logs` stream viewer** with syntax highlighting, search/level filters, drawer payload inspector, and auto-scroll follow.
@@ -327,10 +327,10 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 - **Enhanced Collection Creation & Schema Designer**: Dual-tab creation drawer ("General & Fields" and "API Access Rules") with type-based schema templates, live field modeling across 11 data types, smart rule token autocomplete (`@request.*`, `@collection.*`, schema fields), quick preset chips, and an interactive Rule Documentation modal dialog.
 - **Relational Association Modeling**: Complete visual relationship builder directly in Schema Designer supporting **1:1 (One-to-One)**, **1:N (Many-to-One / Foreign Key)**, **M:N (Many-to-Many)**, self-referencing tree structures, on-delete referential integrity policies (`CASCADE`, `SET_NULL`, `RESTRICT`), and interactive linked record pickers with inline relation expansion.
 - **Theming**: Tri-state theme toggle supporting **System** (default, dynamically adapting to OS preference in real-time), **Light**, and **Dark** modes with persistent storage.
-- **Routing**: **TanStack Router** with file-based routing (`ui/src/routes/`), generated type-safe route trees, typed Zod search schemas, route loaders, intent preloading (`preload: 'intent'`), and automatic code splitting.
-- **Styling**: **Meta StyleX (`@stylexjs/stylex`)** with `@stylexjs/unplugin` for zero-runtime / compile-time atomic CSS-in-JS and dedicated design tokens (`@moul-dev/ui/tokens.stylex`).
-- **Data & Tables**: **TanStack Query (`@tanstack/react-query`)** for asynchronous state caching and server synchronization.
-- **Iconography**: **Phosphor Icons (`@phosphor-icons/react`)**.
+- **Routing**: A small History API router (`ui/src/lib/router.ts`, route table in `ui/src/routes.ts`) with an auth guard and one lazily loaded chunk per page.
+- **Styling**: Lit `css` scoped to each element's shadow root, built on the `@moul-dev/ui/style.css` design tokens (OKLCH colors with `light-dark()`).
+- **Data**: **TanStack Query core (`@tanstack/query-core`)** behind Lit reactive controllers (`QueryController`, `MutationController`) for caching and server synchronization.
+- **Iconography**: **Phosphor Icons (`@phosphor-icons/core`)** raw SVGs, rendered by `<admin-icon>`.
 
 ### Local UI Development & Live Reloading
 
