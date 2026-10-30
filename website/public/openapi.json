@@ -642,7 +642,7 @@
       },
       "patch": {
         "summary": "Update Moul",
-        "description": "Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\nOnly the properties present in the body change: `rules` merge key by key, while `fields`, `webhooks` and\n`emailTemplates` replace the stored values when sent (`null` clears them; email templates fall back to the defaults).\nIf the `name` property in the request body is different from `{name}`, the physical table will be renamed.\n",
+        "description": "Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\nOnly the properties present in the body change: `rules` merge key by key, while `fields`, `webhooks` and\n`emailTemplates` replace the stored values when sent (`null` clears them; email templates fall back to the defaults).\nIf the `name` property in the request body is different from `{name}`, the physical table will be renamed.\nThe collection type is fixed at creation: a `type` other than the stored one answers `400` (omit it or send the current type).\n",
         "tags": [
           "Moul Schema Management"
         ],
@@ -683,7 +683,8 @@
                       "auth",
                       "worker",
                       "analytic"
-                    ]
+                    ],
+                    "description": "Must match the stored type. Omit or leave empty to keep it."
                   },
                   "fields": {
                     "type": "array",
@@ -720,7 +721,7 @@
             }
           },
           "400": {
-            "description": "Invalid request parameters, empty name, or target name collision.",
+            "description": "Invalid request parameters, empty name, target name collision, or a type change.",
             "content": {
               "application/json": {
                 "schema": {
@@ -790,7 +791,8 @@
                       "auth",
                       "worker",
                       "analytic"
-                    ]
+                    ],
+                    "description": "Must match the stored type. Omit or leave empty to keep it."
                   },
                   "fields": {
                     "type": "array",
@@ -827,7 +829,7 @@
             }
           },
           "400": {
-            "description": "Invalid request parameters, empty name, or target name collision.",
+            "description": "Invalid request parameters, empty name, target name collision, or a type change.",
             "content": {
               "application/json": {
                 "schema": {

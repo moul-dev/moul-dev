@@ -184,9 +184,10 @@ type moulPatch struct {
 }
 
 // UpdateMoul updates an existing collection schema, rules, fields, and physical table.
-// Only the properties present in the body change: an empty name or type keeps the current one,
+// Only the properties present in the body change: an empty name keeps the current one,
 // rules merge key by key, and fields, emailTemplates and webhooks replace the stored values
-// (null clears them; emailTemplates fall back to the defaults).
+// (null clears them; emailTemplates fall back to the defaults). The type cannot change: an empty
+// type or the current one is accepted, any other value is a 400.
 func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	name := c.Param("name")
 	if name == "" {
@@ -286,8 +287,11 @@ func (p *moulPatch) applyTo(m *schema.Moul) error {
 	if name := strings.TrimSpace(p.Name); name != "" {
 		m.Name = name
 	}
-	if p.Type != "" {
-		m.Type = p.Type
+	// Schema sync only manages user fields, so a new type would drop the old type's system
+	// columns (email, passwordHash, ...) without adding its own. The TUI always sends the
+	// current type, so that stays allowed.
+	if p.Type != "" && p.Type != m.Type {
+		return fmt.Errorf("cannot change collection type from %q to %q", m.Type, p.Type)
 	}
 	if p.Fields != nil {
 		var fields []schema.MoulField

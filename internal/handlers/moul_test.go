@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/moul-dev/moul-dev/internal/testutil"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 )
 
 func TestMoulAuthAndRecordCRUD(t *testing.T) {
@@ -1215,6 +1217,90 @@ func TestUpdateMoulKeepsOmittedProperties(t *testing.T) {
 		t.Fatalf("Expected 400 for malformed fields, got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+func TestUpdateMoulTypeChange(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	e := echo.New()
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.PATCH("/api/moul/:name", moulHandler.UpdateMoul)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	columns := func(table string) []string {
+		t.Helper()
+		var names []string
+		if err := dbConn.NewQuery("SELECT name FROM pragma_table_info({:table}) ORDER BY cid").Bind(dbx.Params{"table": table}).Column(&names); err != nil {
+			t.Fatalf("Failed to read columns of %s: %v", table, err)
+		}
+		return names
+	}
+	create := func(name, typ string) []string {
+		t.Helper()
+		resp := postJSON(t, client, server.URL+"/api/moul", schema.Moul{
+			Name:   name,
+			Type:   typ,
+			Fields: []schema.MoulField{{Name: "nickname", Type: "text"}},
+		}, "")
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("Expected 201 for CreateMoul %s, got %d", name, resp.StatusCode)
+		}
+		resp.Body.Close()
+		return columns(name)
+	}
+
+	create("members", "auth")
+	create("posts", "base")
+	want := map[string][]string{"members": columns("members"), "posts": columns("posts")}
+	if !slices.Contains(want["members"], "passwordHash") || slices.Contains(want["posts"], "passwordHash") {
+		t.Fatalf("Unexpected starting columns: %v", want)
+	}
+
+	// 1. A different type is refused and leaves the table and metadata alone,
+	// in both directions and for values that are not a type at all
+	for _, tc := range []struct{ name, stored, typ string }{
+		{"members", "auth", "base"},
+		{"members", "auth", "worker"},
+		{"posts", "base", "auth"},
+		{"posts", "base", "analytic"},
+		{"posts", "base", "bogus"},
+	} {
+		resp := patchJSON(t, client, server.URL+"/api/moul/"+tc.name, map[string]any{
+			"type":   tc.typ,
+			"fields": []schema.MoulField{{Name: "nickname", Type: "text"}, {Name: "bio", Type: "text"}},
+		}, "")
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("PATCH %s type %q: expected 400, got %d", tc.name, tc.typ, resp.StatusCode)
+		}
+		resp.Body.Close()
+		if got := columns(tc.name); !slices.Equal(got, want[tc.name]) {
+			t.Errorf("PATCH %s type %q: expected columns %v, got %v", tc.name, tc.typ, want[tc.name], got)
+		}
+		m, err := db.LoadMoulByName(dbConn, tc.name)
+		if err != nil {
+			t.Fatalf("LoadMoulByName(%s): %v", tc.name, err)
+		}
+		if m.Type != tc.stored || len(m.Fields) != 1 {
+			t.Errorf("PATCH %s type %q: expected stored type %q with 1 field, got %q with %+v", tc.name, tc.typ, tc.stored, m.Type, m.Fields)
+		}
+	}
+
+	// 2. The current type, as the TUI always sends it, is accepted
+	resp := patchJSON(t, client, server.URL+"/api/moul/members", map[string]any{
+		"type":   "auth",
+		"fields": []schema.MoulField{{Name: "nickname", Type: "text"}, {Name: "bio", Type: "text"}},
+	}, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for PATCH with the current type, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	if got := columns("members"); !slices.Equal(got, append(slices.Clone(want["members"]), "bio")) {
+		t.Fatalf("Expected auth columns plus bio, got %v", got)
+	}
 }
 
 func TestSelectFieldValidationAndCRUD(t *testing.T) {
