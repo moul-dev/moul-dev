@@ -1,10 +1,11 @@
 import type { LogItem } from '@moul-dev/ui';
 import { css, html, LitElement, type PropertyValues } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import { api, getAuthToken, getStoredAdminKey, resolveApiPath } from '../api/client';
+import { getAuthToken, getStoredAdminKey, resolveApiPath } from '../api/client';
+import { moulsCollection } from '../api/db';
 import { subscribeWithFetch } from '../api/moul-live';
+import { LiveQueryController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { QueryController } from '../lib/query';
 import { baseStyles } from '../styles/base';
 import { pageHeader, pageStyles } from '../styles/page';
 
@@ -72,10 +73,7 @@ export class AdminRealtimePage extends LitElement {
   declare isStreaming: boolean;
   declare events: LogItem[];
 
-  private readonly mouls = new QueryController(this, () => ({
-    queryKey: ['mouls'],
-    queryFn: api.listMouls,
-  }));
+  private readonly mouls = new LiveQueryController(this, (q) => q.from({ moul: moulsCollection }));
 
   private unsubscribe?: () => void;
 
@@ -149,7 +147,7 @@ export class AdminRealtimePage extends LitElement {
   }
 
   override render() {
-    const mouls: { name: string }[] = this.mouls.data ?? [];
+    const mouls = this.mouls.data;
 
     return html`
       ${pageHeader(

@@ -122,8 +122,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     let errorData: any = null;
     try {
       errorData = await res.json();
-      if (errorData?.message) {
-        errorMsg = errorData.message;
+      // Most handlers answer `{ message }`; some (feature flags) answer `{ error }`.
+      if (errorData?.message || errorData?.error) {
+        errorMsg = errorData.message || errorData.error;
       }
     } catch {
       // ignore json parse error

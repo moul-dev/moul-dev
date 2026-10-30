@@ -1,14 +1,14 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import { api } from '../api/client';
+import { moulsCollection } from '../api/db';
 import { collectionTypeBadge } from '../components/collections/collection-type';
 import { deleteCollectionDialog } from '../components/collections/delete-collection-dialog';
 import '../components/collections/fields-builder';
 import { EMPTY_RULES, type MoulRules } from '../components/collections/rules-editor';
 import '../components/collections/rules-editor';
 import { fieldValue, submitOnEnter } from '../lib/forms';
+import { LiveQueryController, TransactionController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { MutationController, QueryController, queryClient } from '../lib/query';
 import { router } from '../lib/router';
 import { toast } from '../lib/toast';
 import { baseStyles } from '../styles/base';
@@ -154,36 +154,9 @@ export class AdminCollectionsPage extends LitElement {
   declare newRules: MoulRules;
   declare error: string | null;
 
-  private readonly mouls = new QueryController(this, () => ({
-    queryKey: ['mouls'],
-    queryFn: api.listMouls,
-  }));
-
-  private readonly createMutation = new MutationController(this, {
-    mutationFn: (data: any) => api.createMoul(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mouls'] });
-      this.isCreateOpen = false;
-      this.resetCreateForm();
-      toast.success('Collection Created', 'Collection created successfully.');
-    },
-    onError: (err: any) => {
-      this.error = err.message || 'Failed to create collection';
-    },
-  });
-
-  private readonly deleteMutation = new MutationController(this, {
-    mutationFn: (name: string) => api.deleteMoul(name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mouls'] });
-      this.collectionToDelete = null;
-      toast.success('Collection Deleted', 'Collection was deleted successfully.');
-    },
-    onError: (err: any) => {
-      this.collectionToDelete = null;
-      toast.error('Delete Failed', err.message || 'Failed to delete collection.');
-    },
-  });
+  private readonly mouls = new LiveQueryController(this, (q) => q.from({ moul: moulsCollection }));
+  private readonly creating = new TransactionController(this);
+  private readonly deleting = new TransactionController(this);
 
   constructor() {
     super();
@@ -206,12 +179,17 @@ export class AdminCollectionsPage extends LitElement {
     this.isCreateOpen = true;
   }
 
-  private handleCreate() {
+  private async handleCreate() {
     this.error = null;
 
     const name = this.newName.trim().toLowerCase();
     if (!name) {
       this.error = 'Collection name is required.';
+      this.createTab = 'general';
+      return;
+    }
+    if (moulsCollection.has(name)) {
+      this.error = `A collection named "${name}" already exists.`;
       this.createTab = 'general';
       return;
     }
@@ -234,12 +212,32 @@ export class AdminCollectionsPage extends LitElement {
           }
         : this.newRules;
 
-    this.createMutation.mutate({
-      name,
-      type: this.newType,
-      fields: prepareFieldsForSave(this.newFields, name),
-      rules,
-    });
+    // Not optimistic: the server has the last word on the schema, and its error belongs in this form.
+    const tx = moulsCollection.insert(
+      { name, type: this.newType, fields: prepareFieldsForSave(this.newFields, name), rules },
+      { optimistic: false },
+    );
+    try {
+      await this.creating.track(tx);
+    } catch (err: any) {
+      this.error = err?.message || 'Failed to create collection';
+      return;
+    }
+    this.isCreateOpen = false;
+    this.resetCreateForm();
+    toast.success('Collection Created', 'Collection created successfully.');
+  }
+
+  /** The card leaves at once; the dialog stays up until the server confirms, and a failure puts the card back. */
+  private async deleteCollection(name: string) {
+    try {
+      await this.deleting.track(moulsCollection.delete(name));
+      toast.success('Collection Deleted', 'Collection was deleted successfully.');
+    } catch (err: any) {
+      toast.error('Delete Failed', err?.message || 'Failed to delete collection.');
+    } finally {
+      this.collectionToDelete = null;
+    }
   }
 
   private renderFieldPills(moul: any) {
@@ -305,9 +303,9 @@ export class AdminCollectionsPage extends LitElement {
   }
 
   private renderList() {
-    const { data: mouls, isLoading } = this.mouls.result;
+    const { data: mouls, isLoading } = this.mouls;
     if (isLoading) return html`<div class="muted">Loading collections...</div>`;
-    if (!mouls || mouls.length === 0) {
+    if (mouls.length === 0) {
       return html`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-primary-500)"></admin-icon>
@@ -320,11 +318,11 @@ export class AdminCollectionsPage extends LitElement {
         </moul-empty-state>
       `;
     }
-    return html`<div class="grid">${repeat(mouls, (m: any) => m.name, (m) => this.renderCard(m))}</div>`;
+    return html`<div class="grid">${repeat(mouls, (m) => m.name, (m) => this.renderCard(m))}</div>`;
   }
 
   private renderCreateDrawer() {
-    const isPending = this.createMutation.isPending;
+    const isPending = this.creating.isPending;
     return html`
       <moul-drawer
         placement="right"
@@ -386,7 +384,7 @@ export class AdminCollectionsPage extends LitElement {
                   current-moul-name=${this.newName}
                   collection-type=${this.newType}
                   .fields=${this.newFields}
-                  .allMouls=${this.mouls.data ?? []}
+                  .allMouls=${this.mouls.data}
                   @fieldschange=${(e: CustomEvent<{ fields: MoulField[] }>) => (this.newFields = e.detail.fields)}
                 ></admin-fields-builder>
               </div>
@@ -428,10 +426,10 @@ export class AdminCollectionsPage extends LitElement {
       ${deleteCollectionDialog({
         isOpen: this.collectionToDelete !== null,
         name: this.collectionToDelete ?? '',
-        isPending: this.deleteMutation.isPending,
+        isPending: this.deleting.isPending,
         onCancel: () => (this.collectionToDelete = null),
         onConfirm: () => {
-          if (this.collectionToDelete) this.deleteMutation.mutate(this.collectionToDelete);
+          if (this.collectionToDelete) void this.deleteCollection(this.collectionToDelete);
         },
       })}
     `;

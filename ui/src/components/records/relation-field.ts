@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { live } from 'lit/directives/live.js';
-import { api } from '../../api/client';
-import { QueryController } from '../../lib/query';
+import { recordsCollection } from '../../api/db';
+import { LiveQueryController } from '../../lib/live-query';
 import { baseStyles } from '../../styles/base';
 import type { MoulField } from '../../utils/fields';
 import { getRecordDisplayLabel } from './record-helpers';
@@ -104,14 +104,14 @@ export class AdminRelationField extends LitElement {
   declare value: unknown;
   declare errorMessage: string;
 
-  private readonly targets = new QueryController(this, () => {
-    const target = this.relationConfig?.targetMoul || '';
-    return {
-      queryKey: ['records', target, 1, 100],
-      queryFn: () => api.listRecords(target, { perPage: 100 }),
-      enabled: Boolean(target),
-    };
-  });
+  private readonly targets = new LiveQueryController(
+    this,
+    (q) => {
+      const target = this.relationConfig?.targetMoul;
+      return target ? q.from({ record: recordsCollection(target, { perPage: 100 }) }) : undefined;
+    },
+    () => [this.relationConfig?.targetMoul],
+  );
 
   constructor() {
     super();
@@ -127,9 +127,7 @@ export class AdminRelationField extends LitElement {
   }
 
   private get targetRecords(): any[] {
-    const data = this.targets.data;
-    if (Array.isArray(data)) return data;
-    return Array.isArray(data?.items) ? data.items : [];
+    return this.targets.data;
   }
 
   private renderLabel(cardinality: string, target: string) {
@@ -168,7 +166,7 @@ export class AdminRelationField extends LitElement {
       <!-- Always shows the placeholder: picking a record adds it to the chips above. -->
       <moul-select
         aria-label=${`Add ${this.label} record`}
-        placeholder=${this.targets.result.isLoading ? 'Loading records...' : `Select record to add to ${this.label}...`}
+        placeholder=${this.targets.isLoading ? 'Loading records...' : `Select record to add to ${this.label}...`}
         .selectedKey=${live('')}
         @selectionchange=${(e: CustomEvent<{ selectedKey: string }>) => {
           const id = e.detail.selectedKey;
@@ -195,7 +193,7 @@ export class AdminRelationField extends LitElement {
       ${this.renderLabel(cardinality, target)}
       <moul-select
         aria-label=${`${this.label} (${cardinality} ➔ ${target})`}
-        placeholder=${this.targets.result.isLoading ? 'Loading target records...' : `Select ${target} record...`}
+        placeholder=${this.targets.isLoading ? 'Loading target records...' : `Select ${target} record...`}
         ?is-required=${this.required}
         .selectedKey=${live(current)}
         @selectionchange=${(e: CustomEvent<{ selectedKey: string }>) => {

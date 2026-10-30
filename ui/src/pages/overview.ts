@@ -1,7 +1,9 @@
 import { css, html, LitElement } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { api } from '../api/client';
+import { moulsCollection } from '../api/db';
 import { collectionTypeBadge } from '../components/collections/collection-type';
+import { LiveQueryController } from '../lib/live-query';
 import { onPress } from '../lib/press';
 import { QueryController } from '../lib/query';
 import { router } from '../lib/router';
@@ -175,10 +177,7 @@ export class AdminOverviewPage extends LitElement {
     `,
   ];
 
-  private readonly mouls = new QueryController(this, () => ({
-    queryKey: ['mouls'],
-    queryFn: api.listMouls,
-  }));
+  private readonly mouls = new LiveQueryController(this, (q) => q.from({ moul: moulsCollection }));
 
   private readonly metrics = new QueryController(this, () => ({
     queryKey: ['sysmon'],
@@ -187,11 +186,11 @@ export class AdminOverviewPage extends LitElement {
   }));
 
   private renderCollections() {
-    const { data: mouls, isLoading } = this.mouls.result;
+    const { data: mouls, isLoading } = this.mouls;
     if (isLoading) {
       return html`<div class="muted">Loading collections...</div>`;
     }
-    if (!mouls || mouls.length === 0) {
+    if (mouls.length === 0) {
       return html`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-primary-500)"></admin-icon>
@@ -216,7 +215,7 @@ export class AdminOverviewPage extends LitElement {
   }
 
   override render() {
-    const { data: mouls, isLoading: moulsLoading } = this.mouls.result;
+    const { data: mouls, isLoading: moulsLoading } = this.mouls;
     // GET /api/system/metrics → { current: MetricsSnapshot, history } (internal/sysmon).
     const current = this.metrics.data?.current;
     const collectionCount = Array.isArray(mouls) ? mouls.length : 0;

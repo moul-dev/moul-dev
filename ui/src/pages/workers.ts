@@ -1,10 +1,11 @@
+import { eq } from '@tanstack/db';
 import { css, html, LitElement, nothing } from 'lit';
-import { api } from '../api/client';
+import { BUILT_IN_WORKERS as BUILT_IN, moulsCollection, withoutVirtualProps, workerJobsCollection } from '../api/db';
 import '../components/data-table';
 import type { DataColumn } from '../components/data-table';
 import { copyText, workerStateTone } from '../components/records/record-helpers';
+import { LiveQueryController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { MutationController, QueryController, queryClient } from '../lib/query';
 import { toast } from '../lib/toast';
 import { baseStyles } from '../styles/base';
 import { pageHeader, pageStyles } from '../styles/page';
@@ -13,7 +14,6 @@ type Job = Record<string, any>;
 type StateFilter = 'all' | 'available' | 'executing' | 'completed' | 'retryable' | 'discarded';
 
 const FILTERS: StateFilter[] = ['all', 'available', 'executing', 'completed', 'retryable', 'discarded'];
-const BUILT_IN = '_workers';
 
 const BUILT_IN_WORKERS = [
   { name: 'SendEmail', description: 'Asynchronous transactional email dispatcher' },
@@ -29,7 +29,7 @@ function stateBadge(state: string) {
 
 /** The job's payload, parsed when it is a JSON string; the whole job when it has none. */
 function payloadOf(job: Job): unknown {
-  if (!job.payload) return job;
+  if (!job.payload) return withoutVirtualProps(job);
   if (typeof job.payload !== 'string') return job.payload;
   try {
     return JSON.parse(job.payload);
@@ -195,46 +195,53 @@ export class AdminWorkersPage extends LitElement {
 
   private copiedTimer?: number;
 
-  private readonly mouls = new QueryController(this, () => ({
-    queryKey: ['mouls'],
-    queryFn: api.listMouls,
-  }));
+  private readonly workerMouls = new LiveQueryController(this, (q) =>
+    q.from({ moul: moulsCollection }).where(({ moul }) => eq(moul.type, 'worker')),
+  );
 
-  private readonly jobs = new QueryController(this, () => {
-    const collection = this.collection;
-    return {
-      queryKey: ['workerJobs', collection],
-      queryFn: () =>
-        collection === BUILT_IN
-          ? api.listWorkers({ perPage: 100, sort: '-createdAt' })
-          : api.listRecords(collection, { perPage: 100, sort: '-createdAt' }),
-      refetchInterval: 5000,
-    };
-  });
-
-  private updateJob(job: Job, data: Record<string, unknown>) {
-    return this.collection === BUILT_IN ? api.updateWorkerJob(job.id, data) : api.updateRecord(this.collection, job.id, data);
+  /** The selected queue's latest jobs, polled every 5 seconds. */
+  private get queue() {
+    return workerJobsCollection(this.collection);
   }
 
-  private readonly retryMutation = new MutationController(this, {
-    mutationFn: (job: Job) => this.updateJob(job, { state: 'available', scheduled_at: new Date().toISOString() }),
-    onSuccess: (_data, job) => {
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.success('Job Retried', `Job ${job.id} marked as available for immediate processing.`);
-      if (this.selectedJob?.id === job.id) this.selectedJob = { ...this.selectedJob, state: 'available' };
-    },
-    onError: (err: any) => toast.error('Retry Failed', err.message || 'Failed to retry job.'),
-  });
+  // Newest first, as the server sends them, so polled-in jobs land on top.
+  private readonly jobs = new LiveQueryController(
+    this,
+    (q) =>
+      q
+        .from({ job: this.queue })
+        .orderBy(({ job }) => job.createdAt, 'desc')
+        .orderBy(({ job }) => job.id, 'asc'),
+    () => [this.queue],
+  );
 
-  private readonly discardMutation = new MutationController(this, {
-    mutationFn: (job: Job) => this.updateJob(job, { state: 'discarded' }),
-    onSuccess: (_data, job) => {
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.info('Job Discarded', `Job ${job.id} has been marked as discarded.`);
-      if (this.selectedJob?.id === job.id) this.selectedJob = { ...this.selectedJob, state: 'discarded' };
-    },
-    onError: (err: any) => toast.error('Discard Failed', err.message || 'Failed to discard job.'),
-  });
+  /** Moves the job to `changes` at once; the badge and buttons spring back if the server refuses. */
+  private async setJobState(job: Job, changes: Record<string, unknown>, done: () => void, failed: (message: string) => void) {
+    try {
+      await this.queue.update(String(job.id), (draft) => Object.assign(draft, changes)).when('settled');
+      done();
+    } catch (err: any) {
+      failed(err?.message);
+    }
+  }
+
+  private retry(job: Job) {
+    return this.setJobState(
+      job,
+      { state: 'available', scheduled_at: new Date().toISOString() },
+      () => toast.success('Job Retried', `Job ${job.id} marked as available for immediate processing.`),
+      (message) => toast.error('Retry Failed', message || 'Failed to retry job.'),
+    );
+  }
+
+  private discard(job: Job) {
+    return this.setJobState(
+      job,
+      { state: 'discarded' },
+      () => toast.info('Job Discarded', `Job ${job.id} has been marked as discarded.`),
+      (message) => toast.error('Discard Failed', message || 'Failed to discard job.'),
+    );
+  }
 
   constructor() {
     super();
@@ -246,18 +253,17 @@ export class AdminWorkersPage extends LitElement {
   }
 
   private get collections() {
-    const userWorkers = (this.mouls.data ?? []).filter((m: any) => m.type === 'worker' && m.name !== BUILT_IN);
-    return [{ name: BUILT_IN, label: '_workers (Built-in)' }, ...userWorkers.map((m: any) => ({ name: m.name, label: m.name }))];
+    const userWorkers = this.workerMouls.data.filter((m) => m.name !== BUILT_IN);
+    return [{ name: BUILT_IN, label: '_workers (Built-in)' }, ...userWorkers.map((m) => ({ name: m.name, label: m.name }))];
   }
 
   override willUpdate(): void {
     // Fall back to the built-in queue when the selected worker collection disappears.
-    if (this.mouls.data && !this.collections.some((c) => c.name === this.collection)) this.collection = BUILT_IN;
+    if (this.workerMouls.isReady && !this.collections.some((c) => c.name === this.collection)) this.collection = BUILT_IN;
   }
 
   private get allJobs(): Job[] {
-    const data = this.jobs.data;
-    return Array.isArray(data) ? data : data?.items || [];
+    return this.jobs.data;
   }
 
   private inspect(job: Job) {
@@ -266,7 +272,7 @@ export class AdminWorkersPage extends LitElement {
   }
 
   private async copyPayload(job: Job) {
-    const payload = job.payload || job;
+    const payload = job.payload || withoutVirtualProps(job);
     if (!(await copyText(typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)))) {
       toast.error('Copy Failed', 'The browser blocked clipboard access.');
       return;
@@ -311,8 +317,8 @@ export class AdminWorkersPage extends LitElement {
         const state = stateOf(job);
         const canRetry = state === 'retryable' || state === 'discarded' || state === 'completed';
         const canDiscard = state === 'available' || state === 'retryable' || state === 'executing';
-        const retrying = this.retryMutation.isPending && this.retryMutation.result.variables?.id === job.id;
-        const discarding = this.discardMutation.isPending && this.discardMutation.result.variables?.id === job.id;
+        // A state change still on its way to the server; another click would race it.
+        const saving = Boolean(job.$hasPendingWrites);
         return html`
           <span class="actions" style="display: inline-flex; gap: var(--spacing-1)">
             <moul-button variant="ghost" is-icon size="sm" aria-label=${`Inspect job ${job.id}`} @click=${onPress(() => this.inspect(job))}>
@@ -324,8 +330,8 @@ export class AdminWorkersPage extends LitElement {
                     variant="secondary"
                     size="sm"
                     aria-label=${`Retry job ${job.id}`}
-                    ?is-pending=${retrying}
-                    @click=${onPress(() => this.retryMutation.mutate(job))}
+                    ?is-disabled=${saving}
+                    @click=${onPress(() => this.retry(job))}
                   >
                     <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                     Retry
@@ -338,8 +344,8 @@ export class AdminWorkersPage extends LitElement {
                     variant="danger-soft"
                     size="sm"
                     aria-label=${`Discard job ${job.id}`}
-                    ?is-pending=${discarding}
-                    @click=${onPress(() => this.discardMutation.mutate(job))}
+                    ?is-disabled=${saving}
+                    @click=${onPress(() => this.discard(job))}
                   >
                     <admin-icon slot="prefix" name="prohibit" size="14"></admin-icon>
                     Discard
@@ -353,7 +359,9 @@ export class AdminWorkersPage extends LitElement {
   ];
 
   private renderInspector() {
-    const job = this.selectedJob;
+    // The live row, so the inspector follows polling and optimistic changes; the snapshot once it leaves the queue.
+    const selected = this.selectedJob;
+    const job = selected && (this.queue.get(String(selected.id)) ?? selected);
     return html`
       <moul-drawer
         placement="right"
@@ -423,14 +431,18 @@ export class AdminWorkersPage extends LitElement {
               <moul-button
                 slot="footer"
                 variant="danger-soft"
-                ?is-disabled=${job.state === 'discarded'}
-                ?is-pending=${this.discardMutation.isPending}
-                @click=${onPress(() => this.discardMutation.mutate(job))}
+                ?is-disabled=${job.state === 'discarded' || Boolean(job.$hasPendingWrites)}
+                @click=${onPress(() => this.discard(job))}
               >
                 <admin-icon slot="prefix" name="prohibit" size="14"></admin-icon>
                 Discard Job
               </moul-button>
-              <moul-button slot="footer" variant="primary" ?is-pending=${this.retryMutation.isPending} @click=${onPress(() => this.retryMutation.mutate(job))}>
+              <moul-button
+                slot="footer"
+                variant="primary"
+                ?is-disabled=${Boolean(job.$hasPendingWrites)}
+                @click=${onPress(() => this.retry(job))}
+              >
                 <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                 Retry Job
               </moul-button>
@@ -480,7 +492,7 @@ export class AdminWorkersPage extends LitElement {
                     </moul-select>
                   `
                 : nothing}
-              <moul-button variant="secondary" @click=${onPress(() => this.jobs.refetch())}>
+              <moul-button variant="secondary" @click=${onPress(() => this.queue.utils.refetch())}>
                 <admin-icon slot="prefix" name="arrows-clockwise" size="14"></admin-icon>
                 Refresh
               </moul-button>
@@ -499,7 +511,7 @@ export class AdminWorkersPage extends LitElement {
               `;
             })}
           </div>
-          <admin-data-table aria-label="Worker Jobs Table" dense .columns=${this.columns} .rows=${jobs} ?loading=${this.jobs.result.isLoading}>
+          <admin-data-table aria-label="Worker Jobs Table" dense .columns=${this.columns} .rows=${jobs} ?loading=${this.jobs.isLoading}>
             <moul-empty-state slot="empty">
               <admin-icon slot="icon" name="queue" size="32" color="var(--color-fg-subtle)"></admin-icon>
               <span slot="title">No jobs found</span>

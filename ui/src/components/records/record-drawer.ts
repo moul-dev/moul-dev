@@ -1,8 +1,9 @@
+import { safeRandomUUID } from '@tanstack/db';
 import { css, html, LitElement, nothing, type PropertyValues } from 'lit';
-import { api } from '../../api/client';
+import { type RecordsCollection, retryJobs, withoutVirtualProps } from '../../api/db';
 import { fieldValue, submitOnEnter } from '../../lib/forms';
+import { TransactionController } from '../../lib/live-query';
 import { onPress } from '../../lib/press';
-import { MutationController, queryClient } from '../../lib/query';
 import { toast } from '../../lib/toast';
 import { baseStyles } from '../../styles/base';
 import { formatFormDataForSubmit, validateAuthFields, validateFieldValue, validateRecordForm } from '../../utils/fieldValidation';
@@ -257,6 +258,7 @@ export class AdminRecordDrawer extends LitElement {
     moul: { attribute: false },
     fields: { attribute: false },
     record: { attribute: false },
+    records: { attribute: false },
     active: { state: true },
     formData: { state: true },
     formErrors: { state: true },
@@ -271,6 +273,8 @@ export class AdminRecordDrawer extends LitElement {
   declare fields: Field[];
   /** The record to edit; null to create one. */
   declare record: any | null;
+  /** The grid page's collection, which saves go through. */
+  declare records: RecordsCollection | undefined;
   /** Local copy of `record`, kept current after retry/discard without closing the drawer. */
   declare active: any | null;
   declare formData: Record<string, any>;
@@ -281,63 +285,9 @@ export class AdminRecordDrawer extends LitElement {
 
   private copiedTimer?: number;
 
-  private invalidate() {
-    queryClient.invalidateQueries({ queryKey: ['records', this.moulName] });
-  }
-
-  private readonly createMutation = new MutationController(this, {
-    mutationFn: (data: any) => api.createRecord(this.moulName, data),
-    onSuccess: () => {
-      this.invalidate();
-      this.close();
-      toast.success('Record Created', 'New record created successfully.');
-    },
-    onError: (err: any) => toast.error('Creation Failed', err.message || 'Failed to create record.'),
-  });
-
-  private readonly updateMutation = new MutationController(this, {
-    mutationFn: ({ id, data }: { id: string; data: any }) => api.updateRecord(this.moulName, id, data),
-    onSuccess: () => {
-      this.invalidate();
-      this.close();
-      toast.success('Record Updated', 'Record updated successfully.');
-    },
-    onError: (err: any) => toast.error('Update Failed', err.message || 'Failed to update record.'),
-  });
-
-  private readonly retryMutation = new MutationController(this, {
-    mutationFn: async (record: any) => {
-      try {
-        return await api.retryJobs(this.moulName, [record.id]);
-      } catch {
-        // Collections without the jobs endpoint: requeue by hand.
-        return await api.updateRecord(this.moulName, record.id, {
-          state: 'available',
-          scheduled_at: new Date().toISOString(),
-          attempt: 0,
-        });
-      }
-    },
-    onSuccess: (_data, record) => {
-      this.invalidate();
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.success('Task Scheduled for Retry', `Worker task ${record.id} marked as available for immediate execution.`);
-      this.patchActive(record.id, { state: 'available', attempt: 0, scheduled_at: new Date().toISOString() });
-    },
-    onError: (err: any) => toast.error('Retry Failed', err.message || 'Failed to retry worker task.'),
-  });
-
-  private readonly discardMutation = new MutationController(this, {
-    mutationFn: (record: any) =>
-      api.updateRecord(this.moulName, record.id, { state: 'discarded', discarded_at: new Date().toISOString() }),
-    onSuccess: (_data, record) => {
-      this.invalidate();
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.info('Task Discarded', `Worker task ${record.id} was marked as discarded.`);
-      this.patchActive(record.id, { state: 'discarded', discarded_at: new Date().toISOString() });
-    },
-    onError: (err: any) => toast.error('Discard Failed', err.message || 'Failed to discard task.'),
-  });
+  private readonly saving = new TransactionController(this);
+  private readonly retrying = new TransactionController(this);
+  private readonly discarding = new TransactionController(this);
 
   constructor() {
     super();
@@ -346,6 +296,7 @@ export class AdminRecordDrawer extends LitElement {
     this.moul = null;
     this.fields = [];
     this.record = null;
+    this.records = undefined;
     this.active = null;
     this.formData = {};
     this.formErrors = {};
@@ -361,8 +312,8 @@ export class AdminRecordDrawer extends LitElement {
   override willUpdate(changed: PropertyValues<this>): void {
     // Start each opening from the given record (or an empty form) with no errors shown.
     if ((changed.has('isOpen') && this.isOpen) || (changed.has('record') && this.isOpen)) {
-      this.active = this.record;
-      this.formData = this.record ? { ...this.record } : {};
+      this.active = this.record ? withoutVirtualProps(this.record) : null;
+      this.formData = this.active ? { ...this.active } : {};
       this.formErrors = {};
       this.touched = {};
       this.showRawJson = false;
@@ -437,10 +388,57 @@ export class AdminRecordDrawer extends LitElement {
       return;
     }
     const data = formatFormDataForSubmit(this.moul?.fields || [], this.formData);
-    if (this.isCreating) {
-      this.createMutation.mutate(data);
-    } else {
-      this.updateMutation.mutate({ id: this.active.id, data });
+    if (this.isCreating) void this.createRecord(data);
+    else void this.updateRecord(String(this.active.id), data);
+  }
+
+  /** Waits for the server before the row shows up: it assigns the ID and decides where the row sorts. */
+  private async createRecord(data: Record<string, any>) {
+    if (!this.records) return;
+    try {
+      // The ID is a placeholder the collection needs as a key; the handler doesn't send it.
+      await this.saving.track(this.records.insert({ ...data, id: safeRandomUUID() }, { optimistic: false }));
+      this.close();
+      toast.success('Record Created', 'New record created successfully.');
+    } catch (err: any) {
+      toast.error('Creation Failed', err?.message || 'Failed to create record.');
+    }
+  }
+
+  /** The grid row changes at once; the drawer closes when the server accepts, or stays open to fix a refusal. */
+  private async updateRecord(id: string, data: Record<string, any>) {
+    if (!this.records) return;
+    try {
+      await this.saving.track(this.records.update(id, (draft) => Object.assign(draft, data)));
+      this.close();
+      toast.success('Record Updated', 'Record updated successfully.');
+    } catch (err: any) {
+      toast.error('Update Failed', err?.message || 'Failed to update record.');
+    }
+  }
+
+  private async retry(record: any) {
+    if (!this.records) return;
+    try {
+      await this.retrying.track(retryJobs(this.records, [String(record.id)]));
+      toast.success('Task Scheduled for Retry', `Worker task ${record.id} marked as available for immediate execution.`);
+      this.patchActive(record.id, { state: 'available', attempt: 0, scheduled_at: new Date().toISOString() });
+    } catch (err: any) {
+      toast.error('Retry Failed', err?.message || 'Failed to retry worker task.');
+    }
+  }
+
+  private async discard(record: any) {
+    if (!this.records) return;
+    const discarded_at = new Date().toISOString();
+    try {
+      await this.discarding.track(
+        this.records.update(String(record.id), (draft) => Object.assign(draft, { state: 'discarded', discarded_at })),
+      );
+      toast.info('Task Discarded', `Worker task ${record.id} was marked as discarded.`);
+      this.patchActive(record.id, { state: 'discarded', discarded_at });
+    } catch (err: any) {
+      toast.error('Discard Failed', err?.message || 'Failed to discard task.');
     }
   }
 
@@ -573,8 +571,8 @@ export class AdminRecordDrawer extends LitElement {
             <moul-button
               variant="secondary"
               aria-label="Retry task immediately"
-              ?is-pending=${this.retryMutation.isPending}
-              @click=${onPress(() => this.retryMutation.mutate(record))}
+              ?is-pending=${this.retrying.isPending}
+              @click=${onPress(() => this.retry(record))}
             >
               <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
               Retry Task
@@ -583,8 +581,8 @@ export class AdminRecordDrawer extends LitElement {
               variant="danger-soft"
               aria-label="Discard task"
               ?is-disabled=${record.state === 'discarded'}
-              ?is-pending=${this.discardMutation.isPending}
-              @click=${onPress(() => this.discardMutation.mutate(record))}
+              ?is-pending=${this.discarding.isPending}
+              @click=${onPress(() => this.discard(record))}
             >
               <admin-icon slot="prefix" name="prohibit" size="14"></admin-icon>
               Discard
@@ -677,7 +675,7 @@ export class AdminRecordDrawer extends LitElement {
     const record = this.active;
     const creating = this.isCreating;
     const type = this.moul?.type || 'base';
-    const isSaving = this.createMutation.isPending || this.updateMutation.isPending;
+    const isSaving = this.saving.isPending;
     const stateTone = record?.state ? workerStateTone(record.state) : undefined;
 
     return html`
@@ -764,7 +762,7 @@ export class AdminRecordDrawer extends LitElement {
             <moul-button variant="ghost" @click=${onPress(() => this.close())}>Cancel</moul-button>
             ${type === 'worker' && record
               ? html`
-                  <moul-button variant="secondary" ?is-pending=${this.retryMutation.isPending} @click=${onPress(() => this.retryMutation.mutate(record))}>
+                  <moul-button variant="secondary" ?is-pending=${this.retrying.isPending} @click=${onPress(() => this.retry(record))}>
                     <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                     Retry Task
                   </moul-button>

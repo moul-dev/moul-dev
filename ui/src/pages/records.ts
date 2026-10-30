@@ -1,5 +1,16 @@
+import { eq, type InitialQueryBuilder } from '@tanstack/db';
 import { css, html, LitElement, nothing } from 'lit';
-import { api } from '../api/client';
+import {
+  invalidateRecords,
+  moulsCollection,
+  pageTotals,
+  type RecordsCollection,
+  type RecordsQuery,
+  recordsCollection,
+  recordsQueryKey,
+  retryJobs,
+  withoutVirtualProps,
+} from '../api/db';
 import '../components/data-table';
 import type { DataColumn } from '../components/data-table';
 import '../components/records/export-modal';
@@ -14,8 +25,9 @@ import {
   workerStateTone,
 } from '../components/records/record-helpers';
 import { fieldValue } from '../lib/forms';
+import { LiveQueryController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { MutationController, QueryController, queryClient } from '../lib/query';
+import { QueryDataController } from '../lib/query';
 import { router } from '../lib/router';
 import { StoreController } from '../lib/store';
 import { toast } from '../lib/toast';
@@ -41,6 +53,34 @@ function readSearch(params: URLSearchParams) {
     create: params.get('create') === 'true',
   };
 }
+
+/**
+ * Orders the page's rows the way the server sorted them (`-createdAt,title`; `id` when unset), so
+ * a row that is edited, added or refetched lands where the server would put it. Relation paths
+ * and `@random` can't be mirrored here; those pages keep the order the rows arrived in.
+ */
+function orderLikeServer(rows: ReturnType<typeof fromPage>, sort: string | undefined) {
+  const clauses = (sort || 'id')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => ({ field: part.replace(/^[-+]/, ''), desc: part.startsWith('-') }));
+  if (clauses.some(({ field }) => field.includes('.') || field === '@random')) return rows;
+  // The server leaves ties in no particular order; break them by ID so they hold still.
+  if (!clauses.some(({ field }) => field === 'id')) clauses.push({ field: 'id', desc: false });
+  let ordered = rows;
+  for (const { field, desc } of clauses) {
+    // SQLite compares text bytewise and puts NULLs first in ascending order.
+    ordered = ordered.orderBy(({ record }) => record[field], {
+      direction: desc ? 'desc' : 'asc',
+      nulls: desc ? 'last' : 'first',
+      stringSort: 'lexical',
+    });
+  }
+  return ordered;
+}
+
+const fromPage = (q: InitialQueryBuilder, page: RecordsCollection) => q.from({ record: page });
 
 /** Chip linking to a related record; opens the target collection's grid in a new tab. */
 function relationChip(target: string, id: string, label: string) {
@@ -208,8 +248,6 @@ export class AdminRecordsPage extends LitElement {
     drawerRecord: { state: true },
     recordToDelete: { state: true },
     isBatchDeleteOpen: { state: true },
-    isBatchDeleting: { state: true },
-    isBatchRetrying: { state: true },
     isExportOpen: { state: true },
     isImportOpen: { state: true },
   };
@@ -220,8 +258,6 @@ export class AdminRecordsPage extends LitElement {
   declare drawerRecord: Rec | null;
   declare recordToDelete: Rec | null;
   declare isBatchDeleteOpen: boolean;
-  declare isBatchDeleting: boolean;
-  declare isBatchRetrying: boolean;
   declare isExportOpen: boolean;
   declare isImportOpen: boolean;
 
@@ -233,69 +269,52 @@ export class AdminRecordsPage extends LitElement {
     return readSearch(router.location.search);
   }
 
-  private readonly moul = new QueryController(this, () => ({
-    queryKey: ['moul', this.moulName],
-    queryFn: () => api.getMoul(this.moulName),
-    enabled: Boolean(this.moulName),
-  }));
+  private readonly moul = new LiveQueryController(
+    this,
+    (q) =>
+      this.moulName
+        ? q
+            .from({ moul: moulsCollection })
+            .where(({ moul }) => eq(moul.name, this.moulName))
+            .findOne()
+        : undefined,
+    () => [this.moulName],
+  );
 
   /** Relation fields to expand, so cells can show labels instead of IDs. */
   private get expand(): string | undefined {
-    const names = (this.moul.data?.fields ?? []).filter((f: any) => f.type === 'relation' && f.name).map((f: any) => f.name);
+    const names = (this.moul.first?.fields ?? []).filter((f) => f.type === 'relation' && f.name).map((f) => f.name);
     return names.length > 0 ? names.join(',') : undefined;
   }
 
-  private readonly records = new QueryController(this, () => {
-    const s = this.search;
-    const expand = this.expand;
-    return {
-      queryKey: ['records', this.moulName, s.page, s.perPage, s.sort, s.filter, s.search, expand],
-      queryFn: () =>
-        api.listRecords(this.moulName, { page: s.page, perPage: s.perPage, sort: s.sort, filter: s.filter, search: s.search, expand }),
-      enabled: Boolean(this.moulName),
-    };
-  });
+  /** What the grid asks the server for: the URL's paging, sort and filters, plus relation expansion. */
+  private get query(): RecordsQuery {
+    const { page, perPage, sort, filter, search } = this.search;
+    return { page, perPage, sort, filter, search, expand: this.expand };
+  }
 
-  private readonly deleteMutation = new MutationController(this, {
-    mutationFn: (id: string) => api.deleteRecord(this.moulName, id),
-    onSuccess: (_data, id) => {
-      this.invalidateRecords();
-      this.isDrawerOpen = false;
-      if (this.selectedIds.has(String(id))) {
-        const next = new Set(this.selectedIds);
-        next.delete(String(id));
-        this.selectedIds = next;
-      }
-      toast.info('Record Deleted', 'Record was deleted.');
-    },
-    onError: (err: any) => toast.error('Delete Failed', err.message || 'Failed to delete record.'),
-    onSettled: () => {
-      this.recordToDelete = null;
-    },
-  });
+  /**
+   * The collection behind the grid: this page of records, as the server pages, sorts and filters
+   * it. Waits for the schema, so the first fetch already expands relations.
+   */
+  private get page(): RecordsCollection | undefined {
+    return this.moulName && !this.moul.isLoading ? recordsCollection(this.moulName, this.query) : undefined;
+  }
 
-  private readonly retryMutation = new MutationController(this, {
-    mutationFn: async (record: Rec) => {
-      try {
-        return await api.retryJobs(this.moulName, [record.id]);
-      } catch {
-        return await api.updateRecord(this.moulName, record.id, {
-          state: 'available',
-          scheduled_at: new Date().toISOString(),
-          attempt: 0,
-        });
-      }
+  private readonly records = new LiveQueryController(
+    this,
+    (q) => {
+      const page = this.page;
+      return page ? orderLikeServer(fromPage(q, page), this.search.sort) : undefined;
     },
-    onSuccess: (_data, record) => {
-      this.invalidateRecords();
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.success('Task Scheduled for Retry', `Worker task ${record.id} marked as available for immediate execution.`);
-    },
-    onError: (err: any) => toast.error('Retry Failed', err.message || 'Failed to retry worker task.'),
-  });
+    () => [this.page],
+  );
+
+  // The page's totals, which the collection doesn't keep: read from the response it fetched.
+  private readonly pageInfo = new QueryDataController(this, () => recordsQueryKey(this.moulName, this.query));
 
   private lastSearchParam: string | undefined;
-  private lastMoulName = '';
+  private lastPage: RecordsCollection | undefined;
 
   constructor() {
     super();
@@ -305,8 +324,6 @@ export class AdminRecordsPage extends LitElement {
     this.drawerRecord = null;
     this.recordToDelete = null;
     this.isBatchDeleteOpen = false;
-    this.isBatchDeleting = false;
-    this.isBatchRetrying = false;
     this.isExportOpen = false;
     this.isImportOpen = false;
     new StoreController(this, router);
@@ -319,9 +336,10 @@ export class AdminRecordsPage extends LitElement {
       this.lastSearchParam = s.search;
       this.searchText = s.search ?? '';
     }
-    // A different collection starts with nothing selected.
-    if (this.moulName !== this.lastMoulName) {
-      this.lastMoulName = this.moulName;
+    // Selection covers the rows on screen: another page, filter or collection starts with none.
+    const page = this.page;
+    if (page && page !== this.lastPage) {
+      this.lastPage = page;
       this.selectedIds = new Set();
     }
     // ?create=true (the overview's "New Record") opens the create drawer once, then leaves the URL.
@@ -332,13 +350,7 @@ export class AdminRecordsPage extends LitElement {
   }
 
   private get rows(): Rec[] {
-    const data = this.records.data;
-    if (Array.isArray(data)) return data;
-    return Array.isArray(data?.items) ? data.items : [];
-  }
-
-  private invalidateRecords() {
-    queryClient.invalidateQueries({ queryKey: ['records', this.moulName] });
+    return this.records.data;
   }
 
   private setSearch(patch: Record<string, string | number | boolean | undefined>, replace = false) {
@@ -368,43 +380,63 @@ export class AdminRecordsPage extends LitElement {
     this.selectedIds = next;
   }
 
-  private async batchDelete() {
-    const ids = [...this.selectedIds];
-    this.isBatchDeleting = true;
+  /** The row leaves the grid at once; a failed delete puts it back. */
+  private async deleteRecord(rec: Rec) {
+    const id = String(rec.id);
+    this.recordToDelete = null;
+    this.isDrawerOpen = false;
+    if (this.selectedIds.has(id)) {
+      const next = new Set(this.selectedIds);
+      next.delete(id);
+      this.selectedIds = next;
+    }
     try {
-      await Promise.all(ids.map((id) => api.deleteRecord(this.moulName, id)));
-      this.invalidateRecords();
-      toast.info('Records Deleted', `Successfully deleted ${ids.length} record${ids.length > 1 ? 's' : ''}.`);
-      this.selectedIds = new Set();
-      this.isBatchDeleteOpen = false;
+      await this.page?.delete(id).when('settled');
+      toast.info('Record Deleted', 'Record was deleted.');
     } catch (err: any) {
-      // Some deletes may have succeeded; refresh so the grid shows what is left.
-      this.invalidateRecords();
-      toast.error('Batch Delete Failed', err.message || 'Failed to delete selected records.');
-    } finally {
-      this.isBatchDeleting = false;
+      toast.error('Delete Failed', err?.message || 'Failed to delete record.');
     }
   }
 
-  private async batchRetry() {
+  private async batchDelete() {
     const ids = [...this.selectedIds];
-    this.isBatchRetrying = true;
+    this.selectedIds = new Set();
+    this.isBatchDeleteOpen = false;
     try {
-      await api.retryJobs(this.moulName, ids);
-      this.invalidateRecords();
-      queryClient.invalidateQueries({ queryKey: ['workerJobs'] });
-      toast.success('Tasks Scheduled for Retry', `Successfully scheduled ${ids.length} task${ids.length > 1 ? 's' : ''} for retry.`);
-      this.selectedIds = new Set();
+      await this.page?.delete(ids).when('settled');
+      toast.info('Records Deleted', `Successfully deleted ${ids.length} record${ids.length > 1 ? 's' : ''}.`);
     } catch (err: any) {
-      toast.error('Batch Retry Failed', err.message || 'Failed to retry selected worker tasks.');
-    } finally {
-      this.isBatchRetrying = false;
+      // Rows that did delete stay gone; the rest come back.
+      toast.error('Batch Delete Failed', err?.message || 'Failed to delete selected records.');
     }
+  }
+
+  private async retry(ids: string[]) {
+    const page = this.page;
+    if (!page) return;
+    const one = ids.length === 1;
+    try {
+      await retryJobs(page, ids).when('settled');
+      toast.success(
+        one ? 'Task Scheduled for Retry' : 'Tasks Scheduled for Retry',
+        one
+          ? `Worker task ${ids[0]} marked as available for immediate execution.`
+          : `Successfully scheduled ${ids.length} tasks for retry.`,
+      );
+    } catch (err: any) {
+      toast.error(one ? 'Retry Failed' : 'Batch Retry Failed', err?.message || 'Failed to retry worker tasks.');
+    }
+  }
+
+  private batchRetry() {
+    const ids = [...this.selectedIds];
+    this.selectedIds = new Set();
+    void this.retry(ids);
   }
 
   /** Downloads the selected rows of the current page as JSON, without a server round trip. */
   private exportSelected() {
-    const selected = this.rows.filter((r) => this.selectedIds.has(String(r.id)));
+    const selected = this.rows.filter((r) => this.selectedIds.has(String(r.id))).map(withoutVirtualProps);
     const url = URL.createObjectURL(new Blob([JSON.stringify(selected, null, 2)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
@@ -503,7 +535,6 @@ export class AdminRecordsPage extends LitElement {
         align: 'end',
         render: (rec) => {
           const canRetry = type === 'worker' && RETRYABLE_STATES.has(String(rec.state || 'available').toLowerCase());
-          const retrying = this.retryMutation.isPending && this.retryMutation.result.variables?.id === rec.id;
           return html`
             <span style="display: inline-flex; align-items: center; gap: 0.25rem">
               ${canRetry
@@ -512,8 +543,7 @@ export class AdminRecordsPage extends LitElement {
                       variant="secondary"
                       size="sm"
                       aria-label=${`Retry task ${rec.id}`}
-                      ?is-pending=${retrying}
-                      @click=${onPress(() => this.retryMutation.mutate(rec))}
+                      @click=${onPress(() => this.retry([String(rec.id)]))}
                     >
                       <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                       Retry
@@ -536,7 +566,7 @@ export class AdminRecordsPage extends LitElement {
 
   private renderToolbar(totalItems: number) {
     const count = this.selectedIds.size;
-    const isWorker = this.moul.data?.type === 'worker';
+    const isWorker = this.moul.first?.type === 'worker';
     return html`
       <moul-card>
         <moul-card-body>
@@ -560,7 +590,7 @@ export class AdminRecordsPage extends LitElement {
                     </moul-button>
                     ${isWorker
                       ? html`
-                          <moul-button variant="secondary" ?is-pending=${this.isBatchRetrying} @click=${onPress(() => this.batchRetry())}>
+                          <moul-button variant="secondary" @click=${onPress(() => this.batchRetry())}>
                             <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                             Retry
                           </moul-button>
@@ -599,9 +629,8 @@ export class AdminRecordsPage extends LitElement {
         <moul-button
           slot="footer"
           variant="danger"
-          ?is-pending=${this.deleteMutation.isPending}
           @click=${onPress(() => {
-            if (rec) this.deleteMutation.mutate(String(rec.id));
+            if (rec) void this.deleteRecord(rec);
           })}
         >
           Delete Record
@@ -622,7 +651,7 @@ export class AdminRecordsPage extends LitElement {
           <br /><br />This action cannot be undone.
         </p>
         <moul-button slot="footer" variant="outline" @click=${onPress(() => (this.isBatchDeleteOpen = false))}>Cancel</moul-button>
-        <moul-button slot="footer" variant="danger" ?is-pending=${this.isBatchDeleting} @click=${onPress(() => this.batchDelete())}>
+        <moul-button slot="footer" variant="danger" @click=${onPress(() => this.batchDelete())}>
           Delete ${count} Records
         </moul-button>
       </moul-alert-dialog>
@@ -631,13 +660,13 @@ export class AdminRecordsPage extends LitElement {
 
   override render() {
     const name = this.moulName;
-    const moul = this.moul.data;
+    const moul = this.moul.first;
     const type = moul?.type || 'base';
     const s = this.search;
     const rows = this.rows;
-    const data = this.records.data;
-    const totalItems = data && !Array.isArray(data) && typeof data.totalItems === 'number' ? data.totalItems : rows.length;
-    const totalPages = data && !Array.isArray(data) && typeof (data as any).totalPages === 'number' ? Math.max(1, (data as any).totalPages) : 1;
+    const info = pageTotals(this.pageInfo.data);
+    const totalItems = info.totalItems ?? rows.length;
+    const totalPages = Math.max(1, info.totalPages ?? 1);
     const fields = displayFieldsFor(moul, rows);
 
     return html`
@@ -679,7 +708,7 @@ export class AdminRecordsPage extends LitElement {
         .columns=${this.columns(type, fields)}
         .rows=${rows}
         .isRowSelected=${(rec: Rec) => this.selectedIds.has(String(rec.id))}
-        ?loading=${this.records.result.isLoading}
+        ?loading=${this.records.isLoading || this.moul.isLoading}
       >
         <moul-empty-state slot="empty">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-fg-subtle)"></admin-icon>
@@ -712,6 +741,7 @@ export class AdminRecordsPage extends LitElement {
         .moul=${moul}
         .fields=${fields}
         .record=${this.drawerRecord}
+        .records=${this.page}
         @openchange=${(e: CustomEvent<{ isOpen: boolean }>) => (this.isDrawerOpen = e.detail.isOpen)}
         @deleterequest=${(e: CustomEvent<{ record: Rec }>) => (this.recordToDelete = e.detail.record)}
       ></admin-record-drawer>
@@ -731,7 +761,7 @@ export class AdminRecordsPage extends LitElement {
         moul-name=${name}
         ?is-open=${this.isImportOpen}
         @openchange=${(e: CustomEvent<{ isOpen: boolean }>) => (this.isImportOpen = e.detail.isOpen)}
-        @imported=${() => this.invalidateRecords()}
+        @imported=${() => invalidateRecords(this.moulName)}
       ></admin-import-modal>
     `;
   }

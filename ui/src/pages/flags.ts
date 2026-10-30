@@ -1,14 +1,14 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { api } from '../api/client';
+import { type FeatureFlag, flagsCollection } from '../api/db';
 import { fieldValue, submitOnEnter } from '../lib/forms';
+import { LiveQueryController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { MutationController, QueryController, queryClient } from '../lib/query';
+import { MutationController } from '../lib/query';
 import { toast } from '../lib/toast';
 import { baseStyles } from '../styles/base';
 import { pageHeader, pageStyles } from '../styles/page';
-
-type Flag = { key: string; description?: string; enabled?: boolean };
 
 const DEFAULT_CONTEXT = '{\n  "user_id": "usr_123",\n  "role": "beta"\n}';
 
@@ -155,7 +155,7 @@ export class AdminFlagsPage extends LitElement {
   };
 
   declare isCreateOpen: boolean;
-  declare flagToDelete: Flag | null;
+  declare flagToDelete: FeatureFlag | null;
   declare newKey: string;
   declare newDescription: string;
   declare newEnabled: boolean;
@@ -165,44 +165,8 @@ export class AdminFlagsPage extends LitElement {
   declare evalJsonError: string | null;
   declare evalResult: any | null;
 
-  private readonly flags = new QueryController(this, () => ({
-    queryKey: ['flags'],
-    queryFn: api.listFeatureFlags,
-  }));
-
-  private readonly createMutation = new MutationController(this, {
-    mutationFn: (data: any) => api.createFeatureFlag(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['flags'] });
-      this.isCreateOpen = false;
-      this.resetCreateForm();
-      toast.success('Flag Created', 'Feature flag was created successfully.');
-    },
-    onError: (err: any) => toast.error('Create Failed', err.message || 'Failed to create feature flag.'),
-  });
-
-  private readonly updateMutation = new MutationController(this, {
-    mutationFn: ({ key, data }: { key: string; data: any }) => api.updateFeatureFlag(key, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flags'] }),
-    onError: (err: any) => {
-      // Re-read the server state so the switch springs back.
-      queryClient.invalidateQueries({ queryKey: ['flags'] });
-      toast.error('Update Failed', err.message || 'Failed to update feature flag.');
-    },
-  });
-
-  private readonly deleteMutation = new MutationController(this, {
-    mutationFn: (key: string) => api.deleteFeatureFlag(key),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['flags'] });
-      this.flagToDelete = null;
-      toast.success('Flag Deleted', 'Feature flag was deleted successfully.');
-    },
-    onError: (err: any) => {
-      this.flagToDelete = null;
-      toast.error('Delete Failed', err.message || 'Failed to delete feature flag.');
-    },
-  });
+  // The API lists flags in no particular order; sort them so the list holds still.
+  private readonly flags = new LiveQueryController(this, (q) => q.from({ flag: flagsCollection }).orderBy(({ flag }) => flag.key));
 
   private readonly evalMutation = new MutationController(this, {
     mutationFn: ({ key, context }: { key: string; context: unknown }) => api.evalFeatureFlag(key, context),
@@ -230,26 +194,52 @@ export class AdminFlagsPage extends LitElement {
     this.newEnabled = true;
   }
 
-  private create() {
-    if (!this.newKey.trim()) {
+  /** The flag shows up at once; a rejected create takes it back out and says why. */
+  private async create() {
+    const key = this.newKey.trim();
+    if (!key) {
       toast.error('Validation Error', 'Flag key is required.');
       return;
     }
-    this.createMutation.mutate({
-      key: this.newKey.trim(),
-      description: this.newDescription.trim(),
-      enabled: this.newEnabled,
-      value_type: 'boolean',
-      variations: [
-        { value: true, name: 'On' },
-        { value: false, name: 'Off' },
-      ],
-      rules: [],
-    });
+    if (flagsCollection.has(key)) {
+      toast.error('Create Failed', `A feature flag named "${key}" already exists.`);
+      return;
+    }
+    const flag = { key, description: this.newDescription.trim(), enabled: this.newEnabled };
+    this.isCreateOpen = false;
+    this.resetCreateForm();
+    try {
+      await flagsCollection.insert(flag).when('settled');
+      toast.success('Flag Created', 'Feature flag was created successfully.');
+    } catch (err: any) {
+      toast.error('Create Failed', err?.message || 'Failed to create feature flag.');
+    }
+  }
+
+  /** The switch moves at once and springs back if the server refuses. */
+  private async toggle(flag: FeatureFlag, enabled: boolean) {
+    try {
+      const tx = flagsCollection.update(flag.key, (draft) => {
+        draft.enabled = enabled;
+      });
+      await tx.when('settled');
+    } catch (err: any) {
+      toast.error('Update Failed', err?.message || 'Failed to update feature flag.');
+    }
+  }
+
+  private async delete(flag: FeatureFlag) {
+    this.flagToDelete = null;
+    try {
+      await flagsCollection.delete(flag.key).when('settled');
+      toast.success('Flag Deleted', 'Feature flag was deleted successfully.');
+    } catch (err: any) {
+      toast.error('Delete Failed', err?.message || 'Failed to delete feature flag.');
+    }
   }
 
   private openEval(key?: string) {
-    const flags: Flag[] = this.flags.data ?? [];
+    const flags = this.flags.data;
     this.evalKey = key || flags[0]?.key || '';
     this.evalResult = null;
     this.evalJsonError = null;
@@ -271,7 +261,7 @@ export class AdminFlagsPage extends LitElement {
     this.evalMutation.mutate({ key: this.evalKey, context });
   }
 
-  private renderFlag(flag: Flag) {
+  private renderFlag(flag: FeatureFlag) {
     return html`
       <moul-card>
         <moul-card-body>
@@ -294,8 +284,7 @@ export class AdminFlagsPage extends LitElement {
               <moul-switch
                 aria-label=${`Toggle flag ${flag.key}`}
                 ?is-checked=${Boolean(flag.enabled)}
-                @change=${(e: CustomEvent<{ isChecked: boolean }>) =>
-                  this.updateMutation.mutate({ key: flag.key, data: { enabled: e.detail.isChecked } })}
+                @change=${(e: CustomEvent<{ isChecked: boolean }>) => this.toggle(flag, e.detail.isChecked)}
               >
                 ${flag.enabled ? 'Enabled' : 'Disabled'}
               </moul-switch>
@@ -310,9 +299,9 @@ export class AdminFlagsPage extends LitElement {
   }
 
   private renderList() {
-    const { data: flags, isLoading } = this.flags.result;
+    const { data: flags, isLoading } = this.flags;
     if (isLoading) return html`<div class="muted">Loading feature flags...</div>`;
-    if (!flags || flags.length === 0) {
+    if (flags.length === 0) {
       return html`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="flag" size="32" color="var(--color-primary-500)"></admin-icon>
@@ -325,11 +314,11 @@ export class AdminFlagsPage extends LitElement {
         </moul-empty-state>
       `;
     }
-    return html`<div class="flags">${repeat(flags as Flag[], (f) => f.key, (f) => this.renderFlag(f))}</div>`;
+    return html`<div class="flags">${repeat(flags, (f) => f.key, (f) => this.renderFlag(f))}</div>`;
   }
 
   private renderEvalDrawer() {
-    const flags: Flag[] = this.flags.data ?? [];
+    const flags = this.flags.data;
     const result = this.evalResult;
     return html`
       <moul-drawer
@@ -433,7 +422,6 @@ export class AdminFlagsPage extends LitElement {
   }
 
   private renderCreateDrawer() {
-    const isPending = this.createMutation.isPending;
     return html`
       <moul-drawer
         placement="right"
@@ -476,9 +464,7 @@ export class AdminFlagsPage extends LitElement {
           </moul-checkbox>
         </form>
         <moul-button slot="footer" variant="ghost" @click=${onPress(() => (this.isCreateOpen = false))}>Cancel</moul-button>
-        <moul-button slot="footer" variant="primary" ?is-disabled=${isPending} @click=${onPress(() => this.create())}>
-          ${isPending ? 'Creating...' : 'Create Flag'}
-        </moul-button>
+        <moul-button slot="footer" variant="primary" @click=${onPress(() => this.create())}>Create Flag</moul-button>
       </moul-drawer>
     `;
   }
@@ -519,9 +505,8 @@ export class AdminFlagsPage extends LitElement {
         <moul-button
           slot="footer"
           variant="danger"
-          ?is-pending=${this.deleteMutation.isPending}
           @click=${onPress(() => {
-            if (flag) this.deleteMutation.mutate(flag.key);
+            if (flag) this.delete(flag);
           })}
         >
           Delete

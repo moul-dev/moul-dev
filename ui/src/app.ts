@@ -1,4 +1,5 @@
 import { css, html, LitElement, nothing } from 'lit';
+import { resetCollections } from './api/db';
 import { logoIcon } from './components/layout/logo';
 import { onPress } from './lib/press';
 import { queryClient } from './lib/query';
@@ -69,7 +70,10 @@ export class AdminApp extends LitElement {
     auth.addEventListener('change', () => {
       if (auth.isAuthenticated !== wasAuthenticated) {
         wasAuthenticated = auth.isAuthenticated;
-        if (!wasAuthenticated) queryClient.clear();
+        if (!wasAuthenticated) {
+          resetCollections();
+          queryClient.clear();
+        }
         router.refresh();
       }
     });

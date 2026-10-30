@@ -1,11 +1,12 @@
+import { eq } from '@tanstack/db';
 import { css, html, LitElement, nothing } from 'lit';
-import { api } from '../api/client';
+import { moulsCollection } from '../api/db';
 import { deleteCollectionDialog } from '../components/collections/delete-collection-dialog';
 import '../components/collections/fields-builder';
 import { EMPTY_RULES, type MoulRules } from '../components/collections/rules-editor';
 import '../components/collections/rules-editor';
+import { LiveQueryController, TransactionController } from '../lib/live-query';
 import { onPress } from '../lib/press';
-import { MutationController, QueryController, queryClient } from '../lib/query';
 import { router } from '../lib/router';
 import { StoreController } from '../lib/store';
 import { toast } from '../lib/toast';
@@ -162,46 +163,25 @@ export class AdminCollectionPage extends LitElement {
     return router.location.params.moulName ?? '';
   }
 
-  private readonly moul = new QueryController(this, () => ({
-    queryKey: ['moul', this.moulName],
-    queryFn: () => api.getMoul(this.moulName),
-    enabled: Boolean(this.moulName),
-  }));
+  private readonly moul = new LiveQueryController(
+    this,
+    (q) =>
+      this.moulName
+        ? q
+            .from({ moul: moulsCollection })
+            .where(({ moul }) => eq(moul.name, this.moulName))
+            .findOne()
+        : undefined,
+    () => [this.moulName],
+  );
 
-  private readonly allMouls = new QueryController(this, () => ({
-    queryKey: ['mouls'],
-    queryFn: api.listMouls,
-  }));
+  private readonly allMouls = new LiveQueryController(this, (q) => q.from({ moul: moulsCollection }));
+
+  private readonly saving = new TransactionController(this);
+  private readonly deleting = new TransactionController(this);
 
   /** The server copy the editable `fields` and `rules` were last reset from. */
   private loadedMoul: unknown;
-
-  private readonly updateMutation = new MutationController(this, {
-    mutationFn: (data: any) => api.updateMoul(this.moulName, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['moul', this.moulName] });
-      queryClient.invalidateQueries({ queryKey: ['mouls'] });
-      toast.success('Schema Saved', 'Collection schema and associations saved successfully.');
-    },
-    onError: (err: any) => {
-      toast.error('Save Failed', err.message || 'Failed to save collection schema.');
-    },
-  });
-
-  private readonly deleteMutation = new MutationController(this, {
-    mutationFn: (name: string) => api.deleteMoul(name),
-    onSuccess: (_data, name) => {
-      queryClient.invalidateQueries({ queryKey: ['mouls'] });
-      queryClient.removeQueries({ queryKey: ['moul', name] });
-      this.isDeleteOpen = false;
-      toast.success('Collection Deleted', `Collection "${name}" was deleted successfully.`);
-      router.navigate('/collections');
-    },
-    onError: (err: any) => {
-      this.isDeleteOpen = false;
-      toast.error('Delete Failed', err.message || 'Failed to delete collection.');
-    },
-  });
 
   constructor() {
     super();
@@ -213,7 +193,7 @@ export class AdminCollectionPage extends LitElement {
 
   override willUpdate(): void {
     // Reset the editable copy whenever the server copy changes (first load, save, other collection).
-    const moul = this.moul.data;
+    const moul = this.moul.first;
     if (moul && moul !== this.loadedMoul) {
       this.loadedMoul = moul;
       this.fields = moul.fields || [];
@@ -221,17 +201,38 @@ export class AdminCollectionPage extends LitElement {
     }
   }
 
-  private save() {
-    const validation = validateSchemaFields(this.fields, this.moul.data?.type || 'base');
+  private async save() {
+    const name = this.moulName;
+    const validation = validateSchemaFields(this.fields, this.moul.first?.type || 'base');
     if (!validation.isValid) {
       toast.error('Schema Validation Error', validation.summaryErrors[0] || 'Please fix invalid field configurations.');
       return;
     }
-    this.updateMutation.mutate({
-      name: this.moulName,
-      fields: prepareFieldsForSave(this.fields, this.moulName),
-      rules: this.rules,
+    const fields = prepareFieldsForSave(this.fields, name);
+    const rules = this.rules;
+    // Not optimistic: a rejected schema would roll back and reset this form, losing the edits.
+    const tx = moulsCollection.update(name, { optimistic: false }, (draft) => {
+      draft.fields = fields;
+      draft.rules = rules;
     });
+    try {
+      await this.saving.track(tx);
+      toast.success('Schema Saved', 'Collection schema and associations saved successfully.');
+    } catch (err: any) {
+      toast.error('Save Failed', err?.message || 'Failed to save collection schema.');
+    }
+  }
+
+  private async deleteCollection(name: string) {
+    try {
+      await this.deleting.track(moulsCollection.delete(name));
+      toast.success('Collection Deleted', `Collection "${name}" was deleted successfully.`);
+      router.navigate('/collections');
+    } catch (err: any) {
+      toast.error('Delete Failed', err?.message || 'Failed to delete collection.');
+    } finally {
+      this.isDeleteOpen = false;
+    }
   }
 
   private renderAssociations() {
@@ -314,11 +315,11 @@ export class AdminCollectionPage extends LitElement {
 
   override render() {
     const name = this.moulName;
-    const moul = this.moul.data;
-    if (this.moul.result.isLoading) {
+    const moul = this.moul.first;
+    if (this.moul.isLoading) {
       return html`<div class="muted">Loading collection schema...</div>`;
     }
-    const isSaving = this.updateMutation.isPending;
+    const isSaving = this.saving.isPending;
     const openDelete = onPress(() => (this.isDeleteOpen = true));
 
     return html`
@@ -351,7 +352,7 @@ export class AdminCollectionPage extends LitElement {
             current-moul-name=${name}
             collection-type=${moul?.type || 'base'}
             .fields=${this.fields}
-            .allMouls=${this.allMouls.data ?? []}
+            .allMouls=${this.allMouls.data}
             @fieldschange=${(e: CustomEvent<{ fields: MoulField[] }>) => (this.fields = e.detail.fields)}
           ></admin-fields-builder>
         </moul-card-body>
@@ -391,10 +392,10 @@ export class AdminCollectionPage extends LitElement {
       ${deleteCollectionDialog({
         isOpen: this.isDeleteOpen,
         name,
-        isPending: this.deleteMutation.isPending,
+        isPending: this.deleting.isPending,
         confirmLabel: 'Delete Collection',
         onCancel: () => (this.isDeleteOpen = false),
-        onConfirm: () => this.deleteMutation.mutate(name),
+        onConfirm: () => void this.deleteCollection(name),
       })}
     `;
   }

@@ -98,7 +98,8 @@ export function displayFieldsFor(moul: any, records: any[]): { name: string; typ
   const keys = new Set<string>();
   for (const rec of records) {
     for (const key of Object.keys(rec)) {
-      if (!NON_FIELD_KEYS.has(key)) keys.add(key);
+      // `$`-prefixed keys are TanStack DB's row metadata, not record fields.
+      if (!NON_FIELD_KEYS.has(key) && !key.startsWith('$')) keys.add(key);
     }
   }
   return [...keys].map((name) => ({ name, type: 'text' }));

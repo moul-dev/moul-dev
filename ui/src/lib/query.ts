@@ -1,5 +1,6 @@
 import {
   type DefaultError,
+  hashKey,
   MutationObserver,
   type MutationObserverOptions,
   type MutationObserverResult,
@@ -87,6 +88,38 @@ export class QueryController<
 
   refetch() {
     return this.result.refetch();
+  }
+}
+
+/**
+ * Reads a query's cached data and re-renders the host when it changes, without observing the
+ * query: it never fetches, and has no options of its own to replace those of whatever does fetch
+ * it (a query collection, say).
+ */
+export class QueryDataController<TData = unknown> implements ReactiveController {
+  private readonly host: ReactiveControllerHost;
+  private readonly queryKey: () => QueryKey;
+  private unsubscribe?: () => void;
+
+  constructor(host: ReactiveControllerHost, queryKey: () => QueryKey) {
+    this.host = host;
+    this.queryKey = queryKey;
+    host.addController(this);
+  }
+
+  hostConnected(): void {
+    this.unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.query.queryHash === hashKey(this.queryKey())) this.host.requestUpdate();
+    });
+  }
+
+  hostDisconnected(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+  }
+
+  get data(): TData | undefined {
+    return queryClient.getQueryData<TData>(this.queryKey());
   }
 }
 
