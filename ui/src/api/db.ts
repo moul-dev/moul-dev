@@ -74,11 +74,9 @@ export const moulsCollection = register(
         }
       },
       onUpdate: async ({ transaction, collection }) => {
-        for (const { key, modified } of transaction.mutations) {
-          // The endpoint replaces fields and rules wholesale, so send both, not just what changed.
-          await api.updateMoul(key, { name: key, fields: modified.fields, rules: modified.rules });
-        }
-        // The saved schema can differ from what was sent (defaults, dropped templates); read it back.
+        // The endpoint is a partial update, so properties left out (webhooks, email templates) keep their values.
+        for (const { key, changes } of transaction.mutations) await api.updateMoul(key, changes);
+        // The saved schema can differ from what was sent (default auth rules); read it back.
         await collection.utils.refetch();
       },
       onDelete: async ({ transaction, collection }) => {
