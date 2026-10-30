@@ -558,7 +558,7 @@ paths:
                     $ref: '#/components/schemas/MoulField'
                 rules:
                   $ref: '#/components/schemas/MoulRules'
-                email_templates:
+                emailTemplates:
                   $ref: '#/components/schemas/EmailTemplates'
       responses:
         '201':
@@ -611,6 +611,8 @@ paths:
       summary: Update Moul
       description: |
         Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.
+        Only the properties present in the body change: `rules` merge key by key, while `fields`, `webhooks` and
+        `emailTemplates` replace the stored values when sent (`null` clears them; email templates fall back to the defaults).
         If the `name` property in the request body is different from `{name}`, the physical table will be renamed.
       tags:
         - Moul Schema Management
@@ -630,12 +632,10 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - name
               properties:
                 name:
                   type: string
-                  description: New or current name of the collection.
+                  description: New name of the collection. Omit or leave empty to keep the current name.
                 type:
                   type: string
                   enum: [base, auth, worker, analytic]
@@ -645,8 +645,12 @@ paths:
                     $ref: '#/components/schemas/MoulField'
                 rules:
                   $ref: '#/components/schemas/MoulRules'
-                email_templates:
+                emailTemplates:
                   $ref: '#/components/schemas/EmailTemplates'
+                webhooks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Webhook'
       responses:
         '200':
           description: Moul schema updated successfully.
@@ -671,9 +675,9 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalError'
     put:
-      summary: Replace Moul
+      summary: Update Moul (PUT alias)
       description: |
-        Replaces or updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.
+        Same as `PATCH /api/moul/{name}`: only the properties present in the body change.
       tags:
         - Moul Schema Management
       security:
@@ -692,12 +696,10 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - name
               properties:
                 name:
                   type: string
-                  description: New or current name of the collection.
+                  description: New name of the collection. Omit or leave empty to keep the current name.
                 type:
                   type: string
                   enum: [base, auth, worker, analytic]
@@ -707,8 +709,12 @@ paths:
                     $ref: '#/components/schemas/MoulField'
                 rules:
                   $ref: '#/components/schemas/MoulRules'
-                email_templates:
+                emailTemplates:
                   $ref: '#/components/schemas/EmailTemplates'
+                webhooks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Webhook'
       responses:
         '200':
           description: Moul schema updated successfully.
@@ -3739,7 +3745,7 @@ components:
             $ref: '#/components/schemas/MoulField'
         rules:
           $ref: '#/components/schemas/MoulRules'
-        email_templates:
+        emailTemplates:
           $ref: '#/components/schemas/EmailTemplates'
         webhooks:
           type: array

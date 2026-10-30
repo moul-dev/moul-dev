@@ -554,7 +554,7 @@
                   "rules": {
                     "$ref": "#/components/schemas/MoulRules"
                   },
-                  "email_templates": {
+                  "emailTemplates": {
                     "$ref": "#/components/schemas/EmailTemplates"
                   }
                 }
@@ -642,7 +642,7 @@
       },
       "patch": {
         "summary": "Update Moul",
-        "description": "Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\nIf the `name` property in the request body is different from `{name}`, the physical table will be renamed.\n",
+        "description": "Updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\nOnly the properties present in the body change: `rules` merge key by key, while `fields`, `webhooks` and\n`emailTemplates` replace the stored values when sent (`null` clears them; email templates fall back to the defaults).\nIf the `name` property in the request body is different from `{name}`, the physical table will be renamed.\n",
         "tags": [
           "Moul Schema Management"
         ],
@@ -671,13 +671,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "New or current name of the collection."
+                    "description": "New name of the collection. Omit or leave empty to keep the current name."
                   },
                   "type": {
                     "type": "string",
@@ -697,8 +694,14 @@
                   "rules": {
                     "$ref": "#/components/schemas/MoulRules"
                   },
-                  "email_templates": {
+                  "emailTemplates": {
                     "$ref": "#/components/schemas/EmailTemplates"
+                  },
+                  "webhooks": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
                   }
                 }
               }
@@ -745,8 +748,8 @@
         }
       },
       "put": {
-        "summary": "Replace Moul",
-        "description": "Replaces or updates an existing collection schema definition, rules, fields, and physical SQLite database table columns.\n",
+        "summary": "Update Moul (PUT alias)",
+        "description": "Same as `PATCH /api/moul/{name}`: only the properties present in the body change.\n",
         "tags": [
           "Moul Schema Management"
         ],
@@ -775,13 +778,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "New or current name of the collection."
+                    "description": "New name of the collection. Omit or leave empty to keep the current name."
                   },
                   "type": {
                     "type": "string",
@@ -801,8 +801,14 @@
                   "rules": {
                     "$ref": "#/components/schemas/MoulRules"
                   },
-                  "email_templates": {
+                  "emailTemplates": {
                     "$ref": "#/components/schemas/EmailTemplates"
+                  },
+                  "webhooks": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
                   }
                 }
               }
@@ -5524,7 +5530,7 @@
           "rules": {
             "$ref": "#/components/schemas/MoulRules"
           },
-          "email_templates": {
+          "emailTemplates": {
             "$ref": "#/components/schemas/EmailTemplates"
           },
           "webhooks": {
