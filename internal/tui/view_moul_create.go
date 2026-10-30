@@ -253,15 +253,10 @@ func (m *Model) initMoulFormForEdit(moul schema.Moul) {
 					return nil
 				}),
 
-			huh.NewSelect[string]().
+			// The server refuses type changes: schema sync would drop the old type's system columns.
+			huh.NewNote().
 				Title("Collection Type").
-				Options(
-					huh.NewOption("Base (Standard Table)", "base"),
-					huh.NewOption("Auth (User Management Table)", "auth"),
-					huh.NewOption("Worker (Job Queue Table)", "worker"),
-					huh.NewOption("Analytic (Traffic Tracking Table)", "analytic"),
-				).
-				Value(&m.newMoulType),
+				Description(moul.Type+" (fixed at creation)"),
 		),
 	).WithTheme(ThemeCustom)
 }
