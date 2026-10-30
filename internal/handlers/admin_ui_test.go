@@ -52,7 +52,7 @@ func TestAdminUIRedirectsAndFallback(t *testing.T) {
 	if cc := rec.Header().Get("Cache-Control"); !strings.Contains(cc, "no-cache") {
 		t.Fatalf("expected Cache-Control no-cache for index.html, got %q", cc)
 	}
-	if !strings.Contains(rec.Body.String(), "<div id=\"root\"></div>") && !strings.Contains(rec.Body.String(), "moul Web Admin Console") {
+	if !strings.Contains(rec.Body.String(), "<admin-app></admin-app>") {
 		t.Fatalf("unexpected index.html body: %s", rec.Body.String())
 	}
 
