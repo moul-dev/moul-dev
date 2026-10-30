@@ -1054,6 +1054,169 @@ func TestUpdateMoul(t *testing.T) {
 	}
 }
 
+func TestUpdateMoulKeepsOmittedProperties(t *testing.T) {
+	dbConn := testutil.NewTestDB(t)
+
+	moulHandler := handlers.NewMoulHandler(dbConn)
+	webhookHandler := handlers.NewWebhookHandler(dbConn)
+	authHandler := handlers.NewAuthHandler(dbConn)
+	e := echo.New()
+	e.POST("/api/moul", moulHandler.CreateMoul)
+	e.PATCH("/api/moul/:name", moulHandler.UpdateMoul)
+	e.POST("/api/moul/:name/webhooks", webhookHandler.CreateWebhook)
+	e.PUT("/api/moul/:name/email-templates", authHandler.UpdateEmailTemplates)
+
+	server := httptest.NewServer(e)
+	defer server.Close()
+	client := server.Client()
+
+	// 1. An auth collection with a subscribeRule, a webhook and a custom OTP template
+	resp := postJSON(t, client, server.URL+"/api/moul", schema.Moul{
+		Name:   "members",
+		Type:   "auth",
+		Fields: []schema.MoulField{{Name: "nickname", Type: "text"}},
+		Rules:  schema.MoulRules{SubscribeRule: "id = @request.auth.id"},
+	}, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for CreateMoul, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = postJSON(t, client, server.URL+"/api/moul/members/webhooks", schema.Webhook{
+		URL:    "https://example.com/hook",
+		Events: []string{"create"},
+	}, "")
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected 201 for CreateWebhook, got %d", resp.StatusCode)
+	}
+	var hook schema.Webhook
+	parseJSON(t, resp, &hook)
+
+	templates := schema.GetDefaultEmailTemplates()
+	templates.OTP.Subject = "Your members code"
+	resp, err := doRequest(client, http.MethodPut, server.URL+"/api/moul/members/email-templates", templates, "")
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("Failed to update email templates: %v, status: %d", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// 2. PATCH only fields: webhooks, templates, type and rules survive
+	resp = patchJSON(t, client, server.URL+"/api/moul/members", map[string]any{
+		"fields": []schema.MoulField{{Name: "nickname", Type: "text"}, {Name: "bio", Type: "text"}},
+	}, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for fields-only PATCH, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	m, err := db.LoadMoulByName(dbConn, "members")
+	if err != nil {
+		t.Fatalf("LoadMoulByName: %v", err)
+	}
+	if len(m.Fields) != 2 || m.Fields[1].Name != "bio" {
+		t.Fatalf("Expected fields nickname and bio, got %+v", m.Fields)
+	}
+	if m.Type != "auth" {
+		t.Fatalf("Expected type auth to be kept, got %q", m.Type)
+	}
+	if len(m.Webhooks) != 1 || m.Webhooks[0].ID != hook.ID || m.Webhooks[0].URL != hook.URL {
+		t.Fatalf("Expected webhook %+v to survive, got %+v", hook, m.Webhooks)
+	}
+	if m.EmailTemplates == nil || m.EmailTemplates.OTP.Subject != "Your members code" {
+		t.Fatalf("Expected custom OTP template to survive, got %+v", m.EmailTemplates)
+	}
+	if m.Rules.ListRule != "id = @request.auth.id" || m.Rules.SubscribeRule != "id = @request.auth.id" {
+		t.Fatalf("Expected rules to be kept, got %+v", m.Rules)
+	}
+
+	// 3. The console's { name, fields, rules } payload changes the rules it sends and keeps subscribeRule
+	resp = patchJSON(t, client, server.URL+"/api/moul/members", map[string]any{
+		"name":   "members",
+		"fields": m.Fields,
+		"rules": map[string]string{
+			"listRule":   "",
+			"viewRule":   "@request.auth.id != ''",
+			"createRule": "",
+			"updateRule": "id = @request.auth.id",
+			"deleteRule": "id = @request.auth.id",
+		},
+	}, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for console PATCH, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	m, _ = db.LoadMoulByName(dbConn, "members")
+	if m.Rules.ViewRule != "@request.auth.id != ''" || m.Rules.SubscribeRule != "id = @request.auth.id" {
+		t.Fatalf("Expected viewRule changed and subscribeRule kept, got %+v", m.Rules)
+	}
+	if m.Rules.ListRule != "id = @request.auth.id" {
+		t.Fatalf("Expected blank listRule of an auth collection to get the default, got %q", m.Rules.ListRule)
+	}
+	if len(m.Webhooks) != 1 || m.EmailTemplates.OTP.Subject != "Your members code" {
+		t.Fatalf("Expected webhook and template to survive the console PATCH, got %+v / %+v", m.Webhooks, m.EmailTemplates)
+	}
+
+	// 4. A name-only PATCH renames the table and keeps everything else
+	resp = patchJSON(t, client, server.URL+"/api/moul/members", map[string]any{"name": "people"}, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for rename PATCH, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	if _, err := db.LoadMoulByName(dbConn, "members"); err == nil {
+		t.Fatalf("Expected members to be renamed away")
+	}
+	m, err = db.LoadMoulByName(dbConn, "people")
+	if err != nil {
+		t.Fatalf("LoadMoulByName(people): %v", err)
+	}
+	if len(m.Fields) != 2 || len(m.Webhooks) != 1 || m.EmailTemplates.OTP.Subject != "Your members code" {
+		t.Fatalf("Expected fields, webhook and template to follow the rename, got %+v", m)
+	}
+	var tables []string
+	if err := dbConn.NewQuery("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('people', 'members')").Column(&tables); err != nil {
+		t.Fatalf("Failed to list tables: %v", err)
+	}
+	if len(tables) != 1 || tables[0] != "people" {
+		t.Fatalf("Expected only the people table after the rename, got %v", tables)
+	}
+
+	// 5. Explicit values still clear: [] drops webhooks, null restores the default templates
+	resp = patchJSON(t, client, server.URL+"/api/moul/people", map[string]any{"webhooks": []any{}, "emailTemplates": nil}, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected 200 for clearing PATCH, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	m, _ = db.LoadMoulByName(dbConn, "people")
+	if len(m.Webhooks) != 0 {
+		t.Fatalf("Expected webhooks to be cleared, got %+v", m.Webhooks)
+	}
+	if m.EmailTemplates == nil || m.EmailTemplates.OTP.Subject != schema.GetDefaultEmailTemplates().OTP.Subject {
+		t.Fatalf("Expected default templates after null, got %+v", m.EmailTemplates)
+	}
+
+	// 6. System collections and underscore names are still refused
+	resp = patchJSON(t, client, server.URL+"/api/moul/_rootUsers", map[string]any{"fields": []any{}}, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for patching a system collection, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	resp = patchJSON(t, client, server.URL+"/api/moul/people", map[string]any{"name": "_people"}, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for renaming to an underscore name, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	if _, err := db.LoadMoulByName(dbConn, "people"); err != nil {
+		t.Fatalf("Expected people to be untouched by refused PATCHes: %v", err)
+	}
+
+	// 7. A malformed property is a 400, not a reset
+	resp = patchJSON(t, client, server.URL+"/api/moul/people", map[string]any{"fields": "bio"}, "")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for malformed fields, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
 func TestSelectFieldValidationAndCRUD(t *testing.T) {
 	dbConn := testutil.NewTestDB(t)
 

@@ -165,7 +165,7 @@ When creating an `auth` collection, default access rules are automatically confi
 ### Collection Management (Admin Auth)
 - `GET /api/moul`: List all collection schemas (root user token or admin key).
 - `POST /api/moul`: Create new collection schema (`X-Admin-Key` or Admin Token).
-- `PATCH /api/moul/:name`: Update collection schema.
+- `PATCH /api/moul/:name`: Update collection schema. Only the properties in the body change (`rules` merge key by key; `fields`, `webhooks` and `emailTemplates` are replaced when sent).
 - `DELETE /api/moul/:name`: Delete collection schema and drop physical SQLite table.
 
 ### Dynamic Record CRUD

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -172,7 +173,20 @@ func (h *MoulHandler) DeleteMoul(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// moulPatch is the body of PATCH /api/moul/:name. A nil RawMessage means the key was absent.
+type moulPatch struct {
+	Name           string          `json:"name"`
+	Type           string          `json:"type"`
+	Fields         json.RawMessage `json:"fields"`
+	Rules          json.RawMessage `json:"rules"`
+	EmailTemplates json.RawMessage `json:"emailTemplates"`
+	Webhooks       json.RawMessage `json:"webhooks"`
+}
+
 // UpdateMoul updates an existing collection schema, rules, fields, and physical table.
+// Only the properties present in the body change: an empty name or type keeps the current one,
+// rules merge key by key, and fields, emailTemplates and webhooks replace the stored values
+// (null clears them; emailTemplates fall back to the defaults).
 func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	name := c.Param("name")
 	if name == "" {
@@ -182,7 +196,8 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Cannot update system collections")
 	}
 
-	origMoul, err := db.LoadMoulByName(h.DB, name)
+	// LoadMoulByName returns a copy, so the patch is applied to it in place.
+	updated, err := db.LoadMoulByName(h.DB, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Not found")
@@ -191,15 +206,14 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to look up moul")
 	}
 
-	updated := new(schema.Moul)
-	if err := c.Bind(updated); err != nil {
+	patch := new(moulPatch)
+	if err := c.Bind(patch); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
-
-	updated.Name = strings.TrimSpace(updated.Name)
-	if updated.Name == "" {
-		updated.Name = name
+	if err := patch.applyTo(updated); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	if strings.HasPrefix(updated.Name, "_") {
 		return echo.NewHTTPError(http.StatusBadRequest, "Moul name cannot start with underscore")
 	}
@@ -210,12 +224,6 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 
 	if err := validateMoulFields(updated); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	updated.ID = origMoul.ID
-	updated.CreatedAt = origMoul.CreatedAt
-	if updated.Type == "" {
-		updated.Type = origMoul.Type
 	}
 
 	// Default rules for auth type if blank
@@ -271,6 +279,45 @@ func (h *MoulHandler) UpdateMoul(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, updated)
+}
+
+// applyTo overlays the properties present in the patch onto m.
+func (p *moulPatch) applyTo(m *schema.Moul) error {
+	if name := strings.TrimSpace(p.Name); name != "" {
+		m.Name = name
+	}
+	if p.Type != "" {
+		m.Type = p.Type
+	}
+	if p.Fields != nil {
+		var fields []schema.MoulField
+		if err := json.Unmarshal(p.Fields, &fields); err != nil {
+			return fmt.Errorf("invalid fields")
+		}
+		m.Fields = fields
+	}
+	if p.Rules != nil {
+		// Decoding into the stored rules keeps the ones the body leaves out, such as a
+		// subscribeRule that the TUI has no input for.
+		if err := json.Unmarshal(p.Rules, &m.Rules); err != nil {
+			return fmt.Errorf("invalid rules")
+		}
+	}
+	if p.EmailTemplates != nil {
+		var templates *schema.EmailTemplates
+		if err := json.Unmarshal(p.EmailTemplates, &templates); err != nil {
+			return fmt.Errorf("invalid emailTemplates")
+		}
+		m.EmailTemplates = templates
+	}
+	if p.Webhooks != nil {
+		var hooks []schema.Webhook
+		if err := json.Unmarshal(p.Webhooks, &hooks); err != nil {
+			return fmt.Errorf("invalid webhooks")
+		}
+		m.Webhooks = hooks
+	}
+	return nil
 }
 
 func validateMoulFields(m *schema.Moul) error {

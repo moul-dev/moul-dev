@@ -190,5 +190,5 @@ func main() {
 
 - `GET /api/moul` - List all dynamic collections.
 - `GET /api/moul/:name` - Get schema definition, field types, and rules for a collection.
-- `PATCH /api/moul/:name` - Update fields, schema, or access rules.
+- `PATCH /api/moul/:name` - Update fields, schema, or access rules. Only the properties in the body change: `rules` merge key by key, and `fields`, `webhooks` and `emailTemplates` are replaced when sent.
 - `DELETE /api/moul/:name` - Delete a collection and drop its SQLite table.
