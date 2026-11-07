@@ -1,4 +1,4 @@
-import { toastQueue } from '@moul-dev/ui';
+import { toastQueue } from '@moul-dev/web-component';
 
 // The React console patched toastQueue.add to default every toast to 3 seconds.
 const DEFAULT_DURATION = 3000;

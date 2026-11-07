@@ -317,11 +317,11 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 
 ### Frontend Architecture & Stack
 
-- **UI Component System**: **Moul UI (`@moul-dev/ui`)**, accessible `<moul-*>` Web Components (Lit, Shadow DOM, native `<dialog>`, Popover API and `ElementInternals`). The console itself is a set of Lit elements; it has no React dependency.
+- **UI Component System**: **Moul UI (`@moul-dev/web-component`)**, accessible `<moul-*>` Web Components (Lit, Shadow DOM, native `<dialog>`, Popover API and `ElementInternals`). The console itself is a set of Lit elements; it has no React dependency.
 - **Background Worker Engine & Jobs Queue Monitor**: Real-time worker jobs queue table with status filters (`available`, `executing`, `completed`, `retryable`, `discarded`), execution attempt metrics, job payload inspector drawer, and instant **Retry** and **Discard** actions.
-- **Visual Telemetry & Analytics Dashboard**: Built-in interactive **AreaChart** (requests over time categorized by success vs error) and **TopList** (top endpoints & referrers) powered by `@moul-dev/ui` alongside live server latency, throughput, and error rate stats.
-- **Real-Time Stream Viewer**: Server-Sent Events (SSE) listener integrated with `@moul-dev/ui`'s high-performance **`Logs` stream viewer** with syntax highlighting, search/level filters, drawer payload inspector, and auto-scroll follow.
-- **Data Import & Export Modals**: Accessible `@moul-dev/ui` modals for records with drag-and-drop file upload, CSV & JSON format auto-detection, schema envelope controls, conflict mode selectors (`upsert`, `insert`, `replace`), and atomic/continue error handling with detailed row error breakdown.
+- **Visual Telemetry & Analytics Dashboard**: Built-in interactive **AreaChart** (requests over time categorized by success vs error) and **TopList** (top endpoints & referrers) powered by `@moul-dev/web-component` alongside live server latency, throughput, and error rate stats.
+- **Real-Time Stream Viewer**: Server-Sent Events (SSE) listener integrated with `@moul-dev/web-component`'s high-performance **`Logs` stream viewer** with syntax highlighting, search/level filters, drawer payload inspector, and auto-scroll follow.
+- **Data Import & Export Modals**: Accessible `@moul-dev/web-component` modals for records with drag-and-drop file upload, CSV & JSON format auto-detection, schema envelope controls, conflict mode selectors (`upsert`, `insert`, `replace`), and atomic/continue error handling with detailed row error breakdown.
 - **Feature Flag Evaluation Playground**: Live evaluation sandbox to test flag targeting gates, percentage rollouts, and actor/group targeting rules against customizable JSON contexts with instant reason code breakdowns.
 - **Settings Unsaved State Protection**: Form divergence tracking (`isDirty`) with visual warning badges and `AlertDialog` confirmation guards protecting against accidental loss when configuring S3, Litestream, rate limits, OAuth, or email.
 - **Actionable System Overview & Live Collection Metrics**: Engine overview with live record count badges per schema and quick "+ New Record" actions.
@@ -329,7 +329,7 @@ The specification file is embedded into the compiled binary via Go's `//go:embed
 - **Relational Association Modeling**: Complete visual relationship builder directly in Schema Designer supporting **1:1 (One-to-One)**, **1:N (Many-to-One / Foreign Key)**, **M:N (Many-to-Many)**, self-referencing tree structures, on-delete referential integrity policies (`CASCADE`, `SET_NULL`, `RESTRICT`), and interactive linked record pickers with inline relation expansion.
 - **Theming**: Tri-state theme toggle supporting **System** (default, dynamically adapting to OS preference in real-time), **Light**, and **Dark** modes with persistent storage.
 - **Routing**: A small History API router (`ui/src/lib/router.ts`, route table in `ui/src/routes.ts`) with an auth guard and one lazily loaded chunk per page.
-- **Styling**: Lit `css` scoped to each element's shadow root, built on the `@moul-dev/ui/style.css` design tokens (OKLCH colors with `light-dark()`).
+- **Styling**: Lit `css` scoped to each element's shadow root, built on the `@moul-dev/web-component/style.css` design tokens (OKLCH colors with `light-dark()`).
 - **Data**: **TanStack Query core (`@tanstack/query-core`)** behind Lit reactive controllers (`QueryController`, `MutationController`) for caching and server synchronization.
 - **Iconography**: **Phosphor Icons (`@phosphor-icons/core`)** raw SVGs, rendered by `<admin-icon>`.
 - **Developer Tooling**: A dev-only **Moul Inspector** (`ui/src/devtools/`) for the event bus, query cache and router; `vite build` leaves it out.
@@ -971,14 +971,19 @@ make build
 
 ### Versioning & Releases
 
-Moul and `@moul-dev/ui` share one [CalVer](https://calver.org) scheme, `YYYY.MM.MICRO`: the UTC year, the UTC month without zero padding, and a release counter that starts at `0` each month. Release tags add a leading `v`, so the first release of November 2026 is `v2026.11.0` and the next is `v2026.11.1`. Every tag is valid SemVer.
+Moul and `@moul-dev/web-component` share [SemVer](https://semver.org): a `major` release breaks an API or a default, a `minor` one adds API, and a `patch` only fixes. Release tags add a leading `v`. The first SemVer release is `v1.0.0-alpha.1`, and the alphas count up (`v1.0.0-alpha.2`, …) until `v1.0.0`.
 
 ```bash
-make next-version   # Prints the next tag, e.g. v2026.11.0
-make release-tag    # Tags HEAD with it; publish with: git push origin <tag>
+make next-version BUMP=prerelease              # v1.0.0-alpha.1 -> v1.0.0-alpha.2
+make next-version BUMP=prerelease PREID=beta   # v1.0.0-alpha.2 -> v1.0.0-beta.1
+make next-version BUMP=major                   # v1.0.0-beta.1  -> v1.0.0
+make next-version BUMP=minor                   # v1.0.0         -> v1.1.0
+make release-tag BUMP=patch                    # Tags HEAD with the next tag; publish with: git push origin <tag>
 ```
 
-Pushing the tag runs `.github/workflows/release.yml`. It rejects any tag that is not `vYYYY.MM.MICRO`, then builds `moul` and `moul-ctl` for macOS and Linux and publishes them as a GitHub release. The tags from `v2026.07` to `v2026.09` predate the scheme.
+`major`, `minor` and `patch` graduate a prerelease to the version it leads up to (`v1.0.0-alpha.3` + `major` = `v1.0.0`); with `PREID` they open a prerelease of the next version instead (`v1.0.0` + `minor` + `PREID=beta` = `v1.1.0-beta.1`). The next tag is computed from the highest SemVer tag, and a bump that would not sort after it is refused. The rules live in `internal/semver` and match `bun run bump` in `@moul-dev/web-component`.
+
+Pushing the tag runs `.github/workflows/release.yml`. It rejects any tag that is not `vMAJOR.MINOR.PATCH[-prerelease]`, then builds `moul` and `moul-ctl` for macOS and Linux and publishes them as a GitHub release. Prereleases are published as ordinary releases, because `moul update` follows GitHub's latest release. The CalVer tags from `v2026.07` to `v2026.09` predate the scheme and are ignored.
 
 ### Production Environment Variables
 

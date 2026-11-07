@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: '../pkg/ui/dist',
     emptyOutDir: true,
-    // @moul-dev/ui themes with light-dark(), which the theme switch drives through `color-scheme`
+    // @moul-dev/web-component themes with light-dark(), which the theme switch drives through `color-scheme`
     // on <html>. For older targets Lightning CSS rewrites light-dark() into variables that follow
     // the OS setting instead, so the built console would ignore the Light/Dark choice.
     cssTarget: ['chrome123', 'edge123', 'firefox120', 'safari17.5', 'ios17.5'],

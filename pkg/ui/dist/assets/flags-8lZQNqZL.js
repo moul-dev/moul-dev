@@ -1,4 +1,4 @@
-import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./query-DEj2kaNm.js";import{t as s}from"./client-DaTS5Mxb.js";import{t as c}from"./live-query-DDtzER30.js";import{n as l}from"./index-DeN0Cdry.js";import{t as u}from"./repeat-Utyd6s0W.js";import{n as d,t as f}from"./page-ITe5xmEa.js";import{n as p,t as m}from"./forms-ChSyHPkg.js";import{t as h}from"./toast-CRunUHSe.js";var g=`{
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o,t as s}from"./query-DdOx0cLf.js";import{t as c}from"./client-DaTS5Mxb.js";import{t as l}from"./live-query-DFtKXPMp.js";import{n as u}from"./index-C29yRTIN.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./forms-ChSyHPkg.js";import{t as h}from"./toast-BKHbxuSD.js";var g=`{
   "user_id": "usr_123",
   "role": "beta"
 }`,_=[{label:`Standard User`,json:`{
@@ -12,7 +12,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
 }`},{label:`Rollout Target`,json:`{
   "target_id": "user_bucket_42",
   "percentage": 50
-}`}],v=class extends i{static styles=[n,d,e`
+}`}],v=class extends i{static styles=[n,d,t`
       :host {
         --page-gap: var(--spacing-4);
       }
@@ -126,31 +126,31 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         gap: var(--spacing-1);
         font-weight: 700;
       }
-    `];static properties={isCreateOpen:{state:!0},flagToDelete:{state:!0},newKey:{state:!0},newDescription:{state:!0},newEnabled:{state:!0},isEvalOpen:{state:!0},evalKey:{state:!0},evalContext:{state:!0},evalJsonError:{state:!0},evalResult:{state:!0}};flags=new c(this,e=>e.from({flag:l}).orderBy(({flag:e})=>e.key));evalMutation=new o(this,{mutationFn:({key:e,context:t})=>s.evalFeatureFlag(e,t),onSuccess:e=>{this.evalResult=e},onError:e=>h.error(`Evaluation Failed`,e.message||`Failed to evaluate feature flag.`)});constructor(){super(),this.isCreateOpen=!1,this.flagToDelete=null,this.isEvalOpen=!1,this.evalKey=``,this.evalContext=g,this.evalJsonError=null,this.evalResult=null,this.resetCreateForm()}resetCreateForm(){this.newKey=``,this.newDescription=``,this.newEnabled=!0}async create(){let e=this.newKey.trim();if(!e){h.error(`Validation Error`,`Flag key is required.`);return}if(l.has(e)){h.error(`Create Failed`,`A feature flag named "${e}" already exists.`);return}let t={key:e,description:this.newDescription.trim(),enabled:this.newEnabled};this.isCreateOpen=!1,this.resetCreateForm();try{await l.insert(t).when(`settled`),h.success(`Flag Created`,`Feature flag was created successfully.`)}catch(e){h.error(`Create Failed`,e?.message||`Failed to create feature flag.`)}}async toggle(e,t){try{await l.update(e.key,e=>{e.enabled=t}).when(`settled`)}catch(e){h.error(`Update Failed`,e?.message||`Failed to update feature flag.`)}}async delete(e){this.flagToDelete=null;try{await l.delete(e.key).when(`settled`),h.success(`Flag Deleted`,`Feature flag was deleted successfully.`)}catch(e){h.error(`Delete Failed`,e?.message||`Failed to delete feature flag.`)}}openEval(e){let t=this.flags.data;this.evalKey=e||t[0]?.key||``,this.evalResult=null,this.evalJsonError=null,this.isEvalOpen=!0}runEval(){this.evalJsonError=null;let e={};if(this.evalContext.trim())try{e=JSON.parse(this.evalContext)}catch(e){this.evalJsonError=`Invalid JSON format: ${e.message}`;return}this.evalMutation.mutate({key:this.evalKey,context:e})}renderFlag(e){return r`
+    `];static properties={isCreateOpen:{state:!0},flagToDelete:{state:!0},newKey:{state:!0},newDescription:{state:!0},newEnabled:{state:!0},isEvalOpen:{state:!0},evalKey:{state:!0},evalContext:{state:!0},evalJsonError:{state:!0},evalResult:{state:!0}};flags=new l(this,e=>e.from({flag:u}).orderBy(({flag:e})=>e.key));evalMutation=new s(this,{mutationFn:({key:e,context:t})=>c.evalFeatureFlag(e,t),onSuccess:e=>{this.evalResult=e},onError:e=>h.error(`Evaluation Failed`,e.message||`Failed to evaluate feature flag.`)});constructor(){super(),this.isCreateOpen=!1,this.flagToDelete=null,this.isEvalOpen=!1,this.evalKey=``,this.evalContext=g,this.evalJsonError=null,this.evalResult=null,this.resetCreateForm()}resetCreateForm(){this.newKey=``,this.newDescription=``,this.newEnabled=!0}async create(){let e=this.newKey.trim();if(!e){h.error(`Validation Error`,`Flag key is required.`);return}if(u.has(e)){h.error(`Create Failed`,`A feature flag named "${e}" already exists.`);return}let t={key:e,description:this.newDescription.trim(),enabled:this.newEnabled};this.isCreateOpen=!1,this.resetCreateForm();try{await u.insert(t).when(`settled`),h.success(`Flag Created`,`Feature flag was created successfully.`)}catch(e){h.error(`Create Failed`,e?.message||`Failed to create feature flag.`)}}async toggle(e,t){try{await u.update(e.key,e=>{e.enabled=t}).when(`settled`)}catch(e){h.error(`Update Failed`,e?.message||`Failed to update feature flag.`)}}async delete(e){this.flagToDelete=null;try{await u.delete(e.key).when(`settled`),h.success(`Flag Deleted`,`Feature flag was deleted successfully.`)}catch(e){h.error(`Delete Failed`,e?.message||`Failed to delete feature flag.`)}}openEval(e){let t=this.flags.data;this.evalKey=e||t[0]?.key||``,this.evalResult=null,this.evalJsonError=null,this.isEvalOpen=!0}runEval(){this.evalJsonError=null;let e={};if(this.evalContext.trim())try{e=JSON.parse(this.evalContext)}catch(e){this.evalJsonError=`Invalid JSON format: ${e.message}`;return}this.evalMutation.mutate({key:this.evalKey,context:e})}renderFlag(t){return r`
       <moul-card>
         <moul-card-body>
           <div class="flag">
             <div class="flag-info">
               <div class="flag-title">
                 <admin-icon name="flag" size="18" color="var(--color-primary-500)"></admin-icon>
-                <span class="flag-key">${e.key}</span>
-                ${e.enabled?r`<moul-badge tone="success">Enabled</moul-badge>`:r`<moul-badge variant="bordered">Disabled</moul-badge>`}
+                <span class="flag-key">${t.key}</span>
+                ${t.enabled?r`<moul-badge tone="success">Enabled</moul-badge>`:r`<moul-badge variant="bordered">Disabled</moul-badge>`}
               </div>
-              ${e.description?r`<span class="flag-description">${e.description}</span>`:t}
+              ${t.description?r`<span class="flag-description">${t.description}</span>`:e}
             </div>
             <div class="flag-actions">
-              <moul-button variant="outline" aria-label=${`Test evaluate flag ${e.key}`} @click=${a(()=>this.openEval(e.key))}>
+              <moul-button variant="outline" aria-label=${`Test evaluate flag ${t.key}`} @click=${a(()=>this.openEval(t.key))}>
                 <admin-icon slot="prefix" name="flask" size="14"></admin-icon>
                 Evaluate
               </moul-button>
               <moul-switch
-                aria-label=${`Toggle flag ${e.key}`}
-                ?is-checked=${!!e.enabled}
-                @change=${t=>this.toggle(e,t.detail.isChecked)}
+                aria-label=${`Toggle flag ${t.key}`}
+                ?is-checked=${!!t.enabled}
+                @change=${e=>this.toggle(t,e.detail.isChecked)}
               >
-                ${e.enabled?`Enabled`:`Disabled`}
+                ${t.enabled?`Enabled`:`Disabled`}
               </moul-switch>
-              <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${e.key}`} @click=${a(()=>this.flagToDelete=e)}>
+              <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${t.key}`} @click=${a(()=>this.flagToDelete=t)}>
                 <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
               </moul-button>
             </div>
@@ -167,7 +167,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
             New Flag
           </moul-button>
         </moul-empty-state>
-      `:r`<div class="flags">${u(e,e=>e.key,e=>this.renderFlag(e))}</div>`}renderEvalDrawer(){let e=this.flags.data,n=this.evalResult;return r`
+      `:r`<div class="flags">${o(e,e=>e.key,e=>this.renderFlag(e))}</div>`}renderEvalDrawer(){let t=this.flags.data,n=this.evalResult;return r`
       <moul-drawer
         placement="right"
         size="md"
@@ -185,15 +185,15 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         </div>
 
         <div class="form">
-          ${e.length>0?r`
+          ${t.length>0?r`
                 <moul-select
                   label="Select Target Flag"
                   selected-key=${this.evalKey}
                   @selectionchange=${e=>{e.detail.selectedKey&&(this.evalKey=e.detail.selectedKey,this.evalResult=null)}}
                 >
-                  ${e.map(e=>r`<moul-select-item key=${e.key} value=${e.key}>${e.key} (${e.enabled?`ON`:`OFF`})</moul-select-item>`)}
+                  ${t.map(e=>r`<moul-select-item key=${e.key} value=${e.key}>${e.key} (${e.enabled?`ON`:`OFF`})</moul-select-item>`)}
                 </moul-select>
-              `:t}
+              `:e}
 
           <div>
             <span class="presets-label">Quick Context Presets</span>
@@ -218,7 +218,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
             @input=${e=>this.evalContext=m(e)}
           ></moul-text-area>
 
-          ${this.evalJsonError?r`<div class="json-error">${this.evalJsonError}</div>`:t}
+          ${this.evalJsonError?r`<div class="json-error">${this.evalJsonError}</div>`:e}
           ${n?r`
                 <div class="result">
                   <div style="display: flex; align-items: center; justify-content: space-between">
@@ -231,9 +231,9 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
                     </moul-badge>
                   </div>
                   <div>Reason Code: <code>${n.reason||`evaluated`}</code></div>
-                  ${n.variation===void 0?t:r`<div class="muted">Variation: <strong>${String(n.variation)}</strong></div>`}
+                  ${n.variation===void 0?e:r`<div class="muted">Variation: <strong>${String(n.variation)}</strong></div>`}
                 </div>
-              `:t}
+              `:e}
         </div>
 
         <moul-button slot="footer" variant="ghost" @click=${a(()=>this.isEvalOpen=!1)}>Close</moul-button>

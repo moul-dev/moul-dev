@@ -1,4 +1,4 @@
-import type { LogItem } from '@moul-dev/ui';
+import type { LogItem } from '@moul-dev/web-component';
 import { css, html, LitElement, type PropertyValues } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { getAuthToken, getStoredAdminKey, resolveApiPath } from '../api/client';

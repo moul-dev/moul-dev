@@ -10,7 +10,7 @@
 
 ### Core Dependencies
 - **HTTP Engine**: Echo v5 (`github.com/labstack/echo/v5`)
-- **Web Admin Console**: Lit custom elements on Moul UI (`@moul-dev/ui` web components) with tri-state system/light/dark theming, a History API router, TanStack Query core (`@tanstack/query-core`) behind Lit reactive controllers, Phosphor Icons (`@phosphor-icons/core`), and a dev-only Moul Inspector for events, queries and routes, embedded via Go `//go:embed all:dist`.
+- **Web Admin Console**: Lit custom elements on Moul UI (`@moul-dev/web-component` web components) with tri-state system/light/dark theming, a History API router, TanStack Query core (`@tanstack/query-core`) behind Lit reactive controllers, Phosphor Icons (`@phosphor-icons/core`), and a dev-only Moul Inspector for events, queries and routes, embedded via Go `//go:embed all:dist`.
 - **Database Abstraction**: `github.com/pocketbase/dbx`
 - **SQLite Engine**: `modernc.org/sqlite` (Pure Go, CGO-free)
 - **TUI Framework**: Charm Bubble Tea (`charm.land/bubbletea/v2`)

@@ -1,4 +1,4 @@
-import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}from"./query-DEj2kaNm.js";import{t as o}from"./client-DaTS5Mxb.js";import{t as s}from"./router-B1wwybcr.js";import{t as c}from"./live-query-DDtzER30.js";import{i as l}from"./index-DeN0Cdry.js";import{t as u}from"./repeat-Utyd6s0W.js";import{n as d,t as f}from"./page-ITe5xmEa.js";import{t as p}from"./collection-type-CsNDn6tw.js";var m={page:1,perPage:30},h=class extends r{static styles=[t,e`
+import{l as e,n as t,o as n,r,t as i}from"./press-CVc8c9H4.js";import{l as a,n as o}from"./query-DdOx0cLf.js";import{t as s}from"./client-DaTS5Mxb.js";import{t as c}from"./router-B1wwybcr.js";import{t as l}from"./live-query-DFtKXPMp.js";import{i as u}from"./index-C29yRTIN.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{t as p}from"./collection-type-BejiEvyc.js";var m={page:1,perPage:30},h=class extends r{static styles=[t,e`
       :host {
         display: block;
       }
@@ -57,12 +57,12 @@ import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}fro
         padding-top: var(--spacing-2);
         border-top: 1px solid var(--color-border-subtle);
       }
-    `];static properties={moul:{attribute:!1}};count=new a(this,()=>({queryKey:[`collectionRecordCount`,this.moul?.name],queryFn:()=>o.listRecords(this.moul.name,{perPage:1}),enabled:!!this.moul?.name}));render(){let{name:e,type:t}=this.moul,{data:r,isLoading:a}=this.count.result,o=(r&&!Array.isArray(r)?r.totalItems:void 0)??(Array.isArray(r)?r.length:0),c=`/records/${encodeURIComponent(e)}`;return n`
+    `];static properties={moul:{attribute:!1}};count=new o(this,()=>({queryKey:[`collectionRecordCount`,this.moul?.name],queryFn:()=>s.listRecords(this.moul.name,{perPage:1}),enabled:!!this.moul?.name}));render(){let{name:e,type:t}=this.moul,{data:r,isLoading:a}=this.count.result,o=(r&&!Array.isArray(r)?r.totalItems:void 0)??(Array.isArray(r)?r.length:0),s=`/records/${encodeURIComponent(e)}`;return n`
       <moul-card>
         <moul-card-body>
           <div class="inner">
             <div class="top-row">
-              <a class="name" href=${s.href(c,m)}>
+              <a class="name" href=${c.href(s,m)}>
                 <admin-icon name="database" size="18" color="var(--color-primary-500)"></admin-icon>
                 <span>${e}</span>
               </a>
@@ -76,7 +76,7 @@ import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}fro
               <moul-button
                 variant="outline"
                 aria-label=${`Create new record in ${e}`}
-                @click=${i(()=>s.navigate(c,{search:{...m,create:!0}}))}
+                @click=${i(()=>c.navigate(s,{search:{...m,create:!0}}))}
               >
                 <admin-icon slot="prefix" name="plus" size="14"></admin-icon>
                 New Record
@@ -84,7 +84,7 @@ import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}fro
               <moul-button
                 variant="ghost"
                 aria-label=${`Browse ${e} records`}
-                @click=${i(()=>s.navigate(c,{search:m}))}
+                @click=${i(()=>c.navigate(s,{search:m}))}
               >
                 View Table
                 <admin-icon slot="suffix" name="arrow-right" size="14"></admin-icon>
@@ -123,23 +123,23 @@ import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}fro
         grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
         gap: var(--spacing-4);
       }
-    `];mouls=new c(this,e=>e.from({moul:l}));metrics=new a(this,()=>({queryKey:[`sysmon`],queryFn:o.getMetrics,refetchInterval:5e3}));renderCollections(){let{data:e,isLoading:t}=this.mouls;return t?n`<div class="muted">Loading collections...</div>`:e.length===0?n`
+    `];mouls=new l(this,e=>e.from({moul:u}));metrics=new o(this,()=>({queryKey:[`sysmon`],queryFn:s.getMetrics,refetchInterval:5e3}));renderCollections(){let{data:e,isLoading:t}=this.mouls;return t?n`<div class="muted">Loading collections...</div>`:e.length===0?n`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-primary-500)"></admin-icon>
           <span slot="title">No collections yet</span>
           <span slot="description">Create your first collection to define your schema and store data.</span>
-          <moul-button slot="actions" variant="primary" @click=${i(()=>s.navigate(`/collections`))}>
+          <moul-button slot="actions" variant="primary" @click=${i(()=>c.navigate(`/collections`))}>
             <admin-icon slot="prefix" name="plus" size="14"></admin-icon>
             Create Collection
           </moul-button>
         </moul-empty-state>
       `:n`
       <div class="collections">
-        ${u(e,e=>e.name,e=>n`<admin-collection-card .moul=${e}></admin-collection-card>`)}
+        ${a(e,e=>e.name,e=>n`<admin-collection-card .moul=${e}></admin-collection-card>`)}
       </div>
-    `}render(){let{data:e,isLoading:t}=this.mouls,r=this.metrics.data?.current,a=Array.isArray(e)?e.length:0,o=r?Math.round(Number(r.memory?.used)/1024/1024*10)/10:0,c=Number(r?.system?.num_goroutines)||0,l=()=>`...`;return n`
+    `}render(){let{data:e,isLoading:t}=this.mouls,r=this.metrics.data?.current,a=Array.isArray(e)?e.length:0,o=r?Math.round(Number(r.memory?.used)/1024/1024*10)/10:0,s=Number(r?.system?.num_goroutines)||0,l=()=>`...`;return n`
       ${f(`Overview`,`System status and collections at a glance.`,n`
-          <moul-button variant="primary" @click=${i(()=>s.navigate(`/collections`))}>
+          <moul-button variant="primary" @click=${i(()=>c.navigate(`/collections`))}>
             Manage Collections
             <admin-icon slot="suffix" name="arrow-right" size="16"></admin-icon>
           </moul-button>
@@ -166,7 +166,7 @@ import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}fro
         <moul-stat
           label="Goroutines"
           description="Active concurrent routines"
-          .value=${c}
+          .value=${s}
           .valueFormatter=${r?void 0:l}
         >
           <admin-icon slot="icon" name="pulse" size="20" color="var(--color-warning-500)"></admin-icon>

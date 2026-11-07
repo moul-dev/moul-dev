@@ -19,7 +19,7 @@ function getStoredTheme(): ThemeMode {
 }
 
 /**
- * Theme mode (system, light, dark). The `@moul-dev/ui` tokens use `light-dark()`, so the
+ * Theme mode (system, light, dark). The `@moul-dev/web-component` tokens use `light-dark()`, so the
  * theme is applied by setting `color-scheme` and `data-theme` on `<html>`.
  */
 class ThemeStore extends Store {

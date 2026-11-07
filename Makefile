@@ -19,17 +19,21 @@ lint-fix:
 	gofmt -w .
 	golangci-lint run --fix ./...
 
-# Print the next CalVer release tag, vYYYY.MM.MICRO (shared with @moul-dev/ui):
-# the first release of a UTC month is vYYYY.MM.0, each later one adds 1 to MICRO.
+# Print the next SemVer release tag, vMAJOR.MINOR.PATCH[-prerelease] (shared with
+# @moul-dev/web-component), from the highest SemVer tag. Rules: internal/semver.
+#   make next-version BUMP=prerelease               # v1.0.0-alpha.1 -> v1.0.0-alpha.2
+#   make next-version BUMP=prerelease PREID=beta    # v1.0.0-alpha.2 -> v1.0.0-beta.1
+#   make next-version BUMP=major                    # v1.0.0-beta.1  -> v1.0.0
+#   make next-version BUMP=minor                    # v1.0.0         -> v1.1.0
+BUMP ?=
+PREID ?=
 next-version:
-	@month="v$$(date -u +%Y).$$(date -u +%m | sed 's/^0//')"; \
-	micro=$$(git tag --list "$$month.*" | sed "s/^$$month\.//" | grep -E '^(0|[1-9][0-9]*)$$' | sort -n | tail -1); \
-	if [ -z "$$micro" ]; then echo "$$month.0"; else echo "$$month.$$((micro + 1))"; fi
+	@git tag --list 'v*' | go run ./internal/semver/cmd/next-version -bump="$(BUMP)" -preid="$(PREID)"
 
-# Tag HEAD as the next release; pushing the tag publishes it
+# Tag HEAD as the next release (same BUMP and PREID); pushing the tag publishes it
 release-tag:
 	@git fetch --tags --quiet origin
-	@tag=$$($(MAKE) -s next-version); \
+	@tag=$$(git tag --list 'v*' | go run ./internal/semver/cmd/next-version -bump="$(BUMP)" -preid="$(PREID)") && \
 	git tag -a "$$tag" -m "Release $$tag" && \
 	echo "Tagged $$tag. Publish it with: git push origin $$tag"
 
@@ -85,7 +89,7 @@ ui-install:
 ui-dev:
 	bun --cwd ui dev
 
-# Build the Admin UI (Lit + @moul-dev/ui web components) into pkg/ui/dist; fails if React creeps back in
+# Build the Admin UI (Lit + @moul-dev/web-component web components) into pkg/ui/dist; fails if React creeps back in
 ui-build:
 	bun run --cwd ui build
 

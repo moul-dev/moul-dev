@@ -1,4 +1,4 @@
-import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{i as o,t as s}from"./router-B1wwybcr.js";import{n as c,t as l}from"./live-query-DDtzER30.js";import{F as u,i as d}from"./index-DeN0Cdry.js";import{n as f}from"./page-ITe5xmEa.js";import{n as p,t as m}from"./rules-editor-CZ0ADqS3.js";import{a as h,f as g}from"./fieldValidation-D0RWDzzJ.js";import{t as _}from"./toast-CRunUHSe.js";function v(e,t){let n=[];for(let r of e??[])if(r.name!==t)for(let e of r.fields??[])e.type===`relation`&&e.relationConfig?.targetMoul===t&&n.push({sourceMoul:r.name,fieldName:e.name,cardinality:e.relationConfig.cardinality||`1:N`,onDelete:e.relationConfig.onDelete||`SET_NULL`});return n}var y=class extends i{static styles=[n,f,e`
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{i as o,t as s}from"./router-B1wwybcr.js";import{n as c,t as l}from"./live-query-DFtKXPMp.js";import{F as u,i as d}from"./index-C29yRTIN.js";import{n as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./rules-editor-f4xliTmf.js";import{a as h,f as g}from"./fieldValidation-D0RWDzzJ.js";import{t as _}from"./toast-BKHbxuSD.js";function v(e,t){let n=[];for(let r of e??[])if(r.name!==t)for(let e of r.fields??[])e.type===`relation`&&e.relationConfig?.targetMoul===t&&n.push({sourceMoul:r.name,fieldName:e.name,cardinality:e.relationConfig.cardinality||`1:N`,onDelete:e.relationConfig.onDelete||`SET_NULL`});return n}var y=class extends i{static styles=[n,f,t`
       .page-title {
         display: flex;
         align-items: center;
@@ -98,7 +98,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{i a
         font-size: var(--font-size-xs);
         color: var(--color-fg-subtle);
       }
-    `];static properties={fields:{state:!0},rules:{state:!0},isDeleteOpen:{state:!0}};get moulName(){return s.location.params.moulName??``}moul=new l(this,e=>this.moulName?e.from({moul:d}).where(({moul:e})=>u(e.name,this.moulName)).findOne():void 0,()=>[this.moulName]);allMouls=new l(this,e=>e.from({moul:d}));saving=new c(this);deleting=new c(this);loadedMoul;constructor(){super(),this.fields=[],this.rules={...m},this.isDeleteOpen=!1,new o(this,s)}willUpdate(){let e=this.moul.first;e&&e!==this.loadedMoul&&(this.loadedMoul=e,this.fields=e.fields||[],this.rules=e.rules||{})}async save(){let e=this.moulName,t=h(this.fields,this.moul.first?.type||`base`);if(!t.isValid){_.error(`Schema Validation Error`,t.summaryErrors[0]||`Please fix invalid field configurations.`);return}let n=g(this.fields,e),r=this.rules,i=d.update(e,{optimistic:!1},e=>{e.fields=n,e.rules=r});try{await this.saving.track(i),_.success(`Schema Saved`,`Collection schema and associations saved successfully.`)}catch(e){_.error(`Save Failed`,e?.message||`Failed to save collection schema.`)}}async deleteCollection(e){try{await this.deleting.track(d.delete(e)),_.success(`Collection Deleted`,`Collection "${e}" was deleted successfully.`),s.navigate(`/collections`)}catch(e){_.error(`Delete Failed`,e?.message||`Failed to delete collection.`)}finally{this.isDeleteOpen=!1}}renderAssociations(){let e=this.moulName,n=this.fields.filter(e=>e.type===`relation`&&e.relationConfig),i=v(this.allMouls.data,e),a=n.length+i.length,o=e=>r`<moul-badge variant="bordered">${e}</moul-badge>`;return r`
+    `];static properties={fields:{state:!0},rules:{state:!0},isDeleteOpen:{state:!0}};get moulName(){return s.location.params.moulName??``}moul=new l(this,e=>this.moulName?e.from({moul:d}).where(({moul:e})=>u(e.name,this.moulName)).findOne():void 0,()=>[this.moulName]);allMouls=new l(this,e=>e.from({moul:d}));saving=new c(this);deleting=new c(this);loadedMoul;constructor(){super(),this.fields=[],this.rules={...m},this.isDeleteOpen=!1,new o(this,s)}willUpdate(){let e=this.moul.first;e&&e!==this.loadedMoul&&(this.loadedMoul=e,this.fields=e.fields||[],this.rules=e.rules||{})}async save(){let e=this.moulName,t=h(this.fields,this.moul.first?.type||`base`);if(!t.isValid){_.error(`Schema Validation Error`,t.summaryErrors[0]||`Please fix invalid field configurations.`);return}let n=g(this.fields,e),r=this.rules,i=d.update(e,{optimistic:!1},e=>{e.fields=n,e.rules=r});try{await this.saving.track(i),_.success(`Schema Saved`,`Collection schema and associations saved successfully.`)}catch(e){_.error(`Save Failed`,e?.message||`Failed to save collection schema.`)}}async deleteCollection(e){try{await this.deleting.track(d.delete(e)),_.success(`Collection Deleted`,`Collection "${e}" was deleted successfully.`),s.navigate(`/collections`)}catch(e){_.error(`Delete Failed`,e?.message||`Failed to delete collection.`)}finally{this.isDeleteOpen=!1}}renderAssociations(){let t=this.moulName,n=this.fields.filter(e=>e.type===`relation`&&e.relationConfig),i=v(this.allMouls.data,t),a=n.length+i.length,o=e=>r`<moul-badge variant="bordered">${e}</moul-badge>`;return r`
       <moul-card>
         <moul-card-header>
           <div class="section-header">
@@ -123,7 +123,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{i a
                           <strong>${n.name}</strong>
                           <span class="muted">➔</span>
                           <strong class="target">${n.relationConfig?.targetMoul}</strong>
-                          ${n.relationConfig?.targetMoul===e?o(`self`):t}
+                          ${n.relationConfig?.targetMoul===t?o(`self`):e}
                         </div>
                         <div class="association-badges">
                           <moul-badge tone="primary">${n.relationConfig?.cardinality||`1:N`}</moul-badge>
@@ -138,17 +138,17 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{i a
                 <admin-icon name="share-network" size="14" color="var(--color-success-500)"></admin-icon>
                 Incoming References (${i.length})
               </div>
-              ${i.length===0?r`<span class="none">No other collections reference ${e} yet.</span>`:i.map(t=>r`
+              ${i.length===0?r`<span class="none">No other collections reference ${t} yet.</span>`:i.map(e=>r`
                       <div class="association">
                         <div class="association-path">
-                          <strong class="target">${t.sourceMoul}</strong>
-                          <span class="muted">(${t.fieldName})</span>
+                          <strong class="target">${e.sourceMoul}</strong>
+                          <span class="muted">(${e.fieldName})</span>
                           <span class="muted">➔</span>
-                          <strong>${e}</strong>
+                          <strong>${t}</strong>
                         </div>
                         <div class="association-badges">
-                          <moul-badge tone="success">${t.cardinality}</moul-badge>
-                          ${o(t.onDelete)}
+                          <moul-badge tone="success">${e.cardinality}</moul-badge>
+                          ${o(e.onDelete)}
                         </div>
                       </div>
                     `)}

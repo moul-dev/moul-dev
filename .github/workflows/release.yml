@@ -13,11 +13,11 @@ jobs:
     name: Build & Publish Release
     runs-on: ubuntu-latest
     steps:
-      - name: Check CalVer Tag
+      - name: Check SemVer Tag
         run: |
-          # Releases are tagged vYYYY.MM.MICRO with an unpadded month, e.g. v2026.11.0.
-          if ! [[ "$GITHUB_REF_NAME" =~ ^v[0-9]{4}\.([1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME is not CalVer vYYYY.MM.MICRO (e.g. v2026.11.0). Get the next tag from 'make next-version'."
+          # Releases are tagged vMAJOR.MINOR.PATCH with an optional prerelease, e.g. v1.0.0-alpha.1.
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not SemVer vMAJOR.MINOR.PATCH[-prerelease] (e.g. v1.0.0-alpha.1). Get the next tag from 'make next-version BUMP=...'."
             exit 1
           fi
 
@@ -45,7 +45,7 @@ jobs:
 
       - name: Build Binaries
         run: |
-          # Extract version from tag (e.g. refs/tags/v2026.11.0 -> v2026.11.0)
+          # Extract version from tag (e.g. refs/tags/v1.0.0-alpha.1 -> v1.0.0-alpha.1)
           VERSION=${GITHUB_REF#refs/tags/}
           
           # We want to cross-compile for macOS (darwin) and Linux, both amd64 and arm64
@@ -83,5 +83,7 @@ jobs:
         with:
           files: dist/*.tar.gz
           draft: false
+          # Alphas stay ordinary releases: `moul update` follows GitHub's latest release, which
+          # skips prereleases, so marking them would send alpha users back to the CalVer builds.
           prerelease: false
           generate_release_notes: true

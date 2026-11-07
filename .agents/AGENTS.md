@@ -4,7 +4,7 @@
 - **Synchronous Documentation Updates**: Always update relevant documentation (including `README.md`, API references, LLM guides such as `llms.txt` and `AGENTS.md`, OpenAPI specifications, and feature guides) whenever implementing feature changes, API additions, or relevant bugfixes.
 
 ## Versioning
-- **CalVer `YYYY.MM.MICRO`**: Moul and `@moul-dev/ui` share one scheme. Release tags are `vYYYY.MM.MICRO` with an unpadded month (`v2026.9.0`, never `v2026.09`): the first release of a UTC month is `.0`, and each later release that month adds one to `MICRO`. Take the next tag from `make next-version` instead of writing one by hand.
+- **SemVer `vMAJOR.MINOR.PATCH[-prerelease]`**: Moul and `@moul-dev/web-component` share one scheme, starting at `v1.0.0-alpha.1`. `major` for breaking API or default changes, `minor` for new API, `patch` for fixes; while in alpha, `BUMP=prerelease` advances the counter. Take the next tag from `make next-version BUMP=…` (rules in `internal/semver`) instead of writing one by hand.
 
 ## Go Backend Engineering Standards
 - **Strict Error Handling**: Never discard errors silently using blank identifiers (`_ = ...` or `_, _ = ...`). Always check and propagate errors with `%w` wrapping (`fmt.Errorf("...: %w", err)`) or map them to structured HTTP domain responses.
@@ -13,9 +13,9 @@
 - **Synchronous OpenAPI & API Documentation**: Whenever adding, modifying, or deleting HTTP endpoints in `internal/handlers/router.go`, synchronously update `docs/openapi.json` and `docs/openapi.yml`, then run `make sync-docs`.
 - **Concurrency & State Safety**: Stateful services, in-memory caches, and background workers must ensure thread safety with appropriate synchronization primitives (`sync.RWMutex` / `sync.Mutex`).
 
-## Moul UI (`@moul-dev/ui`) Standards
-- **Primary UI Library**: When writing frontend React code, use components from `@moul-dev/ui` (built on React Aria Components + StyleX).
-- **Global Stylesheet**: Ensure `import '@moul-dev/ui/style.css';` is included at the application root.
+## Moul UI (`@moul-dev/web-component`) Standards
+- **Primary UI Library**: When writing frontend React code, use components from `@moul-dev/web-component` (built on React Aria Components + StyleX).
+- **Global Stylesheet**: Ensure `import '@moul-dev/web-component/style.css';` is included at the application root.
 - **React Aria Events**: Always use `onPress` instead of `onClick` on buttons and interactive triggers.
 - **State & Accessibility**: Use standard React Aria props (`isSelected`, `selectedKey`, `onSelectionChange`, `isOpen`, `onOpenChange`) and ensure all icon-only buttons have an `aria-label`.
 - **Compound Structure**: Follow compound component conventions for `Card`, `Modal`, `Drawer`, `AlertDialog`, `Tabs`, `Table`, and `Sidebar`.

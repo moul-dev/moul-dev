@@ -1,4 +1,4 @@
-import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./repeat-Utyd6s0W.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-CRunUHSe.js";function g(e){return r`
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-BKHbxuSD.js";function g(e){return r`
     <moul-alert-dialog
       tone="error"
       size="sm"
@@ -16,7 +16,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         ${e.confirmLabel??`Delete`}
       </moul-button>
     </moul-alert-dialog>
-  `}function _(e,t,n,r){let i=(e.name||``).trim(),a=!i,o=!!(i&&m(i,r)),s=!(!i||l(i)),c=!!(i&&n.some((e,n)=>n!==t&&(e.name||``).trim().toLowerCase()===i.toLowerCase())),d=e.min!=null&&e.max!=null&&e.min>e.max,p=e.type===`select`&&(!e.options||e.options.length===0),h=u(e.type),g=!(!e.unique||h),_=f(i);return{isEmpty:a,isConflict:o,isInvalidCamel:s,isDuplicate:c,hasMinMaxConflict:d,hasSelectError:p,isUniqueEligible:h,hasUniqueError:g,isInvalid:a||o||s||c||d||p||g,suggestedCamel:_,canSuggestFix:s&&!!_&&_!==i&&l(_)&&!m(_,r)}}var v=class extends i{static styles=[n,e`
+  `}function _(e,t,n,r){let i=(e.name||``).trim(),a=!i,o=!!(i&&m(i,r)),s=!(!i||l(i)),c=!!(i&&n.some((e,n)=>n!==t&&(e.name||``).trim().toLowerCase()===i.toLowerCase())),d=e.min!=null&&e.max!=null&&e.min>e.max,p=e.type===`select`&&(!e.options||e.options.length===0),h=u(e.type),g=!(!e.unique||h),_=f(i);return{isEmpty:a,isConflict:o,isInvalidCamel:s,isDuplicate:c,hasMinMaxConflict:d,hasSelectError:p,isUniqueEligible:h,hasUniqueError:g,isInvalid:a||o||s||c||d||p||g,suggestedCamel:_,canSuggestFix:s&&!!_&&_!==i&&l(_)&&!m(_,r)}}var v=class extends i{static styles=[n,t`
       :host {
         display: flex;
         flex-direction: column;
@@ -366,25 +366,25 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         <span class="truncate">${s}</span>
         <admin-icon slot="suffix" name=${n?`caret-up`:`caret-down`} size="12"></admin-icon>
       </moul-button>
-    `}renderWarnings(e,n,i){let o=(e,n=t)=>r`
+    `}renderWarnings(t,n,i){let o=(t,n=e)=>r`
       <div class="warning">
         <admin-icon name="warning-circle" size="14"></admin-icon>
-        <span>${e}</span>
+        <span>${t}</span>
         ${n}
       </div>
     `;return r`
       <div class="warnings">
-        ${i.isEmpty?o(`Field name is required.`):t}
-        ${i.isConflict?o(`“${e.name}” is already a built-in default column for ${this.collectionType} collections. Please rename or remove it.`):t}
-        ${!i.isConflict&&!i.isEmpty&&i.isInvalidCamel?o(`Field name “${e.name}” must be camelCase (e.g. “authorId”, “viewsCount”).`,i.canSuggestFix?r`
+        ${i.isEmpty?o(`Field name is required.`):e}
+        ${i.isConflict?o(`“${t.name}” is already a built-in default column for ${this.collectionType} collections. Please rename or remove it.`):e}
+        ${!i.isConflict&&!i.isEmpty&&i.isInvalidCamel?o(`Field name “${t.name}” must be camelCase (e.g. “authorId”, “viewsCount”).`,i.canSuggestFix?r`
                     <moul-button variant="secondary" size="sm" @click=${a(()=>this.changeField(n,`name`,i.suggestedCamel))}>
                       Use “${i.suggestedCamel}”
                     </moul-button>
-                  `:t):t}
-        ${i.isDuplicate&&!i.isConflict?o(`Field name “${e.name}” is already used in another field. Field names must be unique.`):t}
-        ${i.hasMinMaxConflict?o(`Minimum (${e.min}) cannot be greater than maximum (${e.max}).`):t}
-        ${i.hasSelectError?o(`Select field requires at least one allowed option.`):t}
-        ${i.hasUniqueError?o(`Field “${e.name}” of type “${e.type}” cannot have a unique constraint.`):t}
+                  `:e):e}
+        ${i.isDuplicate&&!i.isConflict?o(`Field name “${t.name}” is already used in another field. Field names must be unique.`):e}
+        ${i.hasMinMaxConflict?o(`Minimum (${t.min}) cannot be greater than maximum (${t.max}).`):e}
+        ${i.hasSelectError?o(`Select field requires at least one allowed option.`):e}
+        ${i.hasUniqueError?o(`Field “${t.name}” of type “${t.type}” cannot have a unique constraint.`):e}
       </div>
     `}renderRelationPanel(e,t){let n=e=>n=>{n.detail.selectedKey&&this.changeRelation(t,e,n.detail.selectedKey)};return r`
       <div class="panel-section">
@@ -427,7 +427,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
           </moul-select>
         </div>
       </div>
-    `}renderSelectPanel(e,n){let i=e.options||[];return r`
+    `}renderSelectPanel(t,n){let i=t.options||[];return r`
       <div class="panel-section">
         <moul-tag-group
           label="Allowed Options"
@@ -436,7 +436,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         >
           ${o(i,e=>e,e=>r`<moul-tag key=${e} size="sm" is-removable>${e}</moul-tag>`)}
         </moul-tag-group>
-        ${i.length===0?r`<span class="options-empty">No options added yet. Type an option name below and press Add.</span>`:t}
+        ${i.length===0?r`<span class="options-empty">No options added yet. Type an option name below and press Add.</span>`:e}
         <div class="add-option">
           <moul-text-field
             aria-label="New option name"
@@ -448,20 +448,20 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
           <moul-button variant="secondary" @click=${a(()=>this.addOption(n))}>Add</moul-button>
         </div>
       </div>
-    `}renderLimitsPanel(e,n,i){let a=i===`text`,o=e=>t=>{let r=t.target.value;this.changeField(n,e,r??void 0)};return r`
+    `}renderLimitsPanel(t,n,i){let a=i===`text`,o=e=>t=>{let r=t.target.value;this.changeField(n,e,r??void 0)};return r`
       <div class="panel-section">
         <span class="constraint-label">${a?`Character Length Limits (optional):`:`Numeric Range Limits (optional):`}</span>
         <div class="number-row">
           <moul-number-field
             label=${a?`Min Characters`:`Minimum Value`}
-            min=${a?0:t}
-            .value=${e.min??null}
+            min=${a?0:e}
+            .value=${t.min??null}
             @input=${o(`min`)}
           ></moul-number-field>
           <moul-number-field
             label=${a?`Max Characters`:`Maximum Value`}
-            min=${a?0:t}
-            .value=${e.max??null}
+            min=${a?0:e}
+            .value=${t.max??null}
             @input=${o(`max`)}
           ></moul-number-field>
         </div>
@@ -483,7 +483,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
           plaintext to the database server.
         </span>
       </div>
-    `}renderField(e,n){let i=_(e,n,this.fields,this.collectionType),o=e.type,c=o===`text`||o===`editor`,l=[`relation`,`select`,`number`,`cloak`].includes(o)||c,u=!!this.expanded[n],f=e.name||`field ${n+1}`;return r`
+    `}renderField(t,n){let i=_(t,n,this.fields,this.collectionType),o=t.type,c=o===`text`||o===`editor`,l=[`relation`,`select`,`number`,`cloak`].includes(o)||c,u=!!this.expanded[n],f=t.name||`field ${n+1}`;return r`
       <div class="field-card ${o===`relation`?`relation`:``} ${i.isInvalid?`invalid`:``}">
         <div class="card-content">
           <div class="top-row">
@@ -518,7 +518,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
               aria-label=${`Field ${n+1} name`}
               aria-invalid=${i.isInvalid?`true`:`false`}
               placeholder="fieldName (e.g. authorId)"
-              .value=${e.name}
+              .value=${t.name}
               @input=${e=>this.changeField(n,`name`,s(e))}
             ></moul-text-field>
 
@@ -547,14 +547,14 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
           <div class="bottom-row">
             <div class="checkboxes">
               <moul-checkbox
-                ?is-checked=${!!e.required}
+                ?is-checked=${!!t.required}
                 aria-label=${`Required constraint for ${f}`}
                 @change=${e=>this.changeField(n,`required`,e.detail.isChecked)}
               >
                 Required
               </moul-checkbox>
               <moul-checkbox
-                ?is-checked=${i.isUniqueEligible&&!!e.unique}
+                ?is-checked=${i.isUniqueEligible&&!!t.unique}
                 ?is-disabled=${!i.isUniqueEligible}
                 title=${i.isUniqueEligible?``:`Unique constraint is not supported for ${o} fields`}
                 aria-label=${i.isUniqueEligible?`Unique constraint for ${f}`:`Unique constraint not supported for ${f}`}
@@ -563,21 +563,21 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
                 Unique
               </moul-checkbox>
             </div>
-            ${l?this.renderOptionsToggle(e,n,u):t}
+            ${l?this.renderOptionsToggle(t,n,u):e}
           </div>
 
-          ${i.isInvalid?this.renderWarnings(e,n,i):t}
+          ${i.isInvalid?this.renderWarnings(t,n,i):e}
         </div>
 
         ${u&&l?r`
               <div class="panel">
-                ${o===`relation`?this.renderRelationPanel(e,n):t}
-                ${o===`select`?this.renderSelectPanel(e,n):t}
-                ${c?this.renderLimitsPanel(e,n,`text`):t}
-                ${o===`number`?this.renderLimitsPanel(e,n,`number`):t}
-                ${o===`cloak`?this.renderCloakPanel(e,n):t}
+                ${o===`relation`?this.renderRelationPanel(t,n):e}
+                ${o===`select`?this.renderSelectPanel(t,n):e}
+                ${c?this.renderLimitsPanel(t,n,`text`):e}
+                ${o===`number`?this.renderLimitsPanel(t,n,`number`):e}
+                ${o===`cloak`?this.renderCloakPanel(t,n):e}
               </div>
-            `:t}
+            `:e}
       </div>
     `}render(){return r`
       <div class="header">
@@ -601,7 +601,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
               <span slot="description">Click '+ Add Field' to start defining custom columns.</span>
             </moul-empty-state>
           `:r`<div class="field-list">${this.fields.map((e,t)=>this.renderField(e,t))}</div>`}
-    `}};customElements.define(`admin-fields-builder`,v);var y=[{title:`Public Access`,desc:`Anyone can query or execute without logging in. Leave rule empty.`,code:``,badge:`Public`},{title:`Signed-In Users Only`,desc:`Requires a valid login token from any registered user.`,code:`@request.auth.id != ""`,badge:`Authenticated`,tone:`primary`},{title:`Author / Owner Only`,desc:`Only the user who owns the record can view, edit, or delete it.`,code:`userId = @request.auth.id`,badge:`Ownership`,tone:`success`},{title:`User Profile Self-Access`,desc:`For users collections, allows users to view or update only their own profile.`,code:`id = @request.auth.id`,badge:`Self Profile`,tone:`success`},{title:`Administrators Only`,desc:`Restricts access exclusively to users with role="admin".`,code:`@request.auth.role = "admin"`,badge:`Admins Only`,tone:`warning`},{title:`Published or Creator`,desc:`Visitors can view published items, while creators can view/edit their own drafts.`,code:`status = "published" || authorId = @request.auth.id`,badge:`Visibility`,tone:`primary`},{title:`Cross-Table Role Lookup`,desc:`Checks whether the requesting user has permission in another table.`,code:`@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = "admin"`,badge:`Relational Join`,tone:`warning`}],b=[[`@request.auth.id`,`ID of current logged-in user`,`@request.auth.id != ""`],[`@request.auth.email`,`Email of logged-in user`,`@request.auth.email ~ "@company.com"`],[`@request.auth.role`,`Role field of the logged-in user`,`@request.auth.role = "admin"`],[`@request.body.<field>`,`Incoming request body value during create or update`,`@request.body.status = "draft"`],[`@request.headers.<name>`,`HTTP request header`,`@request.headers.x_api_version = "v1"`],[`@request.query.<name>`,`URL query parameter`,`@request.query.preview = "true"`]],x=[[`=, !=, >, <, >=, <=`,`Standard equality and comparison`,`price >= 10`],[`~, !~`,`Text contains or does not contain`,`title ~ "announcement"`],[`&&, ||, !`,`AND, OR, NOT logical operators`,`status = "active" && !archived`],[`?=`,`Array contains element`,`tags ?= "featured"`],[`@collection.<table>.<field>`,`Look up relation in another table`,`@collection.members.userId = @request.auth.id`],[`geoDistance(lon1, lat1, lon2, lat2)`,`Calculates geographical distance (km)`,`geoDistance(lon, lat, 104.9, 11.5) < 50`]],S=class extends i{static styles=[n,e`
+    `}};customElements.define(`admin-fields-builder`,v);var y=[{title:`Public Access`,desc:`Anyone can query or execute without logging in. Leave rule empty.`,code:``,badge:`Public`},{title:`Signed-In Users Only`,desc:`Requires a valid login token from any registered user.`,code:`@request.auth.id != ""`,badge:`Authenticated`,tone:`primary`},{title:`Author / Owner Only`,desc:`Only the user who owns the record can view, edit, or delete it.`,code:`userId = @request.auth.id`,badge:`Ownership`,tone:`success`},{title:`User Profile Self-Access`,desc:`For users collections, allows users to view or update only their own profile.`,code:`id = @request.auth.id`,badge:`Self Profile`,tone:`success`},{title:`Administrators Only`,desc:`Restricts access exclusively to users with role="admin".`,code:`@request.auth.role = "admin"`,badge:`Admins Only`,tone:`warning`},{title:`Published or Creator`,desc:`Visitors can view published items, while creators can view/edit their own drafts.`,code:`status = "published" || authorId = @request.auth.id`,badge:`Visibility`,tone:`primary`},{title:`Cross-Table Role Lookup`,desc:`Checks whether the requesting user has permission in another table.`,code:`@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = "admin"`,badge:`Relational Join`,tone:`warning`}],b=[[`@request.auth.id`,`ID of current logged-in user`,`@request.auth.id != ""`],[`@request.auth.email`,`Email of logged-in user`,`@request.auth.email ~ "@company.com"`],[`@request.auth.role`,`Role field of the logged-in user`,`@request.auth.role = "admin"`],[`@request.body.<field>`,`Incoming request body value during create or update`,`@request.body.status = "draft"`],[`@request.headers.<name>`,`HTTP request header`,`@request.headers.x_api_version = "v1"`],[`@request.query.<name>`,`URL query parameter`,`@request.query.preview = "true"`]],x=[[`=, !=, >, <, >=, <=`,`Standard equality and comparison`,`price >= 10`],[`~, !~`,`Text contains or does not contain`,`title ~ "announcement"`],[`&&, ||, !`,`AND, OR, NOT logical operators`,`status = "active" && !archived`],[`?=`,`Array contains element`,`tags ?= "featured"`],[`@collection.<table>.<field>`,`Look up relation in another table`,`@collection.members.userId = @request.auth.id`],[`geoDistance(lon1, lat1, lon2, lat2)`,`Calculates geographical distance (km)`,`geoDistance(lon, lat, 104.9, 11.5) < 50`]],S=class extends i{static styles=[n,t`
       h2 {
         display: flex;
         align-items: center;
@@ -824,7 +824,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
 
         <moul-button slot="footer" variant="primary" @click=${a(()=>this.close())}>Close</moul-button>
       </moul-modal>
-    `}};customElements.define(`admin-rule-docs-modal`,S);var C={listRule:``,viewRule:``,createRule:``,updateRule:``,deleteRule:``},w=`@request.auth.id != ""`,T=`id = @request.auth.id`,E=`userId = @request.auth.id`,D=`@request.auth.role = "admin"`,O=e=>({listRule:e,viewRule:e,createRule:e,updateRule:e,deleteRule:e});function k(e,t){switch(e){case`public`:return O(``);case`auth`:return O(w);case`owner`:return t?{listRule:T,viewRule:T,createRule:``,updateRule:T,deleteRule:T}:{listRule:``,viewRule:``,createRule:w,updateRule:E,deleteRule:E};case`admin`:return O(D)}}var A=[{key:`listRule`,label:`List Records`,placeholder:e=>e?T:`e.g. status = 'published'`,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`viewRule`,label:`View Record`,placeholder:()=>T,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`createRule`,label:`Create Record`,placeholder:e=>e?`Leave blank for public sign-ups`:`e.g. @request.auth.id != ''`,description:e=>e?`Leave blank for public sign-ups.`:`Leave blank for public creation.`},{key:`updateRule`,label:`Update Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public editing.`},{key:`deleteRule`,label:`Delete Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public deletion.`}],j=class extends i{static styles=[n,e`
+    `}};customElements.define(`admin-rule-docs-modal`,S);var C={listRule:``,viewRule:``,createRule:``,updateRule:``,deleteRule:``},w=`@request.auth.id != ""`,T=`id = @request.auth.id`,E=`userId = @request.auth.id`,D=`@request.auth.role = "admin"`,O=e=>({listRule:e,viewRule:e,createRule:e,updateRule:e,deleteRule:e});function k(e,t){switch(e){case`public`:return O(``);case`auth`:return O(w);case`owner`:return t?{listRule:T,viewRule:T,createRule:``,updateRule:T,deleteRule:T}:{listRule:``,viewRule:``,createRule:w,updateRule:E,deleteRule:E};case`admin`:return O(D)}}var A=[{key:`listRule`,label:`List Records`,placeholder:e=>e?T:`e.g. status = 'published'`,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`viewRule`,label:`View Record`,placeholder:()=>T,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`createRule`,label:`Create Record`,placeholder:e=>e?`Leave blank for public sign-ups`:`e.g. @request.auth.id != ''`,description:e=>e?`Leave blank for public sign-ups.`:`Leave blank for public creation.`},{key:`updateRule`,label:`Update Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public editing.`},{key:`deleteRule`,label:`Delete Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public deletion.`}],j=class extends i{static styles=[n,t`
       :host {
         display: flex;
         flex-direction: column;

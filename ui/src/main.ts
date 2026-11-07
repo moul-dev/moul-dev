@@ -1,5 +1,5 @@
 // Registers every <moul-*> element from the component library.
-import '@moul-dev/ui';
+import '@moul-dev/web-component';
 import './index.css';
 import './icons';
 import './components/layout/app-layout';

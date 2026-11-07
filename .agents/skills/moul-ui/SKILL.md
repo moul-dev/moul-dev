@@ -1,15 +1,15 @@
 ---
 name: moul-ui
 description: >-
-  Expert guidance, component catalog, API reference, and recipes for Moul UI (@moul-dev/ui)
+  Expert guidance, component catalog, API reference, and recipes for Moul UI (@moul-dev/web-component)
   — an accessible, zero-runtime React component library built with React Aria Components,
   semantic HTML table primitives, and StyleX. Use when creating buttons, inputs, forms, dialogs,
   modals, sidebars, cards, tables, pagination, empty states, logs, charts, badges, toasts, or configuring design tokens and themes.
 ---
 
-# Moul UI (`@moul-dev/ui`) — AI Agent Guidelines & Component Reference
+# Moul UI (`@moul-dev/web-component`) — AI Agent Guidelines & Component Reference
 
-`@moul-dev/ui` is an accessible, zero-runtime React component library built with **React Aria Components**, **semantic HTML table primitives**, and **StyleX**.
+`@moul-dev/web-component` is an accessible, zero-runtime React component library built with **React Aria Components**, **semantic HTML table primitives**, and **StyleX**.
 
 ---
 
@@ -18,11 +18,11 @@ description: >-
 ### Installation
 
 ```bash
-bun add @moul-dev/ui
+bun add @moul-dev/web-component
 # or
-npm install @moul-dev/ui
+npm install @moul-dev/web-component
 # or
-pnpm add @moul-dev/ui
+pnpm add @moul-dev/web-component
 ```
 
 ### Import Stylesheet
@@ -30,7 +30,7 @@ pnpm add @moul-dev/ui
 The compiled StyleX atomic CSS stylesheet **must** be imported at the root of your application (e.g., `main.tsx`, `index.tsx`, `App.tsx`, or global layout):
 
 ```tsx
-import '@moul-dev/ui/style.css';
+import '@moul-dev/web-component/style.css';
 ```
 
 ### Theme Provider
@@ -38,7 +38,7 @@ import '@moul-dev/ui/style.css';
 Wrap your application (or subtree) in `ThemeProvider`:
 
 ```tsx
-import { ThemeProvider } from '@moul-dev/ui';
+import { ThemeProvider } from '@moul-dev/web-component';
 
 export function App({ children }: { children: React.ReactNode }) {
   return (
@@ -53,12 +53,12 @@ export function App({ children }: { children: React.ReactNode }) {
 
 ## 2. Core Agent Rules & Conventions
 
-When generating code with `@moul-dev/ui`, always adhere to the following rules:
+When generating code with `@moul-dev/web-component`, always adhere to the following rules:
 
-### Rule 1: Always Import from `@moul-dev/ui`
-All components, hooks, queues, and tokens are exported directly from `@moul-dev/ui`:
+### Rule 1: Always Import from `@moul-dev/web-component`
+All components, hooks, queues, and tokens are exported directly from `@moul-dev/web-component`:
 ```tsx
-import { Button, TextField, Modal, Card, Table, AreaChart, toastQueue } from '@moul-dev/ui';
+import { Button, TextField, Modal, Card, Table, AreaChart, toastQueue } from '@moul-dev/web-component';
 ```
 
 ### Rule 2: Use React Aria Event Handlers (`onPress` vs `onClick`)
@@ -123,7 +123,7 @@ import {
   TableCaption,
   TableEmpty,
   TableSkeleton,
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 ```
 
 #### 1. Basic Semantic Usage (Static / Declarative)
@@ -138,7 +138,7 @@ import {
   TableCell,
   TableCaption,
   Badge,
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 
 export function BasicTableExample() {
   return (
@@ -184,7 +184,7 @@ export function BasicTableExample() {
 ```
 
 #### 2. TanStack Table Integration (`@tanstack/react-table`)
-Connect `@moul-dev/ui` table primitives with `@tanstack/react-table` for multi-column sorting, row selection, column pinning, and pagination:
+Connect `@moul-dev/web-component` table primitives with `@tanstack/react-table` for multi-column sorting, row selection, column pinning, and pagination:
 
 ```tsx
 import {
@@ -196,7 +196,7 @@ import {
   TableCell,
   Checkbox,
   Badge,
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 import {
   useTable,
   createColumnHelper,
@@ -339,7 +339,7 @@ export function TanStackTableExample({ data }: { data: ServiceRecord[] }) {
 Render 10,000+ rows smoothly with windowing:
 
 ```tsx
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@moul-dev/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@moul-dev/web-component';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef } from 'react';
 
@@ -403,7 +403,7 @@ export function VirtualTableExample({ data }: { data: any[] }) {
 
 #### 4. Loading Skeleton & Empty States (`TableSkeleton`, `TableEmpty`, `EmptyState`)
 ```tsx
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton, TableEmpty, EmptyState } from '@moul-dev/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton, TableEmpty, EmptyState } from '@moul-dev/web-component';
 
 // Loading State (5 skeleton rows, 4 columns each)
 <TableBody>
@@ -454,7 +454,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSke
 
 #### `EmptyState`
 ```tsx
-import { EmptyState, EmptyStateIcon, EmptyStateTitle, EmptyStateDescription, EmptyStateActions, Button } from '@moul-dev/ui';
+import { EmptyState, EmptyStateIcon, EmptyStateTitle, EmptyStateDescription, EmptyStateActions, Button } from '@moul-dev/web-component';
 
 // Direct Props (Variants: 'default' | 'card' | 'dashed')
 <EmptyState
@@ -489,7 +489,7 @@ import {
   PaginationEllipsis,
   PaginationSummary,
   PaginationPageSize,
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 import { useState } from 'react';
 
 // Basic Controlled
@@ -518,7 +518,7 @@ export function PaginationDemo() {
 
 #### `Button`
 ```tsx
-import { Button } from '@moul-dev/ui';
+import { Button } from '@moul-dev/web-component';
 
 // Variants: 'primary' | 'secondary' | 'tertiary' | 'outline' | 'ghost' | 'danger' | 'danger-soft'
 // Sizes: 'sm' | 'md' | 'lg'
@@ -533,7 +533,7 @@ import { Button } from '@moul-dev/ui';
 
 #### `ButtonGroup`
 ```tsx
-import { Button, ButtonGroup } from '@moul-dev/ui';
+import { Button, ButtonGroup } from '@moul-dev/web-component';
 
 <ButtonGroup orientation="horizontal" isAttached>
   <Button variant="outline">Day</Button>
@@ -544,7 +544,7 @@ import { Button, ButtonGroup } from '@moul-dev/ui';
 
 #### `ToggleButton` & `ToggleButtonGroup`
 ```tsx
-import { ToggleButton, ToggleButtonGroup } from '@moul-dev/ui';
+import { ToggleButton, ToggleButtonGroup } from '@moul-dev/web-component';
 
 <ToggleButton isSelected={isPinned} onChange={setIsPinned} variant="outline">
   Pin to Dashboard
@@ -559,7 +559,7 @@ import { ToggleButton, ToggleButtonGroup } from '@moul-dev/ui';
 
 #### `Link` & `Kbd`
 ```tsx
-import { Link, Kbd } from '@moul-dev/ui';
+import { Link, Kbd } from '@moul-dev/web-component';
 
 // Link Variants: 'primary' | 'secondary' | 'subtle' | Underline: 'always' | 'hover' | 'none'
 <Link href="/docs" variant="primary" underline="hover">
@@ -575,7 +575,7 @@ import { Link, Kbd } from '@moul-dev/ui';
 
 #### `TextField` & `TextArea`
 ```tsx
-import { TextField, TextArea } from '@moul-dev/ui';
+import { TextField, TextArea } from '@moul-dev/web-component';
 
 <TextField
   label="Email Address"
@@ -594,7 +594,7 @@ import { TextField, TextArea } from '@moul-dev/ui';
 
 #### `NumberField` & `SearchField`
 ```tsx
-import { NumberField, SearchField } from '@moul-dev/ui';
+import { NumberField, SearchField } from '@moul-dev/web-component';
 
 <NumberField
   label="Quantity"
@@ -613,7 +613,7 @@ import { NumberField, SearchField } from '@moul-dev/ui';
 
 #### `Select` & `ComboBox`
 ```tsx
-import { Select, SelectItem, SelectSection, ComboBox, ComboBoxItem } from '@moul-dev/ui';
+import { Select, SelectItem, SelectSection, ComboBox, ComboBoxItem } from '@moul-dev/web-component';
 
 // Select
 <Select
@@ -642,7 +642,7 @@ import { Select, SelectItem, SelectSection, ComboBox, ComboBoxItem } from '@moul
 
 #### `Checkbox`, `CheckboxGroup`, `RadioGroup`, `Switch`
 ```tsx
-import { Checkbox, CheckboxGroup, RadioGroup, Radio, Switch } from '@moul-dev/ui';
+import { Checkbox, CheckboxGroup, RadioGroup, Radio, Switch } from '@moul-dev/web-component';
 
 <Checkbox isSelected={agree} onChange={setAgree}>
   I accept the terms and conditions
@@ -667,7 +667,7 @@ import { Checkbox, CheckboxGroup, RadioGroup, Radio, Switch } from '@moul-dev/ui
 
 #### `InputOTP`, `Slider`, `ProgressBar`
 ```tsx
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator, REGEXP_ONLY_DIGITS, Slider, ProgressBar } from '@moul-dev/ui';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator, REGEXP_ONLY_DIGITS, Slider, ProgressBar } from '@moul-dev/web-component';
 
 <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp}>
   <InputOTPGroup>
@@ -689,7 +689,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator, REGEXP_ONLY_D
 
 #### `DatePicker` & `Calendar`
 ```tsx
-import { DatePicker, Calendar } from '@moul-dev/ui';
+import { DatePicker, Calendar } from '@moul-dev/web-component';
 
 <DatePicker label="Event date" isRequired />
 <Calendar aria-label="Appointment date" />
@@ -710,7 +710,7 @@ import {
   CommandPaletteSeparator,
   CommandPaletteEmpty,
   Kbd
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 
 <CommandPalette isOpen={isOpen} onOpenChange={setIsOpen}>
   <CommandPaletteInput placeholder="Type a command or search..." />
@@ -746,7 +746,7 @@ import {
   DrawerBody,
   DrawerFooter,
   Button
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 
 // Placements: 'right' | 'left' | 'top' | 'bottom'
 // Sizes: 'sm' | 'md' | 'lg' | 'full'
@@ -781,7 +781,7 @@ import {
   ModalBody,
   ModalFooter,
   Button
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 
 <ModalOverlay isOpen={isOpen} onOpenChange={setIsOpen} isDismissable>
   <Modal size="md">
@@ -805,7 +805,7 @@ import {
 
 #### `AlertDialog`
 ```tsx
-import { AlertDialog } from '@moul-dev/ui';
+import { AlertDialog } from '@moul-dev/web-component';
 
 // Variants: 'destructive' | 'confirmation' | 'info'
 <AlertDialog
@@ -823,7 +823,7 @@ import { AlertDialog } from '@moul-dev/ui';
 
 #### `Popover` & `Tooltip`
 ```tsx
-import { Popover, PopoverTrigger, PopoverDialog, Tooltip, TooltipTrigger, Button } from '@moul-dev/ui';
+import { Popover, PopoverTrigger, PopoverDialog, Tooltip, TooltipTrigger, Button } from '@moul-dev/web-component';
 
 // Tooltip
 <TooltipTrigger delay={200}>
@@ -851,7 +851,7 @@ import { Popover, PopoverTrigger, PopoverDialog, Tooltip, TooltipTrigger, Button
 
 #### `Alert`
 ```tsx
-import { Alert, Button } from '@moul-dev/ui';
+import { Alert, Button } from '@moul-dev/web-component';
 
 // Variants: 'info' | 'accent' | 'success' | 'warning' | 'error' | 'loading'
 <Alert
@@ -870,7 +870,7 @@ import { Alert, Button } from '@moul-dev/ui';
 
 #### `Badge`, `Avatar`, `Spinner`, `Skeleton`
 ```tsx
-import { Badge, Avatar, Spinner, Skeleton } from '@moul-dev/ui';
+import { Badge, Avatar, Spinner, Skeleton } from '@moul-dev/web-component';
 
 // Badge Variants: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'outline'
 <Badge variant="success" size="md" dot>Operational</Badge>
@@ -891,7 +891,7 @@ import { Badge, Avatar, Spinner, Skeleton } from '@moul-dev/ui';
 
 #### `Toast`
 ```tsx
-import { ToastContainer, toastQueue } from '@moul-dev/ui';
+import { ToastContainer, toastQueue } from '@moul-dev/web-component';
 
 // Place <ToastContainer /> once at root (e.g. App.tsx)
 <ToastContainer />
@@ -911,7 +911,7 @@ toastQueue.add({
 
 #### `Card`
 ```tsx
-import { Card, CardHeader, CardBody, CardFooter, Button } from '@moul-dev/ui';
+import { Card, CardHeader, CardBody, CardFooter, Button } from '@moul-dev/web-component';
 
 // Variants: 'elevated' | 'outlined' | 'flat' | 'interactive'
 <Card variant="outlined">
@@ -933,7 +933,7 @@ import { Card, CardHeader, CardBody, CardFooter, Button } from '@moul-dev/ui';
 
 #### `Tabs`
 ```tsx
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from '@moul-dev/ui';
+import { Tabs, TabList, Tab, TabPanels, TabPanel } from '@moul-dev/web-component';
 
 <Tabs defaultSelectedKey="overview">
   <TabList aria-label="Project tabs">
@@ -951,7 +951,7 @@ import { Tabs, TabList, Tab, TabPanels, TabPanel } from '@moul-dev/ui';
 
 #### `TagGroup` & `Tag`
 ```tsx
-import { TagGroup, Tag } from '@moul-dev/ui';
+import { TagGroup, Tag } from '@moul-dev/web-component';
 
 <TagGroup
   label="Categories"
@@ -977,7 +977,7 @@ import {
   SidebarFooter,
   SidebarDivider,
   Avatar
-} from '@moul-dev/ui';
+} from '@moul-dev/web-component';
 
 <Sidebar selectedKey={currentNav} onSelectionChange={setCurrentNav} variant="solid">
   <SidebarAside showCollapseToggle>
@@ -1009,7 +1009,7 @@ import {
 
 #### `Logs` Stream Viewer Block
 ```tsx
-import { Logs, LogsStream, LogsToolbar, LogsDrawerInspector } from '@moul-dev/ui';
+import { Logs, LogsStream, LogsToolbar, LogsDrawerInspector } from '@moul-dev/web-component';
 
 <Logs
   data={logEntries}
@@ -1026,7 +1026,7 @@ import { Logs, LogsStream, LogsToolbar, LogsDrawerInspector } from '@moul-dev/ui
 
 #### `AreaChart` & `LineChart`
 ```tsx
-import { ChartContainer, AreaChart, LineChart } from '@moul-dev/ui';
+import { ChartContainer, AreaChart, LineChart } from '@moul-dev/web-component';
 
 const chartData = [
   { date: 'Jan', revenue: 4200, expenses: 2400 },
@@ -1048,7 +1048,7 @@ const chartData = [
 
 #### `BarChart` & `DoughnutChart`
 ```tsx
-import { BarChart, DoughnutChart } from '@moul-dev/ui';
+import { BarChart, DoughnutChart } from '@moul-dev/web-component';
 
 const deviceData = [
   { device: 'Desktop', share: 58 },
@@ -1067,7 +1067,7 @@ const deviceData = [
 
 #### `Stat`, `TopList`, `PercentageBar`, `PercentageCircle`
 ```tsx
-import { Stat, TopList, PercentageBar, PercentageCircle } from '@moul-dev/ui';
+import { Stat, TopList, PercentageBar, PercentageCircle } from '@moul-dev/web-component';
 
 <Stat
   label="Monthly Active Users"
@@ -1093,11 +1093,11 @@ import { Stat, TopList, PercentageBar, PercentageCircle } from '@moul-dev/ui';
 
 ## 4. Theming & Design Tokens
 
-Moul UI tokens are driven by StyleX and OKLCH color spaces. Design tokens can be imported from `@moul-dev/ui/tokens.stylex` or directly from `@moul-dev/ui`:
+Moul UI tokens are driven by StyleX and OKLCH color spaces. Design tokens can be imported from `@moul-dev/web-component/tokens.stylex` or directly from `@moul-dev/web-component`:
 
 ```tsx
 import * as stylex from '@stylexjs/stylex';
-import { tokens } from '@moul-dev/ui';
+import { tokens } from '@moul-dev/web-component';
 
 const styles = stylex.create({
   card: {
@@ -1159,12 +1159,12 @@ You can customize the look and feel dynamically using CSS custom properties:
 |:---|:---|
 | `<Button onClick={handleClick}>` | `<Button onPress={handleClick}>` (Uses React Aria `onPress` for touch + keyboard support) |
 | `<Button><Icon /></Button>` without label | `<Button aria-label="Action description"><Icon /></Button>` |
-| Re-inventing custom `<button>` or `<input>` primitives | Use `<Button>`, `<TextField>`, `<Select>`, `<Checkbox>` from `@moul-dev/ui` |
+| Re-inventing custom `<button>` or `<input>` primitives | Use `<Button>`, `<TextField>`, `<Select>`, `<Checkbox>` from `@moul-dev/web-component` |
 | Using old Column / Row React Aria table primitives | Use semantic `<Table>`, `<TableHeader>`, `<TableRow>`, `<TableHead>`, `<TableCell>`, `<TableBody>`, `<TableFooter>` |
 | Creating custom sort buttons or manual chevron icons in table headers | Pass `sortDirection` and `onSort` directly to `<TableHead sortDirection={...} onSort={...}>` |
 | Hacking custom table loading states with divs | Use `<TableSkeleton rows={5} columns={4} />` inside `<TableBody>` |
 | Hacking empty table states with broken layout divs | Use `<TableEmpty colSpan={...}><EmptyState ... /></TableEmpty>` inside `<TableBody>` |
 | Wrapping `<Table>` in redundant overflow wrapper divs | `<Table>` wraps in horizontal scroll container automatically by default (`wrapInContainer={true}`) |
-| Missing `@moul-dev/ui/style.css` stylesheet | Import `@moul-dev/ui/style.css` in root file |
+| Missing `@moul-dev/web-component/style.css` stylesheet | Import `@moul-dev/web-component/style.css` in root file |
 | Using string classes for dynamic theme colors | Set `--brand-hue` or use `<ThemeProvider>` |
 | Passing native `open` prop to Modal | Use `isOpen` and `onOpenChange` on `ModalOverlay` |

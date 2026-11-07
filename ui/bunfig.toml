@@ -1,4 +1,4 @@
 [install]
-# @moul-dev/ui depends on `motion`, whose framer-motion core lists React as an
+# @moul-dev/web-component depends on `motion`, whose framer-motion core lists React as an
 # optional peer. Nothing here imports it, so keep React out of node_modules.
 peer = false

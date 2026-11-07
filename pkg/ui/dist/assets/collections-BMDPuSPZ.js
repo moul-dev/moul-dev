@@ -1,4 +1,4 @@
-import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./router-B1wwybcr.js";import{n as s,t as c}from"./live-query-DDtzER30.js";import{i as l}from"./index-DeN0Cdry.js";import{t as u}from"./repeat-Utyd6s0W.js";import{n as d,t as f}from"./page-ITe5xmEa.js";import{n as p,t as m}from"./rules-editor-CZ0ADqS3.js";import{n as h,t as g}from"./forms-ChSyHPkg.js";import{a as _,f as v}from"./fieldValidation-D0RWDzzJ.js";import{t as y}from"./toast-CRunUHSe.js";import{t as b}from"./collection-type-CsNDn6tw.js";var x=`id = @request.auth.id`;function S(e,t){if(e===`auth`){let e=e=>e===``||e===x||e===void 0?x:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===x?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var C=class extends i{static styles=[n,d,e`
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./router-B1wwybcr.js";import{n as c,t as l}from"./live-query-DFtKXPMp.js";import{i as u}from"./index-C29yRTIN.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./rules-editor-f4xliTmf.js";import{n as h,t as g}from"./forms-ChSyHPkg.js";import{a as _,f as v}from"./fieldValidation-D0RWDzzJ.js";import{t as y}from"./toast-BKHbxuSD.js";import{t as b}from"./collection-type-BejiEvyc.js";var x=`id = @request.auth.id`;function S(e,t){if(e===`auth`){let e=e=>e===``||e===x||e===void 0?x:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===x?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var C=class extends i{static styles=[n,d,t`
       :host {
         --page-gap: var(--spacing-4);
       }
@@ -81,12 +81,12 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         gap: var(--spacing-4);
         padding-block: var(--spacing-3);
       }
-    `];static properties={isCreateOpen:{state:!0},createTab:{state:!0},collectionToDelete:{state:!0},newName:{state:!0},newType:{state:!0},newFields:{state:!0},newRules:{state:!0},error:{state:!0}};mouls=new c(this,e=>e.from({moul:l}));creating=new s(this);deleting=new s(this);constructor(){super(),this.isCreateOpen=!1,this.collectionToDelete=null,this.resetCreateForm()}resetCreateForm(){this.newName=``,this.newType=`base`,this.newFields=[],this.newRules={...m},this.createTab=`general`,this.error=null}openCreate(){this.resetCreateForm(),this.isCreateOpen=!0}async handleCreate(){this.error=null;let e=this.newName.trim().toLowerCase();if(!e){this.error=`Collection name is required.`,this.createTab=`general`;return}if(l.has(e)){this.error=`A collection named "${e}" already exists.`,this.createTab=`general`;return}let t=_(this.newFields,this.newType);if(!t.isValid){this.error=t.summaryErrors[0]||`Please fix invalid field configurations.`,this.createTab=`general`;return}let n=this.newType===`auth`?{listRule:this.newRules.listRule||x,viewRule:this.newRules.viewRule||x,createRule:this.newRules.createRule||``,updateRule:this.newRules.updateRule||x,deleteRule:this.newRules.deleteRule||x}:this.newRules,r=l.insert({name:e,type:this.newType,fields:v(this.newFields,e),rules:n},{optimistic:!1});try{await this.creating.track(r)}catch(e){this.error=e?.message||`Failed to create collection`;return}this.isCreateOpen=!1,this.resetCreateForm(),y.success(`Collection Created`,`Collection created successfully.`)}async deleteCollection(e){try{await this.deleting.track(l.delete(e)),y.success(`Collection Deleted`,`Collection was deleted successfully.`)}catch(e){y.error(`Delete Failed`,e?.message||`Failed to delete collection.`)}finally{this.collectionToDelete=null}}renderFieldPills(e){let n=e=>r`<span class="pill">${e}</span>`;return r`
+    `];static properties={isCreateOpen:{state:!0},createTab:{state:!0},collectionToDelete:{state:!0},newName:{state:!0},newType:{state:!0},newFields:{state:!0},newRules:{state:!0},error:{state:!0}};mouls=new l(this,e=>e.from({moul:u}));creating=new c(this);deleting=new c(this);constructor(){super(),this.isCreateOpen=!1,this.collectionToDelete=null,this.resetCreateForm()}resetCreateForm(){this.newName=``,this.newType=`base`,this.newFields=[],this.newRules={...m},this.createTab=`general`,this.error=null}openCreate(){this.resetCreateForm(),this.isCreateOpen=!0}async handleCreate(){this.error=null;let e=this.newName.trim().toLowerCase();if(!e){this.error=`Collection name is required.`,this.createTab=`general`;return}if(u.has(e)){this.error=`A collection named "${e}" already exists.`,this.createTab=`general`;return}let t=_(this.newFields,this.newType);if(!t.isValid){this.error=t.summaryErrors[0]||`Please fix invalid field configurations.`,this.createTab=`general`;return}let n=this.newType===`auth`?{listRule:this.newRules.listRule||x,viewRule:this.newRules.viewRule||x,createRule:this.newRules.createRule||``,updateRule:this.newRules.updateRule||x,deleteRule:this.newRules.deleteRule||x}:this.newRules,r=u.insert({name:e,type:this.newType,fields:v(this.newFields,e),rules:n},{optimistic:!1});try{await this.creating.track(r)}catch(e){this.error=e?.message||`Failed to create collection`;return}this.isCreateOpen=!1,this.resetCreateForm(),y.success(`Collection Created`,`Collection created successfully.`)}async deleteCollection(e){try{await this.deleting.track(u.delete(e)),y.success(`Collection Deleted`,`Collection was deleted successfully.`)}catch(e){y.error(`Delete Failed`,e?.message||`Failed to delete collection.`)}finally{this.collectionToDelete=null}}renderFieldPills(t){let n=e=>r`<span class="pill">${e}</span>`;return r`
       <div class="fields">
         <span>Fields:</span>
         ${n(`id`)} ${n(`createdAt`)} ${n(`updatedAt`)}
-        ${e.type===`auth`?r`<span class="pill accent">username</span><span class="pill accent">email</span>`:t}
-        ${(e.fields||[]).map(e=>e.type===`relation`&&e.relationConfig?r`
+        ${t.type===`auth`?r`<span class="pill accent">username</span><span class="pill accent">email</span>`:e}
+        ${(t.fields||[]).map(e=>e.type===`relation`&&e.relationConfig?r`
                 <span
                   class="pill accent"
                   title=${`Relation ${e.name} ➔ ${e.relationConfig.targetMoul} (${e.relationConfig.cardinality||`1:N`})`}
@@ -113,12 +113,12 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
             <div class="action-group">
               <moul-button
                 variant="secondary"
-                @click=${a(()=>o.navigate(`/records/${encodeURIComponent(t)}`,{search:{page:1,perPage:30}}))}
+                @click=${a(()=>s.navigate(`/records/${encodeURIComponent(t)}`,{search:{page:1,perPage:30}}))}
               >
                 <admin-icon slot="prefix" name="table" size="14"></admin-icon>
                 Records
               </moul-button>
-              <moul-button variant="ghost" @click=${a(()=>o.navigate(`/collections/${encodeURIComponent(t)}`))}>
+              <moul-button variant="ghost" @click=${a(()=>s.navigate(`/collections/${encodeURIComponent(t)}`))}>
                 <admin-icon slot="prefix" name="sliders" size="14"></admin-icon>
                 Schema
               </moul-button>
@@ -139,7 +139,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
             New Collection
           </moul-button>
         </moul-empty-state>
-      `:r`<div class="grid">${u(e,e=>e.name,e=>this.renderCard(e))}</div>`}renderCreateDrawer(){let e=this.creating.isPending;return r`
+      `:r`<div class="grid">${o(e,e=>e.name,e=>this.renderCard(e))}</div>`}renderCreateDrawer(){let t=this.creating.isPending;return r`
       <moul-drawer
         placement="right"
         size="lg"
@@ -157,7 +157,7 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
           @submit=${e=>{e.preventDefault(),this.handleCreate()}}
           @keydown=${h}
         >
-          ${this.error?r`<moul-alert tone="error" description=${this.error}></moul-alert>`:t}
+          ${this.error?r`<moul-alert tone="error" description=${this.error}></moul-alert>`:e}
 
           <moul-tabs
             variant="line"
@@ -208,8 +208,8 @@ import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t a
         </form>
 
         <moul-button slot="footer" variant="outline" @click=${a(()=>this.isCreateOpen=!1)}>Cancel</moul-button>
-        <moul-button slot="footer" variant="primary" ?is-disabled=${e} @click=${a(()=>this.handleCreate())}>
-          ${e?`Creating Collection...`:`Create Collection`}
+        <moul-button slot="footer" variant="primary" ?is-disabled=${t} @click=${a(()=>this.handleCreate())}>
+          ${t?`Creating Collection...`:`Create Collection`}
         </moul-button>
       </moul-drawer>
     `}render(){return r`

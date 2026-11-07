@@ -1,4 +1,4 @@
-import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js";import{d as s,l as c,r as l,u}from"./query-DEj2kaNm.js";import{t as d}from"./client-DaTS5Mxb.js";import{i as ee,t as f}from"./router-B1wwybcr.js";import{n as p,t as m}from"./live-query-DDtzER30.js";import{F as h,Jt as g,a as _,c as v,i as y,l as b,o as x,r as S,s as C}from"./index-DeN0Cdry.js";import{n as w,r as T}from"./repeat-Utyd6s0W.js";import"./data-table-kOkcDszi.js";import{n as E}from"./page-ITe5xmEa.js";import{n as te,t as D}from"./forms-ChSyHPkg.js";import{i as ne,n as re,r as ie,t as O}from"./fieldValidation-D0RWDzzJ.js";import{t as k}from"./toast-CRunUHSe.js";import{a as A,c as j,i as M,n as N,o as P,r as F,s as I,t as L}from"./record-helpers-BhvqQe0T.js";var R=[{key:`json`,icon:`file-code`,label:`JSON`,description:`Structured JSON format. Ideal for migrations, backups, and nested relations.`},{key:`csv`,icon:`file-csv`,label:`CSV`,description:`RFC 4180 spreadsheet format. Ideal for Excel, Google Sheets, or data analysts.`}],z=class extends a{static styles=[r,t`
+import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js";import{d as s,f as c,m as l,p as u,r as d,u as ee}from"./query-DdOx0cLf.js";import{t as f}from"./client-DaTS5Mxb.js";import{i as p,t as m}from"./router-B1wwybcr.js";import{n as h,t as g}from"./live-query-DFtKXPMp.js";import{F as _,Jt as te,a as v,c as y,i as b,l as x,o as S,r as C,s as w}from"./index-C29yRTIN.js";import"./data-table-BT-iosg4.js";import{n as T}from"./page-C5Uax4jB.js";import{n as E,t as D}from"./forms-ChSyHPkg.js";import{i as ne,n as re,r as ie,t as O}from"./fieldValidation-D0RWDzzJ.js";import{t as k}from"./toast-BKHbxuSD.js";import{a as A,c as j,i as M,n as N,o as P,r as F,s as I,t as L}from"./record-helpers-BhvqQe0T.js";var R=[{key:`json`,icon:`file-code`,label:`JSON`,description:`Structured JSON format. Ideal for migrations, backups, and nested relations.`},{key:`csv`,icon:`file-csv`,label:`CSV`,description:`RFC 4180 spreadsheet format. Ideal for Excel, Google Sheets, or data analysts.`}],z=class extends a{static styles=[r,n`
       h2 {
         display: flex;
         align-items: center;
@@ -99,7 +99,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
       .scope input {
         accent-color: var(--color-primary-500);
       }
-    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},activeFilter:{type:String,attribute:`active-filter`},activeSearch:{type:String,attribute:`active-search`},totalRecords:{type:Number,attribute:`total-records`},format:{state:!0},scope:{state:!0},includeSchema:{state:!0},isExporting:{state:!0}};constructor(){super(),this.isOpen=!1,this.moulName=``,this.activeFilter=``,this.activeSearch=``,this.totalRecords=0,this.format=`json`,this.scope=`all`,this.includeSchema=!1,this.isExporting=!1}get hasActiveFilters(){return!!(this.activeFilter.trim()||this.activeSearch.trim())}willUpdate(e){e.has(`isOpen`)&&this.isOpen&&(this.scope=this.hasActiveFilters?`filtered`:`all`)}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async export(){this.isExporting=!0;try{await d.exportRecords(this.moulName,{format:this.format,includeSchema:this.format===`json`&&this.includeSchema,filter:this.scope===`filtered`?this.activeFilter:void 0}),k.success(`Export Successful`,`Exported ${this.moulName} records as ${this.format.toUpperCase()}.`),this.close()}catch(e){k.error(`Export Failed`,e.message||`Failed to download exported records.`)}finally{this.isExporting=!1}}render(){return i`
+    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},activeFilter:{type:String,attribute:`active-filter`},activeSearch:{type:String,attribute:`active-search`},totalRecords:{type:Number,attribute:`total-records`},format:{state:!0},scope:{state:!0},includeSchema:{state:!0},isExporting:{state:!0}};constructor(){super(),this.isOpen=!1,this.moulName=``,this.activeFilter=``,this.activeSearch=``,this.totalRecords=0,this.format=`json`,this.scope=`all`,this.includeSchema=!1,this.isExporting=!1}get hasActiveFilters(){return!!(this.activeFilter.trim()||this.activeSearch.trim())}willUpdate(e){e.has(`isOpen`)&&this.isOpen&&(this.scope=this.hasActiveFilters?`filtered`:`all`)}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async export(){this.isExporting=!0;try{await f.exportRecords(this.moulName,{format:this.format,includeSchema:this.format===`json`&&this.includeSchema,filter:this.scope===`filtered`?this.activeFilter:void 0}),k.success(`Export Successful`,`Exported ${this.moulName} records as ${this.format.toUpperCase()}.`),this.close()}catch(e){k.error(`Export Failed`,e.message||`Failed to download exported records.`)}finally{this.isExporting=!1}}render(){return i`
       <moul-modal
         size="md"
         aria-label=${`Export ${this.moulName} records`}
@@ -122,7 +122,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                         <admin-icon name=${e.icon} size="18" color="var(--color-primary-500)"></admin-icon>
                         ${e.label}
                       </span>
-                      ${this.format===e.key?i`<moul-badge tone="primary" size="sm">Selected</moul-badge>`:n}
+                      ${this.format===e.key?i`<moul-badge tone="primary" size="sm">Selected</moul-badge>`:t}
                     </span>
                     <span class="format-description">${e.description}</span>
                   </button>
@@ -144,7 +144,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                       <admin-icon name="funnel" size="16"></admin-icon>
                       Active Filtered Subset
                     </label>
-                  `:n}
+                  `:t}
             </div>
           </div>
 
@@ -158,18 +158,18 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                     Include collection schema definition in export envelope
                   </moul-checkbox>
                 </div>
-              `:n}
+              `:t}
         </div>
 
         <moul-button slot="footer" variant="outline" ?is-disabled=${this.isExporting} @click=${o(()=>this.close())}>
           Cancel
         </moul-button>
         <moul-button slot="footer" variant="primary" ?is-pending=${this.isExporting} @click=${o(()=>this.export())}>
-          ${this.isExporting?n:i`<admin-icon slot="prefix" name="download-simple" size="16"></admin-icon>`}
+          ${this.isExporting?t:i`<admin-icon slot="prefix" name="download-simple" size="16"></admin-icon>`}
           ${this.isExporting?`Exporting...`:`Download ${this.format.toUpperCase()}`}
         </moul-button>
       </moul-modal>
-    `}};customElements.define(`admin-export-modal`,z);var B=e=>/\.(csv|json)$/i.test(e.name),V=class extends a{static styles=[r,t`
+    `}};customElements.define(`admin-export-modal`,z);var B=e=>/\.(csv|json)$/i.test(e.name),V=class extends a{static styles=[r,n`
       h2 {
         display: flex;
         align-items: center;
@@ -326,25 +326,25 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         gap: var(--spacing-2);
         color: var(--color-error-500);
       }
-    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},file:{state:!0},mode:{state:!0},errorMode:{state:!0},isUploading:{state:!0},result:{state:!0},isDragOver:{state:!0}};constructor(){super(),this.isOpen=!1,this.moulName=``,this.file=null,this.mode=`upsert`,this.errorMode=`atomic`,this.isUploading=!1,this.result=null,this.isDragOver=!1}reset(){this.file=null,this.result=null,this.isUploading=!1}close(){this.reset(),this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}pickFile(e){e&&(B(e)?(this.file=e,this.result=null):k.error(`Invalid File`,`Only .csv and .json files are supported for import.`))}onDrop(e){e.preventDefault(),this.isDragOver=!1,this.pickFile(e.dataTransfer?.files?.[0])}async runImport(){if(this.file){this.isUploading=!0;try{let e=await d.importRecords(this.moulName,this.file,{mode:this.mode,onError:this.errorMode});this.result=e,k.success(`Import Finished`,`Imported ${e.total} records into ${this.moulName}.`),this.dispatchEvent(new CustomEvent(`imported`,{detail:e}))}catch(e){k.error(`Import Failed`,e.message||`Failed to import records.`)}finally{this.isUploading=!1}}}renderResult(e){let t=e.errors??[],r=(e,t,n=`var(--color-fg)`)=>i`
+    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},file:{state:!0},mode:{state:!0},errorMode:{state:!0},isUploading:{state:!0},result:{state:!0},isDragOver:{state:!0}};constructor(){super(),this.isOpen=!1,this.moulName=``,this.file=null,this.mode=`upsert`,this.errorMode=`atomic`,this.isUploading=!1,this.result=null,this.isDragOver=!1}reset(){this.file=null,this.result=null,this.isUploading=!1}close(){this.reset(),this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}pickFile(e){e&&(B(e)?(this.file=e,this.result=null):k.error(`Invalid File`,`Only .csv and .json files are supported for import.`))}onDrop(e){e.preventDefault(),this.isDragOver=!1,this.pickFile(e.dataTransfer?.files?.[0])}async runImport(){if(this.file){this.isUploading=!0;try{let e=await f.importRecords(this.moulName,this.file,{mode:this.mode,onError:this.errorMode});this.result=e,k.success(`Import Finished`,`Imported ${e.total} records into ${this.moulName}.`),this.dispatchEvent(new CustomEvent(`imported`,{detail:e}))}catch(e){k.error(`Import Failed`,e.message||`Failed to import records.`)}finally{this.isUploading=!1}}}renderResult(e){let n=e.errors??[],r=(e,t,n=`var(--color-fg)`)=>i`
       <div class="stat">
         <span class="stat-value" style="color: ${n}">${e}</span>
         <span class="stat-label">${t}</span>
       </div>
     `;return i`
       <moul-alert
-        tone=${t.length>0?`warning`:`success`}
-        description=${t.length>0?`Import partially completed with ${t.length} error(s).`:`Records imported and synchronized successfully!`}
+        tone=${n.length>0?`warning`:`success`}
+        description=${n.length>0?`Import partially completed with ${n.length} error(s).`:`Records imported and synchronized successfully!`}
       ></moul-alert>
       <div class="stats">
         ${r(e.total,`Total`)} ${r(e.inserted,`Inserted`,`var(--color-success-500)`)}
         ${r(e.updated,`Updated`,`var(--color-primary-500)`)} ${r(e.skipped,`Skipped`,`var(--color-fg-subtle)`)}
       </div>
-      ${t.length>0?i`
+      ${n.length>0?i`
             <div>
-              <span class="errors-title">Row Errors (${t.length}):</span>
+              <span class="errors-title">Row Errors (${n.length}):</span>
               <div class="errors">
-                ${t.map(e=>i`
+                ${n.map(e=>i`
                     <div class="error">
                       <admin-icon name="warning-circle" size="14"></admin-icon>
                       <span>Row ${e.row}: ${e.message}</span>
@@ -352,7 +352,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                   `)}
               </div>
             </div>
-          `:n}
+          `:t}
     `}renderForm(){let e=this.file,t=e?.name.toLowerCase().endsWith(`.csv`);return i`
       <input
         id="file-input"
@@ -450,12 +450,12 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                 ?is-pending=${this.isUploading}
                 @click=${o(()=>this.runImport())}
               >
-                ${this.isUploading?n:i`<admin-icon slot="prefix" name="upload-simple" size="16"></admin-icon>`}
+                ${this.isUploading?t:i`<admin-icon slot="prefix" name="upload-simple" size="16"></admin-icon>`}
                 ${this.isUploading?`Importing records...`:`Execute Import`}
               </moul-button>
             `}
       </moul-modal>
-    `}};customElements.define(`admin-import-modal`,V);var H=class extends a{static styles=[r,t`
+    `}};customElements.define(`admin-import-modal`,V);var H=class extends a{static styles=[r,n`
       :host {
         display: flex;
         flex-direction: column;
@@ -606,24 +606,24 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         font-size: var(--font-size-xs);
         color: var(--color-error-500);
       }
-    `];static properties={label:{type:String},required:{type:Boolean},value:{attribute:!1},errorMessage:{type:String,attribute:`error-message`},isUploading:{state:!0},isDragging:{state:!0}};constructor(){super(),this.label=``,this.required=!1,this.value=null,this.errorMessage=``,this.isUploading=!1,this.isDragging=!1}emit(e){this.dispatchEvent(new CustomEvent(`valuechange`,{detail:{value:e}}))}browse(){this.isUploading||this.renderRoot.querySelector(`input[type=file]`)?.click()}async upload(e){this.isUploading=!0;try{let t=await d.uploadFile(e);Array.isArray(t)&&t.length>0?this.emit(t[0]):t&&typeof t==`object`&&this.emit(t),k.success(`File Uploaded`,`${e.name} uploaded successfully.`)}catch(e){k.error(`Upload Failed`,e.message||`Failed to upload file.`)}finally{this.isUploading=!1}}renderAttached(){let e=this.value,t=A(e),r=M(e),a=typeof e==`object`&&e?.size?F(e.size):``,s=typeof e==`object`?e?.createdAt||e?.created_at:void 0;return i`
+    `];static properties={label:{type:String},required:{type:Boolean},value:{attribute:!1},errorMessage:{type:String,attribute:`error-message`},isUploading:{state:!0},isDragging:{state:!0}};constructor(){super(),this.label=``,this.required=!1,this.value=null,this.errorMessage=``,this.isUploading=!1,this.isDragging=!1}emit(e){this.dispatchEvent(new CustomEvent(`valuechange`,{detail:{value:e}}))}browse(){this.isUploading||this.renderRoot.querySelector(`input[type=file]`)?.click()}async upload(e){this.isUploading=!0;try{let t=await f.uploadFile(e);Array.isArray(t)&&t.length>0?this.emit(t[0]):t&&typeof t==`object`&&this.emit(t),k.success(`File Uploaded`,`${e.name} uploaded successfully.`)}catch(e){k.error(`Upload Failed`,e.message||`Failed to upload file.`)}finally{this.isUploading=!1}}renderAttached(){let e=this.value,n=A(e),r=M(e),a=typeof e==`object`&&e?.size?F(e.size):``,s=typeof e==`object`?e?.createdAt||e?.created_at:void 0;return i`
       <div class="attached">
         <div class="attached-left">
-          ${I(e)&&t?i`<img class="thumb" src=${t} alt=${r} />`:i`<span class="icon-box"><admin-icon name="file" size="22" color="var(--color-primary-500)"></admin-icon></span>`}
+          ${I(e)&&n?i`<img class="thumb" src=${n} alt=${r} />`:i`<span class="icon-box"><admin-icon name="file" size="22" color="var(--color-primary-500)"></admin-icon></span>`}
           <div class="info">
             <span class="name" title=${r}>${r}</span>
             <div class="meta">
-              ${a?i`<span>${a}</span>`:n}
-              ${s?i`<span>${new Date(s).toLocaleDateString()}</span>`:n}
+              ${a?i`<span>${a}</span>`:t}
+              ${s?i`<span>${new Date(s).toLocaleDateString()}</span>`:t}
             </div>
           </div>
         </div>
         <div class="actions">
-          ${t?i`
-                <moul-button variant="ghost" is-icon aria-label="View file" @click=${o(()=>window.open(t,`_blank`,`noopener`))}>
+          ${n?i`
+                <moul-button variant="ghost" is-icon aria-label="View file" @click=${o(()=>window.open(n,`_blank`,`noopener`))}>
                   <admin-icon name="arrow-square-out" size="14"></admin-icon>
                 </moul-button>
-              `:n}
+              `:t}
           <moul-button variant="outline" aria-label="Replace file" ?is-disabled=${this.isUploading} @click=${o(()=>this.browse())}>
             <admin-icon slot="prefix" name="upload-simple" size="14"></admin-icon>
             Replace
@@ -654,15 +654,15 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
             `}
       </button>
     `}render(){return i`
-      <span class="label">${this.label}${this.required?i`<span class="required">*</span>`:n}</span>
+      <span class="label">${this.label}${this.required?i`<span class="required">*</span>`:t}</span>
       <input
         type="file"
         hidden
         @change=${e=>{let t=e.target,n=t.files?.[0];n&&this.upload(n),t.value=``}}
       />
       ${this.value?this.renderAttached():this.renderDropzone()}
-      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:n}
-    `}};customElements.define(`admin-file-field`,H);var U=c(class extends u{constructor(e){if(super(e),e.type!==s.PROPERTY&&e.type!==s.ATTRIBUTE&&e.type!==s.BOOLEAN_ATTRIBUTE)throw Error("The `live` directive is not allowed on child or event bindings");if(!T(e))throw Error("`live` bindings can only contain a single expression")}render(e){return e}update(t,[r]){if(r===e||r===n)return r;let i=t.element,a=t.name;if(t.type===s.PROPERTY){if(r===i[a])return e}else if(t.type===s.BOOLEAN_ATTRIBUTE){if(!!r===i.hasAttribute(a))return e}else if(t.type===s.ATTRIBUTE&&i.getAttribute(a)===r+``)return e;return w(t),r}}),W=`__none__`,G=class extends a{static styles=[r,t`
+      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:t}
+    `}};customElements.define(`admin-file-field`,H);var U=c(class extends u{constructor(e){if(super(e),e.type!==l.PROPERTY&&e.type!==l.ATTRIBUTE&&e.type!==l.BOOLEAN_ATTRIBUTE)throw Error("The `live` directive is not allowed on child or event bindings");if(!s(e))throw Error("`live` bindings can only contain a single expression")}render(e){return e}update(n,[r]){if(r===e||r===t)return r;let i=n.element,a=n.name;if(n.type===l.PROPERTY){if(r===i[a])return e}else if(n.type===l.BOOLEAN_ATTRIBUTE){if(!!r===i.hasAttribute(a))return e}else if(n.type===l.ATTRIBUTE&&i.getAttribute(a)===r+``)return e;return ee(n),r}}),W=`__none__`,G=class extends a{static styles=[r,n`
       :host {
         display: flex;
         flex-direction: column;
@@ -731,17 +731,17 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         font-size: var(--font-size-xs);
         color: var(--color-error-500);
       }
-    `];static properties={label:{type:String},required:{type:Boolean},relationConfig:{attribute:!1},value:{attribute:!1},errorMessage:{type:String,attribute:`error-message`}};targets=new m(this,e=>{let t=this.relationConfig?.targetMoul;return t?e.from({record:x(t,{perPage:100})}):void 0},()=>[this.relationConfig?.targetMoul]);constructor(){super(),this.label=``,this.required=!1,this.relationConfig=void 0,this.value=null,this.errorMessage=``}emit(e){this.dispatchEvent(new CustomEvent(`valuechange`,{detail:{value:e}}))}get targetRecords(){return this.targets.data}renderLabel(e,t){return i`
+    `];static properties={label:{type:String},required:{type:Boolean},relationConfig:{attribute:!1},value:{attribute:!1},errorMessage:{type:String,attribute:`error-message`}};targets=new g(this,e=>{let t=this.relationConfig?.targetMoul;return t?e.from({record:S(t,{perPage:100})}):void 0},()=>[this.relationConfig?.targetMoul]);constructor(){super(),this.label=``,this.required=!1,this.relationConfig=void 0,this.value=null,this.errorMessage=``}emit(e){this.dispatchEvent(new CustomEvent(`valuechange`,{detail:{value:e}}))}get targetRecords(){return this.targets.data}renderLabel(e,n){return i`
       <span class="label">
         <admin-icon name="link" size="14" color="var(--color-primary-500)"></admin-icon>
         ${this.label}
-        <moul-badge tone="primary" size="sm">${e} ➔ ${t}</moul-badge>
-        ${this.required?i`<span class="required">*</span>`:n}
+        <moul-badge tone="primary" size="sm">${e} ➔ ${n}</moul-badge>
+        ${this.required?i`<span class="required">*</span>`:t}
       </span>
-    `}renderMany(e){let t=Array.isArray(this.value)?this.value.map(String):this.value?[String(this.value)]:[],r=this.targetRecords,a=e=>this.emit(t.filter(t=>t!==e));return i`
+    `}renderMany(e){let n=Array.isArray(this.value)?this.value.map(String):this.value?[String(this.value)]:[],r=this.targetRecords,a=e=>this.emit(n.filter(t=>t!==e));return i`
       ${this.renderLabel(`M:N`,e)}
       <div class="chips">
-        ${t.length===0?i`<span class="chips-empty">No records selected. Select records from the dropdown below to link.</span>`:t.map(e=>{let t=r.find(t=>String(t.id)===e),n=t?P(t):e;return i`
+        ${n.length===0?i`<span class="chips-empty">No records selected. Select records from the dropdown below to link.</span>`:n.map(e=>{let t=r.find(t=>String(t.id)===e),n=t?P(t):e;return i`
                 <span class="chip">
                   <admin-icon name="link" size="12" color="var(--color-primary-500)"></admin-icon>
                   ${n}
@@ -754,15 +754,15 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         aria-label=${`Add ${this.label} record`}
         placeholder=${this.targets.isLoading?`Loading records...`:`Select record to add to ${this.label}...`}
         .selectedKey=${U(``)}
-        @selectionchange=${e=>{let n=e.detail.selectedKey;n&&!t.includes(n)&&this.emit([...t,n])}}
+        @selectionchange=${e=>{let t=e.detail.selectedKey;t&&!n.includes(t)&&this.emit([...n,t])}}
       >
-        ${r.filter(e=>!t.includes(String(e.id))).map(e=>i`<moul-select-item key=${String(e.id)}>${P(e)} (${e.id})</moul-select-item>`)}
+        ${r.filter(e=>!n.includes(String(e.id))).map(e=>i`<moul-select-item key=${String(e.id)}>${P(e)} (${e.id})</moul-select-item>`)}
       </moul-select>
-      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:n}
-    `}render(){let e=this.relationConfig?.targetMoul||``,t=this.relationConfig?.cardinality||`1:N`;if(t===`M:N`)return this.renderMany(e);let r=this.value?String(this.value):``;return i`
-      ${this.renderLabel(t,e)}
+      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:t}
+    `}render(){let e=this.relationConfig?.targetMoul||``,n=this.relationConfig?.cardinality||`1:N`;if(n===`M:N`)return this.renderMany(e);let r=this.value?String(this.value):``;return i`
+      ${this.renderLabel(n,e)}
       <moul-select
-        aria-label=${`${this.label} (${t} ➔ ${e})`}
+        aria-label=${`${this.label} (${n} ➔ ${e})`}
         placeholder=${this.targets.isLoading?`Loading target records...`:`Select ${e} record...`}
         ?is-required=${this.required}
         .selectedKey=${U(r)}
@@ -771,8 +771,8 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         <moul-select-item key=${W}><em>(None / Clear)</em></moul-select-item>
         ${this.targetRecords.map(e=>i`<moul-select-item key=${String(e.id)}>${P(e)} (${e.id})</moul-select-item>`)}
       </moul-select>
-      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:n}
-    `}};customElements.define(`admin-relation-field`,G);var K=new Set([`username`,`email`,`password`,`passwordConfirm`]),q={date:`date`,datetime:`datetime-local`,url:`url`,email:`email`,cloak:`password`};function J(e){switch(e.type){case`cloak`:return`Encrypted at rest with AES-256-GCM`;case`text`:case`editor`:return e.min!==void 0||e.max!==void 0?`Length: ${e.min??0}..${e.max??`∞`} characters`:``;case`url`:return`Must start with http:// or https://`;case`date`:return`Date in YYYY-MM-DD format`;case`datetime`:return`Local or ISO 8601 date & time`;default:return``}}var Y=e=>typeof e==`object`&&e?JSON.stringify(e,null,2):String(e??``);function X(e){try{return JSON.parse(e)}catch{return e}}var ae=class extends a{static styles=[r,t`
+      ${this.errorMessage?i`<div class="error"><admin-icon name="warning-circle" size="14"></admin-icon><span>${this.errorMessage}</span></div>`:t}
+    `}};customElements.define(`admin-relation-field`,G);var K=new Set([`username`,`email`,`password`,`passwordConfirm`]),q={date:`date`,datetime:`datetime-local`,url:`url`,email:`email`,cloak:`password`};function J(e){switch(e.type){case`cloak`:return`Encrypted at rest with AES-256-GCM`;case`text`:case`editor`:return e.min!==void 0||e.max!==void 0?`Length: ${e.min??0}..${e.max??`∞`} characters`:``;case`url`:return`Must start with http:// or https://`;case`date`:return`Date in YYYY-MM-DD format`;case`datetime`:return`Local or ISO 8601 date & time`;default:return``}}var Y=e=>typeof e==`object`&&e?JSON.stringify(e,null,2):String(e??``);function X(e){try{return JSON.parse(e)}catch{return e}}var ae=class extends a{static styles=[r,n`
       .title {
         display: flex;
         align-items: center;
@@ -958,7 +958,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         justify-content: space-between;
         width: 100%;
       }
-    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},moul:{attribute:!1},fields:{attribute:!1},record:{attribute:!1},records:{attribute:!1},active:{state:!0},formData:{state:!0},formErrors:{state:!0},touched:{state:!0},copied:{state:!0},showRawJson:{state:!0}};copiedTimer;saving=new p(this);retrying=new p(this);discarding=new p(this);constructor(){super(),this.isOpen=!1,this.moulName=``,this.moul=null,this.fields=[],this.record=null,this.records=void 0,this.active=null,this.formData={},this.formErrors={},this.touched={},this.copied=null,this.showRawJson=!1}get isCreating(){return this.active===null}willUpdate(e){(e.has(`isOpen`)&&this.isOpen||e.has(`record`)&&this.isOpen)&&(this.active=this.record?b(this.record):null,this.formData=this.active?{...this.active}:{},this.formErrors={},this.touched={},this.showRawJson=!1)}patchActive(e,t){this.active?.id===e&&(this.active={...this.active,...t},this.formData={...this.active})}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async copy(e,t){await L(t)?(this.copied=e,window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copied=null,2e3)):k.error(`Copy Failed`,`The browser blocked clipboard access.`)}setError(e,t){let n={...this.formErrors};t?n[e]=t:delete n[e],this.formErrors=n}validateField(e,t,n){if(this.moul?.type===`auth`&&K.has(e)){let t=re(n,this.isCreating);this.setError(e,t[e]),e===`password`&&this.touched.passwordConfirm&&this.setError(`passwordConfirm`,t.passwordConfirm);return}let r=(this.moul?.fields||[]).find(t=>t.name===e);r&&this.setError(e,ie(r,t,!this.isCreating))}change(e,t){this.formData={...this.formData,[e]:t},this.touched[e]&&this.validateField(e,t,this.formData)}touch(e){this.touched={...this.touched,[e]:!0},this.validateField(e,this.formData[e],this.formData)}commit(e,t){this.change(e,t),this.touch(e)}save(){let e=ne(this.moul?.fields||[],this.formData,this.moul?.type===`auth`,this.isCreating);if(!e.isValid){this.formErrors=e.errors,this.touched={...this.touched,...Object.fromEntries(Object.keys(e.errors).map(e=>[e,!0]))},k.error(`Validation Error`,Object.values(e.errors)[0]||`Please resolve the highlighted field errors before saving.`);return}let t=O(this.moul?.fields||[],this.formData);this.isCreating?this.createRecord(t):this.updateRecord(String(this.active.id),t)}async createRecord(e){if(this.records)try{await this.saving.track(this.records.insert({...e,id:g()},{optimistic:!1})),this.close(),k.success(`Record Created`,`New record created successfully.`)}catch(e){k.error(`Creation Failed`,e?.message||`Failed to create record.`)}}async updateRecord(e,t){if(this.records)try{await this.saving.track(this.records.update(e,e=>Object.assign(e,t))),this.close(),k.success(`Record Updated`,`Record updated successfully.`)}catch(e){k.error(`Update Failed`,e?.message||`Failed to update record.`)}}async retry(e){if(this.records)try{await this.retrying.track(v(this.records,[String(e.id)])),k.success(`Task Scheduled for Retry`,`Worker task ${e.id} marked as available for immediate execution.`),this.patchActive(e.id,{state:`available`,attempt:0,scheduled_at:new Date().toISOString()})}catch(e){k.error(`Retry Failed`,e?.message||`Failed to retry worker task.`)}}async discard(e){if(!this.records)return;let t=new Date().toISOString();try{await this.discarding.track(this.records.update(String(e.id),e=>Object.assign(e,{state:`discarded`,discarded_at:t}))),k.info(`Task Discarded`,`Worker task ${e.id} was marked as discarded.`),this.patchActive(e.id,{state:`discarded`,discarded_at:t})}catch(e){k.error(`Discard Failed`,e?.message||`Failed to discard task.`)}}textField(e,t,n={}){return i`
+    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},moulName:{type:String,attribute:`moul-name`},moul:{attribute:!1},fields:{attribute:!1},record:{attribute:!1},records:{attribute:!1},active:{state:!0},formData:{state:!0},formErrors:{state:!0},touched:{state:!0},copied:{state:!0},showRawJson:{state:!0}};copiedTimer;saving=new h(this);retrying=new h(this);discarding=new h(this);constructor(){super(),this.isOpen=!1,this.moulName=``,this.moul=null,this.fields=[],this.record=null,this.records=void 0,this.active=null,this.formData={},this.formErrors={},this.touched={},this.copied=null,this.showRawJson=!1}get isCreating(){return this.active===null}willUpdate(e){(e.has(`isOpen`)&&this.isOpen||e.has(`record`)&&this.isOpen)&&(this.active=this.record?x(this.record):null,this.formData=this.active?{...this.active}:{},this.formErrors={},this.touched={},this.showRawJson=!1)}patchActive(e,t){this.active?.id===e&&(this.active={...this.active,...t},this.formData={...this.active})}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async copy(e,t){await L(t)?(this.copied=e,window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copied=null,2e3)):k.error(`Copy Failed`,`The browser blocked clipboard access.`)}setError(e,t){let n={...this.formErrors};t?n[e]=t:delete n[e],this.formErrors=n}validateField(e,t,n){if(this.moul?.type===`auth`&&K.has(e)){let t=re(n,this.isCreating);this.setError(e,t[e]),e===`password`&&this.touched.passwordConfirm&&this.setError(`passwordConfirm`,t.passwordConfirm);return}let r=(this.moul?.fields||[]).find(t=>t.name===e);r&&this.setError(e,ie(r,t,!this.isCreating))}change(e,t){this.formData={...this.formData,[e]:t},this.touched[e]&&this.validateField(e,t,this.formData)}touch(e){this.touched={...this.touched,[e]:!0},this.validateField(e,this.formData[e],this.formData)}commit(e,t){this.change(e,t),this.touch(e)}save(){let e=ne(this.moul?.fields||[],this.formData,this.moul?.type===`auth`,this.isCreating);if(!e.isValid){this.formErrors=e.errors,this.touched={...this.touched,...Object.fromEntries(Object.keys(e.errors).map(e=>[e,!0]))},k.error(`Validation Error`,Object.values(e.errors)[0]||`Please resolve the highlighted field errors before saving.`);return}let t=O(this.moul?.fields||[],this.formData);this.isCreating?this.createRecord(t):this.updateRecord(String(this.active.id),t)}async createRecord(e){if(this.records)try{await this.saving.track(this.records.insert({...e,id:te()},{optimistic:!1})),this.close(),k.success(`Record Created`,`New record created successfully.`)}catch(e){k.error(`Creation Failed`,e?.message||`Failed to create record.`)}}async updateRecord(e,t){if(this.records)try{await this.saving.track(this.records.update(e,e=>Object.assign(e,t))),this.close(),k.success(`Record Updated`,`Record updated successfully.`)}catch(e){k.error(`Update Failed`,e?.message||`Failed to update record.`)}}async retry(e){if(this.records)try{await this.retrying.track(y(this.records,[String(e.id)])),k.success(`Task Scheduled for Retry`,`Worker task ${e.id} marked as available for immediate execution.`),this.patchActive(e.id,{state:`available`,attempt:0,scheduled_at:new Date().toISOString()})}catch(e){k.error(`Retry Failed`,e?.message||`Failed to retry worker task.`)}}async discard(e){if(!this.records)return;let t=new Date().toISOString();try{await this.discarding.track(this.records.update(String(e.id),e=>Object.assign(e,{state:`discarded`,discarded_at:t}))),k.info(`Task Discarded`,`Worker task ${e.id} was marked as discarded.`),this.patchActive(e.id,{state:`discarded`,discarded_at:t})}catch(e){k.error(`Discard Failed`,e?.message||`Failed to discard task.`)}}textField(e,t,n={}){return i`
       <moul-text-field
         label=${t}
         type=${n.type??`text`}
@@ -969,7 +969,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         @input=${t=>this.change(e,D(t))}
         @focusout=${()=>this.touch(e)}
       ></moul-text-field>
-    `}renderField(e){let t=this.formErrors[e.name]??``,r=this.formData[e.name];switch(e.type){case`bool`:return i`
+    `}renderField(e){let n=this.formErrors[e.name]??``,r=this.formData[e.name];switch(e.type){case`bool`:return i`
           <moul-checkbox
             ?is-checked=${!!r}
             @change=${t=>this.change(e.name,t.detail.isChecked)}
@@ -979,7 +979,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         `;case`file`:return i`
           <admin-file-field
             label=${e.name}
-            error-message=${t}
+            error-message=${n}
             ?required=${!!e.required}
             .value=${r}
             @valuechange=${t=>this.commit(e.name,t.detail.value)}
@@ -987,7 +987,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         `;case`relation`:return i`
           <admin-relation-field
             label=${e.name}
-            error-message=${t}
+            error-message=${n}
             ?required=${!!e.required}
             .relationConfig=${e.relationConfig}
             .value=${r}
@@ -999,7 +999,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
             placeholder='{"key": "value"}'
             description="Valid JSON object or array"
             rows="4"
-            error-message=${t}
+            error-message=${n}
             ?is-required=${!!e.required}
             .value=${Y(r)}
             @input=${t=>this.change(e.name,X(D(t)))}
@@ -1009,9 +1009,9 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           <moul-number-field
             label=${e.name}
             description=${e.min!==void 0||e.max!==void 0?`Value range: ${e.min??`-∞`}..${e.max??`+∞`}`:``}
-            error-message=${t}
-            min=${e.min??n}
-            max=${e.max??n}
+            error-message=${n}
+            min=${e.min??t}
+            max=${e.max??t}
             ?is-required=${!!e.required}
             .value=${a}
             @input=${t=>this.change(e.name,t.target.value)}
@@ -1027,8 +1027,8 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
             >
               ${e.options.map(e=>i`<moul-select-item key=${e}>${e}</moul-select-item>`)}
             </moul-select>
-            ${t?i`<span class="hint" style="color: var(--color-error-500)">${t}</span>`:n}
-          `:this.textField(e.name,e.name,{required:!!e.required});default:return this.textField(e.name,e.name,{type:q[e.type]??`text`,required:!!e.required,description:J(e)})}}renderWorkerInspector(e){let t=Array.isArray(e.errors)&&e.errors.length>0?e.errors.join(`
+            ${n?i`<span class="hint" style="color: var(--color-error-500)">${n}</span>`:t}
+          `:this.textField(e.name,e.name,{required:!!e.required});default:return this.textField(e.name,e.name,{type:q[e.type]??`text`,required:!!e.required,description:J(e)})}}renderWorkerInspector(e){let n=Array.isArray(e.errors)&&e.errors.length>0?e.errors.join(`
 `):e.last_error?String(e.last_error):null,r=(e.attempt??0)>=(e.max_attempts??3),a=(e,t,n=``)=>i`
       <div class="worker-stat">
         <span class="stat-label">${e}</span>
@@ -1070,14 +1070,14 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           ${a(`Priority`,e.priority??0)}
         </div>
 
-        ${t?i`
+        ${n?i`
               <div class="error-trace">
                 <div class="row-between">
                   <span class="error-trace-title">
                     <admin-icon name="warning-circle" size="15"></admin-icon>
                     Error Trace
                   </span>
-                  <moul-button variant="ghost" size="sm" aria-label="Copy error trace" @click=${o(()=>this.copy(`error`,t))}>
+                  <moul-button variant="ghost" size="sm" aria-label="Copy error trace" @click=${o(()=>this.copy(`error`,n))}>
                     <admin-icon
                       slot="prefix"
                       name=${this.copied===`error`?`check`:`copy`}
@@ -1087,9 +1087,9 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                     ${this.copied===`error`?`Copied`:`Copy`}
                   </moul-button>
                 </div>
-                <pre>${t}</pre>
+                <pre>${n}</pre>
               </div>
-            `:n}
+            `:t}
 
         <div class="row-between">
           <span class="payload-label">Task Payload / Arguments (args)</span>
@@ -1103,15 +1103,15 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           @input=${e=>this.formData={...this.formData,args:X(D(e))}}
         ></moul-text-area>
       </div>
-    `}renderMetadata(e){let t=(e,t)=>t?i`<div class="metadata-row"><span>${e}</span><span>${new Date(String(t)).toLocaleString()}</span></div>`:n;return i`
+    `}renderMetadata(e){let n=(e,n)=>n?i`<div class="metadata-row"><span>${e}</span><span>${new Date(String(n)).toLocaleString()}</span></div>`:t;return i`
       <div class="section-title">
         <admin-icon name="info" size="16" color="var(--color-primary-500)"></admin-icon>
         System Metadata & Inspection
       </div>
       <div class="metadata">
         <div class="metadata-row"><span>Record ID:</span><span style="font-weight: 600">${e.id}</span></div>
-        ${t(`Created At:`,e.createdAt||e.created_at)} ${t(`Inserted At:`,e.inserted_at)}
-        ${t(`Updated At:`,e.updatedAt||e.updated_at)} ${t(`Scheduled At:`,e.scheduled_at)}
+        ${n(`Created At:`,e.createdAt||e.created_at)} ${n(`Inserted At:`,e.inserted_at)}
+        ${n(`Updated At:`,e.updatedAt||e.updated_at)} ${n(`Scheduled At:`,e.scheduled_at)}
       </div>
       <div class="row-between">
         <moul-button variant="outline" @click=${o(()=>this.showRawJson=!this.showRawJson)}>
@@ -1133,8 +1133,8 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           ${this.copied===`json`?`Copied`:`Copy JSON`}
         </moul-button>
       </div>
-      ${this.showRawJson?i`<pre class="json">${JSON.stringify(e,null,2)}</pre>`:n}
-    `}render(){let e=this.active,t=this.isCreating,r=this.moul?.type||`base`,a=this.saving.isPending,s=e?.state?j(e.state):void 0;return i`
+      ${this.showRawJson?i`<pre class="json">${JSON.stringify(e,null,2)}</pre>`:t}
+    `}render(){let e=this.active,n=this.isCreating,r=this.moul?.type||`base`,a=this.saving.isPending,s=e?.state?j(e.state):void 0;return i`
       <moul-drawer
         placement="right"
         size="lg"
@@ -1143,9 +1143,9 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
       >
         <div slot="header" class="header-row">
           <span class="title">
-            ${t?`Create Record`:`Record #${e.id}`}
+            ${n?`Create Record`:`Record #${e.id}`}
             <moul-badge tone="primary" size="sm">${r}</moul-badge>
-            ${e?.state?s?i`<moul-badge tone=${s} size="sm">${e.state}</moul-badge>`:i`<moul-badge variant="bordered" size="sm">${e.state}</moul-badge>`:n}
+            ${e?.state?s?i`<moul-badge tone=${s} size="sm">${e.state}</moul-badge>`:i`<moul-badge variant="bordered" size="sm">${e.state}</moul-badge>`:t}
             ${e?.id?i`
                   <moul-button variant="ghost" size="sm" aria-label="Copy record ID" @click=${o(()=>this.copy(`id`,String(e.id)))}>
                     <admin-icon
@@ -1156,7 +1156,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                     ></admin-icon>
                     ${this.copied===`id`?`Copied`:`Copy ID`}
                   </moul-button>
-                `:n}
+                `:t}
           </span>
           <moul-button variant="ghost" is-icon size="sm" aria-label="Close" @click=${o(()=>this.close())}>
             <admin-icon name="x" size="16"></admin-icon>
@@ -1165,25 +1165,25 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
 
         <form
           @submit=${e=>{e.preventDefault(),this.save()}}
-          @keydown=${te}
+          @keydown=${E}
         >
-          ${r===`worker`&&e?this.renderWorkerInspector(e):n}
+          ${r===`worker`&&e?this.renderWorkerInspector(e):t}
 
           <div class="section-title">
             <admin-icon name="list-bullets" size="16" color="var(--color-primary-500)"></admin-icon>
-            ${t?`New Record`:`Edit Record`}
+            ${n?`New Record`:`Edit Record`}
           </div>
 
           ${r===`auth`?i`
-                ${this.textField(`username`,`Username`,{required:t})}
-                ${this.textField(`email`,`Email`,{type:`email`,required:t})}
-                ${t?i`
+                ${this.textField(`username`,`Username`,{required:n})}
+                ${this.textField(`email`,`Email`,{type:`email`,required:n})}
+                ${n?i`
                       ${this.textField(`password`,`Password`,{type:`password`,required:!0,description:`Minimum 8 characters`})}
                       ${this.textField(`passwordConfirm`,`Confirm Password`,{type:`password`,required:!0})}
-                    `:n}
-              `:n}
+                    `:t}
+              `:t}
           ${this.fields.map(e=>i`<div>${this.renderField(e)}</div>`)}
-          ${e?this.renderMetadata(e):n}
+          ${e?this.renderMetadata(e):t}
         </form>
 
         <div slot="footer" class="footer">
@@ -1193,7 +1193,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                     <admin-icon slot="prefix" name="trash" size="14"></admin-icon>
                     Delete
                   </moul-button>
-                `:n}
+                `:t}
           </div>
           <div class="inline" style="gap: var(--spacing-2)">
             <moul-button variant="ghost" @click=${o(()=>this.close())}>Cancel</moul-button>
@@ -1202,9 +1202,9 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                     <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                     Retry Task
                   </moul-button>
-                `:n}
+                `:t}
             <moul-button variant="primary" ?is-disabled=${a} @click=${o(()=>this.save())}>
-              ${a?`Saving...`:t?`Create Record`:`Save Changes`}
+              ${a?`Saving...`:n?`Create Record`:`Save Changes`}
             </moul-button>
           </div>
         </div>
@@ -1212,7 +1212,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
     `}};customElements.define(`admin-record-drawer`,ae);var oe=new Set([`failed`,`discarded`,`retryable`,`completed`]);function se(e){let t=(t,n)=>{let r=Number.parseInt(e.get(t)??``,10);return Number.isFinite(r)&&r>0?r:n};return{page:t(`page`,1),perPage:t(`perPage`,30),sort:e.get(`sort`)||void 0,filter:e.get(`filter`)||void 0,search:e.get(`search`)||void 0,create:e.get(`create`)===`true`}}function ce(e,t){let n=(t||`id`).split(`,`).map(e=>e.trim()).filter(Boolean).map(e=>({field:e.replace(/^[-+]/,``),desc:e.startsWith(`-`)}));if(n.some(({field:e})=>e.includes(`.`)||e===`@random`))return e;n.some(({field:e})=>e===`id`)||n.push({field:`id`,desc:!1});let r=e;for(let{field:e,desc:t}of n)r=r.orderBy(({record:t})=>t[e],{direction:t?`desc`:`asc`,nulls:t?`last`:`first`,stringSort:`lexical`});return r}var le=(e,t)=>e.from({record:t});function Z(e,t,n){return i`
     <a
       class="chip"
-      href=${f.href(`/records/${encodeURIComponent(e)}`,{page:1,perPage:30,search:t})}
+      href=${m.href(`/records/${encodeURIComponent(e)}`,{page:1,perPage:30,search:t})}
       target="_blank"
       rel="noopener"
       title=${`Target: ${e} · ID: ${t}`}
@@ -1255,7 +1255,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         <admin-icon slot="prefix" name="lock" size="12"></admin-icon>
         ${String(n)}
       </moul-badge>
-    `;if(typeof n==`boolean`)return i`<moul-badge tone=${n?`success`:`error`}>${String(n)}</moul-badge>`;let r=typeof n==`object`?JSON.stringify(n):String(n);return i`<span class="truncate ${typeof n==`object`?`mono small`:``}" title=${r}>${r}</span>`}var $=class extends a{static styles=[r,E,t`
+    `;if(typeof n==`boolean`)return i`<moul-badge tone=${n?`success`:`error`}>${String(n)}</moul-badge>`;let r=typeof n==`object`?JSON.stringify(n):String(n);return i`<span class="truncate ${typeof n==`object`?`mono small`:``}" title=${r}>${r}</span>`}var $=class extends a{static styles=[r,T,n`
       :host {
         --page-gap: var(--spacing-4);
       }
@@ -1316,7 +1316,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         font-size: var(--font-size-sm);
         color: var(--color-fg-subtle);
       }
-    `];static properties={searchText:{state:!0},selectedIds:{state:!0},isDrawerOpen:{state:!0},drawerRecord:{state:!0},recordToDelete:{state:!0},isBatchDeleteOpen:{state:!0},isExportOpen:{state:!0},isImportOpen:{state:!0}};get moulName(){return f.location.params.moulName??``}get search(){return se(f.location.search)}moul=new m(this,e=>this.moulName?e.from({moul:y}).where(({moul:e})=>h(e.name,this.moulName)).findOne():void 0,()=>[this.moulName]);get expand(){let e=(this.moul.first?.fields??[]).filter(e=>e.type===`relation`&&e.name).map(e=>e.name);return e.length>0?e.join(`,`):void 0}get query(){let{page:e,perPage:t,sort:n,filter:r,search:i}=this.search;return{page:e,perPage:t,sort:n,filter:r,search:i,expand:this.expand}}get page(){return this.moulName&&!this.moul.isLoading?x(this.moulName,this.query):void 0}records=new m(this,e=>{let t=this.page;return t?ce(le(e,t),this.search.sort):void 0},()=>[this.page]);pageInfo=new l(this,()=>C(this.moulName,this.query));lastSearchParam;lastPage;constructor(){super(),this.searchText=``,this.selectedIds=new Set,this.isDrawerOpen=!1,this.drawerRecord=null,this.recordToDelete=null,this.isBatchDeleteOpen=!1,this.isExportOpen=!1,this.isImportOpen=!1,new ee(this,f)}willUpdate(){let e=this.search;e.search!==this.lastSearchParam&&(this.lastSearchParam=e.search,this.searchText=e.search??``);let t=this.page;t&&t!==this.lastPage&&(this.lastPage=t,this.selectedIds=new Set),e.create&&(this.openCreate(),this.setSearch({create:void 0},!0))}get rows(){return this.records.data}setSearch(e,t=!1){let n=this.search;f.navigate(f.location.pathname,{replace:t,search:{page:n.page,perPage:n.perPage,sort:n.sort,filter:n.filter,search:n.search,...e}})}openCreate(){this.drawerRecord=null,this.isDrawerOpen=!0}openDetail(e){this.drawerRecord=e,this.isDrawerOpen=!0}toggleSelected(e,t){let n=new Set(this.selectedIds);for(let r of e)t?n.add(r):n.delete(r);this.selectedIds=n}async deleteRecord(e){let t=String(e.id);if(this.recordToDelete=null,this.isDrawerOpen=!1,this.selectedIds.has(t)){let e=new Set(this.selectedIds);e.delete(t),this.selectedIds=e}try{await this.page?.delete(t).when(`settled`),k.info(`Record Deleted`,`Record was deleted.`)}catch(e){k.error(`Delete Failed`,e?.message||`Failed to delete record.`)}}async batchDelete(){let e=[...this.selectedIds];this.selectedIds=new Set,this.isBatchDeleteOpen=!1;try{await this.page?.delete(e).when(`settled`),k.info(`Records Deleted`,`Successfully deleted ${e.length} record${e.length>1?`s`:``}.`)}catch(e){k.error(`Batch Delete Failed`,e?.message||`Failed to delete selected records.`)}}async retry(e){let t=this.page;if(!t)return;let n=e.length===1;try{await v(t,e).when(`settled`),k.success(n?`Task Scheduled for Retry`:`Tasks Scheduled for Retry`,n?`Worker task ${e[0]} marked as available for immediate execution.`:`Successfully scheduled ${e.length} tasks for retry.`)}catch(e){k.error(n?`Retry Failed`:`Batch Retry Failed`,e?.message||`Failed to retry worker tasks.`)}}batchRetry(){let e=[...this.selectedIds];this.selectedIds=new Set,this.retry(e)}exportSelected(){let e=this.rows.filter(e=>this.selectedIds.has(String(e.id))).map(b),t=URL.createObjectURL(new Blob([JSON.stringify(e,null,2)],{type:`application/json`})),n=document.createElement(`a`);n.href=t,n.download=`${this.moulName}-selected-${e.length}-records.json`,n.click(),URL.revokeObjectURL(t),k.success(`Exported Selected`,`Downloaded ${e.length} selected record${e.length>1?`s`:``} as JSON.`)}columns(e,t){let r=this.rows,a=r.length>0&&r.every(e=>this.selectedIds.has(String(e.id))),s=!a&&r.some(e=>this.selectedIds.has(String(e.id))),c=[{key:`__select`,width:`44px`,title:i`
+    `];static properties={searchText:{state:!0},selectedIds:{state:!0},isDrawerOpen:{state:!0},drawerRecord:{state:!0},recordToDelete:{state:!0},isBatchDeleteOpen:{state:!0},isExportOpen:{state:!0},isImportOpen:{state:!0}};get moulName(){return m.location.params.moulName??``}get search(){return se(m.location.search)}moul=new g(this,e=>this.moulName?e.from({moul:b}).where(({moul:e})=>_(e.name,this.moulName)).findOne():void 0,()=>[this.moulName]);get expand(){let e=(this.moul.first?.fields??[]).filter(e=>e.type===`relation`&&e.name).map(e=>e.name);return e.length>0?e.join(`,`):void 0}get query(){let{page:e,perPage:t,sort:n,filter:r,search:i}=this.search;return{page:e,perPage:t,sort:n,filter:r,search:i,expand:this.expand}}get page(){return this.moulName&&!this.moul.isLoading?S(this.moulName,this.query):void 0}records=new g(this,e=>{let t=this.page;return t?ce(le(e,t),this.search.sort):void 0},()=>[this.page]);pageInfo=new d(this,()=>w(this.moulName,this.query));lastSearchParam;lastPage;constructor(){super(),this.searchText=``,this.selectedIds=new Set,this.isDrawerOpen=!1,this.drawerRecord=null,this.recordToDelete=null,this.isBatchDeleteOpen=!1,this.isExportOpen=!1,this.isImportOpen=!1,new p(this,m)}willUpdate(){let e=this.search;e.search!==this.lastSearchParam&&(this.lastSearchParam=e.search,this.searchText=e.search??``);let t=this.page;t&&t!==this.lastPage&&(this.lastPage=t,this.selectedIds=new Set),e.create&&(this.openCreate(),this.setSearch({create:void 0},!0))}get rows(){return this.records.data}setSearch(e,t=!1){let n=this.search;m.navigate(m.location.pathname,{replace:t,search:{page:n.page,perPage:n.perPage,sort:n.sort,filter:n.filter,search:n.search,...e}})}openCreate(){this.drawerRecord=null,this.isDrawerOpen=!0}openDetail(e){this.drawerRecord=e,this.isDrawerOpen=!0}toggleSelected(e,t){let n=new Set(this.selectedIds);for(let r of e)t?n.add(r):n.delete(r);this.selectedIds=n}async deleteRecord(e){let t=String(e.id);if(this.recordToDelete=null,this.isDrawerOpen=!1,this.selectedIds.has(t)){let e=new Set(this.selectedIds);e.delete(t),this.selectedIds=e}try{await this.page?.delete(t).when(`settled`),k.info(`Record Deleted`,`Record was deleted.`)}catch(e){k.error(`Delete Failed`,e?.message||`Failed to delete record.`)}}async batchDelete(){let e=[...this.selectedIds];this.selectedIds=new Set,this.isBatchDeleteOpen=!1;try{await this.page?.delete(e).when(`settled`),k.info(`Records Deleted`,`Successfully deleted ${e.length} record${e.length>1?`s`:``}.`)}catch(e){k.error(`Batch Delete Failed`,e?.message||`Failed to delete selected records.`)}}async retry(e){let t=this.page;if(!t)return;let n=e.length===1;try{await y(t,e).when(`settled`),k.success(n?`Task Scheduled for Retry`:`Tasks Scheduled for Retry`,n?`Worker task ${e[0]} marked as available for immediate execution.`:`Successfully scheduled ${e.length} tasks for retry.`)}catch(e){k.error(n?`Retry Failed`:`Batch Retry Failed`,e?.message||`Failed to retry worker tasks.`)}}batchRetry(){let e=[...this.selectedIds];this.selectedIds=new Set,this.retry(e)}exportSelected(){let e=this.rows.filter(e=>this.selectedIds.has(String(e.id))).map(x),t=URL.createObjectURL(new Blob([JSON.stringify(e,null,2)],{type:`application/json`})),n=document.createElement(`a`);n.href=t,n.download=`${this.moulName}-selected-${e.length}-records.json`,n.click(),URL.revokeObjectURL(t),k.success(`Exported Selected`,`Downloaded ${e.length} selected record${e.length>1?`s`:``} as JSON.`)}columns(e,n){let r=this.rows,a=r.length>0&&r.every(e=>this.selectedIds.has(String(e.id))),s=!a&&r.some(e=>this.selectedIds.has(String(e.id))),c=[{key:`__select`,width:`44px`,title:i`
           <moul-checkbox
             aria-label="Select all rows on page"
             ?is-checked=${a}
@@ -1333,27 +1333,27 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           <button type="button" class="cell-link" title=${`Click to view and edit record #${e.id}`} @click=${()=>this.openDetail(e)}>
             ${String(e.id)}
           </button>
-        `}];e===`auth`&&c.push({key:`username`,title:`Username`,render:e=>e.username||`-`},{key:`email`,title:`Email`,render:e=>e.email||`-`}),e===`worker`&&c.push({key:`worker`,title:`Worker`,render:e=>i`<span style="font-weight: 600">${e.worker||`-`}</span>`},{key:`state`,title:`State`,render:e=>{let t=j(e.state);return t?i`<moul-badge tone=${t}>${e.state||`available`}</moul-badge>`:i`<moul-badge variant="bordered">${e.state||`available`}</moul-badge>`}},{key:`queue`,title:`Queue`,render:e=>e.queue||`default`},{key:`attempt`,title:`Attempt`,align:`end`,render:e=>{let t=(e.attempt??0)>=(e.max_attempts??3);return i`<span style="color: ${t?`var(--color-error-500)`:`var(--color-fg-subtle)`}">${e.attempt??0}/${e.max_attempts??3}</span>`}});for(let e of t)c.push({key:e.name,title:e.name,render:t=>ue(e,t)});return c.push({key:`createdAt`,title:`Created At`,render:e=>{let t=e.createdAt||e.created_at||e.inserted_at;return i`<span class="muted small nowrap">${t?new Date(String(t)).toLocaleString():`-`}</span>`}},{key:`__actions`,title:`Actions`,align:`end`,render:t=>{let r=e===`worker`&&oe.has(String(t.state||`available`).toLowerCase());return i`
+        `}];e===`auth`&&c.push({key:`username`,title:`Username`,render:e=>e.username||`-`},{key:`email`,title:`Email`,render:e=>e.email||`-`}),e===`worker`&&c.push({key:`worker`,title:`Worker`,render:e=>i`<span style="font-weight: 600">${e.worker||`-`}</span>`},{key:`state`,title:`State`,render:e=>{let t=j(e.state);return t?i`<moul-badge tone=${t}>${e.state||`available`}</moul-badge>`:i`<moul-badge variant="bordered">${e.state||`available`}</moul-badge>`}},{key:`queue`,title:`Queue`,render:e=>e.queue||`default`},{key:`attempt`,title:`Attempt`,align:`end`,render:e=>{let t=(e.attempt??0)>=(e.max_attempts??3);return i`<span style="color: ${t?`var(--color-error-500)`:`var(--color-fg-subtle)`}">${e.attempt??0}/${e.max_attempts??3}</span>`}});for(let e of n)c.push({key:e.name,title:e.name,render:t=>ue(e,t)});return c.push({key:`createdAt`,title:`Created At`,render:e=>{let t=e.createdAt||e.created_at||e.inserted_at;return i`<span class="muted small nowrap">${t?new Date(String(t)).toLocaleString():`-`}</span>`}},{key:`__actions`,title:`Actions`,align:`end`,render:n=>{let r=e===`worker`&&oe.has(String(n.state||`available`).toLowerCase());return i`
             <span style="display: inline-flex; align-items: center; gap: 0.25rem">
               ${r?i`
                     <moul-button
                       variant="secondary"
                       size="sm"
-                      aria-label=${`Retry task ${t.id}`}
-                      @click=${o(()=>this.retry([String(t.id)]))}
+                      aria-label=${`Retry task ${n.id}`}
+                      @click=${o(()=>this.retry([String(n.id)]))}
                     >
                       <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                       Retry
                     </moul-button>
-                  `:n}
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${t.id}`} @click=${o(()=>this.openDetail(t))}>
+                  `:t}
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${n.id}`} @click=${o(()=>this.openDetail(n))}>
                 <admin-icon name="pencil-simple" size="14"></admin-icon>
               </moul-button>
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${t.id}`} @click=${o(()=>this.recordToDelete=t)}>
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${n.id}`} @click=${o(()=>this.recordToDelete=n)}>
                 <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
               </moul-button>
             </span>
-          `}}),c}renderToolbar(e){let t=this.selectedIds.size,r=this.moul.first?.type===`worker`;return i`
+          `}}),c}renderToolbar(e){let n=this.selectedIds.size,r=this.moul.first?.type===`worker`;return i`
       <moul-card>
         <moul-card-body>
           <div class="toolbar">
@@ -1365,9 +1365,9 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
               @submit=${()=>this.setSearch({page:1,search:this.searchText.trim()||void 0})}
               @clear=${()=>this.setSearch({page:1,search:void 0})}
             ></moul-search-field>
-            ${t>0?i`
+            ${n>0?i`
                   <div class="selection">
-                    <moul-badge tone="primary">${t} selected</moul-badge>
+                    <moul-badge tone="primary">${n} selected</moul-badge>
                     <moul-button variant="ghost" @click=${o(()=>this.selectedIds=new Set)}>Clear</moul-button>
                     <moul-button variant="outline" @click=${o(()=>this.exportSelected())}>
                       <admin-icon slot="prefix" name="download-simple" size="14"></admin-icon>
@@ -1378,10 +1378,10 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
                             <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                             Retry
                           </moul-button>
-                        `:n}
+                        `:t}
                     <moul-button variant="danger-soft" @click=${o(()=>this.isBatchDeleteOpen=!0)}>
                       <admin-icon slot="prefix" name="trash" size="14"></admin-icon>
-                      Delete (${t})
+                      Delete (${n})
                     </moul-button>
                   </div>
                 `:i`<span class="count">Showing ${this.rows.length} of ${e} record${e===1?``:`s`}</span>`}
@@ -1425,7 +1425,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           Delete ${e} Records
         </moul-button>
       </moul-alert-dialog>
-    `}render(){let e=this.moulName,t=this.moul.first,n=t?.type||`base`,r=this.search,a=this.rows,s=_(this.pageInfo.data),c=s.totalItems??a.length,l=Math.max(1,s.totalPages??1),u=N(t,a);return i`
+    `}render(){let e=this.moulName,t=this.moul.first,n=t?.type||`base`,r=this.search,a=this.rows,s=v(this.pageInfo.data),c=s.totalItems??a.length,l=Math.max(1,s.totalPages??1),u=N(t,a);return i`
       <div class="page-header">
         <div>
           <h1 class="page-title">
@@ -1436,7 +1436,7 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
           <span class="page-subtitle">Explore records data grid</span>
         </div>
         <div class="page-actions">
-          <moul-button variant="outline" @click=${o(()=>f.navigate(`/collections/${encodeURIComponent(e)}`))}>
+          <moul-button variant="outline" @click=${o(()=>m.navigate(`/collections/${encodeURIComponent(e)}`))}>
             <admin-icon slot="prefix" name="sliders" size="16"></admin-icon>
             Schema & Settings
           </moul-button>
@@ -1517,6 +1517,6 @@ import{a as e,c as t,i as n,n as r,o as i,r as a,t as o}from"./press-BQyLhwVv.js
         moul-name=${e}
         ?is-open=${this.isImportOpen}
         @openchange=${e=>this.isImportOpen=e.detail.isOpen}
-        @imported=${()=>S(this.moulName)}
+        @imported=${()=>C(this.moulName)}
       ></admin-import-modal>
     `}};customElements.define(`admin-records-page`,$);export{$ as AdminRecordsPage};

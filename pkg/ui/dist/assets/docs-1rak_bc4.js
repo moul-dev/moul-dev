@@ -1,4 +1,4 @@
-import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a,t as o}from"./page-ITe5xmEa.js";var s=class extends r{static styles=[t,a,e`
+import{l as e,n as t,o as n,r,t as i}from"./press-CVc8c9H4.js";import{n as a,t as o}from"./page-C5Uax4jB.js";var s=class extends r{static styles=[t,a,e`
       :host {
         --page-gap: var(--spacing-4);
         height: calc(100vh - 120px);

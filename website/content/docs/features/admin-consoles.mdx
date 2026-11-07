@@ -18,7 +18,7 @@ Moul provides two dedicated administrative interfaces to manage and inspect your
 Accessed at `http://localhost:8090/_moul_/` (or your production domain).
 
 ### Architecture & Capabilities
-- **Frontend Stack**: Built on **Moul UI (`@moul-dev/ui`)**, **React Aria Components**, and **StyleX** for atomic compile-time CSS-in-JS.
+- **Frontend Stack**: Lit custom elements built on **Moul UI (`@moul-dev/web-component`)** `<moul-*>` web components and its CSS design tokens, with no React.
 - **Visual Schema Designer**: Drag-and-drop field modeling, real-time expression validator, and relationship configuration.
 - **Data Browser & Grid**: Full-screen paginated record explorer with dynamic filtering, sorting, and inline editing.
 - **Data Import & Export**: One-click CSV and JSON export modals (with schema envelope toggle) and drag-and-drop import modal with format auto-detection, conflict modes (`upsert`, `insert`, `replace`), and detailed error reporting.

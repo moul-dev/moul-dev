@@ -1,7 +1,7 @@
 {
   "name": "moul-admin-ui",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0-alpha.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@moul-dev/ui": "2026.10.27",
+    "@moul-dev/web-component": "1.0.0-alpha.1",
     "@phosphor-icons/core": "^2.1.1",
     "@tanstack/db": "1.0.0-rc.1",
     "@tanstack/query-core": "^5.90.0",

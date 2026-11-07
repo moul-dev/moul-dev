@@ -10,7 +10,7 @@ Welcome to `moul`. This document provides essential instructions, operating rule
 
 Key Capabilities:
 - **Single Binary Engine**: Zero external dependencies. Everything runs inside a single binary (`moul`) backed by SQLite.
-- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built as Lit web components on Moul UI (`@moul-dev/ui`), with a tri-state system/light/dark theme toggle and Phosphor Icons, embedded via Go `embed.FS`.
+- **Embedded Web Admin Console**: Full-featured graphical admin UI mounted at `/_moul_/`, built as Lit web components on Moul UI (`@moul-dev/web-component`), with a tri-state system/light/dark theme toggle and Phosphor Icons, embedded via Go `embed.FS`.
 - **Configurable API Prefix**: All API endpoints default to `/api` but can be customized (e.g. `/v1`) or mounted directly at root (`""`) via `--api-prefix`, `MOUL_API_PREFIX`, or `WithAPIPrefix("")`.
 - **Dynamic Schema Execution**: Database collections (called "Mouls") and access rules can be created, updated, and queried at runtime via HTTP API, TUI console, or MCP server without restarting the process.
 - **Programmatic Go API & HTTP Hooks**: Embed the server via `pkg/app` and attach custom HTTP routes (`RegisterRoute`, `OnRouterInit`) and worker tasks without forking core engine logic.
@@ -264,7 +264,7 @@ Moul ships secure by default. The behaviors below apply to every caller that is 
 
 ## 7. Web Admin Console & Moul Inspector
 
-The embedded Web Admin Console (`ui/`) is a Vite-built TypeScript application of Lit custom elements on `@moul-dev/ui`, with no React dependency (`bun run build` fails if one appears). It routes with a small History API router (`ui/src/lib/router.ts`), caches server state with `@tanstack/query-core` behind Lit reactive controllers, and ships a dev-only **Moul Inspector** (see the last subsection).
+The embedded Web Admin Console (`ui/`) is a Vite-built TypeScript application of Lit custom elements on `@moul-dev/web-component`, with no React dependency (`bun run build` fails if one appears). It routes with a small History API router (`ui/src/lib/router.ts`), caches server state with `@tanstack/query-core` behind Lit reactive controllers, and ships a dev-only **Moul Inspector** (see the last subsection).
 
 ### Two-Context Console Authentication Architecture
 - **Master Admin Key Context (Step 1)**: The user establishes connectivity and authorization using their Master Admin Key (`MOUL_ADMIN_KEY`). Prevents unauthenticated `/api/setup` 401 calls and matches the terminal UX of `moul-ctl`.
