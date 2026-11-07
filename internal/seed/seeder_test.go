@@ -1,9 +1,15 @@
 package seed
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/moul-dev/moul-dev/internal/auth"
 	"github.com/moul-dev/moul-dev/internal/db"
+	"github.com/moul-dev/moul-dev/internal/handlers"
 	"github.com/pocketbase/dbx"
 )
 
@@ -58,5 +64,71 @@ func TestSeed(t *testing.T) {
 	err = dbConn.Select("*").From("_rootUsers").Where(dbx.HashExp{"email": "admin@example.com"}).One(&rootUser)
 	if err != nil {
 		t.Errorf("Expected root admin user to exist in _rootUsers: %v", err)
+	}
+}
+
+// TestSeededPostsAcceptUnchangedRelations re-saves every seeded post with its own relation values,
+// as the admin console's record drawer does. Seeded rows are inserted directly, so a relation
+// declared stricter than the data (a 1:1 author shared by two posts) only shows up on update.
+func TestSeededPostsAcceptUnchangedRelations(t *testing.T) {
+	auth.InitJWT("test-secret-key-for-unit-tests-1234")
+	dbConn, err := db.InitDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to init in-memory database: %v", err)
+	}
+	defer dbConn.Close()
+
+	if err := Seed(dbConn); err != nil {
+		t.Fatalf("Seed failed: %v", err)
+	}
+
+	postsMoul, err := db.LoadMoulByName(dbConn, "posts")
+	if err != nil {
+		t.Fatalf("Failed to load posts schema: %v", err)
+	}
+	var relationFields []string
+	for _, f := range postsMoul.Fields {
+		if f.Type == "relation" {
+			relationFields = append(relationFields, f.Name)
+		}
+	}
+	if len(relationFields) == 0 {
+		t.Fatal("Expected the seeded posts collection to declare relation fields")
+	}
+
+	var posts []dbx.NullStringMap
+	if err := dbConn.Select("*").From("posts").OrderBy("id").All(&posts); err != nil {
+		t.Fatalf("Failed to list seeded posts: %v", err)
+	}
+	if len(posts) < 3 {
+		t.Fatalf("Expected at least 3 seeded posts, got %d", len(posts))
+	}
+
+	router := handlers.NewRouter(dbConn, nil, nil, nil, nil, nil, "", true, "test")
+	token, err := auth.GenerateToken("root_admin_01", "admin@example.com", "admin", "_rootUsers")
+	if err != nil {
+		t.Fatalf("GenerateToken: %v", err)
+	}
+
+	for _, post := range posts {
+		id := post["id"].String
+		body := map[string]interface{}{}
+		for _, name := range relationFields {
+			body[name] = post[name].String
+		}
+		raw, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("marshal body: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/moul/posts/records/"+id, bytes.NewReader(raw))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("PATCH posts/%s with %s: expected 200, got %d: %s", id, raw, rec.Code, rec.Body.String())
+		}
 	}
 }

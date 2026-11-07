@@ -192,8 +192,9 @@ func Seed(dbConn *dbx.DB, opts ...SeedOptions) error {
 				{Name: "title", Type: "text", Required: true},
 				{Name: "slug", Type: "text", Required: true},
 				{Name: "content", Type: "text"},
-				{Name: "authorId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "users", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
-				{Name: "categoryId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "categories", Cardinality: "1:1", OnDelete: schema.OnDeleteSetNull}},
+				// An author writes many posts and a category holds many posts (pst_001 and pst_003 share an author).
+				{Name: "authorId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "users", Cardinality: "1:N", OnDelete: schema.OnDeleteSetNull}},
+				{Name: "categoryId", Type: "relation", RelationConfig: &schema.RelationConfig{TargetMoul: "categories", Cardinality: "1:N", OnDelete: schema.OnDeleteSetNull}},
 				{Name: "status", Type: "select", Options: []string{"draft", "published", "archived"}},
 				{Name: "viewsCount", Type: "number"},
 				{Name: "isFeatured", Type: "bool"},
