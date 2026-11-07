@@ -85,9 +85,9 @@ ui-install:
 ui-dev:
 	bun --cwd ui dev
 
-# Build Admin UI bundle with TanStack Router and StyleX into pkg/ui/dist
+# Build the Admin UI (Lit + @moul-dev/ui web components) into pkg/ui/dist; fails if React creeps back in
 ui-build:
-	bun --cwd ui tsc && bun --cwd ui vite build
+	bun run --cwd ui build
 
 # Verify that committed pkg/ui/dist matches a fresh build of ui
 ui-check-sync: ui-build

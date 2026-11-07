@@ -1,4 +1,5 @@
-import { EventClient } from '@tanstack/devtools-event-client';
+// In-page event bus for the dev-only Moul Inspector (`inspector.ts`). It replaced the TanStack
+// devtools event client; the payloads are unchanged.
 
 export interface AuthStatePayload {
   isAuthenticated: boolean;
@@ -37,18 +38,37 @@ export type MoulDevtoolsEvents = {
   'system:ping': SystemPingPayload;
 };
 
-class MoulDevtoolsEventClient extends EventClient<MoulDevtoolsEvents> {
-  constructor() {
-    super({
-      pluginId: 'moul-inspector',
-      debug: false,
-    });
+export type MoulDevtoolsEvent = {
+  [K in keyof MoulDevtoolsEvents]: { type: K; payload: MoulDevtoolsEvents[K] };
+}[keyof MoulDevtoolsEvents];
+
+const HISTORY_LIMIT = 100;
+
+class MoulDevtoolsBus extends EventTarget {
+  /** Newest first. Kept in dev only, so the inspector, which loads after startup, sees the boot. */
+  readonly history: MoulDevtoolsEvent[] = [];
+
+  emit<K extends keyof MoulDevtoolsEvents>(type: K, payload: MoulDevtoolsEvents[K]): void {
+    const event = { type, payload } as MoulDevtoolsEvent;
+    if (import.meta.env.DEV) {
+      this.history.unshift(event);
+      this.history.length = Math.min(this.history.length, HISTORY_LIMIT);
+    }
+    this.dispatchEvent(new CustomEvent<MoulDevtoolsEvent>('event', { detail: event }));
+  }
+
+  /** Subscribes to every event; returns the unsubscribe function. */
+  onAll(listener: (event: MoulDevtoolsEvent) => void): () => void {
+    const handler = (event: Event) => listener((event as CustomEvent<MoulDevtoolsEvent>).detail);
+    this.addEventListener('event', handler);
+    return () => this.removeEventListener('event', handler);
   }
 }
 
-export const moulDevtoolsClient = new MoulDevtoolsEventClient();
+export const moulDevtoolsClient = new MoulDevtoolsBus();
 
-// Helper emit functions
+const newId = () => Math.random().toString(36).substring(2, 9);
+
 export function emitAuthChange(payload: Omit<AuthStatePayload, 'timestamp'>): void {
   moulDevtoolsClient.emit('auth:state-change', {
     ...payload,
@@ -58,7 +78,7 @@ export function emitAuthChange(payload: Omit<AuthStatePayload, 'timestamp'>): vo
 
 export function emitApiRequest(payload: Omit<ApiRequestPayload, 'timestamp' | 'id'> & { id?: string }): void {
   moulDevtoolsClient.emit('api:request', {
-    id: payload.id || Math.random().toString(36).substring(2, 9),
+    id: payload.id || newId(),
     ...payload,
     timestamp: Date.now(),
   });
@@ -66,7 +86,7 @@ export function emitApiRequest(payload: Omit<ApiRequestPayload, 'timestamp' | 'i
 
 export function emitAppAction(payload: Omit<AppActionPayload, 'timestamp' | 'id'> & { id?: string }): void {
   moulDevtoolsClient.emit('app:action', {
-    id: payload.id || Math.random().toString(36).substring(2, 9),
+    id: payload.id || newId(),
     ...payload,
     timestamp: Date.now(),
   });

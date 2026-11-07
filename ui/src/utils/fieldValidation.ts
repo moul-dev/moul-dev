@@ -1,4 +1,4 @@
-import { MoulField, isReservedFieldName, isValidCamelCase, isEligibleForUnique } from '../components/collections/FieldsBuilder';
+import { type MoulField, isReservedFieldName, isValidCamelCase, isEligibleForUnique } from './fields';
 
 /**
  * Validates a single collection field value according to its schema constraints.

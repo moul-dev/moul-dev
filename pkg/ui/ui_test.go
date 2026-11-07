@@ -27,8 +27,8 @@ func TestDistFS(t *testing.T) {
 		t.Fatalf("index.html did not contain expected title: %s", string(content))
 	}
 
-	if !strings.Contains(string(content), `<div id="root"></div>`) {
-		t.Fatalf("index.html did not contain #root container: %s", string(content))
+	if !strings.Contains(string(content), `<admin-app></admin-app>`) {
+		t.Fatalf("index.html did not contain the <admin-app> root element: %s", string(content))
 	}
 }
 

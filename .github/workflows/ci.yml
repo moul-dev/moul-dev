@@ -94,6 +94,9 @@ jobs:
       - name: Install UI Dependencies
         run: bun install --cwd ui
 
+      - name: Verify No React Dependencies
+        run: bun ui/scripts/verify-no-react.ts
+
       - name: Typecheck Admin UI
         run: bun --cwd ui tsc
 

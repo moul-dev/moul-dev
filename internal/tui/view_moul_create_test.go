@@ -217,3 +217,26 @@ func TestSaveMoulFormAuthDefaults(t *testing.T) {
 		t.Fatalf("saveMoulForm returned error: %v", res.err)
 	}
 }
+
+func TestEditMoulFormKeepsType(t *testing.T) {
+	m := NewModel("http://localhost:8090", "test-key")
+	m.State = StateMoulCreate
+	m.initMoulFormForEdit(schema.Moul{
+		Name:   "members",
+		Type:   "auth",
+		Fields: []schema.MoulField{{Name: "nickname", Type: "text"}},
+	})
+	m.MoulForm.Init()
+
+	// The type is shown, not offered: the server answers 400 to a type change
+	view := m.MoulForm.View()
+	if !strings.Contains(view, "auth (fixed at creation)") {
+		t.Errorf("Expected the edit form to show the fixed type, got:\n%s", view)
+	}
+	if strings.Contains(view, "Worker (Job Queue Table)") {
+		t.Errorf("Expected no type options in the edit form, got:\n%s", view)
+	}
+	if m.newMoulType != "auth" {
+		t.Fatalf("Expected type auth, got %q", m.newMoulType)
+	}
+}

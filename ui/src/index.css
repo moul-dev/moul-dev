@@ -13,10 +13,6 @@
   --content-max-width: 1200px;
 }
 
-.sidebar-collapsed {
-  --content-max-width: 100%;
-}
-
 *,
 *::before,
 *::after {
@@ -25,7 +21,7 @@
 
 html,
 body,
-#root {
+admin-app {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -33,9 +29,8 @@ body,
   overflow: hidden;
 }
 
-#root>div {
-  height: 100%;
-  width: 100%;
+admin-app {
+  display: block;
 }
 
 body {
@@ -63,18 +58,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: light-dark(oklch(68% 0.02 250), oklch(42% 0.04 250));
-}
-
-@media (min-width: 768px) {
-  .mobile-only,
-  .mobile-only-tabs {
-    display: none !important;
-  }
-}
-
-@media (max-width: 767px) {
-  .mobile-hide-sidebar,
-  .desktop-only {
-    display: none !important;
-  }
 }
