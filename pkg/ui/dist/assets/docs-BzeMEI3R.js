@@ -1,4 +1,4 @@
-import{C as e,r as t,t as n,v as r,x as i}from"./index-RipJGQkD.js";import{n as a,t as o}from"./page-BkXVDI8g.js";var s=class extends r{static styles=[t,a,e`
+import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a,t as o}from"./page-ITe5xmEa.js";var s=class extends r{static styles=[t,a,e`
       :host {
         --page-gap: var(--spacing-4);
         height: calc(100vh - 120px);
@@ -17,9 +17,9 @@ import{C as e,r as t,t as n,v as r,x as i}from"./index-RipJGQkD.js";import{n as 
         height: 100%;
         border: none;
       }
-    `];render(){return i`
-      ${o(`API Reference`,`Explore and test endpoints generated from your schema.`,i`
-          <moul-button variant="outline" @click=${n(()=>window.open(`/docs`,`_blank`,`noopener`))}>
+    `];render(){return n`
+      ${o(`API Reference`,`Explore and test endpoints generated from your schema.`,n`
+          <moul-button variant="outline" @click=${i(()=>window.open(`/docs`,`_blank`,`noopener`))}>
             Open in new tab
             <admin-icon slot="suffix" name="arrow-square-out" size="16"></admin-icon>
           </moul-button>

@@ -1,4 +1,4 @@
-import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}from"./index-RipJGQkD.js";import"./data-table-D9L3z-YW.js";import{n as u,t as d}from"./page-BkXVDI8g.js";import{t as f}from"./toast-CFk4KYOX.js";import{c as p,t as m}from"./record-helpers--GpKp9o_.js";var h=[`all`,`available`,`executing`,`completed`,`retryable`,`discarded`],g=`_workers`,_=[{name:`SendEmail`,description:`Asynchronous transactional email dispatcher`},{name:`DeliverWebhook`,description:`HTTP webhook payload delivery with exponential backoff`}],v=e=>String(e.state||`available`).toLowerCase();function y(e){let t=p(e);return t?c`<moul-badge tone=${t}>${e}</moul-badge>`:c`<moul-badge variant="bordered">${e}</moul-badge>`}function b(e){if(!e.payload)return e;if(typeof e.payload!=`string`)return e.payload;try{return JSON.parse(e.payload)}catch{return e.payload}}var x=e=>e?new Date(String(e)).toLocaleString():`N/A`,S=class extends s{static styles=[i,u,e`
+import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./live-query-DDtzER30.js";import{F as s,i as c,l,t as u,u as d}from"./index-DeN0Cdry.js";import"./data-table-kOkcDszi.js";import{n as f,t as p}from"./page-ITe5xmEa.js";import{t as m}from"./toast-CRunUHSe.js";import{c as h,t as g}from"./record-helpers-BhvqQe0T.js";var _=[`all`,`available`,`executing`,`completed`,`retryable`,`discarded`],v=[{name:`SendEmail`,description:`Asynchronous transactional email dispatcher`},{name:`DeliverWebhook`,description:`HTTP webhook payload delivery with exponential backoff`}],y=e=>String(e.state||`available`).toLowerCase();function b(e){let t=h(e);return t?r`<moul-badge tone=${t}>${e}</moul-badge>`:r`<moul-badge variant="bordered">${e}</moul-badge>`}function x(e){if(!e.payload)return l(e);if(typeof e.payload!=`string`)return e.payload;try{return JSON.parse(e.payload)}catch{return e.payload}}var S=e=>e?new Date(String(e)).toLocaleString():`N/A`,C=class extends i{static styles=[n,f,e`
       .badge-content,
       .actions {
         display: inline-flex;
@@ -129,37 +129,37 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
         background-color: var(--color-bg-subtle);
         color: var(--color-error-500);
       }
-    `];static properties={collection:{state:!0},filter:{state:!0},selectedJob:{state:!0},isInspectorOpen:{state:!0},copied:{state:!0}};copiedTimer;mouls=new r(this,()=>({queryKey:[`mouls`],queryFn:n.listMouls}));jobs=new r(this,()=>{let e=this.collection;return{queryKey:[`workerJobs`,e],queryFn:()=>e===g?n.listWorkers({perPage:100,sort:`-createdAt`}):n.listRecords(e,{perPage:100,sort:`-createdAt`}),refetchInterval:5e3}});updateJob(e,t){return this.collection===g?n.updateWorkerJob(e.id,t):n.updateRecord(this.collection,e.id,t)}retryMutation=new t(this,{mutationFn:e=>this.updateJob(e,{state:`available`,scheduled_at:new Date().toISOString()}),onSuccess:(e,t)=>{o.invalidateQueries({queryKey:[`workerJobs`]}),f.success(`Job Retried`,`Job ${t.id} marked as available for immediate processing.`),this.selectedJob?.id===t.id&&(this.selectedJob={...this.selectedJob,state:`available`})},onError:e=>f.error(`Retry Failed`,e.message||`Failed to retry job.`)});discardMutation=new t(this,{mutationFn:e=>this.updateJob(e,{state:`discarded`}),onSuccess:(e,t)=>{o.invalidateQueries({queryKey:[`workerJobs`]}),f.info(`Job Discarded`,`Job ${t.id} has been marked as discarded.`),this.selectedJob?.id===t.id&&(this.selectedJob={...this.selectedJob,state:`discarded`})},onError:e=>f.error(`Discard Failed`,e.message||`Failed to discard job.`)});constructor(){super(),this.collection=g,this.filter=`all`,this.selectedJob=null,this.isInspectorOpen=!1,this.copied=!1}get collections(){let e=(this.mouls.data??[]).filter(e=>e.type===`worker`&&e.name!==g);return[{name:g,label:`_workers (Built-in)`},...e.map(e=>({name:e.name,label:e.name}))]}willUpdate(){this.mouls.data&&!this.collections.some(e=>e.name===this.collection)&&(this.collection=g)}get allJobs(){let e=this.jobs.data;return Array.isArray(e)?e:e?.items||[]}inspect(e){this.selectedJob=e,this.isInspectorOpen=!0}async copyPayload(e){let t=e.payload||e;await m(typeof t==`string`?t:JSON.stringify(t,null,2))?(this.copied=!0,window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copied=!1,2e3)):f.error(`Copy Failed`,`The browser blocked clipboard access.`)}columns=[{key:`id`,title:`Job ID`,render:e=>c`<span class="mono nowrap" style="color: var(--color-primary-400); font-size: 0.8125rem">${e.id}</span>`},{key:`worker`,title:`Worker`,render:e=>c`<span style="font-weight: 600">${e.worker||`anonymous`}</span>`},{key:`queue`,title:`Queue`,render:e=>c`<span class="mono muted">${e.queue||`default`}</span>`},{key:`state`,title:`Status`,render:e=>y(v(e))},{key:`attempt`,title:`Attempts`,align:`end`,render:e=>{let t=e.attempt??0,n=e.max_attempts??3;return c`<span style="color: ${t>=n?`var(--color-error-500)`:`var(--color-fg-subtle)`}">${t}/${n}</span>`}},{key:`scheduled_at`,title:`Scheduled / Created`,render:e=>{let t=e.scheduled_at||e.createdAt||e.created_at;return c`<span class="muted small nowrap">${t?new Date(t).toLocaleTimeString():`-`}</span>`}},{key:`__actions`,title:`Actions`,align:`end`,render:e=>{let t=v(e),n=t===`retryable`||t===`discarded`||t===`completed`,r=t===`available`||t===`retryable`||t===`executing`,i=this.retryMutation.isPending&&this.retryMutation.result.variables?.id===e.id,o=this.discardMutation.isPending&&this.discardMutation.result.variables?.id===e.id;return c`
+    `];static properties={collection:{state:!0},filter:{state:!0},selectedJob:{state:!0},isInspectorOpen:{state:!0},copied:{state:!0}};copiedTimer;workerMouls=new o(this,e=>e.from({moul:c}).where(({moul:e})=>s(e.type,`worker`)));get queue(){return d(this.collection)}jobs=new o(this,e=>e.from({job:this.queue}).orderBy(({job:e})=>e.createdAt,`desc`).orderBy(({job:e})=>e.id,`asc`),()=>[this.queue]);async setJobState(e,t,n,r){try{await this.queue.update(String(e.id),e=>Object.assign(e,t)).when(`settled`),n()}catch(e){r(e?.message)}}retry(e){return this.setJobState(e,{state:`available`,scheduled_at:new Date().toISOString()},()=>m.success(`Job Retried`,`Job ${e.id} marked as available for immediate processing.`),e=>m.error(`Retry Failed`,e||`Failed to retry job.`))}discard(e){return this.setJobState(e,{state:`discarded`},()=>m.info(`Job Discarded`,`Job ${e.id} has been marked as discarded.`),e=>m.error(`Discard Failed`,e||`Failed to discard job.`))}constructor(){super(),this.collection=u,this.filter=`all`,this.selectedJob=null,this.isInspectorOpen=!1,this.copied=!1}get collections(){let e=this.workerMouls.data.filter(e=>e.name!==u);return[{name:u,label:`_workers (Built-in)`},...e.map(e=>({name:e.name,label:e.name}))]}willUpdate(){this.workerMouls.isReady&&!this.collections.some(e=>e.name===this.collection)&&(this.collection=u)}get allJobs(){return this.jobs.data}inspect(e){this.selectedJob=e,this.isInspectorOpen=!0}async copyPayload(e){let t=e.payload||l(e);await g(typeof t==`string`?t:JSON.stringify(t,null,2))?(this.copied=!0,window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copied=!1,2e3)):m.error(`Copy Failed`,`The browser blocked clipboard access.`)}columns=[{key:`id`,title:`Job ID`,render:e=>r`<span class="mono nowrap" style="color: var(--color-primary-400); font-size: 0.8125rem">${e.id}</span>`},{key:`worker`,title:`Worker`,render:e=>r`<span style="font-weight: 600">${e.worker||`anonymous`}</span>`},{key:`queue`,title:`Queue`,render:e=>r`<span class="mono muted">${e.queue||`default`}</span>`},{key:`state`,title:`Status`,render:e=>b(y(e))},{key:`attempt`,title:`Attempts`,align:`end`,render:e=>{let t=e.attempt??0,n=e.max_attempts??3;return r`<span style="color: ${t>=n?`var(--color-error-500)`:`var(--color-fg-subtle)`}">${t}/${n}</span>`}},{key:`scheduled_at`,title:`Scheduled / Created`,render:e=>{let t=e.scheduled_at||e.createdAt||e.created_at;return r`<span class="muted small nowrap">${t?new Date(t).toLocaleTimeString():`-`}</span>`}},{key:`__actions`,title:`Actions`,align:`end`,render:e=>{let n=y(e),i=n===`retryable`||n===`discarded`||n===`completed`,o=n===`available`||n===`retryable`||n===`executing`,s=!!e.$hasPendingWrites;return r`
           <span class="actions" style="display: inline-flex; gap: var(--spacing-1)">
             <moul-button variant="ghost" is-icon size="sm" aria-label=${`Inspect job ${e.id}`} @click=${a(()=>this.inspect(e))}>
               <admin-icon name="eye" size="15"></admin-icon>
             </moul-button>
-            ${n?c`
+            ${i?r`
                   <moul-button
                     variant="secondary"
                     size="sm"
                     aria-label=${`Retry job ${e.id}`}
-                    ?is-pending=${i}
-                    @click=${a(()=>this.retryMutation.mutate(e))}
+                    ?is-disabled=${s}
+                    @click=${a(()=>this.retry(e))}
                   >
                     <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                     Retry
                   </moul-button>
-                `:l}
-            ${r?c`
+                `:t}
+            ${o?r`
                   <moul-button
                     variant="danger-soft"
                     size="sm"
                     aria-label=${`Discard job ${e.id}`}
-                    ?is-pending=${o}
-                    @click=${a(()=>this.discardMutation.mutate(e))}
+                    ?is-disabled=${s}
+                    @click=${a(()=>this.discard(e))}
                   >
                     <admin-icon slot="prefix" name="prohibit" size="14"></admin-icon>
                     Discard
                   </moul-button>
-                `:l}
+                `:t}
           </span>
-        `}}];renderInspector(){let e=this.selectedJob;return c`
+        `}}];renderInspector(){let e=this.selectedJob,n=e&&(this.queue.get(String(e.id))??e);return r`
       <moul-drawer
         placement="right"
         size="md"
@@ -168,33 +168,33 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
       >
         <div slot="header" class="drawer-title">
           <span class="badge-content" style="gap: var(--spacing-2)">
-            Job Inspector ${e?y(String(e.state||``).toLowerCase()):l}
+            Job Inspector ${n?b(String(n.state||``).toLowerCase()):t}
           </span>
           <moul-button variant="ghost" is-icon size="sm" aria-label="Close" @click=${a(()=>this.isInspectorOpen=!1)}>
             <admin-icon name="x" size="16"></admin-icon>
           </moul-button>
         </div>
-        ${e?c`
+        ${n?r`
               <div class="inspector">
-                <div class="detail"><span class="detail-label">Job ID</span><span class="mono">${e.id}</span></div>
-                <div class="detail"><span class="detail-label">Worker Handler</span><strong>${e.worker}</strong></div>
+                <div class="detail"><span class="detail-label">Job ID</span><span class="mono">${n.id}</span></div>
+                <div class="detail"><span class="detail-label">Worker Handler</span><strong>${n.worker}</strong></div>
                 <div class="detail">
                   <span class="detail-label">Queue & Execution Attempts</span>
                   <span>
-                    Queue: <code>${e.queue||`default`}</code> • Attempts:
-                    <strong>${e.attempt??0} / ${e.max_attempts??3}</strong>
+                    Queue: <code>${n.queue||`default`}</code> • Attempts:
+                    <strong>${n.attempt??0} / ${n.max_attempts??3}</strong>
                   </span>
                 </div>
-                ${e.last_error?c`
+                ${n.last_error?r`
                       <div class="detail">
                         <span class="detail-label" style="color: var(--color-error-500)">Last Error Trace</span>
-                        <pre class="error-trace">${e.last_error}</pre>
+                        <pre class="error-trace">${n.last_error}</pre>
                       </div>
-                    `:l}
+                    `:t}
                 <div class="detail" style="border: none; padding: 0">
                   <div class="row-between">
                     <span class="detail-label">Job Payload JSON</span>
-                    <moul-button variant="ghost" size="sm" @click=${a(()=>this.copyPayload(e))}>
+                    <moul-button variant="ghost" size="sm" @click=${a(()=>this.copyPayload(n))}>
                       <admin-icon
                         slot="prefix"
                         name=${this.copied?`check`:`copy`}
@@ -204,38 +204,42 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
                       ${this.copied?`Copied`:`Copy`}
                     </moul-button>
                   </div>
-                  <pre class="code">${JSON.stringify(b(e),null,2)}</pre>
+                  <pre class="code">${JSON.stringify(x(n),null,2)}</pre>
                 </div>
                 <div class="detail">
                   <span class="detail-label">Timestamps</span>
                   <span class="muted" style="font-size: 0.8125rem">
-                    Created: ${x(e.createdAt||e.created_at)}<br />
-                    Updated: ${x(e.updatedAt||e.updated_at)}<br />
-                    Scheduled: ${x(e.scheduled_at)}
+                    Created: ${S(n.createdAt||n.created_at)}<br />
+                    Updated: ${S(n.updatedAt||n.updated_at)}<br />
+                    Scheduled: ${S(n.scheduled_at)}
                   </span>
                 </div>
               </div>
-            `:l}
+            `:t}
         <moul-button slot="footer" variant="outline" @click=${a(()=>this.isInspectorOpen=!1)}>Close</moul-button>
-        ${e?c`
+        ${n?r`
               <moul-button
                 slot="footer"
                 variant="danger-soft"
-                ?is-disabled=${e.state===`discarded`}
-                ?is-pending=${this.discardMutation.isPending}
-                @click=${a(()=>this.discardMutation.mutate(e))}
+                ?is-disabled=${n.state===`discarded`||!!n.$hasPendingWrites}
+                @click=${a(()=>this.discard(n))}
               >
                 <admin-icon slot="prefix" name="prohibit" size="14"></admin-icon>
                 Discard Job
               </moul-button>
-              <moul-button slot="footer" variant="primary" ?is-pending=${this.retryMutation.isPending} @click=${a(()=>this.retryMutation.mutate(e))}>
+              <moul-button
+                slot="footer"
+                variant="primary"
+                ?is-disabled=${!!n.$hasPendingWrites}
+                @click=${a(()=>this.retry(n))}
+              >
                 <admin-icon slot="prefix" name="arrows-counter-clockwise" size="14"></admin-icon>
                 Retry Job
               </moul-button>
-            `:l}
+            `:t}
       </moul-drawer>
-    `}render(){let e=this.allJobs,t=this.filter===`all`?e:e.filter(e=>v(e)===this.filter),n=this.collections;return c`
-      ${d(`Worker Queue`,`Monitor background jobs, queues, and retries.`,c`
+    `}render(){let e=this.allJobs,n=this.filter===`all`?e:e.filter(e=>y(e)===this.filter),i=this.collections;return r`
+      ${p(`Worker Queue`,`Monitor background jobs, queues, and retries.`,r`
           <moul-badge tone="success">
             <span class="badge-content">
               <admin-icon name="check-circle" weight="fill" size="14"></admin-icon>
@@ -249,19 +253,19 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
           <div class="card-header">
             <span class="card-title">
               <admin-icon name="queue" size="20" color="var(--color-primary-500)"></admin-icon>
-              Queue (${t.length})
+              Queue (${n.length})
             </span>
             <span class="toolbar">
-              ${n.length>1?c`
+              ${i.length>1?r`
                     <moul-select
                       aria-label="Worker Collection"
                       selected-key=${this.collection}
                       @selectionchange=${e=>{e.detail.selectedKey&&(this.collection=e.detail.selectedKey)}}
                     >
-                      ${n.map(e=>c`<moul-select-item key=${e.name}>${e.label}</moul-select-item>`)}
+                      ${i.map(e=>r`<moul-select-item key=${e.name}>${e.label}</moul-select-item>`)}
                     </moul-select>
-                  `:l}
-              <moul-button variant="secondary" @click=${a(()=>this.jobs.refetch())}>
+                  `:t}
+              <moul-button variant="secondary" @click=${a(()=>this.queue.utils.refetch())}>
                 <admin-icon slot="prefix" name="arrows-clockwise" size="14"></admin-icon>
                 Refresh
               </moul-button>
@@ -270,13 +274,13 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
         </moul-card-header>
         <moul-card-body>
           <div class="filters">
-            ${h.map(t=>{let n=t===`all`?e.length:e.filter(e=>v(e)===t).length,r=t===`all`?`All`:t.charAt(0).toUpperCase()+t.slice(1);return c`
+            ${_.map(t=>{let n=t===`all`?e.length:e.filter(e=>y(e)===t).length,i=t===`all`?`All`:t.charAt(0).toUpperCase()+t.slice(1);return r`
                 <moul-button variant=${this.filter===t?`primary`:`outline`} size="sm" @click=${a(()=>this.filter=t)}>
-                  ${r} (${n})
+                  ${i} (${n})
                 </moul-button>
               `})}
           </div>
-          <admin-data-table aria-label="Worker Jobs Table" dense .columns=${this.columns} .rows=${t} ?loading=${this.jobs.result.isLoading}>
+          <admin-data-table aria-label="Worker Jobs Table" dense .columns=${this.columns} .rows=${n} ?loading=${this.jobs.isLoading}>
             <moul-empty-state slot="empty">
               <admin-icon slot="icon" name="queue" size="32" color="var(--color-fg-subtle)"></admin-icon>
               <span slot="title">No jobs found</span>
@@ -297,7 +301,7 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
         </moul-card-header>
         <moul-card-body>
           <div class="worker-list">
-            ${_.map(e=>c`
+            ${v.map(e=>r`
                 <div class="worker">
                   <div>
                     <span class="worker-name">${e.name}</span>
@@ -311,4 +315,4 @@ import{C as e,c as t,d as n,l as r,r as i,t as a,u as o,v as s,x as c,y as l}fro
       </moul-card>
 
       ${this.renderInspector()}
-    `}};customElements.define(`admin-workers-page`,S);export{S as AdminWorkersPage};
+    `}};customElements.define(`admin-workers-page`,C);export{C as AdminWorkersPage};

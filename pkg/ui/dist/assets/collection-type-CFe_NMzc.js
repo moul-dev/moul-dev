@@ -1,1 +1,0 @@
-import{x as e}from"./index-RipJGQkD.js";var t={auth:`primary`,worker:`warning`,analytic:`success`};function n(n){let r=t[n];return r?e`<moul-badge tone=${r}>${n}</moul-badge>`:e`<moul-badge variant="bordered">${n}</moul-badge>`}export{n as t};

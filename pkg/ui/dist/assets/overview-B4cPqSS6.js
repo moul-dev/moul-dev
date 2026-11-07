@@ -1,4 +1,4 @@
-import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJGQkD.js";import{t as c}from"./repeat-CCJXDy8Q.js";import{n as l,t as u}from"./page-BkXVDI8g.js";import{t as d}from"./collection-type-CFe_NMzc.js";var f={page:1,perPage:30},p=class extends o{static styles=[i,e`
+import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{n as a}from"./query-DEj2kaNm.js";import{t as o}from"./client-DaTS5Mxb.js";import{t as s}from"./router-B1wwybcr.js";import{t as c}from"./live-query-DDtzER30.js";import{i as l}from"./index-DeN0Cdry.js";import{t as u}from"./repeat-Utyd6s0W.js";import{n as d,t as f}from"./page-ITe5xmEa.js";import{t as p}from"./collection-type-CsNDn6tw.js";var m={page:1,perPage:30},h=class extends r{static styles=[t,e`
       :host {
         display: block;
       }
@@ -57,18 +57,18 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
         padding-top: var(--spacing-2);
         border-top: 1px solid var(--color-border-subtle);
       }
-    `];static properties={moul:{attribute:!1}};count=new n(this,()=>({queryKey:[`collectionRecordCount`,this.moul?.name],queryFn:()=>t.listRecords(this.moul.name,{perPage:1}),enabled:!!this.moul?.name}));render(){let{name:e,type:t}=this.moul,{data:n,isLoading:i}=this.count.result,o=(n&&!Array.isArray(n)?n.totalItems:void 0)??(Array.isArray(n)?n.length:0),c=`/records/${encodeURIComponent(e)}`;return s`
+    `];static properties={moul:{attribute:!1}};count=new a(this,()=>({queryKey:[`collectionRecordCount`,this.moul?.name],queryFn:()=>o.listRecords(this.moul.name,{perPage:1}),enabled:!!this.moul?.name}));render(){let{name:e,type:t}=this.moul,{data:r,isLoading:a}=this.count.result,o=(r&&!Array.isArray(r)?r.totalItems:void 0)??(Array.isArray(r)?r.length:0),c=`/records/${encodeURIComponent(e)}`;return n`
       <moul-card>
         <moul-card-body>
           <div class="inner">
             <div class="top-row">
-              <a class="name" href=${r.href(c,f)}>
+              <a class="name" href=${s.href(c,m)}>
                 <admin-icon name="database" size="18" color="var(--color-primary-500)"></admin-icon>
                 <span>${e}</span>
               </a>
               <div class="badges">
-                ${d(t)}
-                <moul-badge variant="bordered">${i?`...`:`${o} records`}</moul-badge>
+                ${p(t)}
+                <moul-badge variant="bordered">${a?`...`:`${o} records`}</moul-badge>
               </div>
             </div>
 
@@ -76,7 +76,7 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
               <moul-button
                 variant="outline"
                 aria-label=${`Create new record in ${e}`}
-                @click=${a(()=>r.navigate(c,{search:{...f,create:!0}}))}
+                @click=${i(()=>s.navigate(c,{search:{...m,create:!0}}))}
               >
                 <admin-icon slot="prefix" name="plus" size="14"></admin-icon>
                 New Record
@@ -84,7 +84,7 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
               <moul-button
                 variant="ghost"
                 aria-label=${`Browse ${e} records`}
-                @click=${a(()=>r.navigate(c,{search:f}))}
+                @click=${i(()=>s.navigate(c,{search:m}))}
               >
                 View Table
                 <admin-icon slot="suffix" name="arrow-right" size="14"></admin-icon>
@@ -93,7 +93,7 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
           </div>
         </moul-card-body>
       </moul-card>
-    `}};customElements.define(`admin-collection-card`,p);var m=class extends o{static styles=[i,l,e`
+    `}};customElements.define(`admin-collection-card`,h);var g=class extends r{static styles=[t,d,e`
       .stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -123,23 +123,23 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
         grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
         gap: var(--spacing-4);
       }
-    `];mouls=new n(this,()=>({queryKey:[`mouls`],queryFn:t.listMouls}));metrics=new n(this,()=>({queryKey:[`sysmon`],queryFn:t.getMetrics,refetchInterval:5e3}));renderCollections(){let{data:e,isLoading:t}=this.mouls.result;return t?s`<div class="muted">Loading collections...</div>`:!e||e.length===0?s`
+    `];mouls=new c(this,e=>e.from({moul:l}));metrics=new a(this,()=>({queryKey:[`sysmon`],queryFn:o.getMetrics,refetchInterval:5e3}));renderCollections(){let{data:e,isLoading:t}=this.mouls;return t?n`<div class="muted">Loading collections...</div>`:e.length===0?n`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-primary-500)"></admin-icon>
           <span slot="title">No collections yet</span>
           <span slot="description">Create your first collection to define your schema and store data.</span>
-          <moul-button slot="actions" variant="primary" @click=${a(()=>r.navigate(`/collections`))}>
+          <moul-button slot="actions" variant="primary" @click=${i(()=>s.navigate(`/collections`))}>
             <admin-icon slot="prefix" name="plus" size="14"></admin-icon>
             Create Collection
           </moul-button>
         </moul-empty-state>
-      `:s`
+      `:n`
       <div class="collections">
-        ${c(e,e=>e.name,e=>s`<admin-collection-card .moul=${e}></admin-collection-card>`)}
+        ${u(e,e=>e.name,e=>n`<admin-collection-card .moul=${e}></admin-collection-card>`)}
       </div>
-    `}render(){let{data:e,isLoading:t}=this.mouls.result,n=this.metrics.data?.current,i=Array.isArray(e)?e.length:0,o=n?Math.round(Number(n.memory?.used)/1024/1024*10)/10:0,c=Number(n?.system?.num_goroutines)||0,l=()=>`...`;return s`
-      ${u(`Overview`,`System status and collections at a glance.`,s`
-          <moul-button variant="primary" @click=${a(()=>r.navigate(`/collections`))}>
+    `}render(){let{data:e,isLoading:t}=this.mouls,r=this.metrics.data?.current,a=Array.isArray(e)?e.length:0,o=r?Math.round(Number(r.memory?.used)/1024/1024*10)/10:0,c=Number(r?.system?.num_goroutines)||0,l=()=>`...`;return n`
+      ${f(`Overview`,`System status and collections at a glance.`,n`
+          <moul-button variant="primary" @click=${i(()=>s.navigate(`/collections`))}>
             Manage Collections
             <admin-icon slot="suffix" name="arrow-right" size="16"></admin-icon>
           </moul-button>
@@ -149,7 +149,7 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
         <moul-stat
           label="Collections"
           description="Active schema tables"
-          .value=${i}
+          .value=${a}
           .valueFormatter=${t?l:void 0}
         >
           <admin-icon slot="icon" name="database" size="20" color="var(--color-primary-500)"></admin-icon>
@@ -157,9 +157,9 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
         <moul-stat
           label="Memory"
           description="Go runtime heap"
-          suffix=${n?` MB`:``}
+          suffix=${r?` MB`:``}
           .value=${o}
-          .valueFormatter=${n?void 0:l}
+          .valueFormatter=${r?void 0:l}
         >
           <admin-icon slot="icon" name="cpu" size="20" color="var(--color-success-500)"></admin-icon>
         </moul-stat>
@@ -167,7 +167,7 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
           label="Goroutines"
           description="Active concurrent routines"
           .value=${c}
-          .valueFormatter=${n?void 0:l}
+          .valueFormatter=${r?void 0:l}
         >
           <admin-icon slot="icon" name="pulse" size="20" color="var(--color-warning-500)"></admin-icon>
         </moul-stat>
@@ -179,8 +179,8 @@ import{C as e,d as t,l as n,o as r,r as i,t as a,v as o,x as s}from"./index-RipJ
       <div class="section">
         <div class="section-header">
           <h2>Collections</h2>
-          ${i>2?s`<span class="muted" style="font-size: var(--font-size-sm)">${i} collections</span>`:``}
+          ${a>2?n`<span class="muted" style="font-size: var(--font-size-sm)">${a} collections</span>`:``}
         </div>
         ${this.renderCollections()}
       </div>
-    `}};customElements.define(`admin-overview-page`,m);export{p as AdminCollectionCard,m as AdminOverviewPage};
+    `}};customElements.define(`admin-overview-page`,g);export{h as AdminCollectionCard,g as AdminOverviewPage};

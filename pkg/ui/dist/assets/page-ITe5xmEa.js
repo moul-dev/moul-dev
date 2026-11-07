@@ -1,4 +1,4 @@
-import{C as e,x as t,y as n}from"./index-RipJGQkD.js";var r=e`
+import{c as e,i as t,o as n}from"./press-BQyLhwVv.js";var r=e`
   :host {
     display: flex;
     flex-direction: column;
@@ -56,12 +56,12 @@ import{C as e,x as t,y as n}from"./index-RipJGQkD.js";var r=e`
   .mono {
     font-family: var(--font-mono);
   }
-`;function i(e,r,i){return t`
+`;function i(e,r,i){return n`
     <div class="page-header">
       <div>
         <h1 class="page-title">${e}</h1>
         <span class="page-subtitle">${r}</span>
       </div>
-      ${i?t`<div class="page-actions">${i}</div>`:n}
+      ${i?n`<div class="page-actions">${i}</div>`:t}
     </div>
   `}export{r as n,i as t};

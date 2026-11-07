@@ -1,4 +1,4 @@
-import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y as u}from"./index-RipJGQkD.js";import{t as d}from"./repeat-CCJXDy8Q.js";import{n as f,t as p}from"./page-BkXVDI8g.js";import{n as m,t as h}from"./rules-editor-DoS-GY3A.js";import{n as g,t as _}from"./forms-ChSyHPkg.js";import{a as v,f as y}from"./fieldValidation-D0RWDzzJ.js";import{t as b}from"./toast-CFk4KYOX.js";import{t as x}from"./collection-type-CFe_NMzc.js";var S=`id = @request.auth.id`;function C(e,t){if(e===`auth`){let e=e=>e===``||e===S||e===void 0?S:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===S?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var w=class extends c{static styles=[a,f,e`
+import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./router-B1wwybcr.js";import{n as s,t as c}from"./live-query-DDtzER30.js";import{i as l}from"./index-DeN0Cdry.js";import{t as u}from"./repeat-Utyd6s0W.js";import{n as d,t as f}from"./page-ITe5xmEa.js";import{n as p,t as m}from"./rules-editor-CZ0ADqS3.js";import{n as h,t as g}from"./forms-ChSyHPkg.js";import{a as _,f as v}from"./fieldValidation-D0RWDzzJ.js";import{t as y}from"./toast-CRunUHSe.js";import{t as b}from"./collection-type-CsNDn6tw.js";var x=`id = @request.auth.id`;function S(e,t){if(e===`auth`){let e=e=>e===``||e===x||e===void 0?x:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===x?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var C=class extends i{static styles=[n,d,e`
       :host {
         --page-gap: var(--spacing-4);
       }
@@ -81,12 +81,12 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
         gap: var(--spacing-4);
         padding-block: var(--spacing-3);
       }
-    `];static properties={isCreateOpen:{state:!0},createTab:{state:!0},collectionToDelete:{state:!0},newName:{state:!0},newType:{state:!0},newFields:{state:!0},newRules:{state:!0},error:{state:!0}};mouls=new r(this,()=>({queryKey:[`mouls`],queryFn:n.listMouls}));createMutation=new t(this,{mutationFn:e=>n.createMoul(e),onSuccess:()=>{s.invalidateQueries({queryKey:[`mouls`]}),this.isCreateOpen=!1,this.resetCreateForm(),b.success(`Collection Created`,`Collection created successfully.`)},onError:e=>{this.error=e.message||`Failed to create collection`}});deleteMutation=new t(this,{mutationFn:e=>n.deleteMoul(e),onSuccess:()=>{s.invalidateQueries({queryKey:[`mouls`]}),this.collectionToDelete=null,b.success(`Collection Deleted`,`Collection was deleted successfully.`)},onError:e=>{this.collectionToDelete=null,b.error(`Delete Failed`,e.message||`Failed to delete collection.`)}});constructor(){super(),this.isCreateOpen=!1,this.collectionToDelete=null,this.resetCreateForm()}resetCreateForm(){this.newName=``,this.newType=`base`,this.newFields=[],this.newRules={...h},this.createTab=`general`,this.error=null}openCreate(){this.resetCreateForm(),this.isCreateOpen=!0}handleCreate(){this.error=null;let e=this.newName.trim().toLowerCase();if(!e){this.error=`Collection name is required.`,this.createTab=`general`;return}let t=v(this.newFields,this.newType);if(!t.isValid){this.error=t.summaryErrors[0]||`Please fix invalid field configurations.`,this.createTab=`general`;return}let n=this.newType===`auth`?{listRule:this.newRules.listRule||S,viewRule:this.newRules.viewRule||S,createRule:this.newRules.createRule||``,updateRule:this.newRules.updateRule||S,deleteRule:this.newRules.deleteRule||S}:this.newRules;this.createMutation.mutate({name:e,type:this.newType,fields:y(this.newFields,e),rules:n})}renderFieldPills(e){let t=e=>l`<span class="pill">${e}</span>`;return l`
+    `];static properties={isCreateOpen:{state:!0},createTab:{state:!0},collectionToDelete:{state:!0},newName:{state:!0},newType:{state:!0},newFields:{state:!0},newRules:{state:!0},error:{state:!0}};mouls=new c(this,e=>e.from({moul:l}));creating=new s(this);deleting=new s(this);constructor(){super(),this.isCreateOpen=!1,this.collectionToDelete=null,this.resetCreateForm()}resetCreateForm(){this.newName=``,this.newType=`base`,this.newFields=[],this.newRules={...m},this.createTab=`general`,this.error=null}openCreate(){this.resetCreateForm(),this.isCreateOpen=!0}async handleCreate(){this.error=null;let e=this.newName.trim().toLowerCase();if(!e){this.error=`Collection name is required.`,this.createTab=`general`;return}if(l.has(e)){this.error=`A collection named "${e}" already exists.`,this.createTab=`general`;return}let t=_(this.newFields,this.newType);if(!t.isValid){this.error=t.summaryErrors[0]||`Please fix invalid field configurations.`,this.createTab=`general`;return}let n=this.newType===`auth`?{listRule:this.newRules.listRule||x,viewRule:this.newRules.viewRule||x,createRule:this.newRules.createRule||``,updateRule:this.newRules.updateRule||x,deleteRule:this.newRules.deleteRule||x}:this.newRules,r=l.insert({name:e,type:this.newType,fields:v(this.newFields,e),rules:n},{optimistic:!1});try{await this.creating.track(r)}catch(e){this.error=e?.message||`Failed to create collection`;return}this.isCreateOpen=!1,this.resetCreateForm(),y.success(`Collection Created`,`Collection created successfully.`)}async deleteCollection(e){try{await this.deleting.track(l.delete(e)),y.success(`Collection Deleted`,`Collection was deleted successfully.`)}catch(e){y.error(`Delete Failed`,e?.message||`Failed to delete collection.`)}finally{this.collectionToDelete=null}}renderFieldPills(e){let n=e=>r`<span class="pill">${e}</span>`;return r`
       <div class="fields">
         <span>Fields:</span>
-        ${t(`id`)} ${t(`createdAt`)} ${t(`updatedAt`)}
-        ${e.type===`auth`?l`<span class="pill accent">username</span><span class="pill accent">email</span>`:u}
-        ${(e.fields||[]).map(e=>e.type===`relation`&&e.relationConfig?l`
+        ${n(`id`)} ${n(`createdAt`)} ${n(`updatedAt`)}
+        ${e.type===`auth`?r`<span class="pill accent">username</span><span class="pill accent">email</span>`:t}
+        ${(e.fields||[]).map(e=>e.type===`relation`&&e.relationConfig?r`
                 <span
                   class="pill accent"
                   title=${`Relation ${e.name} ➔ ${e.relationConfig.targetMoul} (${e.relationConfig.cardinality||`1:N`})`}
@@ -94,9 +94,9 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
                   <admin-icon name="link" size="12"></admin-icon>
                   ${e.name} ➔ ${e.relationConfig.targetMoul}
                 </span>
-              `:t(`${e.name} (${e.type})`))}
+              `:n(`${e.name} (${e.type})`))}
       </div>
-    `}renderCard(e){let t=e.name;return l`
+    `}renderCard(e){let t=e.name;return r`
       <moul-card>
         <moul-card-header>
           <div class="card-top">
@@ -104,7 +104,7 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
               <admin-icon name="database" size="20" color="var(--color-primary-500)"></admin-icon>
               ${t}
             </span>
-            ${x(e.type)}
+            ${b(e.type)}
           </div>
         </moul-card-header>
         <moul-card-body>${this.renderFieldPills(e)}</moul-card-body>
@@ -113,33 +113,33 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
             <div class="action-group">
               <moul-button
                 variant="secondary"
-                @click=${o(()=>i.navigate(`/records/${encodeURIComponent(t)}`,{search:{page:1,perPage:30}}))}
+                @click=${a(()=>o.navigate(`/records/${encodeURIComponent(t)}`,{search:{page:1,perPage:30}}))}
               >
                 <admin-icon slot="prefix" name="table" size="14"></admin-icon>
                 Records
               </moul-button>
-              <moul-button variant="ghost" @click=${o(()=>i.navigate(`/collections/${encodeURIComponent(t)}`))}>
+              <moul-button variant="ghost" @click=${a(()=>o.navigate(`/collections/${encodeURIComponent(t)}`))}>
                 <admin-icon slot="prefix" name="sliders" size="14"></admin-icon>
                 Schema
               </moul-button>
             </div>
-            <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${t}`} @click=${o(()=>this.collectionToDelete=t)}>
+            <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${t}`} @click=${a(()=>this.collectionToDelete=t)}>
               <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
             </moul-button>
           </div>
         </moul-card-footer>
       </moul-card>
-    `}renderList(){let{data:e,isLoading:t}=this.mouls.result;return t?l`<div class="muted">Loading collections...</div>`:!e||e.length===0?l`
+    `}renderList(){let{data:e,isLoading:t}=this.mouls;return t?r`<div class="muted">Loading collections...</div>`:e.length===0?r`
         <moul-empty-state variant="bordered">
           <admin-icon slot="icon" name="database" size="32" color="var(--color-primary-500)"></admin-icon>
           <span slot="title">No collections yet</span>
           <span slot="description">Create your first collection to define your schema and store data.</span>
-          <moul-button slot="actions" variant="primary" @click=${o(()=>this.openCreate())}>
+          <moul-button slot="actions" variant="primary" @click=${a(()=>this.openCreate())}>
             <admin-icon slot="prefix" name="plus" size="14"></admin-icon>
             New Collection
           </moul-button>
         </moul-empty-state>
-      `:l`<div class="grid">${d(e,e=>e.name,e=>this.renderCard(e))}</div>`}renderCreateDrawer(){let e=this.createMutation.isPending;return l`
+      `:r`<div class="grid">${u(e,e=>e.name,e=>this.renderCard(e))}</div>`}renderCreateDrawer(){let e=this.creating.isPending;return r`
       <moul-drawer
         placement="right"
         size="lg"
@@ -148,16 +148,16 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
       >
         <div slot="header" class="drawer-header">
           <h2>Create Collection</h2>
-          <moul-button variant="ghost" is-icon size="sm" aria-label="Close" @click=${o(()=>this.isCreateOpen=!1)}>
+          <moul-button variant="ghost" is-icon size="sm" aria-label="Close" @click=${a(()=>this.isCreateOpen=!1)}>
             <admin-icon name="x" size="16"></admin-icon>
           </moul-button>
         </div>
 
         <form
           @submit=${e=>{e.preventDefault(),this.handleCreate()}}
-          @keydown=${g}
+          @keydown=${h}
         >
-          ${this.error?l`<moul-alert tone="error" description=${this.error}></moul-alert>`:u}
+          ${this.error?r`<moul-alert tone="error" description=${this.error}></moul-alert>`:t}
 
           <moul-tabs
             variant="line"
@@ -175,12 +175,12 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
                   description="Unique table name for this collection."
                   is-required
                   .value=${this.newName}
-                  @input=${e=>this.newName=_(e)}
+                  @input=${e=>this.newName=g(e)}
                 ></moul-text-field>
                 <moul-select
                   label="Collection Type"
                   selected-key=${this.newType}
-                  @selectionchange=${e=>{e.detail.selectedKey&&(this.newType=e.detail.selectedKey,this.newRules=C(this.newType,this.newRules))}}
+                  @selectionchange=${e=>{e.detail.selectedKey&&(this.newType=e.detail.selectedKey,this.newRules=S(this.newType,this.newRules))}}
                 >
                   <moul-select-item key="base">Base — Standard data collection</moul-select-item>
                   <moul-select-item key="auth">Auth — Users with authentication</moul-select-item>
@@ -189,7 +189,7 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
                   current-moul-name=${this.newName}
                   collection-type=${this.newType}
                   .fields=${this.newFields}
-                  .allMouls=${this.mouls.data??[]}
+                  .allMouls=${this.mouls.data}
                   @fieldschange=${e=>this.newFields=e.detail.fields}
                 ></admin-fields-builder>
               </div>
@@ -207,18 +207,18 @@ import{C as e,c as t,d as n,l as r,o as i,r as a,t as o,u as s,v as c,x as l,y a
           </moul-tabs>
         </form>
 
-        <moul-button slot="footer" variant="outline" @click=${o(()=>this.isCreateOpen=!1)}>Cancel</moul-button>
-        <moul-button slot="footer" variant="primary" ?is-disabled=${e} @click=${o(()=>this.handleCreate())}>
+        <moul-button slot="footer" variant="outline" @click=${a(()=>this.isCreateOpen=!1)}>Cancel</moul-button>
+        <moul-button slot="footer" variant="primary" ?is-disabled=${e} @click=${a(()=>this.handleCreate())}>
           ${e?`Creating Collection...`:`Create Collection`}
         </moul-button>
       </moul-drawer>
-    `}render(){return l`
-      ${p(`Collections Schema`,`Manage schemas, fields, and access rules.`,l`
-          <moul-button variant="primary" @click=${o(()=>this.openCreate())}>
+    `}render(){return r`
+      ${f(`Collections Schema`,`Manage schemas, fields, and access rules.`,r`
+          <moul-button variant="primary" @click=${a(()=>this.openCreate())}>
             <admin-icon slot="prefix" name="plus" weight="bold" size="16"></admin-icon>
             New Collection
           </moul-button>
         `)}
       ${this.renderList()} ${this.renderCreateDrawer()}
-      ${m({isOpen:this.collectionToDelete!==null,name:this.collectionToDelete??``,isPending:this.deleteMutation.isPending,onCancel:()=>this.collectionToDelete=null,onConfirm:()=>{this.collectionToDelete&&this.deleteMutation.mutate(this.collectionToDelete)}})}
-    `}};customElements.define(`admin-collections-page`,w);export{w as AdminCollectionsPage};
+      ${p({isOpen:this.collectionToDelete!==null,name:this.collectionToDelete??``,isPending:this.deleting.isPending,onCancel:()=>this.collectionToDelete=null,onConfirm:()=>{this.collectionToDelete&&this.deleteCollection(this.collectionToDelete)}})}
+    `}};customElements.define(`admin-collections-page`,C);export{C as AdminCollectionsPage};

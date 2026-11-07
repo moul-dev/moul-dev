@@ -1,15 +1,15 @@
-import{C as e,i as t,n,r,s as i,t as a,v as o,x as s}from"./index-RipJGQkD.js";var c={system:{icon:`sparkle`,label:`System`,next:`Light`},light:{icon:`sun`,label:`Light`,next:`Dark`},dark:{icon:`moon`,label:`Dark`,next:`System`}},l=class extends o{constructor(){super(),new i(this,t)}render(){let{icon:e,label:n,next:r}=c[t.theme],i=t.theme===`system`?`System (${t.resolvedTheme})`:n;return s`
-      <moul-tooltip content=${n} delay="250" placement="bottom">
+import{c as e,n as t,o as n,r,t as i}from"./press-BQyLhwVv.js";import{i as a}from"./router-B1wwybcr.js";import{Mn as o,Nn as s}from"./index-DeN0Cdry.js";var c={system:{icon:`sparkle`,label:`System`,next:`Light`},light:{icon:`sun`,label:`Light`,next:`Dark`},dark:{icon:`moon`,label:`Dark`,next:`System`}},l=class extends r{constructor(){super(),new a(this,s)}render(){let{icon:e,label:t,next:r}=c[s.theme],a=s.theme===`system`?`System (${s.resolvedTheme})`:t;return n`
+      <moul-tooltip content=${t} delay="250" placement="bottom">
         <moul-button
           variant="outline"
           is-icon
-          aria-label=${`Current theme: ${i}. Click to switch to ${r} mode`}
-          @click=${a(()=>t.cycleTheme())}
+          aria-label=${`Current theme: ${a}. Click to switch to ${r} mode`}
+          @click=${i(()=>s.cycleTheme())}
         >
           <admin-icon name=${e} weight="duotone" size="16"></admin-icon>
         </moul-button>
       </moul-tooltip>
-    `}};customElements.define(`admin-theme-toggle`,l);var u=[r,e`
+    `}};customElements.define(`admin-theme-toggle`,l);var u=[t,e`
     :host {
       display: block;
       height: 100%;
@@ -110,29 +110,29 @@ import{C as e,i as t,n,r,s as i,t as a,v as o,x as s}from"./index-RipJGQkD.js";v
       font-family: var(--font-family-base);
       width: 100%;
     }
-  `];function d(e){return s`
+  `];function d(e){return n`
     <div class="container">
       <div class="theme-toggle"><admin-theme-toggle></admin-theme-toggle></div>
       <div class="card">
         <moul-card>
           <moul-card-header>
             <div class="header">
-              <div class="logo">${n(44)}</div>
+              <div class="logo">${o(44)}</div>
               <h1>${e.title}</h1>
               <p class="subtitle">${e.subtitle}</p>
             </div>
           </moul-card-header>
           <moul-card-body><div class="stack">${e.body}</div></moul-card-body>
-          ${e.footer?s`<moul-card-footer><div class="footer">${e.footer}</div></moul-card-footer>`:``}
+          ${e.footer?n`<moul-card-footer><div class="footer">${e.footer}</div></moul-card-footer>`:``}
         </moul-card>
       </div>
     </div>
-  `}function f(e){return s`
+  `}function f(e){return n`
     <div class="key-status">
       <span class="key-status-label">
         <moul-badge tone="success" is-dot aria-label="Verified"></moul-badge>
         Admin key verified
       </span>
-      <moul-button variant="ghost" size="sm" @click=${a(()=>e())}>Change Key</moul-button>
+      <moul-button variant="ghost" size="sm" @click=${i(()=>e())}>Change Key</moul-button>
     </div>
   `}export{u as n,f as r,d as t};

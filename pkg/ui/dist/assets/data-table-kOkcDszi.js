@@ -1,4 +1,4 @@
-import{C as e,r as t,v as n,x as r,y as i}from"./index-RipJGQkD.js";import{t as a}from"./repeat-CCJXDy8Q.js";var o=class extends n{static styles=[t,e`
+import{c as e,i as t,n,o as r,r as i}from"./press-BQyLhwVv.js";import{t as a}from"./repeat-Utyd6s0W.js";var o=class extends i{static styles=[n,e`
       :host {
         display: block;
         width: 100%;
@@ -162,20 +162,20 @@ import{C as e,r as t,v as n,x as r,y as i}from"./index-RipJGQkD.js";import{t as 
           <tr>
             ${this.columns.map(()=>r`<td><moul-skeleton shape="line" height="1.25rem"></moul-skeleton></td>`)}
           </tr>
-        `):a(this.rows,this.rowKey,(e,t)=>r`
-        <tr class="row" aria-selected=${this.isRowSelected?String(this.isRowSelected(e)):i}>
-          ${this.columns.map(n=>r`
-              <td class=${n.align===`end`?`end`:``}>
-                ${n.render?n.render(e,t):String(e[n.key]??``)}
+        `):a(this.rows,this.rowKey,(e,n)=>r`
+        <tr class="row" aria-selected=${this.isRowSelected?String(this.isRowSelected(e)):t}>
+          ${this.columns.map(t=>r`
+              <td class=${t.align===`end`?`end`:``}>
+                ${t.render?t.render(e,n):String(e[t.key]??``)}
               </td>
             `)}
         </tr>
       `)}render(){return r`
-      <table aria-label=${this.getAttribute(`aria-label`)??i}>
+      <table aria-label=${this.getAttribute(`aria-label`)??t}>
         <thead>
           <tr>
             ${this.columns.map(e=>r`
-                <th class=${e.align===`end`?`end`:``} style=${e.width?`width: ${e.width}`:i}>
+                <th class=${e.align===`end`?`end`:``} style=${e.width?`width: ${e.width}`:t}>
                   ${e.title}
                 </th>
               `)}
@@ -185,5 +185,5 @@ import{C as e,r as t,v as n,x as r,y as i}from"./index-RipJGQkD.js";import{t as 
           ${this.renderBody()}
         </tbody>
       </table>
-      ${!this.loading&&this.rows.length===0?r`<div class="empty"><slot name="empty">No data available</slot></div>`:i}
+      ${!this.loading&&this.rows.length===0?r`<div class="empty"><slot name="empty">No data available</slot></div>`:t}
     `}};customElements.define(`admin-data-table`,o);

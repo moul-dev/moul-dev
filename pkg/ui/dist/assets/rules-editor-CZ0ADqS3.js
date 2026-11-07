@@ -1,4 +1,4 @@
-import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";import{t as o}from"./repeat-CCJXDy8Q.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-CFk4KYOX.js";function g(e){return i`
+import{c as e,i as t,n,o as r,r as i,t as a}from"./press-BQyLhwVv.js";import{t as o}from"./repeat-Utyd6s0W.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-CRunUHSe.js";function g(e){return r`
     <moul-alert-dialog
       tone="error"
       size="sm"
@@ -11,12 +11,12 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
         <br /><br />
         This will permanently delete the collection and all of its records. This action cannot be undone.
       </p>
-      <moul-button slot="footer" variant="outline" @click=${n(e.onCancel)}>Cancel</moul-button>
-      <moul-button slot="footer" variant="danger" ?is-pending=${e.isPending} @click=${n(e.onConfirm)}>
+      <moul-button slot="footer" variant="outline" @click=${a(e.onCancel)}>Cancel</moul-button>
+      <moul-button slot="footer" variant="danger" ?is-pending=${e.isPending} @click=${a(e.onConfirm)}>
         ${e.confirmLabel??`Delete`}
       </moul-button>
     </moul-alert-dialog>
-  `}function _(e,t,n,r){let i=(e.name||``).trim(),a=!i,o=!!(i&&m(i,r)),s=!(!i||l(i)),c=!!(i&&n.some((e,n)=>n!==t&&(e.name||``).trim().toLowerCase()===i.toLowerCase())),d=e.min!=null&&e.max!=null&&e.min>e.max,p=e.type===`select`&&(!e.options||e.options.length===0),h=u(e.type),g=!(!e.unique||h),_=f(i);return{isEmpty:a,isConflict:o,isInvalidCamel:s,isDuplicate:c,hasMinMaxConflict:d,hasSelectError:p,isUniqueEligible:h,hasUniqueError:g,isInvalid:a||o||s||c||d||p||g,suggestedCamel:_,canSuggestFix:s&&!!_&&_!==i&&l(_)&&!m(_,r)}}var v=class extends r{static styles=[t,e`
+  `}function _(e,t,n,r){let i=(e.name||``).trim(),a=!i,o=!!(i&&m(i,r)),s=!(!i||l(i)),c=!!(i&&n.some((e,n)=>n!==t&&(e.name||``).trim().toLowerCase()===i.toLowerCase())),d=e.min!=null&&e.max!=null&&e.min>e.max,p=e.type===`select`&&(!e.options||e.options.length===0),h=u(e.type),g=!(!e.unique||h),_=f(i);return{isEmpty:a,isConflict:o,isInvalidCamel:s,isDuplicate:c,hasMinMaxConflict:d,hasSelectError:p,isUniqueEligible:h,hasUniqueError:g,isInvalid:a||o||s||c||d||p||g,suggestedCamel:_,canSuggestFix:s&&!!_&&_!==i&&l(_)&&!m(_,r)}}var v=class extends i{static styles=[n,e`
       :host {
         display: flex;
         flex-direction: column;
@@ -323,7 +323,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
         font-size: var(--font-size-xs);
         color: var(--color-fg-subtle);
       }
-    `];static properties={fields:{attribute:!1},currentMoulName:{type:String,attribute:`current-moul-name`},allMouls:{attribute:!1},collectionType:{type:String,attribute:`collection-type`},expanded:{state:!0},newOptions:{state:!0}};constructor(){super(),this.fields=[],this.currentMoulName=``,this.allMouls=[],this.collectionType=`base`,this.expanded={},this.newOptions={}}emit(e){this.dispatchEvent(new CustomEvent(`fieldschange`,{detail:{fields:e}}))}addField(){this.emit([...this.fields,{name:p(this.fields),type:`text`,required:!1}])}moveField(e,t){let n=e+t;if(n<0||n>=this.fields.length)return;let r=[...this.fields];[r[e],r[n]]=[r[n],r[e]],this.emit(r),this.expanded={...this.expanded,[e]:!!this.expanded[n],[n]:!!this.expanded[e]}}removeField(e){this.emit(this.fields.filter((t,n)=>n!==e));let t={};for(let[n,r]of Object.entries(this.expanded)){let i=Number(n);i<e?t[i]=r:i>e&&(t[i-1]=r)}this.expanded=t}changeField(e,t,n){let r=[...this.fields],i={...r[e],[t]:n};if(t===`type`&&n===`relation`){let t=this.allMouls.find(e=>e.name!==this.currentMoulName)?.name||this.currentMoulName||`users`;i.relationConfig??={targetMoul:t,cardinality:`1:N`,onDelete:`SET_NULL`},/^field\d+$/i.test(i.name)&&(i.name=c(t,this.currentMoulName,this.fields.filter((t,n)=>n!==e))),this.expanded={...this.expanded,[e]:!0}}t===`type`&&n===`select`&&(i.options&&i.options.length!==0||(i.options=[`option1`,`option2`]),this.expanded={...this.expanded,[e]:!0}),t===`type`&&n===`cloak`&&(i.searchable??=!1),t===`unique`&&n&&(i.required=!0),t===`required`&&!n&&i.unique&&(i.unique=!1),t===`type`&&!u(String(n))&&(i.unique=!1),r[e]=i,this.emit(r)}changeRelation(e,t,n){let r=[...this.fields],i=r[e].relationConfig||{targetMoul:this.currentMoulName||`users`,cardinality:`1:N`,onDelete:`SET_NULL`};r[e]={...r[e],relationConfig:{...i,[t]:n}},this.emit(r)}addOption(e){let t=(this.newOptions[e]||``).trim();if(!t)return;let n=this.fields[e].options||[];if(!n.includes(t)){let r=[...this.fields];r[e]={...r[e],options:[...n,t]},this.emit(r)}this.newOptions={...this.newOptions,[e]:``}}removeOption(e,t){let n=[...this.fields];n[e]={...n[e],options:(n[e].options||[]).filter(e=>e!==t)},this.emit(n)}renderSystemFields(){let e=this.collectionType===`auth`,t=e=>i`<moul-badge variant="bordered" size="sm">${e}</moul-badge>`;return i`
+    `];static properties={fields:{attribute:!1},currentMoulName:{type:String,attribute:`current-moul-name`},allMouls:{attribute:!1},collectionType:{type:String,attribute:`collection-type`},expanded:{state:!0},newOptions:{state:!0}};constructor(){super(),this.fields=[],this.currentMoulName=``,this.allMouls=[],this.collectionType=`base`,this.expanded={},this.newOptions={}}emit(e){this.dispatchEvent(new CustomEvent(`fieldschange`,{detail:{fields:e}}))}addField(){this.emit([...this.fields,{name:p(this.fields),type:`text`,required:!1}])}moveField(e,t){let n=e+t;if(n<0||n>=this.fields.length)return;let r=[...this.fields];[r[e],r[n]]=[r[n],r[e]],this.emit(r),this.expanded={...this.expanded,[e]:!!this.expanded[n],[n]:!!this.expanded[e]}}removeField(e){this.emit(this.fields.filter((t,n)=>n!==e));let t={};for(let[n,r]of Object.entries(this.expanded)){let i=Number(n);i<e?t[i]=r:i>e&&(t[i-1]=r)}this.expanded=t}changeField(e,t,n){let r=[...this.fields],i={...r[e],[t]:n};if(t===`type`&&n===`relation`){let t=this.allMouls.find(e=>e.name!==this.currentMoulName)?.name||this.currentMoulName||`users`;i.relationConfig??={targetMoul:t,cardinality:`1:N`,onDelete:`SET_NULL`},/^field\d+$/i.test(i.name)&&(i.name=c(t,this.currentMoulName,this.fields.filter((t,n)=>n!==e))),this.expanded={...this.expanded,[e]:!0}}t===`type`&&n===`select`&&(i.options&&i.options.length!==0||(i.options=[`option1`,`option2`]),this.expanded={...this.expanded,[e]:!0}),t===`type`&&n===`cloak`&&(i.searchable??=!1),t===`unique`&&n&&(i.required=!0),t===`required`&&!n&&i.unique&&(i.unique=!1),t===`type`&&!u(String(n))&&(i.unique=!1),r[e]=i,this.emit(r)}changeRelation(e,t,n){let r=[...this.fields],i=r[e].relationConfig||{targetMoul:this.currentMoulName||`users`,cardinality:`1:N`,onDelete:`SET_NULL`};r[e]={...r[e],relationConfig:{...i,[t]:n}},this.emit(r)}addOption(e){let t=(this.newOptions[e]||``).trim();if(!t)return;let n=this.fields[e].options||[];if(!n.includes(t)){let r=[...this.fields];r[e]={...r[e],options:[...n,t]},this.emit(r)}this.newOptions={...this.newOptions,[e]:``}}removeOption(e,t){let n=[...this.fields];n[e]={...n[e],options:(n[e].options||[]).filter(e=>e!==t)},this.emit(n)}renderSystemFields(){let e=this.collectionType===`auth`,t=e=>r`<moul-badge variant="bordered" size="sm">${e}</moul-badge>`;return r`
       <div class="system-banner">
         <div class="system-banner-left">
           <span class="system-banner-label">
@@ -332,7 +332,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </span>
           <div class="system-fields">
             <span class="pill" title="Primary Key (string)">id ${t(`PK`)}</span>
-            ${e?i`
+            ${e?r`
                   <span class="pill auth" title="Required unique login username">
                     <admin-icon name="user" size="11"></admin-icon>username
                     <moul-badge tone="primary" size="sm">unique</moul-badge>
@@ -346,7 +346,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
                   </span>
                   <span class="pill" title="Creation ISO-8601 timestamp">createdAt</span>
                   <span class="pill" title="Last updated ISO-8601 timestamp">updatedAt</span>
-                `:i`
+                `:r`
                   <span class="pill" title="Creation ISO-8601 timestamp">createdAt ${t(`datetime`)}</span>
                   <span class="pill" title="Last updated ISO-8601 timestamp">updatedAt ${t(`datetime`)}</span>
                 `}
@@ -354,39 +354,39 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
         </div>
         <span class="system-banner-right">Auto-managed</span>
       </div>
-    `}renderOptionsToggle(e,t,r){let a=e.min!==void 0||e.max!==void 0,o=`sliders`,s,c=a;switch(e.type){case`relation`:o=`link`,c=!!e.relationConfig?.targetMoul,s=e.relationConfig?.targetMoul?`➔ ${e.relationConfig.targetMoul} (${e.relationConfig.cardinality||`1:N`})`:`Configure Relation`;break;case`cloak`:o=`lock-key`,c=!!e.searchable,s=e.searchable?`Searchable`:`Cloak Options`;break;case`select`:o=`tag`,c=(e.options||[]).length>0,s=`${(e.options||[]).length} options`;break;case`text`:case`editor`:s=a?`${e.min??0}..${e.max??`∞`} chars`:`Length Limits`;break;default:s=a?`${e.min??`-∞`}..${e.max??`+∞`}`:`Value Range`}return i`
+    `}renderOptionsToggle(e,t,n){let i=e.min!==void 0||e.max!==void 0,o=`sliders`,s,c=i;switch(e.type){case`relation`:o=`link`,c=!!e.relationConfig?.targetMoul,s=e.relationConfig?.targetMoul?`➔ ${e.relationConfig.targetMoul} (${e.relationConfig.cardinality||`1:N`})`:`Configure Relation`;break;case`cloak`:o=`lock-key`,c=!!e.searchable,s=e.searchable?`Searchable`:`Cloak Options`;break;case`select`:o=`tag`,c=(e.options||[]).length>0,s=`${(e.options||[]).length} options`;break;case`text`:case`editor`:s=i?`${e.min??0}..${e.max??`∞`} chars`:`Length Limits`;break;default:s=i?`${e.min??`-∞`}..${e.max??`+∞`}`:`Value Range`}return r`
       <moul-button
         variant=${c?`secondary`:`outline`}
         size="sm"
         aria-label=${`Configure options for ${e.name||`field ${t+1}`}`}
-        aria-expanded=${r?`true`:`false`}
-        @click=${n(()=>this.expanded={...this.expanded,[t]:!r})}
+        aria-expanded=${n?`true`:`false`}
+        @click=${a(()=>this.expanded={...this.expanded,[t]:!n})}
       >
         <admin-icon slot="prefix" name=${o} size="13" color="var(--color-primary-500)"></admin-icon>
         <span class="truncate">${s}</span>
-        <admin-icon slot="suffix" name=${r?`caret-up`:`caret-down`} size="12"></admin-icon>
+        <admin-icon slot="suffix" name=${n?`caret-up`:`caret-down`} size="12"></admin-icon>
       </moul-button>
-    `}renderWarnings(e,t,r){let o=(e,t=a)=>i`
+    `}renderWarnings(e,n,i){let o=(e,n=t)=>r`
       <div class="warning">
         <admin-icon name="warning-circle" size="14"></admin-icon>
         <span>${e}</span>
-        ${t}
+        ${n}
       </div>
-    `;return i`
+    `;return r`
       <div class="warnings">
-        ${r.isEmpty?o(`Field name is required.`):a}
-        ${r.isConflict?o(`“${e.name}” is already a built-in default column for ${this.collectionType} collections. Please rename or remove it.`):a}
-        ${!r.isConflict&&!r.isEmpty&&r.isInvalidCamel?o(`Field name “${e.name}” must be camelCase (e.g. “authorId”, “viewsCount”).`,r.canSuggestFix?i`
-                    <moul-button variant="secondary" size="sm" @click=${n(()=>this.changeField(t,`name`,r.suggestedCamel))}>
-                      Use “${r.suggestedCamel}”
+        ${i.isEmpty?o(`Field name is required.`):t}
+        ${i.isConflict?o(`“${e.name}” is already a built-in default column for ${this.collectionType} collections. Please rename or remove it.`):t}
+        ${!i.isConflict&&!i.isEmpty&&i.isInvalidCamel?o(`Field name “${e.name}” must be camelCase (e.g. “authorId”, “viewsCount”).`,i.canSuggestFix?r`
+                    <moul-button variant="secondary" size="sm" @click=${a(()=>this.changeField(n,`name`,i.suggestedCamel))}>
+                      Use “${i.suggestedCamel}”
                     </moul-button>
-                  `:a):a}
-        ${r.isDuplicate&&!r.isConflict?o(`Field name “${e.name}” is already used in another field. Field names must be unique.`):a}
-        ${r.hasMinMaxConflict?o(`Minimum (${e.min}) cannot be greater than maximum (${e.max}).`):a}
-        ${r.hasSelectError?o(`Select field requires at least one allowed option.`):a}
-        ${r.hasUniqueError?o(`Field “${e.name}” of type “${e.type}” cannot have a unique constraint.`):a}
+                  `:t):t}
+        ${i.isDuplicate&&!i.isConflict?o(`Field name “${e.name}” is already used in another field. Field names must be unique.`):t}
+        ${i.hasMinMaxConflict?o(`Minimum (${e.min}) cannot be greater than maximum (${e.max}).`):t}
+        ${i.hasSelectError?o(`Select field requires at least one allowed option.`):t}
+        ${i.hasUniqueError?o(`Field “${e.name}” of type “${e.type}” cannot have a unique constraint.`):t}
       </div>
-    `}renderRelationPanel(e,t){let n=e=>n=>{n.detail.selectedKey&&this.changeRelation(t,e,n.detail.selectedKey)};return i`
+    `}renderRelationPanel(e,t){let n=e=>n=>{n.detail.selectedKey&&this.changeRelation(t,e,n.detail.selectedKey)};return r`
       <div class="panel-section">
         <div class="relation-banner">
           <admin-icon name="info" size="15" color="var(--color-primary-500)"></admin-icon>
@@ -399,7 +399,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
             selected-key=${e.relationConfig?.targetMoul||this.allMouls[0]?.name||`users`}
             @selectionchange=${n(`targetMoul`)}
           >
-            ${this.allMouls.map(e=>i`
+            ${this.allMouls.map(e=>r`
                 <moul-select-item key=${e.name}>
                   ${e.name} ${e.name===this.currentMoulName?`(Self)`:`(${e.type})`}
                 </moul-select-item>
@@ -427,46 +427,46 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </moul-select>
         </div>
       </div>
-    `}renderSelectPanel(e,t){let r=e.options||[];return i`
+    `}renderSelectPanel(e,n){let i=e.options||[];return r`
       <div class="panel-section">
         <moul-tag-group
           label="Allowed Options"
           is-removable
-          @remove=${e=>this.removeOption(t,e.detail.key)}
+          @remove=${e=>this.removeOption(n,e.detail.key)}
         >
-          ${o(r,e=>e,e=>i`<moul-tag key=${e} size="sm" is-removable>${e}</moul-tag>`)}
+          ${o(i,e=>e,e=>r`<moul-tag key=${e} size="sm" is-removable>${e}</moul-tag>`)}
         </moul-tag-group>
-        ${r.length===0?i`<span class="options-empty">No options added yet. Type an option name below and press Add.</span>`:a}
+        ${i.length===0?r`<span class="options-empty">No options added yet. Type an option name below and press Add.</span>`:t}
         <div class="add-option">
           <moul-text-field
             aria-label="New option name"
             placeholder="Option name (e.g. published)"
-            .value=${this.newOptions[t]||``}
-            @input=${e=>this.newOptions={...this.newOptions,[t]:s(e)}}
-            @keydown=${e=>{e.key===`Enter`&&(e.preventDefault(),this.addOption(t))}}
+            .value=${this.newOptions[n]||``}
+            @input=${e=>this.newOptions={...this.newOptions,[n]:s(e)}}
+            @keydown=${e=>{e.key===`Enter`&&(e.preventDefault(),this.addOption(n))}}
           ></moul-text-field>
-          <moul-button variant="secondary" @click=${n(()=>this.addOption(t))}>Add</moul-button>
+          <moul-button variant="secondary" @click=${a(()=>this.addOption(n))}>Add</moul-button>
         </div>
       </div>
-    `}renderLimitsPanel(e,t,n){let r=n===`text`,o=e=>n=>{let r=n.target.value;this.changeField(t,e,r??void 0)};return i`
+    `}renderLimitsPanel(e,n,i){let a=i===`text`,o=e=>t=>{let r=t.target.value;this.changeField(n,e,r??void 0)};return r`
       <div class="panel-section">
-        <span class="constraint-label">${r?`Character Length Limits (optional):`:`Numeric Range Limits (optional):`}</span>
+        <span class="constraint-label">${a?`Character Length Limits (optional):`:`Numeric Range Limits (optional):`}</span>
         <div class="number-row">
           <moul-number-field
-            label=${r?`Min Characters`:`Minimum Value`}
-            min=${r?0:a}
+            label=${a?`Min Characters`:`Minimum Value`}
+            min=${a?0:t}
             .value=${e.min??null}
             @input=${o(`min`)}
           ></moul-number-field>
           <moul-number-field
-            label=${r?`Max Characters`:`Maximum Value`}
-            min=${r?0:a}
+            label=${a?`Max Characters`:`Maximum Value`}
+            min=${a?0:t}
             .value=${e.max??null}
             @input=${o(`max`)}
           ></moul-number-field>
         </div>
       </div>
-    `}renderCloakPanel(e,t){return i`
+    `}renderCloakPanel(e,t){return r`
       <div class="panel-section">
         <div class="security-header">
           <admin-icon name="lock-key" size="16" color="var(--color-primary-500)"></admin-icon>
@@ -483,20 +483,20 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           plaintext to the database server.
         </span>
       </div>
-    `}renderField(e,t){let r=_(e,t,this.fields,this.collectionType),o=e.type,c=o===`text`||o===`editor`,l=[`relation`,`select`,`number`,`cloak`].includes(o)||c,u=!!this.expanded[t],f=e.name||`field ${t+1}`;return i`
-      <div class="field-card ${o===`relation`?`relation`:``} ${r.isInvalid?`invalid`:``}">
+    `}renderField(e,n){let i=_(e,n,this.fields,this.collectionType),o=e.type,c=o===`text`||o===`editor`,l=[`relation`,`select`,`number`,`cloak`].includes(o)||c,u=!!this.expanded[n],f=e.name||`field ${n+1}`;return r`
+      <div class="field-card ${o===`relation`?`relation`:``} ${i.isInvalid?`invalid`:``}">
         <div class="card-content">
           <div class="top-row">
             <div class="order">
-              <span class="order-number">${t+1}</span>
+              <span class="order-number">${n+1}</span>
               <div class="order-actions">
                 <moul-button
                   variant="outline"
                   size="sm"
                   is-icon
                   aria-label=${`Move ${f} up`}
-                  ?is-disabled=${t===0}
-                  @click=${n(()=>this.moveField(t,-1))}
+                  ?is-disabled=${n===0}
+                  @click=${a(()=>this.moveField(n,-1))}
                 >
                   <admin-icon name="caret-up" size="12"></admin-icon>
                 </moul-button>
@@ -505,8 +505,8 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
                   size="sm"
                   is-icon
                   aria-label=${`Move ${f} down`}
-                  ?is-disabled=${t===this.fields.length-1}
-                  @click=${n(()=>this.moveField(t,1))}
+                  ?is-disabled=${n===this.fields.length-1}
+                  @click=${a(()=>this.moveField(n,1))}
                 >
                   <admin-icon name="caret-down" size="12"></admin-icon>
                 </moul-button>
@@ -514,22 +514,22 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
             </div>
 
             <moul-text-field
-              class="name ${r.isInvalid?`invalid`:``}"
-              aria-label=${`Field ${t+1} name`}
-              aria-invalid=${r.isInvalid?`true`:`false`}
+              class="name ${i.isInvalid?`invalid`:``}"
+              aria-label=${`Field ${n+1} name`}
+              aria-invalid=${i.isInvalid?`true`:`false`}
               placeholder="fieldName (e.g. authorId)"
               .value=${e.name}
-              @input=${e=>this.changeField(t,`name`,s(e))}
+              @input=${e=>this.changeField(n,`name`,s(e))}
             ></moul-text-field>
 
             <moul-select
               class="type"
-              aria-label=${`Field ${t+1} type`}
+              aria-label=${`Field ${n+1} type`}
               placeholder="Select Type"
               selected-key=${o}
-              @selectionchange=${e=>{e.detail.selectedKey&&this.changeField(t,`type`,e.detail.selectedKey)}}
+              @selectionchange=${e=>{e.detail.selectedKey&&this.changeField(n,`type`,e.detail.selectedKey)}}
             >
-              ${d.map(e=>i`
+              ${d.map(e=>r`
                   <moul-select-item key=${e.id} value=${e.label}>
                     <span class="type-item">
                       <admin-icon name=${e.icon} size="15" color="var(--color-primary-500)"></admin-icon>
@@ -539,7 +539,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
                 `)}
             </moul-select>
 
-            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${f}`} @click=${n(()=>this.removeField(t))}>
+            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${f}`} @click=${a(()=>this.removeField(n))}>
               <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
             </moul-button>
           </div>
@@ -549,37 +549,37 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
               <moul-checkbox
                 ?is-checked=${!!e.required}
                 aria-label=${`Required constraint for ${f}`}
-                @change=${e=>this.changeField(t,`required`,e.detail.isChecked)}
+                @change=${e=>this.changeField(n,`required`,e.detail.isChecked)}
               >
                 Required
               </moul-checkbox>
               <moul-checkbox
-                ?is-checked=${r.isUniqueEligible&&!!e.unique}
-                ?is-disabled=${!r.isUniqueEligible}
-                title=${r.isUniqueEligible?``:`Unique constraint is not supported for ${o} fields`}
-                aria-label=${r.isUniqueEligible?`Unique constraint for ${f}`:`Unique constraint not supported for ${f}`}
-                @change=${e=>this.changeField(t,`unique`,e.detail.isChecked)}
+                ?is-checked=${i.isUniqueEligible&&!!e.unique}
+                ?is-disabled=${!i.isUniqueEligible}
+                title=${i.isUniqueEligible?``:`Unique constraint is not supported for ${o} fields`}
+                aria-label=${i.isUniqueEligible?`Unique constraint for ${f}`:`Unique constraint not supported for ${f}`}
+                @change=${e=>this.changeField(n,`unique`,e.detail.isChecked)}
               >
                 Unique
               </moul-checkbox>
             </div>
-            ${l?this.renderOptionsToggle(e,t,u):a}
+            ${l?this.renderOptionsToggle(e,n,u):t}
           </div>
 
-          ${r.isInvalid?this.renderWarnings(e,t,r):a}
+          ${i.isInvalid?this.renderWarnings(e,n,i):t}
         </div>
 
-        ${u&&l?i`
+        ${u&&l?r`
               <div class="panel">
-                ${o===`relation`?this.renderRelationPanel(e,t):a}
-                ${o===`select`?this.renderSelectPanel(e,t):a}
-                ${c?this.renderLimitsPanel(e,t,`text`):a}
-                ${o===`number`?this.renderLimitsPanel(e,t,`number`):a}
-                ${o===`cloak`?this.renderCloakPanel(e,t):a}
+                ${o===`relation`?this.renderRelationPanel(e,n):t}
+                ${o===`select`?this.renderSelectPanel(e,n):t}
+                ${c?this.renderLimitsPanel(e,n,`text`):t}
+                ${o===`number`?this.renderLimitsPanel(e,n,`number`):t}
+                ${o===`cloak`?this.renderCloakPanel(e,n):t}
               </div>
-            `:a}
+            `:t}
       </div>
-    `}render(){return i`
+    `}render(){return r`
       <div class="header">
         <div class="title-group">
           <h3>
@@ -588,20 +588,20 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </h3>
           <span class="subtitle">Define custom columns, data types, and relationships.</span>
         </div>
-        <moul-button variant="primary" @click=${n(()=>this.addField())}>
+        <moul-button variant="primary" @click=${a(()=>this.addField())}>
           <admin-icon slot="prefix" name="plus" size="16"></admin-icon>
           Add Field
         </moul-button>
       </div>
 
       ${this.renderSystemFields()}
-      ${this.fields.length===0?i`
+      ${this.fields.length===0?r`
             <moul-empty-state variant="bordered" size="sm">
               <span slot="title">No custom fields</span>
               <span slot="description">Click '+ Add Field' to start defining custom columns.</span>
             </moul-empty-state>
-          `:i`<div class="field-list">${this.fields.map((e,t)=>this.renderField(e,t))}</div>`}
-    `}};customElements.define(`admin-fields-builder`,v);var y=[{title:`Public Access`,desc:`Anyone can query or execute without logging in. Leave rule empty.`,code:``,badge:`Public`},{title:`Signed-In Users Only`,desc:`Requires a valid login token from any registered user.`,code:`@request.auth.id != ""`,badge:`Authenticated`,tone:`primary`},{title:`Author / Owner Only`,desc:`Only the user who owns the record can view, edit, or delete it.`,code:`userId = @request.auth.id`,badge:`Ownership`,tone:`success`},{title:`User Profile Self-Access`,desc:`For users collections, allows users to view or update only their own profile.`,code:`id = @request.auth.id`,badge:`Self Profile`,tone:`success`},{title:`Administrators Only`,desc:`Restricts access exclusively to users with role="admin".`,code:`@request.auth.role = "admin"`,badge:`Admins Only`,tone:`warning`},{title:`Published or Creator`,desc:`Visitors can view published items, while creators can view/edit their own drafts.`,code:`status = "published" || authorId = @request.auth.id`,badge:`Visibility`,tone:`primary`},{title:`Cross-Table Role Lookup`,desc:`Checks whether the requesting user has permission in another table.`,code:`@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = "admin"`,badge:`Relational Join`,tone:`warning`}],b=[[`@request.auth.id`,`ID of current logged-in user`,`@request.auth.id != ""`],[`@request.auth.email`,`Email of logged-in user`,`@request.auth.email ~ "@company.com"`],[`@request.auth.role`,`Role field of the logged-in user`,`@request.auth.role = "admin"`],[`@request.body.<field>`,`Incoming request body value during create or update`,`@request.body.status = "draft"`],[`@request.headers.<name>`,`HTTP request header`,`@request.headers.x_api_version = "v1"`],[`@request.query.<name>`,`URL query parameter`,`@request.query.preview = "true"`]],x=[[`=, !=, >, <, >=, <=`,`Standard equality and comparison`,`price >= 10`],[`~, !~`,`Text contains or does not contain`,`title ~ "announcement"`],[`&&, ||, !`,`AND, OR, NOT logical operators`,`status = "active" && !archived`],[`?=`,`Array contains element`,`tags ?= "featured"`],[`@collection.<table>.<field>`,`Look up relation in another table`,`@collection.members.userId = @request.auth.id`],[`geoDistance(lon1, lat1, lon2, lat2)`,`Calculates geographical distance (km)`,`geoDistance(lon, lat, 104.9, 11.5) < 50`]],S=class extends r{static styles=[t,e`
+          `:r`<div class="field-list">${this.fields.map((e,t)=>this.renderField(e,t))}</div>`}
+    `}};customElements.define(`admin-fields-builder`,v);var y=[{title:`Public Access`,desc:`Anyone can query or execute without logging in. Leave rule empty.`,code:``,badge:`Public`},{title:`Signed-In Users Only`,desc:`Requires a valid login token from any registered user.`,code:`@request.auth.id != ""`,badge:`Authenticated`,tone:`primary`},{title:`Author / Owner Only`,desc:`Only the user who owns the record can view, edit, or delete it.`,code:`userId = @request.auth.id`,badge:`Ownership`,tone:`success`},{title:`User Profile Self-Access`,desc:`For users collections, allows users to view or update only their own profile.`,code:`id = @request.auth.id`,badge:`Self Profile`,tone:`success`},{title:`Administrators Only`,desc:`Restricts access exclusively to users with role="admin".`,code:`@request.auth.role = "admin"`,badge:`Admins Only`,tone:`warning`},{title:`Published or Creator`,desc:`Visitors can view published items, while creators can view/edit their own drafts.`,code:`status = "published" || authorId = @request.auth.id`,badge:`Visibility`,tone:`primary`},{title:`Cross-Table Role Lookup`,desc:`Checks whether the requesting user has permission in another table.`,code:`@collection.userRoles.userId = @request.auth.id && @collection.userRoles.role = "admin"`,badge:`Relational Join`,tone:`warning`}],b=[[`@request.auth.id`,`ID of current logged-in user`,`@request.auth.id != ""`],[`@request.auth.email`,`Email of logged-in user`,`@request.auth.email ~ "@company.com"`],[`@request.auth.role`,`Role field of the logged-in user`,`@request.auth.role = "admin"`],[`@request.body.<field>`,`Incoming request body value during create or update`,`@request.body.status = "draft"`],[`@request.headers.<name>`,`HTTP request header`,`@request.headers.x_api_version = "v1"`],[`@request.query.<name>`,`URL query parameter`,`@request.query.preview = "true"`]],x=[[`=, !=, >, <, >=, <=`,`Standard equality and comparison`,`price >= 10`],[`~, !~`,`Text contains or does not contain`,`title ~ "announcement"`],[`&&, ||, !`,`AND, OR, NOT logical operators`,`status = "active" && !archived`],[`?=`,`Array contains element`,`tags ?= "featured"`],[`@collection.<table>.<field>`,`Look up relation in another table`,`@collection.members.userId = @request.auth.id`],[`geoDistance(lon1, lat1, lon2, lat2)`,`Calculates geographical distance (km)`,`geoDistance(lon, lat, 104.9, 11.5) < 50`]],S=class extends i{static styles=[n,e`
       h2 {
         display: flex;
         align-items: center;
@@ -738,7 +738,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
         font-size: 0.75rem;
         font-weight: 600;
       }
-    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},copiedCode:{state:!0}};copiedTimer;constructor(){super(),this.isOpen=!1,this.copiedCode=null}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async copy(e,t){try{await navigator.clipboard.writeText(e)}catch{h.error(`Copy Failed`,`The browser blocked clipboard access.`);return}this.copiedCode=e,h.success(`Rule Copied`,`Rule for "${t}" copied to clipboard.`),window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copiedCode=null,2e3)}renderTable(e,t){return i`
+    `];static properties={isOpen:{type:Boolean,attribute:`is-open`},copiedCode:{state:!0}};copiedTimer;constructor(){super(),this.isOpen=!1,this.copiedCode=null}close(){this.isOpen=!1,this.dispatchEvent(new CustomEvent(`openchange`,{detail:{isOpen:!1}}))}async copy(e,t){try{await navigator.clipboard.writeText(e)}catch{h.error(`Copy Failed`,`The browser blocked clipboard access.`);return}this.copiedCode=e,h.success(`Rule Copied`,`Rule for "${t}" copied to clipboard.`),window.clearTimeout(this.copiedTimer),this.copiedTimer=window.setTimeout(()=>this.copiedCode=null,2e3)}renderTable(e,t){return r`
       <div class="table-wrapper">
         <table>
           <thead>
@@ -749,7 +749,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
             </tr>
           </thead>
           <tbody>
-            ${t.map(([e,t,n])=>i`
+            ${t.map(([e,t,n])=>r`
                 <tr>
                   <td><code class="code-tag">${e}</code></td>
                   <td>${t}</td>
@@ -759,7 +759,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </tbody>
         </table>
       </div>
-    `}render(){return i`
+    `}render(){return r`
       <moul-modal
         size="lg"
         ?is-open=${this.isOpen}
@@ -782,12 +782,12 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
               Popular Setups
             </h3>
             <div class="presets">
-              ${y.map(e=>{let t=this.copiedCode===e.code;return i`
+              ${y.map(e=>{let t=this.copiedCode===e.code;return r`
                   <div class="preset">
                     <div class="preset-info">
                       <div class="preset-title-row">
                         <span class="preset-title">${e.title}</span>
-                        ${e.tone?i`<moul-badge tone=${e.tone} size="sm">${e.badge}</moul-badge>`:i`<moul-badge variant="bordered" size="sm">${e.badge}</moul-badge>`}
+                        ${e.tone?r`<moul-badge tone=${e.tone} size="sm">${e.badge}</moul-badge>`:r`<moul-badge variant="bordered" size="sm">${e.badge}</moul-badge>`}
                       </div>
                       <span class="preset-desc">${e.desc}</span>
                       <code class="preset-code">${e.code||`<Empty — Public Access>`}</code>
@@ -795,7 +795,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
                     <moul-button
                       variant="outline"
                       aria-label=${`Copy rule: ${e.title}`}
-                      @click=${n(()=>this.copy(e.code,e.title))}
+                      @click=${a(()=>this.copy(e.code,e.title))}
                     >
                       <admin-icon slot="prefix" name=${t?`check`:`copy`} size="16"></admin-icon>
                       ${t?`Copied`:`Copy`}
@@ -822,9 +822,9 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </div>
         </div>
 
-        <moul-button slot="footer" variant="primary" @click=${n(()=>this.close())}>Close</moul-button>
+        <moul-button slot="footer" variant="primary" @click=${a(()=>this.close())}>Close</moul-button>
       </moul-modal>
-    `}};customElements.define(`admin-rule-docs-modal`,S);var C={listRule:``,viewRule:``,createRule:``,updateRule:``,deleteRule:``},w=`@request.auth.id != ""`,T=`id = @request.auth.id`,E=`userId = @request.auth.id`,D=`@request.auth.role = "admin"`,O=e=>({listRule:e,viewRule:e,createRule:e,updateRule:e,deleteRule:e});function k(e,t){switch(e){case`public`:return O(``);case`auth`:return O(w);case`owner`:return t?{listRule:T,viewRule:T,createRule:``,updateRule:T,deleteRule:T}:{listRule:``,viewRule:``,createRule:w,updateRule:E,deleteRule:E};case`admin`:return O(D)}}var A=[{key:`listRule`,label:`List Records`,placeholder:e=>e?T:`e.g. status = 'published'`,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`viewRule`,label:`View Record`,placeholder:()=>T,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`createRule`,label:`Create Record`,placeholder:e=>e?`Leave blank for public sign-ups`:`e.g. @request.auth.id != ''`,description:e=>e?`Leave blank for public sign-ups.`:`Leave blank for public creation.`},{key:`updateRule`,label:`Update Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public editing.`},{key:`deleteRule`,label:`Delete Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public deletion.`}],j=class extends r{static styles=[t,e`
+    `}};customElements.define(`admin-rule-docs-modal`,S);var C={listRule:``,viewRule:``,createRule:``,updateRule:``,deleteRule:``},w=`@request.auth.id != ""`,T=`id = @request.auth.id`,E=`userId = @request.auth.id`,D=`@request.auth.role = "admin"`,O=e=>({listRule:e,viewRule:e,createRule:e,updateRule:e,deleteRule:e});function k(e,t){switch(e){case`public`:return O(``);case`auth`:return O(w);case`owner`:return t?{listRule:T,viewRule:T,createRule:``,updateRule:T,deleteRule:T}:{listRule:``,viewRule:``,createRule:w,updateRule:E,deleteRule:E};case`admin`:return O(D)}}var A=[{key:`listRule`,label:`List Records`,placeholder:e=>e?T:`e.g. status = 'published'`,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`viewRule`,label:`View Record`,placeholder:()=>T,description:e=>e?`Default: ${T}`:`Leave blank for public access.`},{key:`createRule`,label:`Create Record`,placeholder:e=>e?`Leave blank for public sign-ups`:`e.g. @request.auth.id != ''`,description:e=>e?`Leave blank for public sign-ups.`:`Leave blank for public creation.`},{key:`updateRule`,label:`Update Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public editing.`},{key:`deleteRule`,label:`Delete Record`,placeholder:e=>e?T:`e.g. ${E}`,description:e=>e?`Default: ${T}`:`Leave blank for public deletion.`}],j=class extends i{static styles=[n,e`
       :host {
         display: flex;
         flex-direction: column;
@@ -876,7 +876,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
         flex-direction: column;
         gap: var(--spacing-3);
       }
-    `];static properties={rules:{attribute:!1},isAuthCollection:{type:Boolean,attribute:`is-auth-collection`},isDocsOpen:{state:!0}};constructor(){super(),this.rules={...C},this.isAuthCollection=!1,this.isDocsOpen=!1}emit(e){this.dispatchEvent(new CustomEvent(`ruleschange`,{detail:{rules:e}}))}render(){let e=this.isAuthCollection,t=t=>n(()=>this.emit(k(t,e)));return i`
+    `];static properties={rules:{attribute:!1},isAuthCollection:{type:Boolean,attribute:`is-auth-collection`},isDocsOpen:{state:!0}};constructor(){super(),this.rules={...C},this.isAuthCollection=!1,this.isDocsOpen=!1}emit(e){this.dispatchEvent(new CustomEvent(`ruleschange`,{detail:{rules:e}}))}render(){let e=this.isAuthCollection,t=t=>a(()=>this.emit(k(t,e)));return r`
       <div class="header">
         <div class="title-group">
           <h3>
@@ -885,7 +885,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
           </h3>
           <span class="subtitle">Leave blank for public access.</span>
         </div>
-        <moul-button variant="outline" @click=${n(()=>this.isDocsOpen=!0)}>
+        <moul-button variant="outline" @click=${a(()=>this.isDocsOpen=!0)}>
           <admin-icon slot="prefix" name="book-open" size="16"></admin-icon>
           Examples
         </moul-button>
@@ -899,7 +899,7 @@ import{C as e,r as t,t as n,v as r,x as i,y as a}from"./index-RipJGQkD.js";impor
       </div>
 
       <div class="rules">
-        ${A.map(t=>i`
+        ${A.map(t=>r`
             <moul-text-field
               label=${t.label}
               placeholder=${t.placeholder(e)}
