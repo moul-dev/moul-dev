@@ -61,6 +61,16 @@ export class AdminLayout extends LitElement {
         padding-inline: 0;
       }
 
+      /*
+       * Collapsed rows sit in an inline-block tooltip, which kept them at the rail's start
+       * edge. @moul-dev/web-component centers them after 1.0.0-alpha.1; drop this rule
+       * once the console is on that release.
+       */
+      :host([collapsed]) moul-sidebar-item {
+        width: 2.25rem;
+        margin-inline: auto;
+      }
+
       moul-popover {
         display: block;
         width: 100%;
@@ -68,6 +78,22 @@ export class AdminLayout extends LitElement {
 
       moul-popover::part(trigger) {
         display: block;
+      }
+
+      /* Collapsed, the avatar sits in an inline-block tooltip; center it in the rail. */
+      .user-tooltip {
+        display: flex;
+        justify-content: center;
+      }
+
+      /*
+       * The account menu is wider than the collapsed rail, so centering it under the rail
+       * pushed it off the window's left edge. Open it from the rail's edge instead.
+       */
+      :host([collapsed]) moul-popover::part(popover) {
+        left: anchor(left);
+        translate: none;
+        transform-origin: top left;
       }
 
       .user-trigger {
@@ -255,6 +281,11 @@ export class AdminLayout extends LitElement {
         line-height: 1;
       }
 
+      /* Collapsed, the collapse toggle sits exactly on the logo, which only left a hidden tab stop. */
+      :host([collapsed]) .brand {
+        display: none;
+      }
+
       .header-container {
         width: 100%;
         display: flex;
@@ -356,6 +387,15 @@ export class AdminLayout extends LitElement {
       ? '/collections'
       : allNavLinks.find((link) => router.isActive(link.to))?.to || '/overview';
     const isMobile = this.mobile.matches;
+    const userTrigger = html`
+      <button slot=${this.collapsed ? nothing : 'trigger'} type="button" class="user-trigger" aria-label="Root User Menu">
+        <span class="user-row">
+          <moul-avatar name=${displayName} size="sm"></moul-avatar>
+          ${this.collapsed ? nothing : html`<span class="user-name">${displayName}</span>`}
+        </span>
+        ${this.collapsed ? nothing : html`<admin-icon name="caret-down" size="12" color="var(--color-fg-subtle)"></admin-icon>`}
+      </button>
+    `;
 
     return html`
       <moul-sidebar
@@ -367,13 +407,13 @@ export class AdminLayout extends LitElement {
         <moul-sidebar-aside show-collapse-toggle>
           <moul-sidebar-header>
             <moul-popover placement="bottom">
-              <button slot="trigger" type="button" class="user-trigger" aria-label="Root User Menu">
-                <span class="user-row">
-                  <moul-avatar name=${displayName} size="sm"></moul-avatar>
-                  ${this.collapsed ? nothing : html`<span class="user-name">${displayName}</span>`}
-                </span>
-                ${this.collapsed ? nothing : html`<admin-icon name="caret-down" size="12" color="var(--color-fg-subtle)"></admin-icon>`}
-              </button>
+              ${this.collapsed
+                ? html`
+                    <moul-tooltip slot="trigger" class="user-tooltip" content=${displayName} placement="right" delay="200">
+                      ${userTrigger}
+                    </moul-tooltip>
+                  `
+                : userTrigger}
 
               <div class="menu">
                 <div class="menu-header">

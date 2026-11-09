@@ -763,26 +763,30 @@ export class AdminFieldsBuilder extends LitElement {
             <div class="order">
               <span class="order-number">${index + 1}</span>
               <div class="order-actions">
-                <moul-button
-                  variant="outline"
-                  size="sm"
-                  is-icon
-                  aria-label=${`Move ${label} up`}
-                  ?is-disabled=${index === 0}
-                  @click=${onPress(() => this.moveField(index, -1))}
-                >
-                  <admin-icon name="caret-up" size="12"></admin-icon>
-                </moul-button>
-                <moul-button
-                  variant="outline"
-                  size="sm"
-                  is-icon
-                  aria-label=${`Move ${label} down`}
-                  ?is-disabled=${index === this.fields.length - 1}
-                  @click=${onPress(() => this.moveField(index, 1))}
-                >
-                  <admin-icon name="caret-down" size="12"></admin-icon>
-                </moul-button>
+                <moul-tooltip content="Move up">
+                  <moul-button
+                    variant="outline"
+                    size="sm"
+                    is-icon
+                    aria-label=${`Move ${label} up`}
+                    ?is-disabled=${index === 0}
+                    @click=${onPress(() => this.moveField(index, -1))}
+                  >
+                    <admin-icon name="caret-up" size="12"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
+                <moul-tooltip content="Move down">
+                  <moul-button
+                    variant="outline"
+                    size="sm"
+                    is-icon
+                    aria-label=${`Move ${label} down`}
+                    ?is-disabled=${index === this.fields.length - 1}
+                    @click=${onPress(() => this.moveField(index, 1))}
+                  >
+                    <admin-icon name="caret-down" size="12"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
               </div>
             </div>
 
@@ -816,9 +820,11 @@ export class AdminFieldsBuilder extends LitElement {
               )}
             </moul-select>
 
-            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${label}`} @click=${onPress(() => this.removeField(index))}>
-              <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Remove field">
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${label}`} @click=${onPress(() => this.removeField(index))}>
+                <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
           </div>
 
           <div class="bottom-row">

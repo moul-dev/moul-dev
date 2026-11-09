@@ -240,18 +240,22 @@ export class AdminFileField extends LitElement {
         <div class="actions">
           ${url
             ? html`
-                <moul-button variant="ghost" is-icon aria-label="View file" @click=${onPress(() => window.open(url, '_blank', 'noopener'))}>
-                  <admin-icon name="arrow-square-out" size="14"></admin-icon>
-                </moul-button>
+                <moul-tooltip content="Open in new tab">
+                  <moul-button variant="ghost" is-icon aria-label="View file" @click=${onPress(() => window.open(url, '_blank', 'noopener'))}>
+                    <admin-icon name="arrow-square-out" size="14"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
               `
             : nothing}
           <moul-button variant="outline" aria-label="Replace file" ?is-disabled=${this.isUploading} @click=${onPress(() => this.browse())}>
             <admin-icon slot="prefix" name="upload-simple" size="14"></admin-icon>
             Replace
           </moul-button>
-          <moul-button variant="ghost" is-icon aria-label="Remove file" ?is-disabled=${this.isUploading} @click=${onPress(() => this.emit(null))}>
-            <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-          </moul-button>
+          <moul-tooltip content="Remove file">
+            <moul-button variant="ghost" is-icon aria-label="Remove file" ?is-disabled=${this.isUploading} @click=${onPress(() => this.emit(null))}>
+              <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+            </moul-button>
+          </moul-tooltip>
         </div>
       </div>
     `;

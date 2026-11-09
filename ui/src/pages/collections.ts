@@ -293,9 +293,11 @@ export class AdminCollectionsPage extends LitElement {
                 Schema
               </moul-button>
             </div>
-            <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${name}`} @click=${onPress(() => (this.collectionToDelete = name))}>
-              <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Delete collection">
+              <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${name}`} @click=${onPress(() => (this.collectionToDelete = name))}>
+                <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
           </div>
         </moul-card-footer>
       </moul-card>

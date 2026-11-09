@@ -288,9 +288,11 @@ export class AdminFlagsPage extends LitElement {
               >
                 ${flag.enabled ? 'Enabled' : 'Disabled'}
               </moul-switch>
-              <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${flag.key}`} @click=${onPress(() => (this.flagToDelete = flag))}>
-                <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="Delete flag">
+                <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${flag.key}`} @click=${onPress(() => (this.flagToDelete = flag))}>
+                  <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </div>
           </div>
         </moul-card-body>

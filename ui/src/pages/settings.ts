@@ -480,18 +480,22 @@ export class AdminSettingsPage extends LitElement {
         title: 'Actions',
         render: (r) => html`
           <span style="display: inline-flex; gap: var(--spacing-2)">
-            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Edit ${r.label}`} @click=${onPress(() => this.openDrawer('ratelimit-edit', r.index))}>
-              <admin-icon name="pencil-simple" size="16"></admin-icon>
-            </moul-button>
-            <moul-button
-              variant="ghost"
-              is-icon
-              size="sm"
-              aria-label=${`Delete ${r.label}`}
-              @click=${onPress(() => (this.ruleToDelete = { index: r.index, label: r.label }))}
-            >
-              <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Edit rule">
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Edit ${r.label}`} @click=${onPress(() => this.openDrawer('ratelimit-edit', r.index))}>
+                <admin-icon name="pencil-simple" size="16"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
+            <moul-tooltip content="Delete rule">
+              <moul-button
+                variant="ghost"
+                is-icon
+                size="sm"
+                aria-label=${`Delete ${r.label}`}
+                @click=${onPress(() => (this.ruleToDelete = { index: r.index, label: r.label }))}
+              >
+                <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
           </span>
         `,
       },

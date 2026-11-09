@@ -317,15 +317,17 @@ export class AdminImportModal extends LitElement {
                   <span class="file-size">${formatFileSize(file.size) || '0 B'} • ${isCsv ? 'CSV' : 'JSON'}</span>
                 </div>
               </div>
-              <moul-button
-                variant="ghost"
-                is-icon
-                aria-label="Remove selected file"
-                ?is-disabled=${this.isUploading}
-                @click=${onPress(() => (this.file = null))}
-              >
-                <admin-icon name="x" size="16"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="Remove file">
+                <moul-button
+                  variant="ghost"
+                  is-icon
+                  aria-label="Remove selected file"
+                  ?is-disabled=${this.isUploading}
+                  @click=${onPress(() => (this.file = null))}
+                >
+                  <admin-icon name="x" size="16"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </div>
           `
         : html`

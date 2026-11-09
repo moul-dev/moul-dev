@@ -550,12 +550,16 @@ export class AdminRecordsPage extends LitElement {
                     </moul-button>
                   `
                 : nothing}
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${rec.id}`} @click=${onPress(() => this.openDetail(rec))}>
-                <admin-icon name="pencil-simple" size="14"></admin-icon>
-              </moul-button>
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${rec.id}`} @click=${onPress(() => (this.recordToDelete = rec))}>
-                <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="View and edit">
+                <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${rec.id}`} @click=${onPress(() => this.openDetail(rec))}>
+                  <admin-icon name="pencil-simple" size="14"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
+              <moul-tooltip content="Delete record">
+                <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${rec.id}`} @click=${onPress(() => (this.recordToDelete = rec))}>
+                  <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </span>
           `;
         },

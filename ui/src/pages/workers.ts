@@ -321,9 +321,11 @@ export class AdminWorkersPage extends LitElement {
         const saving = Boolean(job.$hasPendingWrites);
         return html`
           <span class="actions" style="display: inline-flex; gap: var(--spacing-1)">
-            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Inspect job ${job.id}`} @click=${onPress(() => this.inspect(job))}>
-              <admin-icon name="eye" size="15"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Inspect job">
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Inspect job ${job.id}`} @click=${onPress(() => this.inspect(job))}>
+                <admin-icon name="eye" size="15"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
             ${canRetry
               ? html`
                   <moul-button
