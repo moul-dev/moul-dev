@@ -1,4 +1,4 @@
-import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./router-B1wwybcr.js";import{n as c,t as l}from"./live-query-DFtKXPMp.js";import{i as u}from"./index-C29yRTIN.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./rules-editor-f4xliTmf.js";import{n as h,t as g}from"./forms-ChSyHPkg.js";import{a as _,f as v}from"./fieldValidation-D0RWDzzJ.js";import{t as y}from"./toast-BKHbxuSD.js";import{t as b}from"./collection-type-BejiEvyc.js";var x=`id = @request.auth.id`;function S(e,t){if(e===`auth`){let e=e=>e===``||e===x||e===void 0?x:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===x?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var C=class extends i{static styles=[n,d,t`
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./router-B1wwybcr.js";import{n as c,t as l}from"./live-query-CaUrZsz9.js";import{i as u}from"./index-BTyfsV_n.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./rules-editor-GO4lt_fm.js";import{n as h,t as g}from"./forms-ChSyHPkg.js";import{a as _,f as v}from"./fieldValidation-D0RWDzzJ.js";import{t as y}from"./toast-C0GhDIwH.js";import{t as b}from"./collection-type-BejiEvyc.js";var x=`id = @request.auth.id`;function S(e,t){if(e===`auth`){let e=e=>e===``||e===x||e===void 0?x:e;return{listRule:e(t.listRule),viewRule:e(t.viewRule),createRule:t.createRule||``,updateRule:e(t.updateRule),deleteRule:e(t.deleteRule)}}let n=e=>e===x?``:e;return{listRule:n(t.listRule),viewRule:n(t.viewRule),createRule:t.createRule,updateRule:n(t.updateRule),deleteRule:n(t.deleteRule)}}var C=class extends i{static styles=[n,d,t`
       :host {
         --page-gap: var(--spacing-4);
       }
@@ -123,9 +123,11 @@ import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l a
                 Schema
               </moul-button>
             </div>
-            <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${t}`} @click=${a(()=>this.collectionToDelete=t)}>
-              <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Delete collection">
+              <moul-button variant="ghost" is-icon aria-label=${`Delete collection ${t}`} @click=${a(()=>this.collectionToDelete=t)}>
+                <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
           </div>
         </moul-card-footer>
       </moul-card>

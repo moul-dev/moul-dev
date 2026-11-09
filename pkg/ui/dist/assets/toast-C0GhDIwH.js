@@ -1,0 +1,1 @@
+import{Fn as e}from"./index-BTyfsV_n.js";var t=3e3;function n(n,r,i,a=t){return e.add({title:r,description:i,tone:n,duration:a})}var r={success:(e,t,r)=>n(`success`,e,t,r),error:(e,t,r)=>n(`error`,e,t,r),warning:(e,t,r)=>n(`warning`,e,t,r),info:(e,t,r)=>n(`primary`,e,t,r),close:t=>e.close(t)};export{r as t};

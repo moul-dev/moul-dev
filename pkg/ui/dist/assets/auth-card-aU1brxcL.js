@@ -1,4 +1,4 @@
-import{l as e,n as t,o as n,r,t as i}from"./press-CVc8c9H4.js";import{i as a}from"./router-B1wwybcr.js";import{Mn as o,Nn as s}from"./index-C29yRTIN.js";var c={system:{icon:`sparkle`,label:`System`,next:`Light`},light:{icon:`sun`,label:`Light`,next:`Dark`},dark:{icon:`moon`,label:`Dark`,next:`System`}},l=class extends r{constructor(){super(),new a(this,s)}render(){let{icon:e,label:t,next:r}=c[s.theme],a=s.theme===`system`?`System (${s.resolvedTheme})`:t;return n`
+import{l as e,n as t,o as n,r,t as i}from"./press-CVc8c9H4.js";import{i as a}from"./router-B1wwybcr.js";import{Mn as o,Nn as s}from"./index-BTyfsV_n.js";var c={system:{icon:`sparkle`,label:`System`,next:`Light`},light:{icon:`sun`,label:`Light`,next:`Dark`},dark:{icon:`moon`,label:`Dark`,next:`System`}},l=class extends r{constructor(){super(),new a(this,s)}render(){let{icon:e,label:t,next:r}=c[s.theme],a=s.theme===`system`?`System (${s.resolvedTheme})`:t;return n`
       <moul-tooltip content=${t} delay="250" placement="bottom">
         <moul-button
           variant="outline"

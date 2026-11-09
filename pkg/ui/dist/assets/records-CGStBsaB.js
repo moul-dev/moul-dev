@@ -1,4 +1,4 @@
-import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js";import{d as s,f as c,m as l,p as u,r as d,u as ee}from"./query-DdOx0cLf.js";import{t as f}from"./client-DaTS5Mxb.js";import{i as p,t as m}from"./router-B1wwybcr.js";import{n as h,t as g}from"./live-query-DFtKXPMp.js";import{F as _,Jt as te,a as v,c as y,i as b,l as x,o as S,r as C,s as w}from"./index-C29yRTIN.js";import"./data-table-BT-iosg4.js";import{n as T}from"./page-C5Uax4jB.js";import{n as E,t as D}from"./forms-ChSyHPkg.js";import{i as ne,n as re,r as ie,t as O}from"./fieldValidation-D0RWDzzJ.js";import{t as k}from"./toast-BKHbxuSD.js";import{a as A,c as j,i as M,n as N,o as P,r as F,s as I,t as L}from"./record-helpers-BhvqQe0T.js";var R=[{key:`json`,icon:`file-code`,label:`JSON`,description:`Structured JSON format. Ideal for migrations, backups, and nested relations.`},{key:`csv`,icon:`file-csv`,label:`CSV`,description:`RFC 4180 spreadsheet format. Ideal for Excel, Google Sheets, or data analysts.`}],z=class extends a{static styles=[r,n`
+import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js";import{d as s,f as c,m as l,p as u,r as d,u as ee}from"./query-DdOx0cLf.js";import{t as f}from"./client-DaTS5Mxb.js";import{i as p,t as m}from"./router-B1wwybcr.js";import{n as h,t as g}from"./live-query-CaUrZsz9.js";import{F as _,Jt as te,a as v,c as y,i as b,l as x,o as S,r as C,s as w}from"./index-BTyfsV_n.js";import"./data-table-BT-iosg4.js";import{n as T}from"./page-C5Uax4jB.js";import{n as E,t as D}from"./forms-ChSyHPkg.js";import{i as ne,n as re,r as ie,t as O}from"./fieldValidation-D0RWDzzJ.js";import{t as k}from"./toast-C0GhDIwH.js";import{a as A,c as j,i as M,n as N,o as P,r as F,s as I,t as L}from"./record-helpers-BhvqQe0T.js";var R=[{key:`json`,icon:`file-code`,label:`JSON`,description:`Structured JSON format. Ideal for migrations, backups, and nested relations.`},{key:`csv`,icon:`file-csv`,label:`CSV`,description:`RFC 4180 spreadsheet format. Ideal for Excel, Google Sheets, or data analysts.`}],z=class extends a{static styles=[r,n`
       h2 {
         display: flex;
         align-items: center;
@@ -370,15 +370,17 @@ import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js
                   <span class="file-size">${F(e.size)||`0 B`} • ${t?`CSV`:`JSON`}</span>
                 </div>
               </div>
-              <moul-button
-                variant="ghost"
-                is-icon
-                aria-label="Remove selected file"
-                ?is-disabled=${this.isUploading}
-                @click=${o(()=>this.file=null)}
-              >
-                <admin-icon name="x" size="16"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="Remove file">
+                <moul-button
+                  variant="ghost"
+                  is-icon
+                  aria-label="Remove selected file"
+                  ?is-disabled=${this.isUploading}
+                  @click=${o(()=>this.file=null)}
+                >
+                  <admin-icon name="x" size="16"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </div>
           `:i`
             <button
@@ -620,17 +622,21 @@ import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js
         </div>
         <div class="actions">
           ${n?i`
-                <moul-button variant="ghost" is-icon aria-label="View file" @click=${o(()=>window.open(n,`_blank`,`noopener`))}>
-                  <admin-icon name="arrow-square-out" size="14"></admin-icon>
-                </moul-button>
+                <moul-tooltip content="Open in new tab">
+                  <moul-button variant="ghost" is-icon aria-label="View file" @click=${o(()=>window.open(n,`_blank`,`noopener`))}>
+                    <admin-icon name="arrow-square-out" size="14"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
               `:t}
           <moul-button variant="outline" aria-label="Replace file" ?is-disabled=${this.isUploading} @click=${o(()=>this.browse())}>
             <admin-icon slot="prefix" name="upload-simple" size="14"></admin-icon>
             Replace
           </moul-button>
-          <moul-button variant="ghost" is-icon aria-label="Remove file" ?is-disabled=${this.isUploading} @click=${o(()=>this.emit(null))}>
-            <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-          </moul-button>
+          <moul-tooltip content="Remove file">
+            <moul-button variant="ghost" is-icon aria-label="Remove file" ?is-disabled=${this.isUploading} @click=${o(()=>this.emit(null))}>
+              <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+            </moul-button>
+          </moul-tooltip>
         </div>
       </div>
     `}renderDropzone(){let e=!!this.errorMessage;return i`
@@ -1346,12 +1352,16 @@ import{a as e,i as t,l as n,n as r,o as i,r as a,t as o}from"./press-CVc8c9H4.js
                       Retry
                     </moul-button>
                   `:t}
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${n.id}`} @click=${o(()=>this.openDetail(n))}>
-                <admin-icon name="pencil-simple" size="14"></admin-icon>
-              </moul-button>
-              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${n.id}`} @click=${o(()=>this.recordToDelete=n)}>
-                <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="View and edit">
+                <moul-button variant="ghost" is-icon size="sm" aria-label=${`View and edit record ${n.id}`} @click=${o(()=>this.openDetail(n))}>
+                  <admin-icon name="pencil-simple" size="14"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
+              <moul-tooltip content="Delete record">
+                <moul-button variant="ghost" is-icon size="sm" aria-label=${`Delete record ${n.id}`} @click=${o(()=>this.recordToDelete=n)}>
+                  <admin-icon name="trash" size="14" color="var(--color-error-500)"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </span>
           `}}),c}renderToolbar(e){let n=this.selectedIds.size,r=this.moul.first?.type===`worker`;return i`
       <moul-card>

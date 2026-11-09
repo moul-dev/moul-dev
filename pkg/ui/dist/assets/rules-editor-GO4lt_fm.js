@@ -1,4 +1,4 @@
-import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-BKHbxuSD.js";function g(e){return r`
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o}from"./query-DdOx0cLf.js";import{t as s}from"./forms-ChSyHPkg.js";import{c,d as l,l as u,o as d,p as f,s as p,u as m}from"./fieldValidation-D0RWDzzJ.js";import{t as h}from"./toast-C0GhDIwH.js";function g(e){return r`
     <moul-alert-dialog
       tone="error"
       size="sm"
@@ -490,26 +490,30 @@ import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l a
             <div class="order">
               <span class="order-number">${n+1}</span>
               <div class="order-actions">
-                <moul-button
-                  variant="outline"
-                  size="sm"
-                  is-icon
-                  aria-label=${`Move ${f} up`}
-                  ?is-disabled=${n===0}
-                  @click=${a(()=>this.moveField(n,-1))}
-                >
-                  <admin-icon name="caret-up" size="12"></admin-icon>
-                </moul-button>
-                <moul-button
-                  variant="outline"
-                  size="sm"
-                  is-icon
-                  aria-label=${`Move ${f} down`}
-                  ?is-disabled=${n===this.fields.length-1}
-                  @click=${a(()=>this.moveField(n,1))}
-                >
-                  <admin-icon name="caret-down" size="12"></admin-icon>
-                </moul-button>
+                <moul-tooltip content="Move up">
+                  <moul-button
+                    variant="outline"
+                    size="sm"
+                    is-icon
+                    aria-label=${`Move ${f} up`}
+                    ?is-disabled=${n===0}
+                    @click=${a(()=>this.moveField(n,-1))}
+                  >
+                    <admin-icon name="caret-up" size="12"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
+                <moul-tooltip content="Move down">
+                  <moul-button
+                    variant="outline"
+                    size="sm"
+                    is-icon
+                    aria-label=${`Move ${f} down`}
+                    ?is-disabled=${n===this.fields.length-1}
+                    @click=${a(()=>this.moveField(n,1))}
+                  >
+                    <admin-icon name="caret-down" size="12"></admin-icon>
+                  </moul-button>
+                </moul-tooltip>
               </div>
             </div>
 
@@ -539,9 +543,11 @@ import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l a
                 `)}
             </moul-select>
 
-            <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${f}`} @click=${a(()=>this.removeField(n))}>
-              <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
-            </moul-button>
+            <moul-tooltip content="Remove field">
+              <moul-button variant="ghost" is-icon size="sm" aria-label=${`Remove field ${f}`} @click=${a(()=>this.removeField(n))}>
+                <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
+              </moul-button>
+            </moul-tooltip>
           </div>
 
           <div class="bottom-row">

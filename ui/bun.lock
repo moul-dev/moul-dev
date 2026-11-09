@@ -5,7 +5,7 @@
     "": {
       "name": "moul-admin-ui",
       "dependencies": {
-        "@moul-dev/ui": "2026.10.27",
+        "@moul-dev/web-component": "1.0.0-alpha.1",
         "@phosphor-icons/core": "^2.1.1",
         "@tanstack/db": "1.0.0-rc.1",
         "@tanstack/query-core": "^5.90.0",
@@ -28,7 +28,7 @@
 
     "@lit/reactive-element": ["@lit/reactive-element@2.1.2", "", { "dependencies": { "@lit-labs/ssr-dom-shim": "^1.5.0" } }, "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="],
 
-    "@moul-dev/ui": ["@moul-dev/ui@2026.10.27", "", { "dependencies": { "@lit-labs/virtualizer": "^2.1.0", "@lit/context": "^1.1.3", "d3-scale": "^4.0.2", "d3-shape": "^3.2.0", "lit": "^3.2.1", "motion": "^13.4.1" } }, "sha512-uWdgX1S4MFZWdyhSW7aEqVA2Rdw6tH8Za3iDUTx/m0Cv+wt02RC1e4U2jmUmLTOJ1TThNB7Ih5gX6Qh5tkr5Xg=="],
+    "@moul-dev/web-component": ["@moul-dev/web-component@1.0.0-alpha.1", "", { "dependencies": { "@lit-labs/virtualizer": "^2.1.0", "@lit/context": "^1.1.3", "d3-scale": "^4.0.2", "d3-shape": "^3.2.0", "lit": "^3.2.1", "motion": "^13.4.1" } }, "sha512-9CTi4/0xMsAdNUQleveyP0Tfi4upMj5w1H+2SqZi+scz9ifkLwsVaGFdN7rif/mpeqZT1i7KClrf7X3EKIf5CA=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.155.0", "", {}, "sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q=="],
 

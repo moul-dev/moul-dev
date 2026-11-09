@@ -1,4 +1,4 @@
-import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o,t as s}from"./query-DdOx0cLf.js";import{t as c}from"./client-DaTS5Mxb.js";import{t as l}from"./live-query-DFtKXPMp.js";import{n as u}from"./index-C29yRTIN.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./forms-ChSyHPkg.js";import{t as h}from"./toast-BKHbxuSD.js";var g=`{
+import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l as o,t as s}from"./query-DdOx0cLf.js";import{t as c}from"./client-DaTS5Mxb.js";import{t as l}from"./live-query-CaUrZsz9.js";import{n as u}from"./index-BTyfsV_n.js";import{n as d,t as f}from"./page-C5Uax4jB.js";import{n as p,t as m}from"./forms-ChSyHPkg.js";import{t as h}from"./toast-C0GhDIwH.js";var g=`{
   "user_id": "usr_123",
   "role": "beta"
 }`,_=[{label:`Standard User`,json:`{
@@ -150,9 +150,11 @@ import{i as e,l as t,n,o as r,r as i,t as a}from"./press-CVc8c9H4.js";import{l a
               >
                 ${t.enabled?`Enabled`:`Disabled`}
               </moul-switch>
-              <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${t.key}`} @click=${a(()=>this.flagToDelete=t)}>
-                <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
-              </moul-button>
+              <moul-tooltip content="Delete flag">
+                <moul-button variant="ghost" is-icon aria-label=${`Delete flag ${t.key}`} @click=${a(()=>this.flagToDelete=t)}>
+                  <admin-icon name="trash" size="16" color="var(--color-error-500)"></admin-icon>
+                </moul-button>
+              </moul-tooltip>
             </div>
           </div>
         </moul-card-body>
