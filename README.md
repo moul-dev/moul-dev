@@ -971,7 +971,7 @@ make build
 
 ### Versioning & Releases
 
-Moul and `@moul-dev/web-component` share [SemVer](https://semver.org): a `major` release breaks an API or a default, a `minor` one adds API, and a `patch` only fixes. Release tags add a leading `v`. The first SemVer release is `v1.0.0-alpha.1`, and the alphas count up (`v1.0.0-alpha.2`, …) until `v1.0.0`.
+Moul and `@moul-dev/web-component` share [SemVer](https://semver.org): a `major` release breaks an API or a default, a `minor` one adds API, and a `patch` only fixes. Release tags add a leading `v`. The first SemVer release is `v1.0.0-alpha.2` (the `v1.0.0-alpha.1` tag has no release), and the alphas count up until `v1.0.0`.
 
 ```bash
 make next-version BUMP=prerelease              # v1.0.0-alpha.1 -> v1.0.0-alpha.2

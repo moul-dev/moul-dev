@@ -813,9 +813,12 @@ func TestRealtimeSSE_SlowConsumerEviction(t *testing.T) {
 	_, _ = reader.ReadString('\n') // data
 	_, _ = reader.ReadString('\n') // newline
 
-	// Flood the hub with large events to fill both OS socket buffer and the 128-event client channel
-	largePayload := strings.Repeat("A", 1024)
-	for i := 0; i < 500; i++ {
+	// Flood the hub without reading. The stream only falls behind once the loopback socket buffers
+	// are full (a few MB on Linux, which held all of an earlier 0.5 MB flood) and the 128-event
+	// client channel has filled behind them. 1,024 events of 32 KB (32 MB) is far more than both,
+	// so eviction does not depend on how fast the server's writer runs (e.g. with or without -race).
+	largePayload := strings.Repeat("A", 32*1024)
+	for i := 0; i < 1024; i++ {
 		realtime.DefaultHub.Publish(realtime.Event{
 			Action: "create",
 			Moul:   "sse_posts",

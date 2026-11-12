@@ -1,6 +1,6 @@
 # Moul November Release: Embedder Upgrade Guide
 
-Moul v1.0.0-alpha.1 closes a set of security holes found by an embedding app, cuts Moul's fixed cost per request, and adds Go hooks for programmatic writes. Several defaults change for non-admin callers, so work through the upgrade checklist before you deploy.
+Moul v1.0.0-alpha.2 closes a set of security holes found by an embedding app, cuts Moul's fixed cost per request, and adds Go hooks for programmatic writes. Several defaults change for non-admin callers, so work through the upgrade checklist before you deploy.
 
 ## Upgrade checklist
 
