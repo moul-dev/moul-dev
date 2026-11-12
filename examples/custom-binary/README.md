@@ -4,7 +4,7 @@ This example demonstrates how to embed Moul as a Go library inside your own cust
 
 ## Features Included
 
-- **Automatic Admin Console**: The production-ready Web Admin Console (TanStack Router, StyleX, React Aria) is embedded directly into your binary via `pkg/ui.DistFS()`.
+- **Automatic Admin Console**: The production-ready Web Admin Console (Lit web components on Moul UI, `@moul-dev/web-component`) is embedded directly into your binary via `pkg/ui.DistFS()`.
 - **Zero Node.js / Bun Requirement**: Pre-built static assets are bundled inside `github.com/moul-dev/moul-dev/pkg/ui/dist`, so you can build with standard `go build`.
 - **Safe Route Prefixing**: Mounted by default at `/_moul_/` without capturing `/admin`, preventing route collision with your host application.
 - **Customizable**:

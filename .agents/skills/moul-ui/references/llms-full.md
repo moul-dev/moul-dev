@@ -1,0 +1,2887 @@
+# Moul UI — Full Component Reference
+
+> Complete API reference for `@moul-dev/web-component` v1.0.0-alpha.1: every `<moul-*>` custom element with its attributes, JavaScript properties, events, slots, and CSS parts, derived from the Custom Elements Manifest.
+
+<!-- Synced from moul-dev/ui by `make sync-ui-skill`, where `bun run sync:llms --write` generates it. Do not edit by hand. -->
+
+## Setup
+
+```bash
+bun add @moul-dev/web-component
+# or
+npm install @moul-dev/web-component
+```
+
+```js
+// Registers every <moul-*> custom element (side-effect import).
+import '@moul-dev/web-component'
+// CSS token layer: colors, spacing, radii, typography, motion.
+import '@moul-dev/web-component/style.css'
+```
+
+Without a bundler, load the self-contained CDN build (Lit and the other dependencies inlined):
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@moul-dev/web-component/dist/assets/style.css" />
+<script type="module" src="https://cdn.jsdelivr.net/npm/@moul-dev/web-component/dist/cdn/moul-ui.js"></script>
+```
+
+`dist/moul-ui.js` (the package entry) keeps `lit`, `@lit/context`, `@lit-labs/virtualizer`, `motion`, and `d3-*` as bare imports so a bundler shares one copy of Lit with your app. Do not load it directly in a `<script>` tag.
+
+## Conventions
+
+- **Imports**: `import '@moul-dev/web-component'` once registers every `<moul-*>` element. Import design tokens with `import '@moul-dev/web-component/style.css'`. There is no `@moul-dev/web-component/react`, `@moul-dev/web-component/tokens`, or `@moul-dev/web-component/tokens.stylex` entry point.
+- **Markup, not JSX components**: Write native custom element tags (`<moul-button>`), never PascalCase components (`<Button>`). They work in plain HTML, Astro, Lit, Vue, Svelte, and React 19.
+- **Attributes are kebab-case**: Boolean state uses presence attributes such as `is-disabled`, `is-open`, `is-checked`, `is-required`. The matching JS property is camelCase (`el.isDisabled = true`).
+- **Rich data is set as properties**: Arrays, objects, and functions (`data`, `series`, `columns`, `items`, `logs`, `valueFormatter`) are assigned in JavaScript, not serialized into attributes.
+- **Events are DOM events**: Listen with `addEventListener` (`press`, `change`, `input`, `openchange`, `selectionchange`, `pagechange`, `dismiss`). Payloads live on `event.detail`. There is no `onPress` prop.
+- **Overlays**: Toggle `is-open` (or `el.isOpen`) on `<moul-modal>`, `<moul-drawer>`, `<moul-alert-dialog>`, `<moul-popover>`, `<moul-tooltip>`, `<moul-command-palette>`, and react to `openchange` (`detail.isOpen`).
+- **Forms**: Inputs are form-associated via `ElementInternals`; give each a `name` and it submits with a native `<form>` / `FormData`. Enter in `<moul-text-field>`, `<moul-number-field>`, or `<moul-search-field>` submits its `<form>` or `<moul-form>` like a native input, so do not add your own Enter handler.
+- **Semantic tones & variants**: `tone` is one of `primary | accent | success | warning | error`; surface `variant` is one of `solid | flat | shadow | bordered | glass`. Omit `variant` for a neutral surface: an unset `variant` on `<moul-card>`, `<moul-alert>`, `<moul-toast>`, or `<moul-stat>` renders the plain `--color-surface` look, while `variant="flat"` tints it in the tone. `<moul-button>` has its own `variant` set (`primary | secondary | tertiary | outline | ghost | danger | danger-soft`).
+- **Accessibility**: Icon-only buttons (`is-icon`) and dot badges (`is-dot`) must have an `aria-label`.
+- **Theming**: Override `--brand-hue`, `--brand-chroma-multiplier`, `--brand-font-family`, `--brand-font-scale`, `--brand-radius-factor`, and `--brand-density-factor` on `:root` (or any ancestor). Style internals through `::part(...)`.
+
+## Exported JavaScript Helpers
+
+- `toastQueue` — singleton queue: `toastQueue.add({ title, description, tone, variant, duration })` returns an id; mounts `<moul-toast>` elements into a `<moul-toast-region>`.
+- `generatePagination(currentPage, totalPages, siblingCount)` — page list with ellipsis markers used by `<moul-pagination>`.
+- `parseLogs`, `parseLogLine`, `parseAttributes`, `stripAttributes`, `normalizeLogLevel` — log parsing utilities behind `<moul-logs>`.
+- Reactive controllers: `PressController`, `LayoutIndicatorController`, `OverlayPresenceController`, `NumberSpringController`, `FormInternalsController`.
+- `SEMANTIC_TONES`, `VISUAL_VARIANTS`, `normalizeTone`, `normalizeVariant`, `semanticToneStyles` — tone/variant system for authoring your own elements.
+
+---
+
+# Charts & Data Visualization
+
+## AreaChart
+
+D3-powered area chart with optional stacking, grid lines, and hover tooltips. Docs: [/docs/components/charts/areachart](/docs/components/charts/areachart)
+
+```html
+<moul-area-chart id="revenue" x-key="month" height="280" stacked></moul-area-chart>
+```
+
+```js
+const chart = document.querySelector('#revenue')
+chart.data = [
+  { month: 'Jan', web: 120, mobile: 80 },
+  { month: 'Feb', web: 160, mobile: 95 },
+]
+chart.series = [
+  { key: 'web', name: 'Web' },
+  { key: 'mobile', name: 'Mobile' },
+]
+```
+
+### `<moul-area-chart>`
+
+Class: `MoulAreaChart` · Source: `ui/src/components/AreaChart/AreaChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `x-key` | `xKey` | `string` | `'name'` |
+| `height` | `height` | `number` | `300` |
+| `stacked` | `stacked` | `boolean` | `false` |
+| `show-grid` | `showGrid` | `boolean` | `true` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `Record<string, unknown>[]` | `[]` |
+| `series` | `ChartSeries[]` | `[]` |
+| `valueFormatter` | `(value: any) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+
+**CSS Parts:** `empty`, `container`, `svg`, `grid`, `x-axis`, `series`, `area`, `line`, `stroke`, `points`, `point`
+
+## BarChart
+
+Vertical or horizontal bar chart with grouped or stacked series. Docs: [/docs/components/charts/barchart](/docs/components/charts/barchart)
+
+```html
+<moul-bar-chart id="signups" x-key="day" layout="vertical" show-grid></moul-bar-chart>
+```
+
+```js
+const chart = document.querySelector('#signups')
+chart.data = [{ day: 'Mon', count: 12 }, { day: 'Tue', count: 18 }]
+chart.series = [{ key: 'count', name: 'Sign-ups' }]
+```
+
+### `<moul-bar-chart>`
+
+Class: `MoulBarChart` · Source: `ui/src/components/BarChart/BarChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `x-key` | `xKey` | `string` | `'name'` |
+| `height` | `height` | `number` | `300` |
+| `layout` | `layout` | `'vertical' \| 'horizontal'` | `'vertical'` |
+| `stacked` | `stacked` | `boolean` | `false` |
+| `show-grid` | `showGrid` | `boolean` | `true` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `Record<string, unknown>[]` | `[]` |
+| `series` | `ChartSeries[]` | `[]` |
+| `valueFormatter` | `(value: any) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+
+**CSS Parts:** `bar`, `empty`, `grid`
+
+## LineChart
+
+Multi-series line chart with configurable D3 curve. Docs: [/docs/components/charts/linechart](/docs/components/charts/linechart)
+
+```html
+<moul-line-chart id="latency" x-key="time" curve="monotoneX"></moul-line-chart>
+```
+
+```js
+const chart = document.querySelector('#latency')
+chart.data = [{ time: '10:00', p50: 42, p99: 180 }, { time: '10:05', p50: 39, p99: 150 }]
+chart.series = [{ key: 'p50', name: 'p50' }, { key: 'p99', name: 'p99' }]
+chart.valueFormatter = (v) => `${v} ms`
+```
+
+### `<moul-line-chart>`
+
+Class: `MoulLineChart` · Source: `ui/src/components/LineChart/LineChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `x-key` | `xKey` | `string` | `'name'` |
+| `height` | `height` | `number` | `300` |
+| `show-grid` | `showGrid` | `boolean` | `true` |
+| `curve` | `curve` | `string` | `'monotoneX'` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `Record<string, unknown>[]` | `[]` |
+| `series` | `ChartSeries[]` | `[]` |
+| `valueFormatter` | `(value: any) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+
+**CSS Parts:** `empty`, `grid`, `line`, `point`
+
+## DoughnutChart
+
+Doughnut / pie chart with a centered label and sublabel slot. Docs: [/docs/components/charts/doughnutchart](/docs/components/charts/doughnutchart)
+
+```html
+<moul-doughnut-chart id="traffic" center-label="12.4k" center-sublabel="Visits"></moul-doughnut-chart>
+```
+
+```js
+document.querySelector('#traffic').data = [
+  { name: 'Direct', value: 5400 },
+  { name: 'Search', value: 4100 },
+  { name: 'Social', value: 2900 },
+]
+```
+
+### `<moul-doughnut-chart>`
+
+Class: `MoulDoughnutChart` · Source: `ui/src/components/DoughnutChart/DoughnutChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `inner-radius-ratio` | `innerRadiusRatio` | `number` | `0.6` |
+| `height` | `height` | `number` | `300` |
+| `center-label` | `centerLabel` | `string` | `''` |
+| `center-sublabel` | `centerSublabel` | `string` | `''` |
+| `pad-angle` | `padAngle` | `number` | `0.02` |
+| `corner-radius` | `cornerRadius` | `number` | `4` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `DoughnutDataItem[]` | `[]` |
+| `valueFormatter` | `(value: any) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+| `center` |
+
+**CSS Parts:** `empty`, `wrapper`, `svg`, `slice`, `center`, `center-label`, `center-sublabel`
+
+## HeatmapChart
+
+Contributions-style calendar of daily totals, or a weekday × hour punch card (`mode="hour"`) from the same timestamps. Docs: [/docs/components/charts/heatmapchart](/docs/components/charts/heatmapchart)
+
+```html
+<moul-chart-container title="Activity" description="Daily contributions">
+  <moul-tabs slot="header" selected-key="calendar">
+    <moul-tab key="calendar">Calendar</moul-tab>
+    <moul-tab key="hour">By hour</moul-tab>
+  </moul-tabs>
+  <moul-heatmap-chart id="activity" unit="contributions"></moul-heatmap-chart>
+</moul-chart-container>
+```
+
+```js
+const heatmap = document.querySelector('#activity')
+// One item per event (value defaults to 1), or one per day with a total.
+heatmap.data = [
+  { date: '2025-10-23', value: 6 },
+  { date: '2025-10-24T14:05:00', value: 17 },
+]
+document.querySelector('moul-tabs').addEventListener('selectionchange', (e) => {
+  heatmap.mode = e.detail.selectedKey
+})
+```
+
+### `<moul-heatmap-chart>`
+
+Class: `MoulHeatmapChart` · Source: `ui/src/components/HeatmapChart/HeatmapChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `mode` | `mode` | `'calendar' \| 'hour'` | `'calendar'` |
+| `weeks` | `weeks` | `number` | `53` |
+| `end-date` | `endDate` | `string` | `''` |
+| `week-start` | `weekStart` | `number` | `0` |
+| `unit` | `unit` | `string` | `'contributions'` |
+| `unit-singular` | `unitSingular` | `string` | `''` |
+| `color` | `color` | `string` | `''` |
+| `hide-summary` | `hideSummary` | `boolean` | `false` |
+| `hide-legend` | `hideLegend` | `boolean` | `false` |
+| `activeIndex` | `activeIndex` | `number` | `-1` |
+| `focusIndex` | `focusIndex` | `number` | `-1` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `HeatmapDataItem[]` | `[]` |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**CSS Parts:** `base`, `summary`, `total`, `peak`, `grid`, `cell`, `legend`, `tooltip`, `scroller`
+
+## FunnelChart
+
+Ordered conversion steps as centered bars with per-step drop-off and an overall-conversion summary. Docs: [/docs/components/charts/funnelchart](/docs/components/charts/funnelchart)
+
+```html
+<moul-chart-container title="Signup funnel" description="Visit to paid, last 30 days">
+  <moul-funnel-chart id="signups"></moul-funnel-chart>
+</moul-chart-container>
+```
+
+```js
+document.querySelector('#signups').data = [
+  { label: 'Visited site', value: 48200 },
+  { label: 'Signed up', value: 15840 },
+  { label: 'Started paid plan', value: 1380 },
+]
+```
+
+### `<moul-funnel-chart>`
+
+Class: `MoulFunnelChart` · Source: `ui/src/components/FunnelChart/FunnelChart.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `summary-label` | `summaryLabel` | `string` | `'overall conversion'` |
+| `hide-summary` | `hideSummary` | `boolean` | `false` |
+| `activeIndex` | `activeIndex` | `number` | `-1` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `FunnelStage[]` | `[]` |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `point-hover` | `CustomEvent` |
+| `point-leave` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+
+**CSS Parts:** `base`, `summary`, `conversion`, `biggest-drop`, `stages`, `stage`, `stage-label`, `bar`, `drop`, `tooltip`, `empty`
+
+## TopList
+
+Ranked list with proportional value bars. Docs: [/docs/components/charts/toplist](/docs/components/charts/toplist)
+
+```html
+<moul-top-list id="pages" max-items="5" show-rank interactive></moul-top-list>
+```
+
+```js
+document.querySelector('#pages').data = [
+  { label: '/pricing', value: 1820 },
+  { label: '/docs', value: 1240 },
+]
+```
+
+### `<moul-top-list>`
+
+Class: `MoulTopList` · Source: `ui/src/components/TopList/TopList.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `max` | `max` | `number \| undefined` | `undefined` |
+| `max-value` | `maxValue` | `number \| undefined` | `undefined` |
+| `max-items` | `maxItems` | `number` | `10` |
+| `show-rank` | `showRank` | `boolean` | `true` |
+| `multi-color` | `multiColor` | `boolean` | `false` |
+| `bar-color` | `barColor` | `string` | `'var(--color-chart-1)'` |
+| `interactive` | `interactive` | `boolean` | `false` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `data` | `TopListItem[]` | `[]` |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `item-press` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `empty` |
+
+**CSS Parts:** `empty`, `container`, `list`, `item`, `rank`, `label`, `track`, `bar`, `value`
+
+## Stat
+
+KPI tile with animated value, trend indicator, and optional sparkline. Docs: [/docs/components/stat](/docs/components/stat)
+
+```html
+<moul-stat label="Monthly revenue" value="48210" prefix="$" trend="up" trend-value="+12.5%" tone="success"></moul-stat>
+```
+
+### `<moul-stat>`
+
+Class: `MoulStat` · Source: `ui/src/components/Stat/Stat.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `label` | `label` | `string` | `''` |
+| `value` | `value` | `number` | `0` |
+| `prefix` | `prefix` | `string` | `''` |
+| `suffix` | `suffix` | `string` | `''` |
+| `trend` | `trend` | `'up' \| 'down' \| 'neutral'` | `'neutral'` |
+| `trend-value` | `trendValue` | `string` | `''` |
+| `is-lower-better` | `isLowerBetter` | `boolean` | `false` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass' \| undefined` | — |
+| `color` | `color` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+| `sparklineData` | `number[] \| undefined` | `undefined` |
+| `sparklineLabels` | `string[] \| undefined` | `undefined` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `icon` |
+| `footer` |
+
+**CSS Parts:** `sparkline`, `trend-badge`, `header`, `icon`, `label`, `body`, `value-row`, `prefix`, `value`, `suffix`, `description`, `footer`
+
+## Percentage
+
+Linear and circular percentage indicators. Docs: [/docs/components/charts/percentage](/docs/components/charts/percentage)
+
+```html
+<moul-percentage-bar value="72" label="Storage used" tone="warning"></moul-percentage-bar>
+<moul-percentage-circle value="64" size="lg" label="Uptime"></moul-percentage-circle>
+```
+
+### `<moul-percentage-bar>`
+
+Class: `MoulPercentageBar` · Source: `ui/src/components/Percentage/PercentageBar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `number` | `0` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `show-label` | `showLabel` | `boolean` | `true` |
+| `label` | `label` | `string` | `''` |
+| `show-value-text` | `showValueText` | `boolean` | `true` |
+| `color` | `color` | `string` | `''` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+
+**CSS Parts:** `container`, `header`, `label`, `value`, `svg`
+
+### `<moul-percentage-circle>`
+
+Class: `MoulPercentageCircle` · Source: `ui/src/components/Percentage/PercentageCircle.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `number` | `0` |
+| `size` | `size` | `PercentageCircleSize` | `'md'` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `show-label` | `showLabel` | `boolean` | `true` |
+| `stroke-width` | `strokeWidth` | `number` | `8` |
+| `label` | `label` | `string` | `''` |
+| `show-value-text` | `showValueText` | `boolean` | `true` |
+| `color` | `color` | `string` | `''` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `valueFormatter` | `(value: number) => string \| undefined` | `undefined` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+| `label` |
+
+**CSS Parts:** `wrapper`, `svg`, `center`, `value`, `label`
+
+## ChartContainer
+
+Chart card with title, description, header actions, legend, and empty state slots; sizes to its chart unless `height` is set. Docs: [/docs/components/charts/areachart](/docs/components/charts/areachart)
+
+```html
+<moul-chart-container title="Revenue" description="Last 30 days" height="320">
+  <moul-area-chart x-key="month"></moul-area-chart>
+  <span slot="empty">No data yet</span>
+</moul-chart-container>
+```
+
+### `<moul-chart-container>`
+
+Class: `MoulChartContainer` · Source: `ui/src/components/ChartContainer/ChartContainer.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `title` | `title` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `height` | `height` | `number \| undefined` | `undefined` |
+| `is-empty` | `isEmpty` | `boolean` | `false` |
+| `hasHeaderContent` | `hasHeaderContent` | `boolean` | `false` |
+| `hasLegend` | `hasLegend` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `viewport-resize` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| `empty` |
+| (default) |
+| `legend` |
+
+**CSS Parts:** `header`, `header-text`, `title`, `description`, `header-actions`, `content`, `empty`, `legend`
+
+## ChartTooltip
+
+Floating tooltip used internally by charts; usable standalone for custom SVG. Docs: [/docs/components/charts/areachart](/docs/components/charts/areachart)
+
+```html
+<moul-chart-tooltip label="Jan" value="$1,200" x="120" y="40" is-open></moul-chart-tooltip>
+```
+
+### `<moul-chart-tooltip>`
+
+Class: `MoulChartTooltip` · Source: `ui/src/components/ChartTooltip/ChartTooltip.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `label` | `label` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `color` | `color` | `string` | `'var(--color-chart-1)'` |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `x` | `x` | `number` | `0` |
+| `y` | `y` | `number` | `0` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `payload` | `(ChartTooltipPayloadEntry \| unknown)[]` | `[]` |
+| `valueFormatter` | `(value: unknown) => string \| undefined` | `undefined` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `container`, `header`, `indicator`, `label`, `value`, `title`, `list`, `item`
+
+---
+
+# Actions & Toggles
+
+## Button
+
+Button with 7 variants, 3 sizes, icon-only mode, and pending state. Docs: [/docs/components/button](/docs/components/button)
+
+```html
+<moul-button variant="primary" size="md">Save changes</moul-button>
+<moul-button variant="ghost" is-icon aria-label="Close">×</moul-button>
+<moul-button variant="danger" is-pending>Deleting…</moul-button>
+```
+
+### `<moul-button>`
+
+Class: `MoulButton` · Source: `ui/src/components/Button/Button.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `variant` | `variant` | `'primary' \| 'secondary' \| 'tertiary' \| 'outline' \| 'ghost' \| 'danger' \| 'danger-soft'` | `'primary'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `type` | `type` | `'button' \| 'submit' \| 'reset'` | `'button'` |
+| `is-icon` | `isIcon` | `boolean` | `false` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-pending` | `isPending` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `press` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `prefix` |
+| (default) |
+| `suffix` |
+
+**CSS Parts:** `button`, `spinner`, `prefix`, `content`, `suffix`
+
+## ButtonGroup
+
+Groups buttons with attached or spaced layouts. Docs: [/docs/components/buttongroup](/docs/components/buttongroup)
+
+```html
+<moul-button-group spacing="none">
+  <moul-button variant="outline">Day</moul-button>
+  <moul-button variant="outline">Week</moul-button>
+</moul-button-group>
+```
+
+### `<moul-button-group>`
+
+Class: `MoulButtonGroup` · Source: `ui/src/components/ButtonGroup/ButtonGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+| `spacing` | `spacing` | `'none' \| 'sm' \| 'md'` | `'sm'` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`
+
+## ToggleButton
+
+Two-state button that reflects `aria-pressed`. Docs: [/docs/components/togglebutton](/docs/components/togglebutton)
+
+```html
+<moul-toggle-button value="bold" aria-label="Bold">B</moul-toggle-button>
+```
+
+### `<moul-toggle-button>`
+
+Class: `MoulToggleButton` · Source: `ui/src/components/ToggleButton/ToggleButton.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `string` | `''` |
+| `is-selected` | `isSelected` | `boolean` | `false` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+| `press` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `button`, `content`
+
+## ToggleButtonGroup
+
+Single-select toggle group with roving tabindex keyboard navigation. Docs: [/docs/components/togglebuttongroup](/docs/components/togglebuttongroup)
+
+```html
+<moul-toggle-button-group selected-key="left" aria-label="Alignment">
+  <moul-toggle-button value="left">Left</moul-toggle-button>
+  <moul-toggle-button value="center">Center</moul-toggle-button>
+  <moul-toggle-button value="right">Right</moul-toggle-button>
+</moul-toggle-button-group>
+```
+
+### `<moul-toggle-button-group>`
+
+Class: `MoulToggleButtonGroup` · Source: `ui/src/components/ToggleButtonGroup/ToggleButtonGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `selected-key` | `selectedKey` | `string` | `''` |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `indicator`
+
+---
+
+# Inputs & Forms
+
+## TextField
+
+Form-associated text input with label, description, and error message. Docs: [/docs/components/textfield](/docs/components/textfield)
+
+```html
+<moul-text-field name="email" type="email" label="Email" placeholder="you@example.com" is-required></moul-text-field>
+```
+
+### `<moul-text-field>`
+
+Class: `MoulTextField` · Source: `ui/src/components/TextField/TextField.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `type` | `type` | `'text' \| 'email' \| 'password' \| 'tel' \| 'url'` | `'text'` |
+| `placeholder` | `placeholder` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `error-message` | `errorMessage` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-readonly` | `isReadonly` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `input` | `CustomEvent` |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `prefix` |
+| `suffix` |
+| `description` |
+| `error` |
+
+**CSS Parts:** `error`, `base`, `label`, `input-container`, `prefix`, `input`, `suffix`, `description`
+
+## NumberField
+
+Numeric input with stepper buttons and min/max bounds. Docs: [/docs/components/numberfield](/docs/components/numberfield)
+
+```html
+<moul-number-field name="seats" label="Seats" value="5" min="1" max="50" step="1"></moul-number-field>
+```
+
+### `<moul-number-field>`
+
+Class: `MoulNumberField` · Source: `ui/src/components/NumberField/NumberField.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `number \| null` | `null` |
+| `min` | `min` | `number \| undefined` | — |
+| `max` | `max` | `number \| undefined` | — |
+| `step` | `step` | `number` | `1` |
+| `placeholder` | `placeholder` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `error-message` | `errorMessage` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-readonly` | `isReadonly` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `input` | `Event` |
+| `change` | `Event` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `prefix` |
+| `suffix` |
+| `description` |
+| `error` |
+
+**CSS Parts:** `error`, `base`, `label`, `input-container`, `prefix`, `input`, `suffix`, `stepper-group`, `stepper-btn`, `stepper-btn-up`, `stepper-btn-down`, `description`
+
+## SearchField
+
+Search input in a `<search>` landmark with a clear button. Docs: [/docs/components/searchfield](/docs/components/searchfield)
+
+```html
+<moul-search-field name="q" label="Search" placeholder="Search projects…"></moul-search-field>
+```
+
+### `<moul-search-field>`
+
+Class: `MoulSearchField` · Source: `ui/src/components/SearchField/SearchField.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `placeholder` | `placeholder` | `string` | `'Search...'` |
+| `label` | `label` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `error-message` | `errorMessage` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-readonly` | `isReadonly` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `clear` | `CustomEvent` |
+| `input` | `Event` |
+| `change` | `Event` |
+| `submit` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `description` |
+| `error` |
+
+**CSS Parts:** `clear-btn`, `error`, `base`, `label`, `search`, `input-container`, `search-icon`, `input`, `description`
+
+## TextArea
+
+Multiline text input with optional content-based auto-resize. Docs: [/docs/components/textarea](/docs/components/textarea)
+
+```html
+<moul-text-area name="bio" label="Bio" rows="4" auto-resize></moul-text-area>
+```
+
+### `<moul-text-area>`
+
+Class: `MoulTextArea` · Source: `ui/src/components/TextArea/TextArea.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `rows` | `rows` | `number` | `3` |
+| `auto-resize` | `autoResize` | `boolean` | `false` |
+| `placeholder` | `placeholder` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `error-message` | `errorMessage` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-readonly` | `isReadonly` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `input` | `CustomEvent` |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `description` |
+| `error` |
+
+**CSS Parts:** `error`, `base`, `label`, `textarea`, `description`
+
+## Checkbox
+
+Form-associated checkbox with indeterminate state. Docs: [/docs/components/checkbox](/docs/components/checkbox)
+
+```html
+<moul-checkbox name="terms" is-required>I accept the terms</moul-checkbox>
+```
+
+### `<moul-checkbox>`
+
+Class: `MoulCheckbox` · Source: `ui/src/components/Checkbox/Checkbox.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `'on'` |
+| `is-checked` | `isChecked` | `boolean` | `false` |
+| `is-indeterminate` | `isIndeterminate` | `boolean` | `false` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `label` | `label` | `string` | `''` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `indicator`, `icon`, `label`
+
+## CheckboxGroup
+
+Group of checkboxes submitting an array value. Docs: [/docs/components/checkboxgroup](/docs/components/checkboxgroup)
+
+```html
+<moul-checkbox-group name="notify" label="Notify me by" orientation="horizontal">
+  <moul-checkbox value="email">Email</moul-checkbox>
+  <moul-checkbox value="sms">SMS</moul-checkbox>
+</moul-checkbox-group>
+```
+
+### `<moul-checkbox-group>`
+
+Class: `MoulCheckboxGroup` · Source: `ui/src/components/Checkbox/CheckboxGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string[]` | `[]` |
+| `label` | `label` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'vertical'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `description` |
+| (default) |
+
+**CSS Parts:** `base`, `label`, `description`, `group`
+
+## RadioGroup
+
+Radio group with arrow-key navigation. Docs: [/docs/components/radiogroup](/docs/components/radiogroup)
+
+```html
+<moul-radio-group name="plan" label="Plan" value="pro">
+  <moul-radio value="free">Free</moul-radio>
+  <moul-radio value="pro">Pro</moul-radio>
+</moul-radio-group>
+```
+
+### `<moul-radio-group>`
+
+Class: `MoulRadioGroup` · Source: `ui/src/components/RadioGroup/RadioGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'vertical'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| (default) |
+
+**CSS Parts:** `base`, `label`, `group`
+
+### `<moul-radio>`
+
+Class: `MoulRadio` · Source: `ui/src/components/RadioGroup/Radio.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `string` | `''` |
+| `is-checked` | `isChecked` | `boolean` | `false` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `radio-select` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `indicator`, `dot`, `label`
+
+## Switch
+
+On/off switch with `role="switch"` semantics. Docs: [/docs/components/switch](/docs/components/switch)
+
+```html
+<moul-switch name="notifications" is-checked>Enable notifications</moul-switch>
+```
+
+### `<moul-switch>`
+
+Class: `MoulSwitch` · Source: `ui/src/components/Switch/Switch.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `'on'` |
+| `is-checked` | `isChecked` | `boolean` | `false` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `label` | `label` | `string` | `''` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `track`, `thumb`, `label`
+
+## Slider
+
+Range slider with live output. Docs: [/docs/components/slider](/docs/components/slider)
+
+```html
+<moul-slider name="volume" label="Volume" min="0" max="100" step="5" value="40"></moul-slider>
+```
+
+### `<moul-slider>`
+
+Class: `MoulSlider` · Source: `ui/src/components/Slider/Slider.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `min` | `min` | `number` | `0` |
+| `max` | `max` | `number` | `100` |
+| `step` | `step` | `number` | `1` |
+| `value` | `value` | `number` | `0` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `label` | `label` | `string` | `''` |
+| `show-output` | `showOutput` | `boolean` | `true` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `input` | `CustomEvent` |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+
+**CSS Parts:** `thumb`, `track`, `base`, `header`, `label`, `output`, `track-container`, `fill`
+
+## Select
+
+Single-select dropdown rendered in a native popover. Docs: [/docs/components/select](/docs/components/select)
+
+```html
+<moul-select name="region" label="Region" placeholder="Choose a region">
+  <moul-select-item key="us">United States</moul-select-item>
+  <moul-select-item key="kh">Cambodia</moul-select-item>
+</moul-select>
+```
+
+### `<moul-select>`
+
+Class: `MoulSelect` · Source: `ui/src/components/Select/Select.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `selected-key` | `selectedKey` | `string` | `''` |
+| `placeholder` | `placeholder` | `string` | `'Select an option'` |
+| `label` | `label` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-open` | `isOpen` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+| `change` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| (default) |
+
+**CSS Parts:** `trigger`, `popover`, `base`, `label`, `value`, `chevron`
+
+### `<moul-select-item>`
+
+Class: `MoulSelectItem` · Source: `ui/src/components/Select/SelectItem.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `select-item-click` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `item`, `check`
+
+## ComboBox
+
+Filterable autocomplete input. Docs: [/docs/components/combobox](/docs/components/combobox)
+
+```html
+<moul-combobox name="framework" label="Framework" placeholder="Type to filter…">
+  <moul-combobox-item key="astro">Astro</moul-combobox-item>
+  <moul-combobox-item key="lit">Lit</moul-combobox-item>
+  <span slot="empty">No matches</span>
+</moul-combobox>
+```
+
+### `<moul-combobox>`
+
+Class: `MoulComboBox` · Source: `ui/src/components/ComboBox/ComboBox.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `selected-key` | `selectedKey` | `string` | `''` |
+| `input-value` | `inputValue` | `string` | `''` |
+| `placeholder` | `placeholder` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `is-open` | `isOpen` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+| `inputchange` | `CustomEvent` |
+| `change` | `CustomEvent` |
+| `input` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| (default) |
+| `empty` |
+
+**CSS Parts:** `input-container`, `popover`, `base`, `label`, `input`, `toggle-btn`, `empty`
+
+### `<moul-combobox-item>`
+
+Class: `MoulComboBoxItem` · Source: `ui/src/components/ComboBox/ComboBoxItem.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+| `text-value` | `textValue` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `combobox-item-click` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `item`
+
+## DatePicker
+
+ISO date input that opens a calendar popover; locale-aware display. Docs: [/docs/components/datepicker](/docs/components/datepicker)
+
+```html
+<moul-date-picker name="start" label="Start date" value="2026-10-19" locale="km-KH"></moul-date-picker>
+```
+
+### `<moul-date-picker>`
+
+Class: `MoulDatePicker` · Source: `ui/src/components/DatePicker/DatePicker.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `value` | `value` | `string` | `''` |
+| `locale` | `locale` | `string` | `'en-US'` |
+| `placeholder` | `placeholder` | `string` | `'YYYY-MM-DD'` |
+| `label` | `label` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `min-date` | `minDate` | `string` | `''` |
+| `max-date` | `maxDate` | `string` | `''` |
+| `is-open` | `isOpen` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+| `input` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `description` |
+| `error` |
+
+**CSS Parts:** `input-container`, `popover`, `base`, `label`, `input`, `trigger-btn`
+
+## Calendar
+
+Month grid date selector with min/max bounds. Docs: [/docs/components/calendar](/docs/components/calendar)
+
+```html
+<moul-calendar value="2026-10-19" min-date="2026-01-01" max-date="2026-12-31"></moul-calendar>
+```
+
+### `<moul-calendar>`
+
+Class: `MoulCalendar` · Source: `ui/src/components/Calendar/Calendar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `string` | `''` |
+| `locale` | `locale` | `string` | `'en-US'` |
+| `min-date` | `minDate` | `string` | `''` |
+| `max-date` | `maxDate` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `change` | `CustomEvent` |
+
+**CSS Parts:** `base`, `header`, `nav-btn`, `nav-btn-prev`, `heading`, `nav-btn-next`, `grid`, `grid-header`, `grid-cell`, `day-btn`
+
+## InputOTP
+
+One-time passcode input with per-character slots. Docs: [/docs/components/inputotp](/docs/components/inputotp)
+
+```html
+<moul-input-otp name="code" length="6" label="Verification code"></moul-input-otp>
+```
+
+### `<moul-input-otp>`
+
+Class: `MoulInputOTP` · Source: `ui/src/components/InputOTP/InputOTP.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `length` | `length` | `number` | `6` |
+| `value` | `value` | `string` | `''` |
+| `pattern` | `pattern` | `string` | `'^\\d+$'` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-required` | `isRequired` | `boolean` | `false` |
+| `label` | `label` | `string` | `''` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `input` | `CustomEvent` |
+| `change` | `CustomEvent` |
+| `complete` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+| `separator` |
+
+**CSS Parts:** `group`, `base`, `label`, `slot`, `separator`
+
+## Form
+
+Native `<form>` wrapper that collects values from form-associated `moul-*` fields. Docs: [/docs/components/form](/docs/components/form)
+
+```html
+<moul-form action="/api/signup" method="post">
+  <moul-text-field name="email" type="email" label="Email" is-required></moul-text-field>
+  <moul-button type="submit">Sign up</moul-button>
+</moul-form>
+```
+
+### `<moul-form>`
+
+Class: `MoulForm` · Source: `ui/src/components/Form/Form.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `action` | `action` | `string` | `''` |
+| `method` | `method` | `'get' \| 'post' \| 'dialog'` | `'post'` |
+| `novalidate` | `novalidate` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `submit` | `CustomEvent` |
+| `reset` | `CustomEvent` |
+| `invalid` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`
+
+---
+
+# Overlays & Navigation
+
+## Modal
+
+Native `<dialog>` modal with focus trap and backdrop dismiss. Docs: [/docs/components/modal](/docs/components/modal)
+
+```html
+<moul-modal id="invite" size="md">
+  <h2 slot="header">Invite teammates</h2>
+  <p>Send an invite link to your team.</p>
+  <moul-button slot="footer" variant="primary">Send</moul-button>
+</moul-modal>
+```
+
+```js
+document.querySelector('#invite').isOpen = true
+```
+
+### `<moul-modal>`
+
+Class: `MoulModal` · Source: `ui/src/components/Modal/Modal.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg' \| 'fullscreen'` | `'md'` |
+| `is-dismissable` | `isDismissable` | `boolean` | `true` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| (default) |
+| `footer` |
+
+**CSS Parts:** `base`, `dialog`, `header`, `body`, `footer`
+
+## AlertDialog
+
+Blocking confirmation dialog with `role="alertdialog"` and confirm/cancel events. Docs: [/docs/components/alertdialog](/docs/components/alertdialog)
+
+```html
+<moul-alert-dialog is-open tone="error">
+  <span slot="header">Delete project?</span>
+  <span slot="body">This action cannot be undone.</span>
+</moul-alert-dialog>
+```
+
+### `<moul-alert-dialog>`
+
+Class: `MoulAlertDialog` · Source: `ui/src/components/AlertDialog/AlertDialog.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'error'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+| `confirm` | `CustomEvent` |
+| `cancel` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| `body` |
+| (default) |
+| `footer` |
+
+**CSS Parts:** `base`, `dialog`, `header`, `body`, `footer`
+
+## Drawer
+
+Edge-anchored panel built on native `<dialog>`. Docs: [/docs/components/drawer](/docs/components/drawer)
+
+```html
+<moul-drawer placement="right" size="md" is-open>
+  <h2 slot="header">Filters</h2>
+  <p>Drawer content</p>
+</moul-drawer>
+```
+
+### `<moul-drawer>`
+
+Class: `MoulDrawer` · Source: `ui/src/components/Drawer/Drawer.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `placement` | `placement` | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `is-dismissable` | `isDismissable` | `boolean` | `true` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| (default) |
+| `footer` |
+
+**CSS Parts:** `base`, `dialog`, `header`, `body`, `footer`
+
+## Popover
+
+Popover API + CSS anchor positioning with a slotted trigger. Docs: [/docs/components/popover](/docs/components/popover)
+
+```html
+<moul-popover placement="bottom">
+  <moul-button slot="trigger" variant="outline">Options</moul-button>
+  <p>Popover content</p>
+</moul-popover>
+```
+
+### `<moul-popover>`
+
+Class: `MoulPopover` · Source: `ui/src/components/Popover/Popover.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `trigger` | `trigger` | `'click' \| 'manual'` | `'click'` |
+| `placement` | `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'bottom'` |
+| `offset` | `offset` | `number` | `8` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `trigger` |
+| (default) |
+
+**CSS Parts:** `popover`, `trigger`
+
+## Tooltip
+
+Hover/focus tooltip wired with `aria-describedby`. Docs: [/docs/components/tooltip](/docs/components/tooltip)
+
+```html
+<moul-tooltip content="Copy to clipboard" placement="top">
+  <moul-button is-icon aria-label="Copy">⧉</moul-button>
+</moul-tooltip>
+```
+
+### `<moul-tooltip>`
+
+Class: `MoulTooltip` · Source: `ui/src/components/Tooltip/Tooltip.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `content` | `content` | `string` | `''` |
+| `placement` | `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'` |
+| `delay` | `delay` | `number` | `300` |
+| `is-open` | `isOpen` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+| `content` |
+
+**CSS Parts:** `trigger`, `popover`, `tooltip`
+
+## CommandPalette
+
+⌘K command menu with grouped, filterable items. Docs: [/docs/components/commandpalette](/docs/components/commandpalette)
+
+```html
+<moul-command-palette id="cmdk" shortcut="k"></moul-command-palette>
+```
+
+```js
+const palette = document.querySelector('#cmdk')
+palette.items = [
+  { id: 'new', title: 'New project', group: 'Actions', shortcut: 'N' },
+  { id: 'settings', title: 'Open settings', group: 'Navigation' },
+]
+palette.addEventListener('select', (e) => console.log(e.detail.item))
+```
+
+### `<moul-command-palette>`
+
+Class: `MoulCommandPalette` · Source: `ui/src/components/CommandPalette/CommandPalette.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `is-open` | `isOpen` | `boolean` | `false` |
+| `placeholder` | `placeholder` | `string` | `'Type a command or search...'` |
+| `shortcut` | `shortcut` | `string` | `'k'` |
+| `virtualized` | `virtualized` | `boolean` | `false` |
+| `query` | `query` | `string` | `''` |
+| `activeIndex` | `activeIndex` | `number` | `0` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `items` | `CommandPaletteItemData[]` | `[]` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `openchange` | `CustomEvent` |
+| `select` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| `empty` |
+| `footer` |
+
+**CSS Parts:** `input`, `dialog`, `base`, `input-wrapper`, `list`, `empty`, `footer`
+
+## Tabs
+
+Tablist with sliding indicator and roving tabindex; panels matched by `key`. Docs: [/docs/components/tabs](/docs/components/tabs)
+
+```html
+<moul-tabs selected-key="overview" variant="line">
+  <moul-tab slot="tab" key="overview">Overview</moul-tab>
+  <moul-tab slot="tab" key="activity">Activity</moul-tab>
+  <moul-tab-panel key="overview">Overview content</moul-tab-panel>
+  <moul-tab-panel key="activity">Activity content</moul-tab-panel>
+</moul-tabs>
+```
+
+### `<moul-tabs>`
+
+Class: `MoulTabs` · Source: `ui/src/components/Tabs/Tabs.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `selected-key` | `selectedKey` | `string` | `''` |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+| `variant` | `variant` | `'line' \| 'pill' \| 'enclosed'` | `'pill'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `tab` |
+| (default) |
+
+**CSS Parts:** `tablist`, `indicator`, `base`, `panels`
+
+### `<moul-tab>`
+
+Class: `MoulTab` · Source: `ui/src/components/Tabs/Tab.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-selected` | `isSelected` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`
+
+### `<moul-tab-panel>`
+
+Class: `MoulTabPanel` · Source: `ui/src/components/Tabs/TabPanel.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+## Breadcrumbs
+
+Breadcrumb trail with `aria-current` on the last item. Docs: [/docs/components/breadcrumbs](/docs/components/breadcrumbs)
+
+```html
+<moul-breadcrumbs separator="/">
+  <moul-breadcrumb-item href="/">Home</moul-breadcrumb-item>
+  <moul-breadcrumb-item href="/projects">Projects</moul-breadcrumb-item>
+  <moul-breadcrumb-item is-current>Moul UI</moul-breadcrumb-item>
+</moul-breadcrumbs>
+```
+
+### `<moul-breadcrumbs>`
+
+Class: `MoulBreadcrumbs` · Source: `ui/src/components/Breadcrumbs/Breadcrumbs.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `separator` | `separator` | `string` | `'/'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `list`
+
+### `<moul-breadcrumb-item>`
+
+Class: `MoulBreadcrumbItem` · Source: `ui/src/components/Breadcrumbs/BreadcrumbItem.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `href` | `href` | `string` | `''` |
+| `is-current` | `isCurrent` | `boolean` | `false` |
+| `separator` | `separator` | `string` | `''` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+| `separator` |
+
+**CSS Parts:** `item`, `link`, `text`, `separator`
+
+## Pagination
+
+Page navigation with ellipsis truncation. Docs: [/docs/components/pagination](/docs/components/pagination)
+
+```html
+<moul-pagination total-pages="12" current-page="3" sibling-count="1"></moul-pagination>
+```
+
+### `<moul-pagination>`
+
+Class: `MoulPagination` · Source: `ui/src/components/Pagination/Pagination.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `total-pages` | `totalPages` | `number` | `1` |
+| `current-page` | `currentPage` | `number` | `1` |
+| `page-size` | `pageSize` | `number` | `10` |
+| `shape` | `shape` | `'square' \| 'rounded' \| 'pill'` | `'rounded'` |
+| `sibling-count` | `siblingCount` | `number` | `1` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `pagechange` | `CustomEvent` |
+
+**CSS Parts:** `base`, `button`, `prev`, `ellipsis`, `next`
+
+## Link
+
+Anchor with variants and external-link handling. Docs: [/docs/components/link](/docs/components/link)
+
+```html
+<moul-link href="https://moul.dev" is-external>moul.dev</moul-link>
+```
+
+### `<moul-link>`
+
+Class: `MoulLink` · Source: `ui/src/components/Link/Link.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `href` | `href` | `string` | `''` |
+| `target` | `target` | `string` | `''` |
+| `rel` | `rel` | `string` | `''` |
+| `is-external` | `isExternal` | `boolean` | `false` |
+| `variant` | `variant` | `'default' \| 'subtle' \| 'underline'` | `'default'` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `press` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `external-icon`
+
+---
+
+# Surfaces & Feedback
+
+## Alert
+
+Inline status message with semantic tone and dismiss action. Docs: [/docs/components/alert](/docs/components/alert)
+
+```html
+<moul-alert tone="success" variant="flat" title="Deployed" is-dismissible>
+  Your changes are live.
+</moul-alert>
+```
+
+### `<moul-alert>`
+
+Class: `MoulAlert` · Source: `ui/src/components/Alert/Alert.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass' \| undefined` | — |
+| `title` | `title` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `is-dismissible` | `isDismissible` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `dismiss` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `icon` |
+| `title` |
+| (default) |
+| `action` |
+
+**CSS Parts:** `base`, `icon`, `content`, `title`, `description`, `actions`, `dismiss-button`
+
+## Card
+
+Surface container with header, body, and footer regions. Docs: [/docs/components/card](/docs/components/card)
+
+```html
+<moul-card variant="bordered" is-interactive>
+  <moul-card-header>Usage</moul-card-header>
+  <moul-card-body>1,204 requests today</moul-card-body>
+  <moul-card-footer><moul-link href="/usage">View details</moul-link></moul-card-footer>
+</moul-card>
+```
+
+### `<moul-card>`
+
+Class: `MoulCard` · Source: `ui/src/components/Card/Card.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass' \| undefined` | — |
+| `is-interactive` | `isInteractive` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `press` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `header` |
+| `body` |
+| (default) |
+| `footer` |
+
+**CSS Parts:** `header`, `body`, `content`, `footer`
+
+### `<moul-card-header>`
+
+Class: `MoulCardHeader` · Source: `ui/src/components/Card/Card.ts`
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+### `<moul-card-body>`
+
+Class: `MoulCardBody` · Source: `ui/src/components/Card/Card.ts`
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+### `<moul-card-footer>`
+
+Class: `MoulCardFooter` · Source: `ui/src/components/Card/Card.ts`
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+## Badge
+
+Compact status chip or dot indicator. Docs: [/docs/components/badge](/docs/components/badge)
+
+```html
+<moul-badge tone="success" variant="flat">Active</moul-badge>
+<moul-badge tone="error" is-dot aria-label="Offline"></moul-badge>
+```
+
+### `<moul-badge>`
+
+Class: `MoulBadge` · Source: `ui/src/components/Badge/Badge.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass'` | `'flat'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `is-dot` | `isDot` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `prefix` |
+| (default) |
+| `suffix` |
+
+**CSS Parts:** `base`, `prefix`, `content`, `suffix`
+
+## Avatar
+
+Image avatar with initials fallback, status dot, and grouping. Docs: [/docs/components/avatar](/docs/components/avatar)
+
+```html
+<moul-avatar-group max="3" size="sm">
+  <moul-avatar name="Sophearak Tha" src="/avatars/1.png" status="online"></moul-avatar>
+  <moul-avatar name="Dara Kim"></moul-avatar>
+</moul-avatar-group>
+```
+
+### `<moul-avatar>`
+
+Class: `MoulAvatar` · Source: `ui/src/components/Avatar/Avatar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `src` | `src` | `string` | `''` |
+| `name` | `name` | `string` | `''` |
+| `size` | `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'` | — |
+| `shape` | `shape` | `'circle' \| 'square'` | `'circle'` |
+| `status` | `status` | `'online' \| 'offline' \| 'away' \| 'busy' \| undefined` | — |
+| `hasImageError` | `hasImageError` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `error` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `fallback` |
+
+**CSS Parts:** `image`, `initials`, `fallback`, `status`
+
+### `<moul-avatar-group>`
+
+Class: `MoulAvatarGroup` · Source: `ui/src/components/Avatar/AvatarGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `max` | `max` | `number` | `5` |
+| `size` | `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'` | `'md'` |
+| `totalAvatars` | `totalAvatars` | `number` | `0` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `overflow`
+
+## Typography
+
+Headings, body, caption, and code text styles. Docs: [/docs/components/typography](/docs/components/typography)
+
+```html
+<moul-typography variant="h2">Dashboard</moul-typography>
+<moul-typography variant="caption" tone="accent">Updated 2 minutes ago</moul-typography>
+```
+
+### `<moul-typography>`
+
+Class: `MoulTypography` · Source: `ui/src/components/Typography/Typography.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `variant` | `variant` | `'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'body' \| 'caption' \| 'code' \| 'mono'` | `'body'` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error' \| undefined` | — |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `root`
+
+## Kbd
+
+Keyboard shortcut hint. Docs: [/docs/components/kbd](/docs/components/kbd)
+
+```html
+<moul-kbd keys="Meta+K"></moul-kbd>
+```
+
+### `<moul-kbd>`
+
+Class: `MoulKbd` · Source: `ui/src/components/Kbd/Kbd.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `keys` | `keys` | `string` | `''` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `key`
+
+## Separator
+
+Horizontal or vertical divider with `role="separator"`. Docs: [/docs/components/separator](/docs/components/separator)
+
+```html
+<moul-separator orientation="horizontal"></moul-separator>
+```
+
+### `<moul-separator>`
+
+Class: `MoulSeparator` · Source: `ui/src/components/Separator/Separator.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `orientation` | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+
+**CSS Parts:** `separator`
+
+## Spinner
+
+Indeterminate loading indicator with accessible label. Docs: [/docs/components/spinner](/docs/components/spinner)
+
+```html
+<moul-spinner size="sm" label="Loading projects"></moul-spinner>
+```
+
+### `<moul-spinner>`
+
+Class: `MoulSpinner` · Source: `ui/src/components/Spinner/Spinner.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `label` | `label` | `string` | `'Loading'` |
+
+**CSS Parts:** `base`
+
+## Skeleton
+
+Loading placeholder in line, circle, or rect shapes. Docs: [/docs/components/skeleton](/docs/components/skeleton)
+
+```html
+<moul-skeleton shape="line" width="12rem"></moul-skeleton>
+<moul-skeleton shape="circle" width="2.5rem" height="2.5rem" variant="wave"></moul-skeleton>
+```
+
+### `<moul-skeleton>`
+
+Class: `MoulSkeleton` · Source: `ui/src/components/Skeleton/Skeleton.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `shape` | `shape` | `'line' \| 'circle' \| 'rect'` | `'line'` |
+| `variant` | `variant` | `'pulse' \| 'wave'` | `'wave'` |
+| `width` | `width` | `string` | `''` |
+| `height` | `height` | `string` | `''` |
+
+**CSS Parts:** `base`
+
+## ProgressBar
+
+Determinate or indeterminate progress with `role="progressbar"`. Docs: [/docs/components/progressbar](/docs/components/progressbar)
+
+```html
+<moul-progress-bar value="64" max="100" tone="primary" aria-label="Upload progress"></moul-progress-bar>
+```
+
+### `<moul-progress-bar>`
+
+Class: `MoulProgressBar` · Source: `ui/src/components/ProgressBar/ProgressBar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `value` | `value` | `number` | `0` |
+| `min` | `min` | `number` | `0` |
+| `max` | `max` | `number` | `100` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass'` | `'solid'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `shape` | `shape` | `'square' \| 'rounded' \| 'pill'` | `'pill'` |
+| `is-indeterminate` | `isIndeterminate` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `label` |
+
+**CSS Parts:** `header`, `track`, `fill`
+
+## TagGroup
+
+Selectable and removable tags. Docs: [/docs/components/taggroup](/docs/components/taggroup)
+
+```html
+<moul-tag-group label="Filters" selection-mode="multiple" is-removable>
+  <moul-tag key="open" tone="success">Open</moul-tag>
+  <moul-tag key="bug" tone="error">Bug</moul-tag>
+</moul-tag-group>
+```
+
+### `<moul-tag-group>`
+
+Class: `MoulTagGroup` · Source: `ui/src/components/TagGroup/TagGroup.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `selected-keys` | `selectedKeys` | `string[]` | `[]` |
+| `selection-mode` | `selectionMode` | `'none' \| 'single' \| 'multiple'` | `'none'` |
+| `is-removable` | `isRemovable` | `boolean` | `false` |
+| `label` | `label` | `string` | `''` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `label`, `container`
+
+### `<moul-tag>`
+
+Class: `MoulTag` · Source: `ui/src/components/TagGroup/Tag.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass'` | `'flat'` |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `is-selected` | `isSelected` | `boolean` | `false` |
+| `is-removable` | `isRemovable` | `boolean` | `false` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `press` | `CustomEvent` |
+| `remove` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `base`, `remove-button`
+
+## Table
+
+Data table with sortable columns, row selection, and loading/empty states. Docs: [/docs/components/table](/docs/components/table)
+
+```html
+<moul-table id="users" is-sortable is-selectable>
+  <span slot="caption">Team members</span>
+  <span slot="empty">No members yet</span>
+</moul-table>
+```
+
+```js
+import { html } from 'lit'
+
+const table = document.querySelector('#users')
+table.columns = [
+  { key: 'name', title: 'Name', sortable: true },
+  { key: 'role', title: 'Role' },
+  // render() puts markup in the cell; it runs inside the table's shadow root.
+  { key: 'status', title: 'Status', render: (row) => html`<moul-badge tone="success">${row.status}</moul-badge>` },
+]
+table.data = [{ id: '1', name: 'Dara', role: 'Admin', status: 'Active' }]
+```
+
+### `<moul-table>`
+
+Class: `MoulTable` · Source: `ui/src/components/Table/Table.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `data` | `data` | `Record<string, unknown>[]` | `[]` |
+| `columns` | `columns` | `TableColumn[]` | `[]` |
+| `is-sortable` | `isSortable` | `boolean` | `false` |
+| `is-selectable` | `isSelectable` | `boolean` | `false` |
+| `is-loading` | `isLoading` | `boolean` | `false` |
+| `selected-keys` | `selectedKeys` | `string[]` | `[]` |
+| `sort-column` | `sortColumn` | `string` | `''` |
+| `sort-direction` | `sortDirection` | `'asc' \| 'desc'` | `'asc'` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `sortchange` | `CustomEvent` |
+| `selectionchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `caption` |
+| `empty` |
+| `footer` |
+
+**CSS Parts:** `caption`, `header-checkbox`, `th`, `loading-row`, `row`, `footer`
+
+## Toast
+
+Transient notifications managed by the `toastQueue` singleton. Docs: [/docs/components/toast](/docs/components/toast)
+
+```html
+<moul-toast-region></moul-toast-region>
+<moul-toast tone="success" title="Saved" description="Your profile was updated."></moul-toast>
+```
+
+```js
+import { toastQueue } from '@moul-dev/web-component'
+
+toastQueue.add({ title: 'Saved', description: 'Your profile was updated.', tone: 'success' })
+```
+
+### `<moul-toast>`
+
+Class: `MoulToast` · Source: `ui/src/components/Toast/Toast.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `tone` | `tone` | `'primary' \| 'accent' \| 'success' \| 'warning' \| 'error'` | `'primary'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass' \| undefined` | — |
+| `duration` | `duration` | `number` | `5000` |
+| `title` | `title` | `string` | `''` |
+| `description` | `description` | `string` | `''` |
+| `is-open` | `isOpen` | `boolean` | `true` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `dismiss` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `icon` |
+| `title` |
+| (default) |
+| `action` |
+
+**CSS Parts:** `base`, `icon`, `content`, `title`, `description`, `actions`, `dismiss-button`
+
+### `<moul-toast-region>`
+
+Class: `MoulToastRegion` · Source: `ui/src/components/Toast/ToastQueue.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `placement` | `placement` | `'top-start' \| 'top-center' \| 'top-end' \| 'bottom-start' \| 'bottom-center' \| 'bottom-end'` | `'bottom-end'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+## EmptyState
+
+Placeholder for empty collections with icon and actions. Docs: [/docs/components/emptystate](/docs/components/emptystate)
+
+```html
+<moul-empty-state size="md" align="center">
+  <span slot="title">No projects</span>
+  <span slot="description">Create your first project to get started.</span>
+  <moul-button slot="actions" variant="primary">New project</moul-button>
+</moul-empty-state>
+```
+
+### `<moul-empty-state>`
+
+Class: `MoulEmptyState` · Source: `ui/src/components/EmptyState/EmptyState.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `size` | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` |
+| `align` | `align` | `'start' \| 'center'` | `'center'` |
+| `variant` | `variant` | `'solid' \| 'flat' \| 'shadow' \| 'bordered' \| 'glass'` | `'flat'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `icon` |
+| `title` |
+| `description` |
+| (default) |
+| `actions` |
+
+**CSS Parts:** `icon`, `title`, `description`, `actions`, `base`
+
+---
+
+# Composite Blocks
+
+## LogsViewer
+
+Virtualized log viewer with level filtering, search, and a log detail drawer. Docs: [/docs/blocks/logs](/docs/blocks/logs)
+
+```html
+<moul-logs-viewer id="viewer" title="Build logs" filter-level="all" max-height="480px"></moul-logs-viewer>
+
+<moul-logs show-timestamps wrap-lines>
+2026-10-19T10:00:01Z INFO server started on :8080
+2026-10-19T10:00:04Z WARN cache miss ratio 0.42
+</moul-logs>
+```
+
+```js
+document.querySelector('#viewer').logs = [
+  { id: 1, timestamp: '2026-10-19T10:00:01Z', level: 'info', message: 'server started' },
+]
+```
+
+### `<moul-logs-viewer>`
+
+Class: `MoulLogsViewer` · Source: `ui/src/components/LogsViewer/LogsViewer.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `filter-level` | `filterLevel` | `LogFilterLevel` | `'all'` |
+| `search-query` | `searchQuery` | `string` | `''` |
+| `show-timestamps` | `showTimestamps` | `boolean` | `true` |
+| `show-line-numbers` | `showLineNumbers` | `boolean` | `true` |
+| `show-levels` | `showLevels` | `boolean` | `true` |
+| `show-toolbar` | `showToolbar` | `boolean` | `true` |
+| `wrap-lines` | `wrapLines` | `boolean` | `false` |
+| `compact` | `compact` | `boolean` | `false` |
+| `virtualized` | `virtualized` | `boolean` | `true` |
+| `max-height` | `maxHeight` | `string` | `'600px'` |
+| `selected-id` | `selectedId` | `string \| number \| null` | `null` |
+| `is-inspector-open` | `isInspectorOpen` | `boolean` | `false` |
+| `title` | `title` | `string` | `''` |
+| `search-placeholder` | `searchPlaceholder` | `string` | `'Filter logs...'` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `logs` | `LogItem[]` | `[]` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `filterlevelchange` | `CustomEvent` |
+| `filterchange` | `CustomEvent` |
+| `searchchange` | `CustomEvent` |
+| `clear` | `CustomEvent` |
+| `logselect` | `CustomEvent` |
+| `rowclick` | `CustomEvent` |
+
+**CSS Parts:** `row`, `cell-linenumber`, `cell-timestamp`, `cell-level`, `cell-message`, `attributes`, `inspector-header`, `inspector-meta`, `inspector-message`, `inspector-attrs`, `inspector-raw`, `container`, `toolbar`, `search`, `filter-group`, `filter-indicator`, `filter-pill`, `counts`, `scroll-container`, `table`, `empty`, `inspector`
+
+### `<moul-logs>`
+
+Class: `MoulLogs` · Source: `ui/src/components/LogsViewer/Logs.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `raw` | `raw` | `string` | `''` |
+| `filter-level` | `filterLevel` | `LogFilterLevel` | `'all'` |
+| `search-query` | `searchQuery` | `string` | `''` |
+| `show-timestamps` | `showTimestamps` | `boolean` | `true` |
+| `show-line-numbers` | `showLineNumbers` | `boolean` | `true` |
+| `show-levels` | `showLevels` | `boolean` | `true` |
+| `show-toolbar` | `showToolbar` | `boolean` | `true` |
+| `wrap-lines` | `wrapLines` | `boolean` | `false` |
+| `compact` | `compact` | `boolean` | `false` |
+| `virtualized` | `virtualized` | `boolean` | `true` |
+| `max-height` | `maxHeight` | `string` | `'600px'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+## Sidebar
+
+Application shell with collapsible navigation, propagated via `@lit/context`. Docs: [/docs/blocks/sidebar](/docs/blocks/sidebar)
+
+```html
+<moul-sidebar layout="sidebar-framed" selected-key="home">
+  <moul-sidebar-aside aria-label="Main navigation" show-collapse-toggle>
+    <moul-sidebar-header>
+      <moul-sidebar-brand title="Moul" subtitle="Workspace" href="/"></moul-sidebar-brand>
+    </moul-sidebar-header>
+    <moul-sidebar-group label="General">
+      <moul-sidebar-item key="home" href="/" label="Home"></moul-sidebar-item>
+      <moul-sidebar-item key="inbox" href="/inbox" label="Inbox" badge="3"></moul-sidebar-item>
+    </moul-sidebar-group>
+    <moul-sidebar-divider></moul-sidebar-divider>
+    <moul-sidebar-footer>
+      <moul-sidebar-user name="Sophearak Tha" email="hello@moul.dev"></moul-sidebar-user>
+    </moul-sidebar-footer>
+  </moul-sidebar-aside>
+  <moul-sidebar-main>Page content</moul-sidebar-main>
+</moul-sidebar>
+```
+
+### `<moul-sidebar>`
+
+Class: `MoulSidebar` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `layout` | `layout` | `'sidebar-framed' \| 'main-framed'` | `'sidebar-framed'` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+| `selected-key` | `selectedKey` | `string` | `''` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+| `collapsechange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+### `<moul-sidebar-aside>`
+
+Class: `MoulSidebarAside` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `aria-label` | `ariaLabel` | `string` | `'Main Navigation'` |
+| `show-collapse-toggle` | `showCollapseToggle` | `boolean` | `false` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+| `layout` | `layout` | `string` | `'sidebar-framed'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `aside`, `toggle-button`
+
+### `<moul-sidebar-header>`
+
+Class: `MoulSidebarHeader` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `header`
+
+### `<moul-sidebar-brand>`
+
+Class: `MoulSidebarBrand` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `logo` | `logo` | `string` | `''` |
+| `title` | `title` | `string` | `''` |
+| `subtitle` | `subtitle` | `string` | `''` |
+| `href` | `href` | `string` | `''` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `logo` |
+| `title` |
+| `subtitle` |
+| (default) |
+
+**CSS Parts:** `logo`, `info`, `title`, `subtitle`, `link`
+
+### `<moul-sidebar-group>`
+
+Class: `MoulSidebarGroup` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `label` | `label` | `string` | `''` |
+| `collapsible` | `collapsible` | `boolean` | `true` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed-sidebar` | `collapsedSidebar` | `boolean` | `false` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `title` | `string` | — |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `collapsechange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `group-header`, `group-title`, `chevron`, `items`, `items-inner`
+
+### `<moul-sidebar-item>`
+
+Class: `MoulSidebarItem` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `key` | `string` | `''` |
+| `id` | `id` | `string` | `''` |
+| `href` | `href` | `string` | `''` |
+| `label` | `label` | `string` | `''` |
+| `badge` | `badge` | `string` | `''` |
+| `is-disabled` | `isDisabled` | `boolean` | `false` |
+| `is-selected` | `isSelected` | `boolean` | `false` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+
+**Events**
+
+| Event | Type |
+| :--- | :--- |
+| `selectionchange` | `CustomEvent` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `icon` |
+| (default) |
+
+**CSS Parts:** `indicator`, `item`, `icon`, `label`, `badge`
+
+### `<moul-sidebar-divider>`
+
+Class: `MoulSidebarDivider` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+
+### `<moul-sidebar-footer>`
+
+Class: `MoulSidebarFooter` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+| `show-border` | `showBorder` | `boolean` | `true` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `footer`
+
+### `<moul-sidebar-user>`
+
+Class: `MoulSidebarUser` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `name` | `name` | `string` | `''` |
+| `email` | `email` | `string` | `''` |
+| `avatar-src` | `avatarSrc` | `string` | `''` |
+| `status` | `status` | `string` | `''` |
+| `dense` | `dense` | `boolean` | `false` |
+| `collapsed` | `collapsed` | `boolean` | `false` |
+
+**Properties** (JavaScript only — set on the element instance)
+
+| Property | Type | Default |
+| :--- | :--- | :--- |
+| `description` | `string` | — |
+
+**Slots**
+
+| Slot |
+| :--- |
+| `avatar` |
+| `name` |
+| `email` |
+| `action` |
+| (default) |
+
+**CSS Parts:** `avatar`, `info`, `name`, `email`, `action`
+
+### `<moul-sidebar-main>`
+
+Class: `MoulSidebarMain` · Source: `ui/src/components/Sidebar/Sidebar.ts`
+
+**Attributes**
+
+| Attribute | Property | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `layout` | `layout` | `string` | `'sidebar-framed'` |
+
+**Slots**
+
+| Slot |
+| :--- |
+| (default) |
+
+**CSS Parts:** `main`

@@ -14,7 +14,7 @@ import { Callout } from 'fumadocs-ui/components/callout'
 
 When embedding Moul as a Go library:
 
-- **Built-in Web Admin Console**: The production Web Admin Console (TanStack Router, Meta StyleX, React Aria) is embedded directly into your binary via `pkg/ui.DistFS()` and served at `/_moul_/`.
+- **Built-in Web Admin Console**: The production Web Admin Console (Lit web components on Moul UI, `@moul-dev/web-component`) is embedded directly into your binary via `pkg/ui.DistFS()` and served at `/_moul_/`.
 - **Zero Node.js / Bun Requirement**: Compiled static assets are bundled inside `github.com/moul-dev/moul-dev/pkg/ui/dist`, allowing custom binary compilation using standard `go build`.
 - **Safe Route Prefixing**: By default, the admin console mounts strictly at `AdminUIPrefix` (`/_moul_/`) without intercepting `/admin`, preventing route collision with your host application.
 - **Full Customizability**: Override the console with your own frontend SPA, mount on a custom URL prefix, or disable the console entirely for headless API microservices.
